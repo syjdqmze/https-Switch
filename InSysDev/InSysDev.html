@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>InSysDev</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            background-color: skyblue;
+        }
+
+        .top-section {
+            flex: 1.17;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background-size: 200% 200%;
+            animation: gradientMove 5s ease infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .top-section::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+        }
+
+        .title {
+            font-size: clamp(1rem, 5vh, 2.5rem);
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: titleFloat 2s ease-in-out infinite, titleGlow 2s ease-in-out infinite;
+            position: relative;
+            z-index: 1;
+            letter-spacing: 0.3rem;
+            margin: 0 50px;
+        }
+
+        .title-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .recruit {
+            font-size: clamp(14px, 2vh, 20px);
+            color: white;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .side-text {
+            font-size: clamp(14px, 2vh, 20px);
+            color: white;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+            z-index: 1;
+            max-width: 30%;
+            text-align: center;
+            padding: 10px;
+            background: transparent;
+            animation: textFade 3s ease-in-out infinite;
+        }
+
+        .side-text.left {
+            animation-delay: 0s;
+            position: relative;
+            left: -50px;
+        }
+
+        .side-text.right {
+            animation-delay: 1.5s;
+            position: relative;
+            right: -50px;
+        }
+
+        @keyframes textFade {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+
+        @keyframes titleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { 
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 10px rgba(255,255,255,0.5); 
+            }
+            50% { 
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.6); 
+            }
+        }
+
+        .carousel-horse {
+            position: absolute;
+            width: 70px;
+            height: 55px;
+            z-index: 2;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .carousel-horse.left {
+            left: 0.3%;
+            animation: runLeft 0.3s steps(2) infinite;
+        }
+
+        .carousel-horse.right {
+            right: 0.3%;
+            animation: runRight 0.3s steps(2) infinite;
+        }
+
+        @keyframes runLeft {
+            0%, 100% { transform: translateY(-50%) translateX(0); }
+            50% { transform: translateY(-50%) translateX(8px); }
+        }
+
+        @keyframes runRight {
+            0%, 100% { transform: translateY(-50%) scaleX(-1) translateX(0); }
+            50% { transform: translateY(-50%) scaleX(-1) translateX(-8px); }
+        }
+
+        @keyframes legFront {
+            0%, 100% { transform: rotate(-25deg); }
+            50% { transform: rotate(25deg); }
+        }
+
+        @keyframes legBack {
+            0%, 100% { transform: rotate(25deg); }
+            50% { transform: rotate(-25deg); }
+        }
+
+        @keyframes wheelSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .carousel-base {
+            position: absolute;
+            bottom: 5px;
+            left: 10%;
+            right: 10%;
+            height: 8px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            border-radius: 4px;
+            z-index: 1;
+        }
+
+        .bottom-section {
+            flex: 10;
+            background-color: #ffffff;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(8, calc((100% - 14px) * 0.1333334));
+            align-content: start;
+            overflow-y: auto;
+            gap: 2px;
+            padding: 5px;
+        }
+
+        .footer-section {
+            flex: 0 0 30px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+        }
+
+        .footer-item {
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .grid-cell {
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+            font-weight: bold;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .grid-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="top-section">
+        <svg class="carousel-horse left" viewBox="0 0 120 100">
+            <g class="horse-group">
+                <ellipse cx="60" cy="40" rx="35" ry="18" fill="#A0522D"/>
+                <ellipse cx="85" cy="30" rx="12" ry="15" fill="#A0522D"/>
+                <rect x="82" y="12" width="6" height="12" rx="2" fill="#A0522D"/>
+                <circle cx="90" cy="22" r="2.5" fill="black"/>
+                <path d="M42 22 Q38 16 34 22" fill="#A0522D"/>
+                <path d="M50 18 Q45 10 40 18" fill="#A0522D"/>
+                <path d="M55 16 Q50 8 45 16" fill="#A0522D"/>
+                <rect x="38" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 41px 55px; animation: legFront 0.25s ease-in-out infinite;">
+                </rect>
+                <rect x="52" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 55px 55px; animation: legBack 0.25s ease-in-out infinite;">
+                </rect>
+                <rect x="68" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 71px 55px; animation: legFront 0.25s ease-in-out infinite;">
+                </rect>
+                <rect x="82" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 85px 55px; animation: legBack 0.25s ease-in-out infinite;">
+                </rect>
+                <circle cx="72" cy="18" r="6" fill="#FFD700"/>
+                <rect x="68" y="23" width="8" height="16" rx="3" fill="#4169E1"/>
+                <g style="transform-origin: 30px 85px; animation: wheelSpin 0.4s linear infinite;">
+                    <circle cx="30" cy="85" r="12" fill="#654321" stroke="#3d2817" stroke-width="2"/>
+                    <circle cx="30" cy="85" r="3" fill="#3d2817"/>
+                    <line x1="18" y1="85" x2="42" y2="85" stroke="#3d2817" stroke-width="1.5"/>
+                    <line x1="30" y1="73" x2="30" y2="97" stroke="#3d2817" stroke-width="1.5"/>
+                    <line x1="21" y1="76" x2="39" y2="94" stroke="#3d2817" stroke-width="1.5"/>
+                    <line x1="39" y1="76" x2="21" y2="94" stroke="#3d2817" stroke-width="1.5"/>
+                </g>
+            </g>
+        </svg>
+        
+        <svg class="carousel-horse right" viewBox="0 0 120 100">
+            <g class="horse-group">
+                <ellipse cx="60" cy="40" rx="35" ry="18" fill="#A0522D"/>
+                <ellipse cx="85" cy="30" rx="12" ry="15" fill="#A0522D"/>
+                <rect x="82" y="12" width="6" height="12" rx="2" fill="#A0522D"/>
+                <circle cx="90" cy="22" r="2.5" fill="black"/>
+                <path d="M42 22 Q38 16 34 22" fill="#A0522D"/>
+                <path d="M50 18 Q45 10 40 18" fill="#A0522D"/>
+                <path d="M55 16 Q50 8 45 16" fill="#A0522D"/>
+                <rect x="38" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 41px 55px; animation: legFront 0.25s ease-in-out infinite;">
+                </rect>
+                <rect x="52" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 55px 55px; animation: legBack 0.25s ease-in-out infinite;">
+                </rect>
+                <rect x="68" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 71px 55px; animation: legFront 0.25s ease-in-out infinite;">
+                </rect>
+                <rect x="82" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 85px 55px; animation: legBack 0.25s ease-in-out infinite;">
+                </rect>
+                <circle cx="72" cy="18" r="6" fill="#FFD700"/>
+                <rect x="68" y="23" width="8" height="16" rx="3" fill="#4169E1"/>
+                <g style="transform-origin: 30px 85px; animation: wheelSpin 0.4s linear infinite;">
+                    <circle cx="30" cy="85" r="12" fill="#654321" stroke="#3d2817" stroke-width="2"/>
+                    <circle cx="30" cy="85" r="3" fill="#3d2817"/>
+                    <line x1="18" y1="85" x2="42" y2="85" stroke="#3d2817" stroke-width="1.5"/>
+                    <line x1="30" y1="73" x2="30" y2="97" stroke="#3d2817" stroke-width="1.5"/>
+                    <line x1="21" y1="76" x2="39" y2="94" stroke="#3d2817" stroke-width="1.5"/>
+                    <line x1="39" y1="76" x2="21" y2="94" stroke="#3d2817" stroke-width="1.5"/>
+                </g>
+            </g>
+        </svg>
+        
+        <div class="carousel-base"></div>
+        <div class="side-text left">宁可认认真真地做事；绝不麻麻呼呼地将就</div>
+        <div class="title-wrapper">
+            <span class="title">木马人</span>
+            <span class="recruit">招募</span>
+        </div>
+        <div class="side-text right">敢拼敢搏敢牺牲你进来；怕苦怕累怕麻烦请绕开</div>
+    </div>
+    <div class="bottom-section" id="bottomSection"></div>
+    <div class="footer-section">
+        <span class="footer-item">学习</span>
+        <span class="footer-item">创新</span>
+        <span class="footer-item">团结</span>
+        <span class="footer-item">高效</span>
+    </div>
+
+    <script>
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        const bottomSection = document.getElementById('bottomSection');
+        const backgroundStyle = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+
+        for (let i = 1; i <= 80; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            cell.style.background = backgroundStyle;
+
+            if (i === 1) {
+                cell.innerHTML = 'STM32F429<br>芯片系统架构';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = 'sub-item/index01.html';
+                });
+            } else if (i === 2) {
+                cell.innerHTML = 'STM32F429<br>芯片系统时钟';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = 'sub-item/index02.html';
+                });
+            } else if (i === 3) {
+                cell.innerHTML = 'STM32F429<br>启动过程浅析';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = 'sub-item/index03.html';
+                });
+            } else if (i === 4) {
+                cell.innerHTML = 'STM32F429<br>MAP文件浅析';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = 'sub-item/index04.html';
+                });
+            } else if (i === 5) {
+                cell.innerHTML = 'MDK-KEIL<br>安装与使用';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index05.html';
+                });
+            } else if (i === 6) {
+                cell.innerHTML = 'MDK-DAP<br>使用教程';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index06.html';
+                });
+            } else if (i === 7) {
+                cell.innerHTML = 'MDK-ISP<br>编译与下载';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index07.html';
+                });
+            } else if (i === 8) {
+                cell.innerHTML = 'MDK-DAP<br>下载与调式';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index08.html';
+                });
+            } else if (i === 9) {
+                cell.innerHTML = 'STM32F429<br>新建MDK工程<br><span style="font-size: 10px; display: block; text-align: right; color: red;">——寄存器版本</span>';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index09.html';
+                });
+            } else if (i === 10) {
+                cell.innerHTML = 'STM32F429<br>新建MDK功能<br><span style="font-size: 10px; display: block; text-align: right; color: red;">——HAL库版本</span>';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index10.html';
+                });
+            } else if (i === 11) {
+                cell.innerHTML = 'STM32F429<br>stm32-dev-guide<br><span style="font-size: 10px; display: block; text-align: right; color: red;">——Based on Trae-CN</span>';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index11.html';
+                });
+            } else if (i === 12) {
+                cell.innerHTML = 'STM32F429<br>GPIO介绍与配置';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index12.html';
+                });
+            } else if (i === 13) {
+                cell.innerHTML = 'STM32F429<br>中断系统详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index13.html';
+                });
+            } else if (i === 14) {
+                cell.innerHTML = 'STM32F429<br>跑马灯源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index14.html';
+                });
+            } else if (i === 15) {
+                cell.innerHTML = 'STM32F429<br>AI开发与调式';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index15.html';
+                });
+            } else if (i === 16) {
+                cell.innerHTML = 'STM32F429<br>按键输入源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index16.html';
+                });
+            } else if (i === 17) {
+                cell.innerHTML = 'STM32F429<br>外部中断源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index17.html';
+                });
+            } else if (i === 18) {
+                cell.innerHTML = 'STM32F429<br>串口通信源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index18.html';
+                });
+            } else if (i === 19) {
+                cell.innerHTML = 'STM32F429<br>独立看门狗源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index19.html';
+                });
+            } else if (i === 20) {
+                cell.innerHTML = 'STM32F429<br>窗口看门狗源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index20.html';
+                });
+            } else if (i === 21) {
+                cell.innerHTML = 'STM32F429<br>定时器中断源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index21.html';
+                });
+            } else if (i === 22) {
+                cell.innerHTML = 'STM32F429<br>PWM输出源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index22.html';
+                });
+            } else if (i === 23) {
+                cell.innerHTML = 'STM32F429<br>输入捕获源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index23.html';
+                });
+            } else if (i === 24) {
+                cell.innerHTML = 'STM32F429<br>电容触摸源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index24.html';
+                });
+            } else if (i === 25) {
+                cell.innerHTML = 'STM32F429<br>OLED显示源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index25.html';
+                });
+            } else if (i === 26) {
+                cell.innerHTML = 'STM32F429<br>LCD显示源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index26.html';
+                });
+            } else if (i === 27) {
+                cell.innerHTML = 'STM32F429<br>TFTLCD源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index27.html';
+                });
+            } else if (i === 28) {
+                cell.innerHTML = 'STM32F429<br>LTDC屏源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index28.html';
+                });
+            } else if (i === 29) {
+                cell.innerHTML = 'STM32F429<br>USMART源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index29.html';
+                });
+            } else if (i === 30) {
+                cell.innerHTML = 'STM32F429<br>RTC时钟源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index30.html';
+                });
+            } else if (i === 31) {
+                cell.innerHTML = 'STM32F429<br>随机数发生器详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index31.html';
+                });
+            } else if (i === 32) {
+                cell.innerHTML = 'STM32F429<br>待机唤醒源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index32.html';
+                });
+            } else if (i === 33) {
+                cell.innerHTML = 'STM32F429<br>ADC实验源码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index33.html';
+                });
+            } else if (i === 34) {
+                cell.innerHTML = 'STM32F429<br>内部温度传感器详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index34.html';
+                });
+            } else if (i === 35) {
+                cell.innerHTML = 'STM32F429<br>DAC实验详码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index35.html';
+                });
+            } else if (i === 36) {
+                cell.innerHTML = 'STM32F429<br> PWM DAC详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index36.html';
+                });
+            } else if (i === 37) {
+                cell.innerHTML = 'STM32F429<br> DMA实验详码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index37.html';
+                });
+            } else if (i === 38) {
+                cell.innerHTML = 'STM32F429<br> IIC实验详码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index38.html';
+                });
+            } else if (i === 39) {
+                cell.innerHTML = 'STM32F429<br>IO扩展实验详码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index39.html';
+                });
+            } else if (i === 40) {
+                cell.innerHTML = 'STM32F429<br>光照与接近传感器';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index40.html';
+                });
+            } else if (i === 41) {
+                cell.innerHTML = 'STM32F429<br>SPI实验代码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index41.html';
+                });
+            } else if (i === 42) {
+                cell.innerHTML = 'STM32F429<br>485实验代码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index42.html';
+                });
+            } else if (i === 43) {
+                cell.innerHTML = 'STM32F429<br>CAN实验代码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index43.html';
+                });
+            } else if (i === 44) {
+                cell.innerHTML = 'STM32F429<br>触摸屏实验代码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index44.html';
+                });
+            } else if (i === 45) {
+                cell.innerHTML = 'STM32F429<br>红外遥控器代码详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index45.html';
+                });
+            } else if (i === 46) {
+                cell.innerHTML = 'STM32F429<br>数字温度传感器详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index46.html';
+                });
+            } else if (i === 47) {
+                cell.innerHTML = 'STM32F429<br>数字温湿度传感器详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index47.html';
+                });
+            } else if (i === 48) {
+                cell.innerHTML = 'STM32F429<br>MPU9250九轴传感器详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index48.html';
+                });
+            } else if (i === 49) {
+                cell.innerHTML = 'STM32F429<br>MNRF24L01无线通信详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index49.html';
+                });
+            } else if (i === 50) {
+                cell.innerHTML = 'STM32F429<br>FLASH模拟EEPROM详解';
+                cell.style.cursor = 'pointer';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index50.html';
+                });
+            } else if (i === 51) {
+                cell.innerHTML = 'STM32F429<br>摄像头实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index51.html';
+                });
+            } else if (i === 52) {
+                cell.innerHTML = 'STM32F429<br>内存管理实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index52.html';
+                });
+            } else if (i === 53) {
+                cell.innerHTML = 'STM32F429<br>SD卡实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index53.html';
+                });
+            } else if (i === 54) {
+                cell.innerHTML = 'STM32F429<br>NAND FLASH实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index54.html';
+                });
+            } else if (i === 55) {
+                cell.innerHTML = 'STM32F429<br>FATFS实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index55.html';
+                });
+            } else if (i === 56) {
+                cell.innerHTML = 'STM32F429<br>汉字显示实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index56.html';
+                });
+            } else if (i === 57) {
+                cell.innerHTML = 'STM32F429<br>图片显示实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index57.html';
+                });
+            } else if (i === 58) {
+                cell.innerHTML = 'STM32F429<br>照相机实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index58.html';
+                });
+            } else if (i === 59) {
+                cell.innerHTML = 'STM32F429<br>音乐播放实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index59.html';
+                });
+            } else if (i === 60) {
+                cell.innerHTML = 'STM32F429<br>录音机实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index60.html';
+                });
+            } else if (i === 61) {
+                cell.innerHTML = 'STM32F429<br>视频播放器详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index61.html';
+                });
+            } else if (i === 62) {
+                cell.innerHTML = 'STM32F429<br>FPU测试实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index62.html';
+                });
+            } else if (i === 63) {
+                cell.innerHTML = 'STM32F429<br>DSP测试实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index63.html';
+                });
+            } else if (i === 64) {
+                cell.innerHTML = 'STM32F429<br>手写识别详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index64.html';
+                });
+            } else if (i === 65) {
+                cell.innerHTML = 'STM32F429<br>T9拼音输入法详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index65.html';
+                });
+            } else if (i === 66) {
+                cell.innerHTML = 'STM32F429<br>串口IAP实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index66.html';
+                });
+            } else if (i === 67) {
+                cell.innerHTML = 'STM32F429<br>USB读卡器详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index67.html';
+                });
+            } else if (i === 68) {
+                cell.innerHTML = 'STM32F429<br>USB声卡实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index68.html';
+                });
+            } else if (i === 69) {
+                cell.innerHTML = 'STM32F429<br>USB虚拟串口详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index69.html';
+                });
+            } else if (i === 70) {
+                cell.innerHTML = 'STM32F429<br>USB U盘实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index70.html';
+                });
+            } else if (i === 71) {
+                cell.innerHTML = 'STM32F429<br>USB鼠标键盘详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index71.html';
+                });
+            } else if (i === 72) {
+                cell.innerHTML = 'STM32F429<br>网络通信实验详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index72.html';
+                });
+            } else if (i === 73) {
+                cell.innerHTML = 'STM32F429<br>任务调度详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index73.html';
+                });
+            } else if (i === 74) {
+                cell.innerHTML = 'STM32F429<br>任务管理详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index74.html';
+                });
+            } else if (i === 75) {
+                cell.innerHTML = 'STM32F429<br>信号量邮箱详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index75.html';
+                });
+            } else if (i === 76) {
+                cell.innerHTML = 'STM32F429<br>消息队列详解';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                window.location.href = './sub-item/index76.html';
+                });
+            } else {
+                cell.textContent = i;
+            }
+
+            bottomSection.appendChild(cell);
+        }
+    </script>
+</body>
+</html>

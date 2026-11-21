@@ -1,0 +1,2465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Coin - 赛博朋克兔子跑酷</title>
+    <script src="three.min.js"></script>
+    <style>
+        /* ====== 基础重置 ====== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: #0a0015;
+            color: #e0d0ff;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* ====== 页面布局：Flex 纵向 ====== */
+        .page-wrapper {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100vh;
+        }
+
+        /* ====== 顶部导航栏 ====== */
+        .navbar {
+            flex-shrink: 0;
+            height: 56px;
+            background: rgba(20, 5, 40, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(178, 75, 255, 0.6);
+            box-shadow: 0 0 20px rgba(178, 75, 255, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: relative;
+            z-index: 100;
+        }
+        .navbar::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #b24bff, #00f0ff, #b24bff, transparent);
+            animation: nav-glow 3s ease-in-out infinite;
+        }
+        @keyframes nav-glow {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 22px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        .navbar-brand .logo-icon {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, #b24bff, #00f0ff);
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            box-shadow: 0 0 12px #b24bff;
+        }
+        .navbar-brand .logo-text {
+            background: linear-gradient(90deg, #00f0ff, #b24bff, #ff2d95);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .navbar-links {
+            display: flex;
+            gap: 20px;
+        }
+        .navbar-links a {
+            color: #b090d0;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 6px 14px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .navbar-links a:hover {
+            color: #00f0ff;
+            border-color: rgba(0, 240, 255, 0.4);
+            text-shadow: 0 0 8px #00f0ff;
+        }
+        .navbar-stats {
+            display: flex;
+            gap: 18px;
+            font-size: 13px;
+        }
+        .navbar-stats .stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .navbar-stats .stat-label { color: #8060a0; }
+        .navbar-stats .stat-value {
+            color: #ffd700;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+        }
+
+        /* ====== 游戏主体容器 ====== */
+        .game-main {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(180deg, #0a0015 0%, #1a0533 50%, #0d0221 100%);
+        }
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ====== HUD ====== */
+        #hud {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .hud-top {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 40px;
+            align-items: center;
+        }
+        .hud-score {
+            text-align: center;
+        }
+        .hud-score .score-label {
+            font-size: 11px;
+            color: #8060a0;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+        .hud-score .score-value {
+            font-size: 42px;
+            font-weight: bold;
+            color: #00f0ff;
+            text-shadow: 0 0 16px rgba(0, 240, 255, 0.8), 0 0 32px rgba(0, 240, 255, 0.4);
+            font-family: 'Courier New', monospace;
+            line-height: 1;
+        }
+        .hud-combo {
+            text-align: center;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .hud-combo.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .hud-combo .combo-value {
+            font-size: 36px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #ff2d95, #b24bff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: none;
+            filter: drop-shadow(0 0 12px #ff2d95);
+        }
+        .hud-combo .combo-label {
+            font-size: 12px;
+            color: #ff2d95;
+            letter-spacing: 4px;
+        }
+        .hud-buff-row {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .buff-indicator {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            border: 2px solid #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 0 16px rgba(0, 255, 136, 0.5), inset 0 0 12px rgba(0, 255, 136, 0.2);
+            position: relative;
+        }
+        .buff-indicator.active { display: flex; }
+        .buff-indicator .buff-ring {
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: #00ff88;
+            animation: buff-spin 1s linear infinite;
+        }
+        @keyframes buff-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ====== 弹窗 ====== */
+        .overlay-screen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 0, 21, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 50;
+            pointer-events: auto;
+        }
+        .overlay-screen.hidden { display: none; }
+
+        /* 障碍来袭警示层：屏幕边缘红色脉冲 */
+        .warn-vignette {
+            position: fixed; inset: 0;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center,
+                transparent 40%,
+                rgba(255, 30, 60, 0) 65%,
+                rgba(255, 30, 60, 0.85) 100%);
+            opacity: 0;
+            transition: opacity 0.08s linear;
+            z-index: 50;
+        }
+        .warn-vignette.active {
+            animation: warnPulse 0.5s ease-out infinite;
+        }
+        @keyframes warnPulse {
+            0%, 100% { opacity: 0.25; }
+            50% { opacity: 0.8; }
+        }
+        .overlay-box {
+            background: linear-gradient(135deg, rgba(40, 10, 70, 0.95), rgba(20, 5, 40, 0.95));
+            border: 2px solid #b24bff;
+            border-radius: 12px;
+            padding: 40px 60px;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(178, 75, 255, 0.5), inset 0 0 40px rgba(178, 75, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .overlay-box::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(178, 75, 255, 0.03) 2px,
+                rgba(178, 75, 255, 0.03) 4px
+            );
+            pointer-events: none;
+        }
+        .overlay-title {
+            font-size: 48px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #00f0ff, #b24bff, #ff2d95);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: 6px;
+        }
+        .overlay-subtitle {
+            font-size: 14px;
+            color: #8060a0;
+            letter-spacing: 4px;
+            margin-bottom: 28px;
+        }
+        .overlay-stats {
+            display: flex;
+            gap: 36px;
+            margin-bottom: 28px;
+        }
+        .overlay-stat .label {
+            font-size: 12px;
+            color: #8060a0;
+            letter-spacing: 2px;
+        }
+        .overlay-stat .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #00f0ff;
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+            font-family: 'Courier New', monospace;
+        }
+        .btn-neon {
+            background: linear-gradient(135deg, #b24bff, #6a1b9a);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(178, 75, 255, 0.6);
+            transition: all 0.2s;
+        }
+        .btn-neon:hover {
+            background: linear-gradient(135deg, #ff2d95, #b24bff);
+            box-shadow: 0 0 30px rgba(255, 45, 149, 0.8);
+            transform: translateY(-2px);
+        }
+        .controls-hint {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #6040a0;
+            line-height: 1.8;
+        }
+        .controls-hint kbd {
+            display: inline-block;
+            padding: 2px 8px;
+            background: rgba(178, 75, 255, 0.2);
+            border: 1px solid #b24bff;
+            border-radius: 3px;
+            color: #00f0ff;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            margin: 0 2px;
+        }
+
+        /* ====== 移动端触屏按钮 ====== */
+        #touchControls {
+            position: absolute;
+            bottom: 20px;
+            left: 0; right: 0;
+            display: none;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 20;
+            pointer-events: none;
+        }
+        #touchControls.active { display: flex; }
+        .touch-group {
+            display: flex;
+            gap: 12px;
+            pointer-events: auto;
+        }
+        .touch-btn {
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            background: rgba(178, 75, 255, 0.3);
+            border: 2px solid #b24bff;
+            color: #00f0ff;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 12px rgba(178, 75, 255, 0.4);
+            touch-action: manipulation;
+        }
+        .touch-btn:active {
+            background: rgba(178, 75, 255, 0.6);
+            box-shadow: 0 0 24px rgba(178, 75, 255, 0.8);
+        }
+
+        /* ====== 底部页脚 ====== */
+        .footer {
+            flex-shrink: 0;
+            height: 36px;
+            background: rgba(20, 5, 40, 0.85);
+            border-top: 1px solid rgba(178, 75, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            font-size: 11px;
+            color: #6040a0;
+            letter-spacing: 1px;
+        }
+        .footer .footer-copyright { color: #503080; }
+        .footer .footer-links a {
+            color: #8060a0;
+            text-decoration: none;
+            margin-left: 16px;
+        }
+        .footer .footer-links a:hover { color: #00f0ff; }
+
+        /* ====== 全屏扫描线特效 ====== */
+        .scanlines {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 3px,
+                rgba(0, 0, 0, 0.08) 3px,
+                rgba(0, 0, 0, 0.08) 4px
+            );
+            z-index: 5;
+        }
+        .scanlines::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 80px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.4), transparent);
+            animation: scanline-move 6s linear infinite;
+        }
+        @keyframes scanline-move {
+            0% { top: -80px; }
+            100% { top: 100%; }
+        }
+
+        /* ====== 冲击特效 ====== */
+        .hit-flash {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle, rgba(255, 0, 64, 0.4), transparent 60%);
+            pointer-events: none;
+            z-index: 15;
+            opacity: 0;
+        }
+        .hit-flash.active {
+            animation: hit-pulse 0.5s ease-out;
+        }
+        @keyframes hit-pulse {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .speed-flash {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle, rgba(178, 75, 255, 0.3), transparent 50%);
+            pointer-events: none;
+            z-index: 15;
+            opacity: 0;
+        }
+        .speed-flash.active {
+            animation: speed-pulse 0.4s ease-out;
+        }
+        @keyframes speed-pulse {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* 响应式：小屏隐藏导航栏链接 */
+        @media (max-width: 720px) {
+            .navbar-links { display: none; }
+            .overlay-box { padding: 28px 32px; }
+            .overlay-title { font-size: 32px; letter-spacing: 3px; }
+            .hud-score .score-value { font-size: 32px; }
+        }
+    </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+    <!-- ====== 顶部导航栏 ====== -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <div class="logo-icon"></div>
+            <span class="logo-text">COIN</span>
+            <span style="color:#8060a0;font-size:12px;margin-left:4px;">赛博兔子跑酷</span>
+        </div>
+        <div class="navbar-links">
+        </div>
+        <div class="navbar-stats">
+            <div class="stat">
+                <span class="stat-label">最高分</span>
+                <span class="stat-value" id="navHighScore">0</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ====== 游戏主体 ====== -->
+    <div class="game-main">
+        <canvas id="gameCanvas"></canvas>
+        <div class="scanlines"></div>
+        <div class="hit-flash" id="hitFlash"></div>
+        <div class="speed-flash" id="speedFlash"></div>
+
+        <!-- HUD -->
+        <div id="hud">
+            <div class="hud-top">
+                <div class="hud-score">
+                    <div class="score-label">SCORE</div>
+                    <div class="score-value" id="hudScore">0</div>
+                </div>
+                <div class="hud-combo" id="hudCombo">
+                    <div class="combo-value" id="comboValue">×2</div>
+                    <div class="combo-label">COMBO</div>
+                </div>
+            </div>
+            <div class="hud-buff-row">
+                <div class="buff-indicator" id="buffMagnet">
+                    <div class="buff-ring"></div>
+                    🧲
+                </div>
+                <div class="buff-indicator" id="buffSpeed">
+                    <div class="buff-ring"></div>
+                    ⚡
+                </div>
+            </div>
+        </div>
+
+        <!-- 开始弹窗 -->
+        <div class="overlay-screen" id="startScreen">
+            <div class="overlay-box">
+                <div class="overlay-title">COIN</div>
+                <div class="overlay-subtitle">CYBER BUNNY RUNNER</div>
+                <div class="controls-hint">
+                    <div><kbd>←</kbd><kbd>→</kbd> 或 <kbd>A</kbd><kbd>D</kbd> 换道</div>
+                    <div><kbd>↑</kbd> / <kbd>空格</kbd> 或 <kbd>W</kbd> 跳跃</div>
+                    <div><kbd>↓</kbd> 或 <kbd>S</kbd> 下蹲躲高处</div>
+                    <div><kbd>ESC</kbd> 或 <kbd>G</kbd> 手动结束游戏</div>
+                    <div style="margin-top:8px;">收集 🪙 金币 +10 · 🥕 萝卜 +50</div>
+                    <div>避开金属块、警示方块和陷阱！</div>
+                </div>
+                <button class="btn-neon" id="startBtn" style="margin-top:24px;">开始游戏</button>
+            </div>
+        </div>
+
+        <!-- 游戏结束弹窗 -->
+        <div class="overlay-screen hidden" id="gameOverScreen">
+            <div class="overlay-box">
+                <div class="overlay-title" style="letter-spacing:4px;">GAME OVER</div>
+                <div class="overlay-subtitle">系统崩溃 · 兔子失联</div>
+                <div class="overlay-stats">
+                    <div class="overlay-stat">
+                        <div class="label">本局得分</div>
+                        <div class="value" id="finalScore">0</div>
+                    </div>
+                    <div class="overlay-stat">
+                        <div class="label">最高纪录</div>
+                        <div class="value" id="finalHighScore">0</div>
+                    </div>
+                </div>
+                <button class="btn-neon" id="restartBtn">再来一局</button>
+            </div>
+        </div>
+
+        <!-- 障碍来袭红色警示层 -->
+        <div class="warn-vignette" id="warnVignette"></div>
+
+        <!-- 移动端触屏控制 -->
+        <div id="touchControls">
+            <div class="touch-group">
+                <div class="touch-btn" data-action="left">◀</div>
+                <div class="touch-btn" data-action="down">▼</div>
+            </div>
+            <div class="touch-group">
+                <div class="touch-btn" data-action="jump">▲</div>
+                <div class="touch-btn" data-action="right">▶</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== 底部页脚 ====== -->
+    <footer class="footer">
+        <span class="footer-copyright">© 2026 COIN CYBER RUNNER · 赛博朋克兔子跑酷</span>
+        <span class="footer-links">
+            <a href="#">GitHub</a>
+            <a href="#">关于</a>
+            <a href="#">反馈</a>
+        </span>
+    </footer>
+</div>
+
+<!-- ====== Three.js 游戏脚本 ====== -->
+<script>
+(function() {
+    'use strict';
+
+    // ============ 全局配置 ============
+    const CONFIG = {
+        LANE_POSITIONS: [-3, 0, 3],          // 三条车道 X 坐标
+        GRAVITY: -35,
+        JUMP_VELOCITY: 13,
+        START_SPEED: 11,
+        MAX_SPEED: 32,
+        SPEED_INCREMENT: 0.15,                // 每秒加速量
+        TRACK_SEGMENT_LENGTH: 20,
+        TRACK_SEGMENTS: 8,
+        SPAWN_Z: -80,                        // 障碍/收集物生成 Z
+        DESPAWN_Z: 20,                       // 障碍/收集物销毁 Z
+        LANE_SWITCH_SPEED: 12,
+        DUCK_DURATION: 0.6,
+        COMBO_TIMEOUT: 2.0,                  // 连击超时（秒）
+        MAGNET_DURATION: 5,                  // 金币磁铁持续时间
+        MAGNET_TRIGGER_COINS: 15,            // 吃多少金币触发磁铁
+        BOOST_DURATION: 3,                   // 加速带持续时间
+        BOOST_SPEED_MULTIPLIER: 1.6,
+        PIXELS_PER_METER: 50,
+    };
+
+    const COLORS = {
+        // 赛博朋克紫黑调色
+        skyTop: 0x0a0015,
+        skyBottom: 0x0d0221,
+        ground: 0x0d0d1a,
+        trackLine: 0xb24bff,
+        grid: 0x3d1a5c,
+        rabbitBody: 0xff2d95,
+        rabbitEar: 0xb24bff,
+        rabbitEye: 0xffffff,
+        rabbitLed: 0x00f0ff,
+        coin: 0xffd700,
+        coinGlow: 0xffaa00,
+        carrot: 0xff6b00,
+        carrotLeaf: 0x00ff88,
+        obstacleMetal: 0x1a1a2e,
+        obstacleWarning: 0xff0040,
+        obstacleAir: 0x402060,
+        pit: 0x050010,
+        pitLight: 0xff0040,
+        boostPad: 0x00f0ff,
+        horizon: 0x1a0533,
+        particle: 0xb24bff,
+    };
+
+    // ============ 游戏状态 ============
+    const state = {
+        running: false,
+        speed: CONFIG.START_SPEED,
+        baseSpeed: CONFIG.START_SPEED,
+        score: 0,
+        highScore: parseInt(localStorage.getItem('coin_highscore')) || 0,
+        combo: 1,
+        comboTimer: 0,
+        coinsSinceMagnet: 0,
+        magnetTimer: 0,
+        boostTimer: 0,
+        time: 0,
+        invincibleTimer: 0,
+    };
+
+    // 显示最高分
+    document.getElementById('navHighScore').textContent = state.highScore;
+
+    // ============ Three.js 初始化 ============
+    const canvas = document.getElementById('gameCanvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(COLORS.skyTop);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x0a0015, 0.012);
+
+    const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 500);
+    camera.position.set(0, 5, 8);
+    camera.lookAt(0, 1.5, -5);
+
+    // ============ 灯光 ============
+    const ambientLight = new THREE.AmbientLight(0x402060, 1.0);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xb24bff, 1.8);
+    keyLight.position.set(10, 20, 5);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    keyLight.shadow.camera.left = -15;
+    keyLight.shadow.camera.right = 15;
+    keyLight.shadow.camera.top = 15;
+    keyLight.shadow.camera.bottom = -15;
+    keyLight.shadow.camera.far = 60;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0x00f0ff, 1.0);
+    fillLight.position.set(-8, 12, -5);
+    scene.add(fillLight);
+
+    const pointLight = new THREE.PointLight(0xff2d95, 1.5, 20);
+    pointLight.position.set(0, 2, 8);
+    scene.add(pointLight);
+
+    // ============ 天空渐变背景 ============
+    const skyGeo = new THREE.SphereGeometry(200, 32, 32);
+    const skyMat = new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        uniforms: {
+            topColor: { value: new THREE.Color(COLORS.skyTop) },
+            bottomColor: { value: new THREE.Color(COLORS.skyBottom) },
+            offset: { value: 60 },
+            exponent: { value: 0.6 }
+        },
+        vertexShader: `
+            varying vec3 vWorldPosition;
+            void main() {
+                vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+                vWorldPosition = worldPosition.xyz;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `,
+        fragmentShader: `
+            uniform vec3 topColor;
+            uniform vec3 bottomColor;
+            uniform float offset;
+            uniform float exponent;
+            varying vec3 vWorldPosition;
+            void main() {
+                float h = normalize(vWorldPosition + vec3(0.0, offset, 0.0)).y;
+                gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+            }
+        `
+    });
+    const sky = new THREE.Mesh(skyGeo, skyMat);
+    scene.add(sky);
+
+    // 远处山脉剪影
+    const mountainsGeo = new THREE.PlaneGeometry(80, 8, 12, 1);
+    const mountainsMat = new THREE.MeshBasicMaterial({ color: 0x1a0533 });
+    const mountains = new THREE.Mesh(mountainsGeo, mountainsMat);
+    mountains.position.set(0, 1, -90);
+    scene.add(mountains);
+
+    // ============ 赛道 ============
+    const trackGroup = new THREE.Group();
+    scene.add(trackGroup);
+
+    // 创建赛道段
+    function createTrackSegment() {
+        const seg = new THREE.Group();
+
+        // 主地面
+        const groundGeo = new THREE.PlaneGeometry(12, CONFIG.TRACK_SEGMENT_LENGTH);
+        const groundMat = new THREE.MeshStandardMaterial({
+            color: COLORS.ground,
+            roughness: 0.9,
+            metalness: 0.1,
+        });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        seg.add(ground);
+
+        // 两侧暗紫区域（代替草地）
+        const sideGeo = new THREE.PlaneGeometry(40, CONFIG.TRACK_SEGMENT_LENGTH);
+        const sideMat = new THREE.MeshStandardMaterial({
+            color: 0x1a0533,
+            roughness: 1.0,
+        });
+        ['left', 'right'].forEach(side => {
+            const sideMesh = new THREE.Mesh(sideGeo, sideMat);
+            sideMesh.rotation.x = -Math.PI / 2;
+            sideMesh.position.x = side === 'left' ? -26 : 26;
+            sideMesh.receiveShadow = true;
+            seg.add(sideMesh);
+        });
+
+        // 车道分隔线（霓虹紫）
+        for (let i = 0; i < 2; i++) {
+            const lineGeo = new THREE.PlaneGeometry(0.15, CONFIG.TRACK_SEGMENT_LENGTH * 0.7);
+            const lineMat = new THREE.MeshBasicMaterial({
+                color: COLORS.trackLine,
+                transparent: true,
+                opacity: 0.9,
+            });
+            const line = new THREE.Mesh(lineGeo, lineMat);
+            line.rotation.x = -Math.PI / 2;
+            line.position.y = 0.02;
+            line.position.x = -1.5 + i * 3;
+            // 每隔一段留空形成虚线效果
+            seg.add(line);
+
+            // 添加发光效果：用小的点光源
+            const lineLight = new THREE.PointLight(COLORS.trackLine, 0.3, 3);
+            lineLight.position.set(-1.5 + i * 3, 0.1, 0);
+            seg.add(lineLight);
+        }
+
+        // 边缘发光
+        const edgeMat = new THREE.MeshBasicMaterial({
+            color: 0x00f0ff,
+            transparent: true,
+            opacity: 0.4,
+        });
+        [-5.7, 5.7].forEach(x => {
+            const edgeGeo = new THREE.PlaneGeometry(0.1, CONFIG.TRACK_SEGMENT_LENGTH);
+            const edge = new THREE.Mesh(edgeGeo, edgeMat);
+            edge.rotation.x = -Math.PI / 2;
+            edge.position.set(x, 0.01, 0);
+            seg.add(edge);
+        });
+
+        // 网格线（装饰地面）
+        const gridHelper = new THREE.GridHelper(CONFIG.TRACK_SEGMENT_LENGTH, 4, COLORS.grid, COLORS.grid);
+        gridHelper.position.y = 0.03;
+        gridHelper.material.opacity = 0.25;
+        gridHelper.material.transparent = true;
+        seg.add(gridHelper);
+
+        // 保存原始 Z 位置用于滚动
+        seg.userData.baseZ = 0;
+        return seg;
+    }
+
+    const trackSegments = [];
+    for (let i = 0; i < CONFIG.TRACK_SEGMENTS; i++) {
+        const seg = createTrackSegment();
+        seg.position.z = -i * CONFIG.TRACK_SEGMENT_LENGTH;
+        seg.userData.baseZ = seg.position.z;
+        trackGroup.add(seg);
+        trackSegments.push(seg);
+    }
+
+    // ============ 赛博兔子角色 ============
+    const rabbit = new THREE.Group();
+
+    // 身体（椭圆球体）
+    const bodyGeo = new THREE.SphereGeometry(0.6, 12, 10);
+    bodyGeo.scale(1, 0.9, 1.1);
+    const bodyMat = new THREE.MeshStandardMaterial({
+        color: COLORS.rabbitBody,
+        roughness: 0.4,
+        metalness: 0.3,
+        emissive: 0x330022,
+        emissiveIntensity: 0.4,
+    });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.castShadow = true;
+    body.position.y = 0.6;
+    rabbit.add(body);
+
+    // 头部
+    const headGeo = new THREE.SphereGeometry(0.45, 12, 10);
+    headGeo.scale(1, 0.95, 1);
+    const head = new THREE.Mesh(headGeo, bodyMat);
+    head.castShadow = true;
+    head.position.set(0, 1.25, 0.3);
+    rabbit.add(head);
+
+    // 长耳朵
+    const earMat = new THREE.MeshStandardMaterial({
+        color: COLORS.rabbitBody,
+        roughness: 0.4,
+        metalness: 0.3,
+        emissive: 0x330022,
+        emissiveIntensity: 0.4,
+    });
+    const earInnerMat = new THREE.MeshStandardMaterial({
+        color: COLORS.rabbitEar,
+        roughness: 0.3,
+        emissive: 0xb24bff,
+        emissiveIntensity: 0.6,
+    });
+
+    function createEar(side) {
+        const earGroup = new THREE.Group();
+        const earOuterGeo = new THREE.CylinderGeometry(0.12, 0.18, 0.8, 8);
+        const earOuter = new THREE.Mesh(earOuterGeo, earMat);
+        earOuter.castShadow = true;
+        earOuter.position.y = 0.4;
+        earGroup.add(earOuter);
+        const earInnerGeo = new THREE.CylinderGeometry(0.07, 0.12, 0.6, 6);
+        const earInner = new THREE.Mesh(earInnerGeo, earInnerMat);
+        earInner.position.y = 0.45;
+        earGroup.add(earInner);
+        earGroup.position.set(side * 0.28, 1.6, 0.25);
+        earGroup.rotation.z = side * 0.1;
+        return earGroup;
+    }
+    const earLeft = createEar(-1);
+    const earRight = createEar(1);
+    rabbit.add(earLeft);
+    rabbit.add(earRight);
+
+    // 眼睛
+    const eyeGeo = new THREE.SphereGeometry(0.07, 8, 6);
+    const eyeMat = new THREE.MeshStandardMaterial({
+        color: COLORS.rabbitEye,
+        emissive: 0xffffff,
+        emissiveIntensity: 1.0,
+    });
+    [-0.15, 0.15].forEach(x => {
+        const eye = new THREE.Mesh(eyeGeo, eyeMat);
+        eye.position.set(x, 1.28, 0.65);
+        rabbit.add(eye);
+    });
+
+    // 鼻子（小三角）
+    const noseGeo = new THREE.ConeGeometry(0.06, 0.08, 6);
+    const noseMat = new THREE.MeshStandardMaterial({
+        color: 0xff2d95,
+        emissive: 0xff2d95,
+        emissiveIntensity: 0.8,
+    });
+    const nose = new THREE.Mesh(noseGeo, noseMat);
+    nose.position.set(0, 1.18, 0.72);
+    nose.rotation.x = -Math.PI / 2;
+    rabbit.add(nose);
+
+    // 头顶 LED 条纹（赛博义体）
+    const ledStripMat = new THREE.MeshStandardMaterial({
+        color: COLORS.rabbitLed,
+        emissive: COLORS.rabbitLed,
+        emissiveIntensity: 1.2,
+    });
+    const ledStrip = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.04, 0.06), ledStripMat);
+    ledStrip.position.set(0, 1.52, 0.28);
+    rabbit.add(ledStrip);
+
+    // 腿部（4 个）
+    const legMat = new THREE.MeshStandardMaterial({
+        color: COLORS.rabbitBody,
+        roughness: 0.5,
+        metalness: 0.2,
+    });
+    const legs = [];
+    const legPositions = [
+        { x: -0.35, z: 0.4 }, { x: 0.35, z: 0.4 },
+        { x: -0.35, z: -0.4 }, { x: 0.35, z: -0.4 }
+    ];
+    legPositions.forEach((pos, i) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.35, 6), legMat);
+        leg.castShadow = true;
+        leg.position.set(pos.x, 0.2, pos.z);
+        leg.userData = { baseY: 0.2, phase: i * Math.PI / 2 };
+        rabbit.add(leg);
+        legs.push(leg);
+    });
+
+    // 小尾巴
+    const tailGeo = new THREE.SphereGeometry(0.12, 8, 6);
+    const tail = new THREE.Mesh(tailGeo, bodyMat);
+    tail.castShadow = true;
+    tail.position.set(0, 0.7, -0.65);
+    rabbit.add(tail);
+
+    // 脚下发光圆环
+    const rabbitRingGeo = new THREE.RingGeometry(0.6, 0.75, 24);
+    const rabbitRingMat = new THREE.MeshBasicMaterial({
+        color: COLORS.trackLine,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.7,
+    });
+    const rabbitRing = new THREE.Mesh(rabbitRingGeo, rabbitRingMat);
+    rabbitRing.rotation.x = -Math.PI / 2;
+    rabbitRing.position.y = 0.05;
+    rabbit.add(rabbitRing);
+
+    // 让兔子头朝运动方向（障碍飞来的方向 -Z），尾巴朝反方向
+    rabbit.rotation.y = Math.PI;
+
+    scene.add(rabbit);
+
+    // ============ 粒子系统（氛围） ============
+    const particleCount = 200;
+    const particlePositions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+        particlePositions[i * 3] = (Math.random() - 0.5) * 60;
+        particlePositions[i * 3 + 1] = Math.random() * 15;
+        particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 120 - 30;
+    }
+    const particleGeo = new THREE.BufferGeometry();
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+    const particleMat = new THREE.PointsMaterial({
+        color: COLORS.particle,
+        size: 0.15,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending,
+    });
+    const particles = new THREE.Points(particleGeo, particleMat);
+    scene.add(particles);
+
+    // ============ 收集物和障碍管理 ============
+    const collectibles = [];      // 金币 + 萝卜
+    const obstacles = [];         // 障碍
+    const boostPads = [];        // 加速带
+
+    // ============ 创建金币（金色扁平圆盘 + 币面 + 发光环） ============
+    function createCoin() {
+        const group = new THREE.Group();
+
+        // 主体：扁平圆柱（硬币）
+        const bodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.08, 32);
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: 0xffd700,
+            metalness: 0.95,
+            roughness: 0.15,
+            emissive: 0x553300,
+            emissiveIntensity: 0.4,
+        });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.castShadow = true;
+        group.add(body);
+
+        // 边缘凸起环
+        const rimGeo = new THREE.TorusGeometry(0.35, 0.02, 6, 32);
+        const rimMat = new THREE.MeshStandardMaterial({
+            color: 0xffea00,
+            metalness: 1.0,
+            roughness: 0.1,
+            emissive: 0xffaa00,
+            emissiveIntensity: 0.8,
+        });
+        const rim = new THREE.Mesh(rimGeo, rimMat);
+        rim.rotation.x = Math.PI / 2;
+        rim.position.y = 0.04;
+        group.add(rim);
+        const rim2 = rim.clone();
+        rim2.position.y = -0.04;
+        group.add(rim2);
+
+        // 正面币面（略小圆盘叠加上去）
+        const faceGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.01, 32);
+        const faceMat = new THREE.MeshStandardMaterial({
+            color: 0xfff44d,
+            metalness: 0.95,
+            roughness: 0.12,
+            emissive: 0x332200,
+            emissiveIntensity: 0.2,
+        });
+        const face = new THREE.Mesh(faceGeo, faceMat);
+        face.position.y = 0.05;
+        group.add(face);
+        const faceBack = face.clone();
+        faceBack.position.y = -0.05;
+        faceBack.rotation.x = Math.PI;
+        group.add(faceBack);
+
+        // 中心符号（小菱形/八角星装饰）
+        const symbolGeo = new THREE.OctahedronGeometry(0.08, 0);
+        const symbolMat = new THREE.MeshStandardMaterial({
+            color: 0xb8860b,
+            metalness: 1.0,
+            roughness: 0.1,
+        });
+        const symbol = new THREE.Mesh(symbolGeo, symbolMat);
+        symbol.position.set(0, 0.06, 0);
+        symbol.scale.y = 0.1;  // 压扁贴在币面上
+        group.add(symbol);
+
+        // 整体朝镜头侧躺（竖着的圆片）
+        group.rotation.z = Math.PI / 2;  // 让圆柱立起来
+
+        // 金币挂点：让旋转时绕中心
+        group.userData = { type: 'coin', score: 10, floatOffset: Math.random() * Math.PI * 2 };
+        return group;
+    }
+
+    // ============ 创建萝卜（渐变色萝卜 + 精致绿叶） ============
+    function createCarrot() {
+        const group = new THREE.Group();
+
+        // 主体：带尖端的长圆锥
+        const bodyGeo = new THREE.ConeGeometry(0.25, 0.85, 16);
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: 0xff6b00,
+            roughness: 0.6,
+            emissive: 0x441100,
+            emissiveIntensity: 0.25,
+        });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.castShadow = true;
+        body.rotation.x = Math.PI;  // 尖端朝下
+        body.position.y = 0.1;
+        group.add(body);
+
+        // 萝卜表面的纵向纹理条（5 条深橙色）
+        for (let i = 0; i < 5; i++) {
+            const stripGeo = new THREE.BoxGeometry(0.02, 0.7, 0.05);
+            const stripMat = new THREE.MeshStandardMaterial({
+                color: 0xcc4400,
+                roughness: 0.7,
+            });
+            const strip = new THREE.Mesh(stripGeo, stripMat);
+            const angle = (i / 5) * Math.PI * 2;
+            strip.position.set(
+                Math.cos(angle) * 0.18,
+                0.45,
+                Math.sin(angle) * 0.18
+            );
+            strip.rotation.y = angle;
+            strip.rotation.z = -Math.PI / 2;
+            group.add(strip);
+        }
+
+        // 绿叶冠：5 片叶子（圆锥 + 弯曲）
+        const leafMat = new THREE.MeshStandardMaterial({
+            color: 0x00dd66,
+            emissive: 0x00ff88,
+            emissiveIntensity: 0.6,
+            roughness: 0.5,
+        });
+        const leafTips = [0, 0.2, 0.4, 0.6, 0.8];  // 叶子的不同高度
+        for (let i = 0; i < 5; i++) {
+            const leafGeo = new THREE.ConeGeometry(0.09, 0.35, 6);
+            const leaf = new THREE.Mesh(leafGeo, leafMat);
+            const angle = (i / 5) * Math.PI * 2;
+            leaf.position.set(
+                Math.cos(angle) * 0.08,
+                0.7 + leafTips[i] * 0.1,
+                Math.sin(angle) * 0.08
+            );
+            leaf.rotation.z = Math.PI / 2 + Math.cos(angle) * 0.3;
+            leaf.rotation.x = Math.sin(angle) * 0.3;
+            leaf.rotation.y = angle;
+            group.add(leaf);
+        }
+
+        // 中心主叶（最高那片）
+        const mainLeafGeo = new THREE.ConeGeometry(0.06, 0.45, 6);
+        const mainLeaf = new THREE.Mesh(mainLeafGeo, leafMat);
+        mainLeaf.position.set(0, 0.85, 0);
+        mainLeaf.scale.y = 1.2;
+        group.add(mainLeaf);
+
+        group.userData = { type: 'carrot', score: 50, floatOffset: Math.random() * Math.PI * 2 };
+        return group;
+    }
+
+    // ============ 创建地面障碍（赛博路障 + 尖刺 + 警示灯） ============
+    function createGroundObstacle() {
+        const group = new THREE.Group();
+
+        // 主体：六边形柱状造型
+        const baseGeo = new THREE.CylinderGeometry(0.5, 0.6, 0.6, 6);
+        const baseMat = new THREE.MeshStandardMaterial({
+            color: 0x3a0a18,
+            emissive: 0xff2244,
+            emissiveIntensity: 0.8,
+            metalness: 0.9,
+            roughness: 0.25,
+        });
+        const base = new THREE.Mesh(baseGeo, baseMat);
+        base.castShadow = true;
+        base.position.y = 0.3;
+        group.add(base);
+
+        // 底部红色发光环（预警光圈）
+        const ringGeo = new THREE.TorusGeometry(0.7, 0.06, 8, 24);
+        const ringMat = new THREE.MeshBasicMaterial({
+            color: 0xff3355,
+            transparent: true,
+            opacity: 0.9,
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = 0.02;
+        ring.userData.isFlicker = true;
+        group.add(ring);
+
+        // 顶部圆盘 + 红色警示灯
+        const topGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.08, 6);
+        const topMat = new THREE.MeshStandardMaterial({
+            color: 0x330011,
+            metalness: 0.8,
+            roughness: 0.3,
+            emissive: 0xff0040,
+            emissiveIntensity: 0.7,
+        });
+        const top = new THREE.Mesh(topGeo, topMat);
+        top.position.y = 0.64;
+        group.add(top);
+
+        // 顶部警示灯（玻璃球）
+        const lightGeo = new THREE.SphereGeometry(0.12, 12, 8);
+        const lightMat = new THREE.MeshStandardMaterial({
+            color: 0xff3355,
+            emissive: 0xff0040,
+            emissiveIntensity: 1.5,
+            roughness: 0.1,
+            metalness: 0.3,
+        });
+        const lightBulb = new THREE.Mesh(lightGeo, lightMat);
+        lightBulb.position.y = 0.75;
+        lightBulb.userData = { isLightBulb: true };
+        group.add(lightBulb);
+
+        // 闪烁点光源
+        const pointLight = new THREE.PointLight(0xff0040, 1.2, 6);
+        pointLight.position.set(0, 0.75, 0);
+        pointLight.userData = { isFlicker: true };
+        group.add(pointLight);
+
+        // 周围 4 根尖刺
+        const spikeMat = new THREE.MeshStandardMaterial({
+            color: 0x404060,
+            metalness: 0.8,
+            roughness: 0.3,
+        });
+        for (let i = 0; i < 4; i++) {
+            const spikeGeo = new THREE.ConeGeometry(0.08, 0.35, 4);
+            const spike = new THREE.Mesh(spikeGeo, spikeMat);
+            const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+            spike.position.set(
+                Math.cos(angle) * 0.55,
+                0.6,
+                Math.sin(angle) * 0.55
+            );
+            spike.rotation.z = Math.PI;  // 尖刺朝上
+            group.add(spike);
+        }
+
+        group.userData = { type: 'ground', isObstacle: true };
+        return group;
+    }
+
+    // ============ 创建空中障碍（赛博无人机 + 激光发射器） ============
+    function createAirObstacle() {
+        const group = new THREE.Group();
+
+        // 主体：扁平六边形
+        const bodyGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.2, 6);
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: 0x3a0055,
+            metalness: 0.85,
+            roughness: 0.3,
+            emissive: 0xff00ff,
+            emissiveIntensity: 0.9,
+        });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.castShadow = true;
+        body.position.y = 1.8;
+        group.add(body);
+
+        // 顶部发光核心
+        const coreGeo = new THREE.OctahedronGeometry(0.15, 0);
+        const coreMat = new THREE.MeshStandardMaterial({
+            color: 0xff2266,
+            emissive: 0xff0040,
+            emissiveIntensity: 1.2,
+            roughness: 0.2,
+            metalness: 0.5,
+        });
+        const core = new THREE.Mesh(coreGeo, coreMat);
+        core.position.y = 2.0;
+        core.userData = { isRotating: true };
+        group.add(core);
+
+        // 4 个螺旋桨（X 形）
+        const propMat = new THREE.MeshStandardMaterial({
+            color: 0x00f0ff,
+            emissive: 0x00f0ff,
+            emissiveIntensity: 0.8,
+            transparent: true,
+            opacity: 0.6,
+        });
+        for (let i = 0; i < 4; i++) {
+            const propGeo = new THREE.BoxGeometry(0.45, 0.02, 0.12);
+            const prop = new THREE.Mesh(propGeo, propMat);
+            const angle = (i / 4) * Math.PI * 2;
+            prop.position.set(
+                Math.cos(angle) * 0.55,
+                1.7,
+                Math.sin(angle) * 0.55
+            );
+            prop.rotation.y = angle;
+            prop.userData = { isProp: true };
+            group.add(prop);
+        }
+
+        // 螺旋桨轴（4 根小柱）
+        const shaftMat = new THREE.MeshStandardMaterial({
+            color: 0x6060a0,
+            metalness: 0.9,
+            roughness: 0.2,
+        });
+        for (let i = 0; i < 4; i++) {
+            const shaftGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.15, 6);
+            const shaft = new THREE.Mesh(shaftGeo, shaftMat);
+            const angle = (i / 4) * Math.PI * 2;
+            shaft.position.set(
+                Math.cos(angle) * 0.55,
+                1.78,
+                Math.sin(angle) * 0.55
+            );
+            group.add(shaft);
+        }
+
+        // 底部警示灯
+        const lightBulbGeo = new THREE.SphereGeometry(0.06, 8, 6);
+        const lightBulbMat = new THREE.MeshStandardMaterial({
+            color: 0xff0040,
+            emissive: 0xff0040,
+            emissiveIntensity: 1.5,
+        });
+        const bottomLight = new THREE.Mesh(lightBulbGeo, lightBulbMat);
+        bottomLight.position.y = 1.65;
+        bottomLight.userData = { isFlicker: true };
+        group.add(bottomLight);
+
+        const pointLight = new THREE.PointLight(0xff0040, 1.5, 6);
+        pointLight.position.set(0, 1.8, 0);
+        pointLight.userData = { isFlicker: true };
+        group.add(pointLight);
+
+        group.userData = { type: 'air', isObstacle: true, duckable: true };
+        return group;
+    }
+
+    // ============ 创建坑洞（带锯齿边缘 + 深渊红光） ============
+    function createPit() {
+        const group = new THREE.Group();
+
+        // 深渊底部（极暗）
+        const pitGeo = new THREE.BoxGeometry(3.5, 0.3, 2);
+        const pitMat = new THREE.MeshBasicMaterial({ color: 0x020005 });
+        const pit = new THREE.Mesh(pitGeo, pitMat);
+        pit.position.y = -0.15;
+        group.add(pit);
+
+        // 边缘警示光带（虚线感）
+        const edgeMat = new THREE.MeshBasicMaterial({
+            color: 0xff0040,
+            transparent: true,
+            opacity: 0.85,
+        });
+        const topGeo = new THREE.PlaneGeometry(3.6, 2.1);
+        const top = new THREE.Mesh(topGeo, edgeMat);
+        top.rotation.x = -Math.PI / 2;
+        top.position.y = 0.01;
+        group.add(top);
+
+        // 四条侧边光带
+        const sideMat = new THREE.MeshStandardMaterial({
+            color: 0xff0040,
+            emissive: 0xff0040,
+            emissiveIntensity: 1.5,
+        });
+        // 长边（前后）
+        const longGeo = new THREE.BoxGeometry(3.4, 0.15, 0.06);
+        const sideFront = new THREE.Mesh(longGeo, sideMat);
+        sideFront.position.set(0, 0.08, 1.0);
+        group.add(sideFront);
+        const sideBack = sideFront.clone();
+        sideBack.position.z = -1.0;
+        group.add(sideBack);
+        // 短边（左右）
+        const shortGeo = new THREE.BoxGeometry(0.06, 0.15, 1.8);
+        const sideLeft = new THREE.Mesh(shortGeo, sideMat);
+        sideLeft.position.set(-1.7, 0.08, 0);
+        group.add(sideLeft);
+        const sideRight = sideLeft.clone();
+        sideRight.position.x = 1.7;
+        group.add(sideRight);
+
+        // 内部网格（暗示深渊）
+        const gridGeo = new THREE.PlaneGeometry(3, 1.5);
+        const gridMat = new THREE.MeshBasicMaterial({
+            color: 0xff0040,
+            transparent: true,
+            opacity: 0.3,
+        });
+        const grid = new THREE.Mesh(gridGeo, gridMat);
+        grid.rotation.x = -Math.PI / 2;
+        grid.position.y = -0.1;
+        group.add(grid);
+
+        // 底部红色光源
+        const redLight = new THREE.PointLight(0xff0040, 2.0, 5);
+        redLight.position.set(0, -0.5, 0);
+        redLight.userData = { isFlicker: true };
+        group.add(redLight);
+
+        group.userData = { type: 'pit', isObstacle: true };
+        return group;
+    }
+
+    // 创建加速带
+    function createBoostPad() {
+        const group = new THREE.Group();
+        const geo = new THREE.PlaneGeometry(3, 4);
+        const mat = new THREE.MeshStandardMaterial({
+            color: COLORS.boostPad,
+            emissive: COLORS.boostPad,
+            emissiveIntensity: 0.9,
+            transparent: true,
+            opacity: 0.6,
+        });
+        const pad = new THREE.Mesh(geo, mat);
+        pad.rotation.x = -Math.PI / 2;
+        pad.position.y = 0.05;
+        group.add(pad);
+
+        // 箭头纹理
+        const arrowMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8,
+        });
+        for (let i = 0; i < 3; i++) {
+            const arrowGeo = new THREE.ConeGeometry(0.2, 0.5, 4);
+            const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+            arrow.rotation.x = Math.PI / 2;
+            arrow.position.set(0, 0.08, -1 + i);
+            group.add(arrow);
+        }
+
+        group.userData = { type: 'boost', isBoost: true };
+        return group;
+    }
+
+    // ============ 生成波次 ============
+    function spawnWave() {
+        const difficulty = Math.min(state.time / 30, 1);
+        let z = CONFIG.SPAWN_Z - Math.random() * 15;  // 每次从 -80 到 -95 之间生成
+
+        // 基础：3个车道上各放一些收集物
+        CONFIG.LANE_POSITIONS.forEach((laneX, idx) => {
+            // 70% 概率在该车道放收集物
+            if (Math.random() < 0.7) {
+                const coinCount = Math.floor(Math.random() * 4) + 1;
+                for (let i = 0; i < coinCount; i++) {
+                    const collectZ = z - i * 1.5;
+                    let item;
+                    if (Math.random() < 0.15) {
+                        item = createCarrot();
+                    } else {
+                        item = createCoin();
+                    }
+                    item.position.set(laneX, 0.6 + Math.sin(state.time + i) * 0.1, collectZ);
+                    scene.add(item);
+                    collectibles.push(item);
+                }
+            }
+        });
+
+        // 插入一个障碍波
+        const obstacleChance = 0.6 + difficulty * 0.3;
+        if (Math.random() < obstacleChance) {
+            const obstacleType = Math.random();
+            const laneX = CONFIG.LANE_POSITIONS[Math.floor(Math.random() * 3)];
+
+            if (obstacleType < 0.4) {
+                // 地面障碍
+                const obs = createGroundObstacle();
+                obs.position.set(laneX, 0, z - 4);
+                scene.add(obs);
+                obstacles.push(obs);
+            } else if (obstacleType < 0.75) {
+                // 空中障碍
+                const obs = createAirObstacle();
+                obs.position.set(laneX, 0, z - 4);
+                scene.add(obs);
+                obstacles.push(obs);
+            } else {
+                // 坑洞（占两个车道）
+                const obs = createPit();
+                obs.position.set(0, 0, z - 4);
+                scene.add(obs);
+                obstacles.push(obs);
+            }
+
+            // 如果难度够高，可能放两个障碍（不同车道）
+            if (difficulty > 0.4 && Math.random() < 0.3) {
+                const otherLane = CONFIG.LANE_POSITIONS.filter(x => Math.abs(x - laneX) > 0.1);
+                const otherX = otherLane[Math.floor(Math.random() * otherLane.length)];
+                const obs2 = createGroundObstacle();
+                obs2.position.set(otherX, 0, z - 5);
+                scene.add(obs2);
+                obstacles.push(obs2);
+            }
+        }
+
+        // 偶尔生成加速带
+        if (Math.random() < 0.08) {
+            const boost = createBoostPad();
+            boost.position.set(0, 0, z - 8);
+            scene.add(boost);
+            boostPads.push(boost);
+        }
+    }
+
+    // ============ 音效系统（Web Audio API 合成） ============
+    let audioCtx = null;
+    function ensureAudio() {
+        if (!audioCtx) {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            } catch(e) { console.warn('Audio not supported'); }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    // 播放金币音效（短叮声）
+    function playCoinSound() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(1760, now + 0.12);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.22);
+    }
+
+    // 播放萝卜音效（两个音符）
+    function playCarrotSound() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        [660, 990, 1320].forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + i * 0.07);
+            gain.gain.setValueAtTime(0.0001, now + i * 0.07);
+            gain.gain.exponentialRampToValueAtTime(0.22, now + i * 0.07 + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.15);
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start(now + i * 0.07);
+            osc.stop(now + i * 0.07 + 0.17);
+        });
+    }
+
+    // 播放跳跃音效
+    function playJumpSound() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.14);
+    }
+
+    // 播放障碍来袭警示音（高频短促蜂鸣，越近越快）
+    let warningSoundTimer = 0;
+    let warningSoundInterval = 1.0;  // 每秒几次蜂鸣（动态调整）
+    function playWarningBeep() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1200, now);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.1);
+    }
+
+    // 播放游戏结束音效
+    function playGameOverSound() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        [440, 330, 220, 110].forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq, now + i * 0.15);
+            gain.gain.setValueAtTime(0.15, now + i * 0.15);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.2);
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start(now + i * 0.15);
+            osc.stop(now + i * 0.15 + 0.22);
+        });
+    }
+
+    // ============ 背景音乐系统（Web Audio API 循环合成） ============
+    let bgmGain = null;
+    let bgmIntervalId = null;
+    let bgmPlaying = false;
+
+    // 赛博朋克小调进行（A 小调：Am - F - C - G）
+    const BGM_PROGRESSION = [
+        // 每个和弦是一个频率数组（贝斯 + 琶音音符）
+        { bass: 55.00, arp: [220.00, 261.63, 329.63, 440.00] },  // A3 + Am 琶音
+        { bass: 43.65, arp: [174.61, 220.00, 261.63, 349.23] },  // F3 + F 琶音
+        { bass: 65.41, arp: [261.63, 329.63, 392.00, 523.25] },  // C4 + C 琶音
+        { bass: 49.00, arp: [196.00, 246.94, 293.66, 392.00] },  // G3 + G 琶音
+    ];
+    let bgmChordIndex = 0;
+    let bgmStepIndex = 0;
+
+    function playBgNote(freq, startTime, duration, type, volume, delay = 0) {
+        if (!audioCtx) return;
+        const t = startTime + delay;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, t);
+        // ADSR 包络
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(volume, t + 0.01);       // Attack
+        gain.gain.exponentialRampToValueAtTime(volume * 0.7, t + 0.1);  // Decay
+        gain.gain.setValueAtTime(volume * 0.5, t + duration * 0.7);     // Sustain
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);    // Release
+        osc.connect(gain).connect(bgmGain);
+        osc.start(t);
+        osc.stop(t + duration + 0.05);
+    }
+
+    function playBgmStep() {
+        if (!audioCtx || !bgmPlaying) return;
+        const now = audioCtx.currentTime;
+        const chord = BGM_PROGRESSION[bgmChordIndex];
+
+        // 每 4 步换一个和弦（1 拍一步，4 拍一和弦）
+        if (bgmStepIndex % 4 === 0) bgmChordIndex = (bgmChordIndex + 1) % BGM_PROGRESSION.length;
+        const currentChord = BGM_PROGRESSION[bgmChordIndex];
+
+        // 🔊 贝斯鼓点（每步一个底鼓 + 贝斯）
+        if (bgmStepIndex % 2 === 0) {
+            // 底鼓（低频脉冲）
+            const kickOsc = audioCtx.createOscillator();
+            const kickGain = audioCtx.createGain();
+            kickOsc.type = 'sine';
+            kickOsc.frequency.setValueAtTime(120, now);
+            kickOsc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+            kickGain.gain.setValueAtTime(0.4, now);
+            kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+            kickOsc.connect(kickGain).connect(bgmGain);
+            kickOsc.start(now);
+            kickOsc.stop(now + 0.22);
+
+            // 贝斯音
+            playBgNote(currentChord.bass, now, 0.35, 'sawtooth', 0.18);
+        }
+
+        // 🎹 琶音（每步弹一个，4 步一轮）
+        const arpNote = currentChord.arp[bgmStepIndex % 4];
+        playBgNote(arpNote, now, 0.3, 'triangle', 0.12);
+
+        // 🔔 高频点缀（每 2 步一个）
+        if (bgmStepIndex % 2 === 1) {
+            const hiNote = currentChord.arp[(bgmStepIndex + 2) % 4] * 2;
+            playBgNote(hiNote, now, 0.2, 'sine', 0.08);
+        }
+
+        bgmStepIndex++;
+    }
+
+    function startBgm() {
+        if (!audioCtx || bgmPlaying) return;
+        bgmGain = audioCtx.createGain();
+        bgmGain.gain.value = 0.35;  // 总音量
+        bgmGain.connect(audioCtx.destination);
+        bgmPlaying = true;
+        bgmChordIndex = 0;
+        bgmStepIndex = 0;
+        // 每 250ms 一步（BPM ~120）
+        bgmIntervalId = setInterval(playBgmStep, 250);
+    }
+
+    function stopBgm() {
+        bgmPlaying = false;
+        if (bgmIntervalId) { clearInterval(bgmIntervalId); bgmIntervalId = null; }
+        if (bgmGain) { bgmGain.disconnect(); bgmGain = null; }
+    }
+
+    // ============ 金币/萝卜飞行动画系统 ============
+    // 被收集的金币/萝卜飞向 HUD 积分区的曲线动画
+    const flyingCollectibles = [];
+
+    // 将屏幕像素坐标转换为世界坐标（用于 HUD 目标点）
+    function screenToWorld(screenX, screenY, z = 2) {
+        const vec = new THREE.Vector3();
+        // Three.js 中屏幕坐标: x=0 左 → width 右, y=0 上 → height 下
+        vec.x = (screenX / window.innerWidth) * 2 - 1;
+        vec.y = -(screenY / window.innerHeight) * 2 + 1;
+        vec.z = z;  // 距离相机的深度
+        vec.unproject(camera);
+        // 从相机位置向该方向延伸 z 距离
+        const dir = vec.sub(camera.position).normalize();
+        const dist = z / dir.z;  // 简化：用 z 分量估算
+        return camera.position.clone().add(dir.multiplyScalar(Math.abs(dist)));
+    }
+
+    function spawnFlyingCollectible(originalMesh, targetScreenX, targetScreenY, type, onArrive) {
+        // 克隆原 mesh（保持外观和朝向）
+        const clone = originalMesh.clone();
+        clone.traverse(child => {
+            if (child.isMesh) {
+                child.material = child.material.clone();
+                child.material.transparent = true;
+            }
+        });
+        clone.position.copy(originalMesh.position);
+        scene.add(clone);
+
+        // 计算世界坐标目标
+        const targetWorld = screenToWorld(targetScreenX, targetScreenY, 4);
+
+        flyingCollectibles.push({
+            mesh: clone,
+            startPos: clone.position.clone(),
+            endPos: targetWorld,
+            t: 0,
+            duration: 0.55,       // 飞行时间 0.55 秒
+            type: type,           // 'coin' 或 'carrot'
+            onArrive: onArrive,
+        });
+    }
+
+    function updateFlyingCollectibles(dt) {
+        for (let i = flyingCollectibles.length - 1; i >= 0; i--) {
+            const f = flyingCollectibles[i];
+            f.t += dt;
+            const u = Math.min(f.t / f.duration, 1);
+            // 缓动函数 easeInOutQuad（先慢后快再慢）
+            const eased = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+            // 贝塞尔曲线控制点（向上拱形飞行）
+            const cp = f.startPos.clone().lerp(f.endPos, 0.5).add(new THREE.Vector3(0, 2.5, 0));
+            // 二次贝塞尔：B(t) = (1-t)^2 * p0 + 2(1-t)t * p1 + t^2 * p2
+            const one = 1 - eased;
+            f.mesh.position.x = one * one * f.startPos.x + 2 * one * eased * cp.x + eased * eased * f.endPos.x;
+            f.mesh.position.y = one * one * f.startPos.y + 2 * one * eased * cp.y + eased * eased * f.endPos.y;
+            f.mesh.position.z = one * one * f.startPos.z + 2 * one * eased * cp.z + eased * eased * f.endPos.z;
+            // 飞行中快速自转
+            f.mesh.rotation.y += dt * 12;
+            f.mesh.rotation.x += dt * 8;
+            // 缩放到目标点附近时变小消失
+            if (u > 0.7) {
+                const s = Math.max(1 - (u - 0.7) / 0.3, 0);
+                f.mesh.scale.setScalar(s);
+            }
+            // 接近目标时播放抵达音效（提前 80ms 触发）
+            if (u >= 0.88 && !f.arrived) {
+                f.arrived = true;
+                // 触发回调（加分）
+                if (f.onArrive) f.onArrive();
+            }
+            if (u >= 1) {
+                scene.remove(f.mesh);
+                // 清理材质
+                f.mesh.traverse(child => {
+                    if (child.isMesh) {
+                        child.material.dispose();
+                        child.geometry.dispose();
+                    }
+                });
+                flyingCollectibles.splice(i, 1);
+            }
+        }
+    }
+
+    // ============ 金币爆散粒子特效系统 ============
+    const burstParticles = [];
+    function spawnCoinBurst(x, y, z, colorHex) {
+        const count = 12;
+        const geo = new THREE.BoxGeometry(0.12, 0.12, 0.12);
+        const mat = new THREE.MeshStandardMaterial({
+            color: colorHex,
+            emissive: colorHex,
+            emissiveIntensity: 0.8,
+            metalness: 0.9,
+            roughness: 0.2,
+        });
+        for (let i = 0; i < count; i++) {
+            const p = new THREE.Mesh(geo, mat);
+            p.position.set(x, y, z);
+            // 随机速度向量
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const speed = 2 + Math.random() * 2;
+            p.userData = {
+                vx: Math.sin(phi) * Math.cos(theta) * speed,
+                vy: Math.sin(phi) * Math.sin(theta) * speed + 1,  // 带向上分量
+                vz: Math.cos(phi) * speed,
+                life: 0,
+                maxLife: 0.6 + Math.random() * 0.3,
+            };
+            scene.add(p);
+            burstParticles.push(p);
+        }
+    }
+    // 每帧更新爆散粒子
+    function updateBurstParticles(dt) {
+        for (let i = burstParticles.length - 1; i >= 0; i--) {
+            const p = burstParticles[i];
+            p.userData.life += dt;
+            // 速度衰减 + 重力
+            p.userData.vx *= 0.95;
+            p.userData.vy -= 8 * dt;  // 重力
+            p.userData.vz *= 0.95;
+            p.position.x += p.userData.vx * dt;
+            p.position.y += p.userData.vy * dt;
+            p.position.z += p.userData.vz * dt;
+            p.rotation.x += dt * 10;
+            p.rotation.y += dt * 10;
+            // 淡出
+            const fade = 1 - p.userData.life / p.userData.maxLife;
+            p.material.opacity = Math.max(fade, 0);
+            p.material.transparent = true;
+            p.scale.setScalar(Math.max(fade * 0.12, 0.01));
+            if (p.userData.life > p.userData.maxLife) {
+                scene.remove(p);
+                burstParticles.splice(i, 1);
+            }
+        }
+    }
+
+    // ============ 浮动得分文字 ============
+    const floatingTexts = [];
+    function spawnFloatingScore(x, y, z, text, color) {
+        // 用 CanvasTexture 创建动态文字贴图
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = color;
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        ctx.fillText(text, 64, 32);
+        const texture = new THREE.CanvasTexture(canvas);
+        const mat = new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true,
+            depthTest: false,
+        });
+        const geo = new THREE.PlaneGeometry(0.8, 0.4);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(x, y + 0.8, z);
+        mesh.userData = { life: 0, maxLife: 1.2 };
+        scene.add(mesh);
+        floatingTexts.push(mesh);
+    }
+    function updateFloatingTexts(dt, camera) {
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            const t = floatingTexts[i];
+            t.userData.life += dt;
+            t.position.y += dt * 1.5;  // 向上飘
+            t.lookAt(camera.position);  // 始终面向相机
+            const fade = 1 - t.userData.life / t.userData.maxLife;
+            t.material.opacity = Math.max(fade, 0);
+            if (t.userData.life > t.userData.maxLife) {
+                scene.remove(t);
+                t.material.map.dispose();
+                t.material.dispose();
+                floatingTexts.splice(i, 1);
+            }
+        }
+    }
+
+    // 初始化几波
+    for (let i = 0; i < 4; i++) spawnWave();
+
+    // ============ 输入处理 ============
+    const input = {
+        left: false,
+        right: false,
+        up: false,
+        down: false,
+        jumpRequested: false,
+    };
+
+    window.addEventListener('keydown', e => {
+        if (!state.running) {
+            if (e.code === 'Space' || e.code === 'Enter') startGame();
+            return;
+        }
+        switch (e.code) {
+            case 'ArrowLeft': case 'KeyA': input.left = true; break;
+            case 'ArrowRight': case 'KeyD': input.right = true; break;
+            case 'ArrowUp': case 'KeyW': case 'Space':
+                input.jumpRequested = true;
+                input.up = true;
+                e.preventDefault();
+                break;
+            case 'ArrowDown': case 'KeyS': input.down = true; break;
+            case 'Escape': case 'KeyG':  // 手动结束游戏
+                gameOver();
+                break;
+        }
+    });
+    window.addEventListener('keyup', e => {
+        switch (e.code) {
+            case 'ArrowLeft': case 'KeyA': input.left = false; break;
+            case 'ArrowRight': case 'KeyD': input.right = false; break;
+            case 'ArrowUp': case 'KeyW': case 'Space': input.up = false; break;
+            case 'ArrowDown': case 'KeyS': input.down = false; break;
+        }
+    });
+
+    // 触屏支持检测
+    if ('ontouchstart' in window) {
+        document.getElementById('touchControls').classList.add('active');
+        document.querySelectorAll('.touch-btn').forEach(btn => {
+            const action = btn.dataset.action;
+            btn.addEventListener('touchstart', e => {
+                e.preventDefault();
+                if (action === 'jump') input.jumpRequested = true;
+                else if (action === 'left') input.left = true;
+                else if (action === 'right') input.right = true;
+                else if (action === 'down') input.down = true;
+            });
+            btn.addEventListener('touchend', e => {
+                e.preventDefault();
+                if (action === 'left') input.left = false;
+                else if (action === 'right') input.right = false;
+                else if (action === 'down') input.down = false;
+            });
+        });
+    }
+
+    // ============ 兔子运动状态 ============
+    const rabbitState = {
+        laneIndex: 1,          // 0=左, 1=中, 2=右
+        targetX: 0,
+        velocityY: 0,
+        height: 0,
+        ducking: false,
+        duckTimer: 0,
+    };
+
+    // ============ 碰撞检测 ============
+    function checkCollision(mesh, collectibleMesh, radius) {
+        const dx = mesh.position.x - collectibleMesh.position.x;
+        const dy = mesh.position.y - collectibleMesh.position.y;
+        const dz = mesh.position.z - collectibleMesh.position.z;
+        return Math.sqrt(dx*dx + dy*dy + dz*dz) < radius;
+    }
+
+    function checkObstacleCollision(rabbit, obstacle) {
+        const rp = rabbit.position;
+        const op = obstacle.position;
+        const us = obstacle.userData;
+
+        if (us.type === 'ground') {
+            // 地面障碍：兔子必须跳过或换到别的车道
+            if (Math.abs(rp.x - op.x) < 1.0 && Math.abs(rp.z - op.z) < 1.0) {
+                if (rabbitState.height < 0.8) return true;
+            }
+        } else if (us.type === 'air') {
+            // 空中障碍：兔子必须下蹲或跳过
+            if (Math.abs(rp.x - op.x) < 0.8 && Math.abs(rp.z - op.z) < 0.8) {
+                if (!rabbitState.ducking && rabbitState.height < 0.6) return true;
+            }
+        } else if (us.type === 'pit') {
+            // 坑洞：占据两个车道
+            if (Math.abs(rp.z - op.z) < 1.2) {
+                const pitLeft = op.x - 1.5;
+                const pitRight = op.x + 1.5;
+                if (rp.x > pitLeft && rp.x < pitRight && rabbitState.height < 0.3) return true;
+            }
+        }
+        return false;
+    }
+
+    // ============ 游戏循环 ============
+    let lastTime = performance.now();
+
+    function gameLoop() {
+        requestAnimationFrame(gameLoop);
+        const now = performance.now();
+        const delta = Math.min((now - lastTime) / 1000, 0.05);
+        lastTime = now;
+
+        if (!state.running) {
+            renderer.render(scene, camera);
+            return;
+        }
+
+        update(delta);
+        renderer.render(scene, camera);
+    }
+
+    function update(dt) {
+        state.time += dt;
+
+        // 速度递增
+        state.baseSpeed = Math.min(CONFIG.START_SPEED + state.time * CONFIG.SPEED_INCREMENT, CONFIG.MAX_SPEED);
+        state.speed = state.baseSpeed * (state.boostTimer > 0 ? CONFIG.BOOST_SPEED_MULTIPLIER : 1);
+
+        // Buff 计时
+        if (state.boostTimer > 0) state.boostTimer -= dt;
+        if (state.magnetTimer > 0) state.magnetTimer -= dt;
+        if (state.invincibleTimer > 0) state.invincibleTimer -= dt;
+
+        // 连击计时
+        if (state.comboTimer > 0) {
+            state.comboTimer -= dt;
+            if (state.comboTimer <= 0) {
+                state.combo = 1;
+                updateComboUI();
+            }
+        }
+
+        // ============ 兔子控制 ============
+        // 换道
+        if (input.left && rabbitState.laneIndex > 0) {
+            rabbitState.laneIndex--;
+            input.left = false;
+            rabbitState.targetX = CONFIG.LANE_POSITIONS[rabbitState.laneIndex];
+        }
+        if (input.right && rabbitState.laneIndex < 2) {
+            rabbitState.laneIndex++;
+            input.right = false;
+            rabbitState.targetX = CONFIG.LANE_POSITIONS[rabbitState.laneIndex];
+        }
+        // 左右移动（逐渐接近目标）
+        rabbit.position.x += (rabbitState.targetX - rabbit.position.x) * Math.min(1, CONFIG.LANE_SWITCH_SPEED * dt);
+
+        // 跳跃
+        if (input.jumpRequested && rabbitState.height <= 0.01) {
+            rabbitState.velocityY = CONFIG.JUMP_VELOCITY;
+            input.jumpRequested = false;
+            playJumpSound();
+        }
+        // 重力
+        rabbitState.velocityY += CONFIG.GRAVITY * dt;
+        rabbitState.height += rabbitState.velocityY * dt;
+        if (rabbitState.height < 0) {
+            rabbitState.height = 0;
+            rabbitState.velocityY = 0;
+        }
+        rabbit.position.y = rabbitState.height;
+
+        // 下蹲
+        if (input.down && rabbitState.height <= 0.1) {
+            rabbitState.ducking = true;
+            rabbitState.duckTimer = CONFIG.DUCK_DURATION;
+        }
+        if (rabbitState.ducking) {
+            rabbitState.duckTimer -= dt;
+            if (rabbitState.duckTimer <= 0 || !input.down) {
+                rabbitState.ducking = false;
+            }
+        }
+
+        // 下蹲时身体压扁
+        const duckScale = rabbitState.ducking ? 0.5 : 1;
+        body.scale.y = duckScale;
+        body.position.y = 0.6 * duckScale + (1 - duckScale) * 0.3;
+        head.scale.y = duckScale;
+        head.position.y = 1.25 * duckScale + (1 - duckScale) * 0.5;
+        earLeft.scale.y = duckScale;
+        earRight.scale.y = duckScale;
+        earLeft.position.y = 1.6 * duckScale + (1 - duckScale) * 0.6;
+        earRight.position.y = 1.6 * duckScale + (1 - duckScale) * 0.6;
+        ledStrip.scale.y = duckScale;
+        ledStrip.position.y = 1.52 * duckScale + (1 - duckScale) * 0.5;
+
+        // 腿部奔跑动画
+        const runCycle = state.time * 10;
+        legs.forEach((leg, i) => {
+            leg.position.y = leg.userData.baseY + Math.abs(Math.sin(runCycle + leg.userData.phase)) * 0.1;
+        });
+
+        // 耳朵轻微摆动
+        earLeft.rotation.x = Math.sin(runCycle * 0.8) * 0.1;
+        earRight.rotation.x = -Math.sin(runCycle * 0.8) * 0.1;
+
+        // LED 呼吸效果
+        const ledBreath = 0.8 + Math.sin(state.time * 4) * 0.4;
+        ledStripMat.emissiveIntensity = ledBreath;
+
+        // 脚下光环闪烁
+        rabbitRing.material.opacity = 0.5 + Math.sin(state.time * 6) * 0.3;
+        rabbitRing.scale.setScalar(1 + Math.sin(state.time * 3) * 0.1);
+
+        // ============ 赛道滚动 ============
+        const trackMove = state.speed * dt;
+        trackSegments.forEach(seg => {
+            seg.position.z += trackMove;
+            if (seg.position.z > CONFIG.TRACK_SEGMENT_LENGTH / 2) {
+                seg.position.z -= CONFIG.TRACK_SEGMENTS * CONFIG.TRACK_SEGMENT_LENGTH;
+            }
+        });
+
+        // 粒子滚动
+        const pos = particles.geometry.attributes.position;
+        for (let i = 0; i < particleCount; i++) {
+            let z = pos.array[i * 3 + 2] + trackMove * 0.4;
+            if (z > 30) z -= 120;
+            pos.array[i * 3 + 2] = z;
+            pos.array[i * 3 + 1] += Math.sin(state.time + i) * 0.002;
+        }
+        pos.needsUpdate = true;
+
+        // 山脉轻微位移
+        mountains.position.x = Math.sin(state.time * 0.05) * 2;
+
+        // ============ 收集物更新 ============
+        // 磁铁效果
+        const magnetActive = state.magnetTimer > 0;
+
+        for (let i = collectibles.length - 1; i >= 0; i--) {
+            const c = collectibles[i];
+            c.position.z += trackMove;
+            // 旋转 + 浮动
+            c.rotation.y += dt * 3;
+            c.position.y += Math.sin(state.time * 3 + c.userData.floatOffset) * dt * 0.15;
+
+            // 磁铁吸附
+            if (magnetActive) {
+                const dx = rabbit.position.x - c.position.x;
+                const dz = rabbit.position.z - c.position.z;
+                const dist = Math.sqrt(dx*dx + dz*dz);
+                if (dist < 6) {
+                    c.position.x += dx * dt * 4;
+                    c.position.z += dz * dt * 4;
+                }
+            }
+
+            // 碰撞检测
+            const collectRadius = c.userData.type === 'carrot' ? 1.2 : 1.0;
+            if (checkCollision(rabbit, c, collectRadius)) {
+                // 记录当前 combo 状态（飞行途中 combo 可能变，取当时快照）
+                const capturedType = c.userData.type;
+                const capturedScore = c.userData.score;
+                const capturedCombo = Math.max(state.combo, 1);
+                const capturedPos = c.position.clone();
+                const magnetPreCheck = capturedType === 'coin' && state.coinsSinceMagnet + 1 >= CONFIG.MAGNET_TRIGGER_COINS;
+
+                // 隐藏原 mesh，让克隆体替代飞行
+                c.visible = false;
+
+                // HUD 目标：读取左上角分数显示的实际屏幕坐标
+                let hudX = 90, hudY = 55;  // 默认值
+                const hudScore = document.getElementById('hudScore');
+                if (hudScore) {
+                    const rect = hudScore.getBoundingClientRect();
+                    hudX = rect.left + rect.width / 2;
+                    hudY = rect.top + rect.height / 2;
+                }
+
+                spawnFlyingCollectible(c, hudX, hudY, capturedType, () => {
+                    // ✅ 抵达 HUD 时才真正加分 + 音效 + 特效
+                    if (capturedType === 'coin') {
+                        playCoinSound();
+                        spawnCoinBurst(capturedPos.x, capturedPos.y, capturedPos.z, 0xffd700);
+                    } else {
+                        playCarrotSound();
+                        spawnCoinBurst(capturedPos.x, capturedPos.y, capturedPos.z, 0xff6b00);
+                    }
+                    spawnFloatingScore(
+                        capturedPos.x, capturedPos.y, capturedPos.z,
+                        `+${capturedScore * capturedCombo}${capturedCombo > 1 ? ' ×' + capturedCombo : ''}`,
+                        capturedType === 'coin' ? '#ffd700' : '#00ff88'
+                    );
+                    addScore(capturedScore);
+                    state.comboTimer = CONFIG.COMBO_TIMEOUT;
+                    if (state.combo < 5 && state.time > 0.5) state.combo = Math.min(state.combo + 1, 5);
+                    updateComboUI();
+                    if (capturedType === 'coin') {
+                        state.coinsSinceMagnet++;
+                        if (magnetPreCheck) {
+                            state.magnetTimer = CONFIG.MAGNET_DURATION;
+                            state.coinsSinceMagnet = 0;
+                        }
+                    }
+                });
+
+                // 从收集列表里移除原 mesh（已隐藏）
+                scene.remove(c);
+                collectibles.splice(i, 1);
+                continue;
+            }
+
+            // 离开视野
+            if (c.position.z > CONFIG.DESPAWN_Z + 10) {
+                scene.remove(c);
+                collectibles.splice(i, 1);
+            }
+        }
+
+        // ============ 加速带更新 ============
+        for (let i = boostPads.length - 1; i >= 0; i--) {
+            const b = boostPads[i];
+            b.position.z += trackMove;
+            // 箭头动画
+            b.children.forEach((child, idx) => {
+                if (idx >= 3) return; // 箭头从第4个开始
+                child.position.y = 0.08 + Math.sin(state.time * 5 + idx) * 0.05;
+            });
+
+            // 触发加速
+            if (Math.abs(rabbit.position.x - b.position.x) < 3 &&
+                Math.abs(rabbit.position.z - b.position.z) < 2 && state.boostTimer <= 0) {
+                state.boostTimer = CONFIG.BOOST_DURATION;
+                flashSpeed();
+            }
+
+            if (b.position.z > CONFIG.DESPAWN_Z + 10) {
+                scene.remove(b);
+                boostPads.splice(i, 1);
+            }
+        }
+
+        // ============ 障碍来袭警示检测 ============
+        {
+            const warnEl = document.getElementById('warnVignette');
+            // 找前方最近的、和兔子同车道的障碍（Z < 0 表示在兔子前方飞来）
+            let nearestZ = Infinity;
+            for (const o of obstacles) {
+                const dz = o.position.z;  // 障碍的 Z，负数 = 前方飞来
+                if (dz > -14 && dz < 2) {   // 只关注兔子前方 14 米范围内
+                    // 判断是否同车道（坑洞除外，坑洞在中间）
+                    if (o.userData.type === 'pit') {
+                        if (rabbitState.height < 0.3) {
+                            nearestZ = Math.min(nearestZ, dz);
+                        }
+                    } else {
+                        const inSameLane = Math.abs(o.position.x - rabbit.position.x) < 1.5;
+                        if (inSameLane) {
+                            nearestZ = Math.min(nearestZ, dz);
+                        }
+                    }
+                }
+            }
+            // 警示分级：距离越近越急
+            if (nearestZ < 0 && nearestZ !== Infinity) {
+                // 距离转化为紧急度：14米远→0，0米近→1
+                const urgency = Math.max(0, Math.min(1, (14 + nearestZ) / 14));
+                // 屏幕红色闪烁
+                warnEl.classList.add('active');
+                warnEl.style.animationDuration = Math.max(0.15, 0.6 - urgency * 0.45) + 's';
+                // 蜂鸣音效：距离 14→0 米，间隔 1.2s→0.2s
+                warningSoundInterval = 1.2 - urgency * 1.0;  // 1.2s 到 0.2s
+                warningSoundTimer -= dt;
+                if (warningSoundTimer <= 0) {
+                    playWarningBeep();
+                    warningSoundTimer = warningSoundInterval;
+                }
+            } else {
+                warnEl.classList.remove('active');
+                warnEl.style.animationDuration = '';
+                warningSoundTimer = 0.4;  // 一点余留，避免连续切换
+            }
+        }
+
+        // ============ 障碍更新 ============
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            const o = obstacles[i];
+            o.position.z += trackMove;
+
+            // 遍历子元素，根据 userData 做动画
+            o.traverse(child => {
+                // 警示灯闪烁（Light 对象）
+                if (child.isLight && child.userData.isFlicker) {
+                    child.intensity = 0.3 + Math.abs(Math.sin(state.time * 10 + i)) * 2.0;
+                }
+                // 玻璃球/灯泡闪烁（Mesh 对象才用 .material）
+                if (!child.isLight && child.userData.isFlicker && child.material) {
+                    child.material.emissiveIntensity = 0.5 + Math.abs(Math.sin(state.time * 10 + i)) * 1.5;
+                }
+                // 核心旋转（八面体）
+                if (child.userData.isRotating) {
+                    child.rotation.y += dt * 3;
+                    child.rotation.x += dt * 1.5;
+                }
+                // 螺旋桨旋转
+                if (child.userData.isProp) {
+                    child.rotation.x += dt * 25;
+                }
+            });
+
+            // 空中障碍悬浮摆动
+            if (o.userData.type === 'air') {
+                o.position.y = 1.8 + Math.sin(state.time * 3 + i) * 0.1;
+                o.rotation.y += dt * 1.2;
+            }
+
+            // 地面障碍整体轻微震动
+            if (o.userData.type === 'ground') {
+                o.children.forEach((child, idx) => {
+                    if (child.userData.isLightBulb) {
+                        child.material.emissiveIntensity = 0.8 + Math.abs(Math.sin(state.time * 12)) * 2.0;
+                    }
+                });
+            }
+
+            // 碰撞检测
+            if (state.invincibleTimer <= 0 && checkObstacleCollision(rabbit, o)) {
+                gameOver();
+                return;
+            }
+
+            if (o.position.z > CONFIG.DESPAWN_Z + 10) {
+                scene.remove(o);
+                obstacles.splice(i, 1);
+            }
+        }
+
+        // ============ 持续生成新波次 ============
+        // 找出所有动态物体中 z 最小的那个（最远的）
+        let farthestZ = Infinity;
+        [...collectibles, ...obstacles, ...boostPads].forEach(o => {
+            if (o.position.z < farthestZ) farthestZ = o.position.z;
+        });
+        // 当最远物体已经接近玩家一侧（z 大于 -30），说明前面空了，该生成新的
+        if (farthestZ > -30 || farthestZ === Infinity) {
+            spawnWave();
+        }
+
+        // ============ 更新粒子特效 ============
+        updateFlyingCollectibles(dt);
+        updateBurstParticles(dt);
+        updateFloatingTexts(dt, camera);
+
+        // ============ 更新 UI ============
+        updateHUD();
+        updateBuffUI();
+    }
+
+    // ============ UI 更新 ============
+    function updateHUD() {
+        document.getElementById('hudScore').textContent = state.score;
+    }
+
+    function updateComboUI() {
+        const comboEl = document.getElementById('hudCombo');
+        const comboVal = document.getElementById('comboValue');
+        if (state.combo >= 2) {
+            comboEl.classList.add('active');
+            comboVal.textContent = '×' + state.combo;
+        } else {
+            comboEl.classList.remove('active');
+        }
+    }
+
+    function updateBuffUI() {
+        document.getElementById('buffMagnet').classList.toggle('active', state.magnetTimer > 0);
+        document.getElementById('buffSpeed').classList.toggle('active', state.boostTimer > 0);
+    }
+
+    function addScore(points) {
+        const multiplier = state.combo;
+        const gained = points * multiplier;
+        state.score += gained;
+    }
+
+    // ============ 特效 ============
+    function flashHit() {
+        const el = document.getElementById('hitFlash');
+        el.classList.remove('active');
+        // 强制重新开始动画
+        void el.offsetWidth;
+        el.classList.add('active');
+    }
+
+    function flashSpeed() {
+        const el = document.getElementById('speedFlash');
+        el.classList.remove('active');
+        void el.offsetWidth;
+        el.classList.add('active');
+    }
+
+    // ============ 游戏流程 ============
+    function startGame() {
+        // 初始化音频（需要用户交互后才能创建 AudioContext）
+        ensureAudio();
+        startBgm();
+        // 重置状态
+        state.running = true;
+        state.speed = CONFIG.START_SPEED;
+        state.baseSpeed = CONFIG.START_SPEED;
+        state.score = 0;
+        state.combo = 1;
+        state.comboTimer = 0;
+        state.coinsSinceMagnet = 0;
+        state.magnetTimer = 0;
+        state.boostTimer = 0;
+        state.time = 0;
+        state.invincibleTimer = 3.0;  // 启动无敌 3 秒，让玩家先收集再遇到障碍
+
+        // 重置兔子
+        rabbitState.laneIndex = 1;
+        rabbitState.targetX = 0;
+        rabbitState.velocityY = 0;
+        rabbitState.height = 0;
+        rabbit.position.set(0, 0, 0);
+
+        // 清空障碍物
+        [...collectibles, ...obstacles, ...boostPads].forEach(o => scene.remove(o));
+        collectibles.length = 0;
+        obstacles.length = 0;
+        boostPads.length = 0;
+
+        // 重置赛道
+        trackSegments.forEach((seg, i) => {
+            seg.position.z = -i * CONFIG.TRACK_SEGMENT_LENGTH;
+        });
+
+        // 重新生成初始波次
+        for (let i = 0; i < 4; i++) spawnWave();
+
+        // 隐藏弹窗
+        document.getElementById('startScreen').classList.add('hidden');
+        document.getElementById('gameOverScreen').classList.add('hidden');
+    }
+
+    function gameOver() {
+        state.running = false;
+        flashHit();
+        playGameOverSound();
+        stopBgm();
+
+        // 更新最高分
+        if (state.score > state.highScore) {
+            state.highScore = state.score;
+            localStorage.setItem('coin_highscore', state.highScore);
+            document.getElementById('navHighScore').textContent = state.highScore;
+        }
+
+        // 显示结束弹窗
+        document.getElementById('finalScore').textContent = state.score;
+        document.getElementById('finalHighScore').textContent = state.highScore;
+        document.getElementById('gameOverScreen').classList.remove('hidden');
+    }
+
+    // ============ 事件绑定 ============
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('restartBtn').addEventListener('click', startGame);
+
+    // ============ 自适应尺寸 ============
+    function onResize() {
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+        if (w === 0 || h === 0) return;  // 还没布局好，跳过
+        if (canvas.width !== w || canvas.height !== h) {
+            renderer.setSize(w, h, false);
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+        }
+    }
+
+    // 启动阶段，延迟多帧确保 flex 布局完成
+    function initLoop() {
+        onResize();
+        gameLoop();
+    }
+    // 尝试多次调用 onResize 确保尺寸正确
+    setTimeout(onResize, 0);
+    requestAnimationFrame(onResize);
+    requestAnimationFrame(initLoop);
+    setTimeout(initLoop, 100);  // 双重保险
+
+    // ResizeObserver 持续监测
+    if ('ResizeObserver' in window) {
+        const ro = new ResizeObserver(onResize);
+        ro.observe(canvas.parentElement);
+    }
+    window.addEventListener('resize', onResize);
+
+    // 初始 UI
+    updateHUD();
+    updateBuffUI();
+
+})();
+</script>
+</body>
+</html>

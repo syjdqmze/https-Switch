@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Camera Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: white;
+            min-height: 100vh;
+            display: flex;
+            gap: 0.3vw;
+        }
+        
+        .column-left {
+            flex: 4;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-radius: 0.5vw;
+            padding: 0.8vw;
+            border: 0.4vw solid #CCCCCC;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3vw;
+            box-shadow: 
+                0 10px 40px rgba(0, 0, 0, 0.15),
+                inset 0 0 30px rgba(255, 255, 255, 0.5);
+        }
+
+        .column-left-top {
+            flex: 1.8;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 0.5vw;
+            border: 0.3vw solid #CCCCCC;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.3),
+                0 0 20px rgba(102, 126, 234, 0.4),
+                inset 0 0 60px rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .column-left-top::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                45deg,
+                transparent,
+                rgba(255, 255, 255, 0.1),
+                transparent
+            );
+            animation: shine 3s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .column-left-top video,
+        .column-left-top img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 0.3vw;
+        }
+
+        .column-left-middle {
+            height: 70px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 0.5vw;
+            border: 0.3vw solid #CCCCCC;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1.2vw;
+            box-shadow: 
+                0 4px 15px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .control-btn {
+            padding: 0.6vw 1.2vw;
+            font-size: 1vw;
+            font-weight: bold;
+            border: none;
+            border-radius: 0.4vw;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 
+                0 4px 10px rgba(0, 0, 0, 0.3),
+                0 0 15px rgba(255, 255, 255, 0.2);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .record-btn {
+            background: linear-gradient(180deg, #FF7043 0%, #FF5722 50%, #E64A19 100%);
+            color: white;
+            border: 2px solid #FFAB91;
+        }
+
+        .record-btn:hover {
+            background: linear-gradient(180deg, #FF8A65 0%, #FF7043 50%, #FF5722 100%);
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 15px rgba(255, 87, 34, 0.4),
+                0 0 20px rgba(255, 87, 34, 0.3);
+        }
+
+        .record-btn.recording {
+            background: linear-gradient(180deg, #FF5252 0%, #F44336 50%, #D32F2F 100%);
+            border: 2px solid #EF9A9A;
+            animation: pulse 1s infinite, glow 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 15px rgba(244, 67, 54, 0.5); }
+            50% { box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3), 0 0 30px rgba(244, 67, 54, 0.8); }
+        }
+
+        .capture-btn {
+            background: linear-gradient(180deg, #66BB6A 0%, #4CAF50 50%, #388E3C 100%);
+            color: white;
+            border: 2px solid #A5D6A7;
+        }
+
+        .capture-btn:hover {
+            background: linear-gradient(180deg, #81C784 0%, #66BB6A 50%, #4CAF50 100%);
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 15px rgba(76, 175, 80, 0.4),
+                0 0 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .capture-btn:active {
+            transform: translateY(1px);
+        }
+
+        .column-left-bottom {
+            flex: 1;
+            background: linear-gradient(180deg, #B2EBF2 0%, #80DEEA 50%, #4DD0E1 100%);
+            border-radius: 0.5vw;
+            border: 0.3vw solid #CCCCCC;
+            box-shadow: 
+                inset 0 2px 10px rgba(0, 0, 0, 0.1),
+                0 4px 15px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .column-left-bottom::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+            pointer-events: none;
+        }
+        
+        .column-center {
+            flex: 3;
+            background-color: #E0F7FA;
+            border-radius: 0.5vw;
+            padding: 0.8vw;
+            border: 0.4vw solid #CCCCCC;
+        }
+        
+        .column-right {
+            flex: 3;
+            background-color: #E0F7FA;
+            border-radius: 0.5vw;
+            padding: 0.8vw;
+            border: 0.4vw solid #CCCCCC;
+        }
+        
+        /* 响应式调整 - 小屏幕 */
+        @media (max-width: 1200px) {
+            .column-left-middle {
+                height: 60px;
+            }
+            
+            .control-btn {
+                padding: 0.5vw 1vw;
+                font-size: 0.9vw;
+            }
+        }
+        
+        /* 响应式调整 - 中等屏幕 */
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column;
+                gap: 0.5vh;
+            }
+            
+            .column-left,
+            .column-center,
+            .column-right {
+                flex: none;
+                width: 100%;
+                height: auto;
+                min-height: 300px;
+            }
+            
+            .column-left {
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .column-left-top {
+                flex: 1.8;
+                min-height: 200px;
+            }
+            
+            .column-left-middle {
+                height: 60px;
+            }
+            
+            .column-left-bottom {
+                flex: 1;
+                min-height: 100px;
+            }
+            
+            .control-btn {
+                padding: 1vw 2vw;
+                font-size: 1.2vw;
+            }
+        }
+        
+        /* 响应式调整 - 移动设备 */
+        @media (max-width: 600px) {
+            .control-btn {
+                padding: 2vw 4vw;
+                font-size: 3vw;
+            }
+            
+            .column-left-middle {
+                height: 50px;
+                gap: 2vw;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="column-left">
+        <div class="column-left-top">
+            <video id="cameraVideo" autoplay playsinline></video>
+            <img id="capturedImage" alt="拍照图片" style="display: none;">
+        </div>
+        <div class="column-left-middle">
+            <button class="control-btn record-btn" id="recordBtn" onclick="toggleRecording()">录像</button>
+            <button class="control-btn capture-btn" onclick="capturePhoto()">拍照</button>
+        </div>
+        <div class="column-left-bottom"></div>
+    </div>
+    <div class="column-center"></div>
+    <div class="column-right"></div>
+
+    <script>
+        // 录像相关变量
+        let isRecording = false;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let cameraStream = null;
+
+        // 切换录像状态
+        async function toggleRecording() {
+            const recordBtn = document.getElementById('recordBtn');
+            const capturedImage = document.getElementById('capturedImage');
+            const videoElement = document.getElementById('cameraVideo');
+            
+            if (!isRecording) {
+                // 隐藏已显示的照片，显示video
+                capturedImage.style.display = 'none';
+                videoElement.style.display = 'block';
+                
+                // 开始录像
+                const success = await startRecording();
+                if (success) {
+                    recordBtn.textContent = '停止录像';
+                    recordBtn.classList.add('recording');
+                    isRecording = true;
+                }
+            } else {
+                // 停止录像
+                stopRecording();
+                recordBtn.textContent = '录像';
+                recordBtn.classList.remove('recording');
+                isRecording = false;
+            }
+        }
+
+        // 开始录像
+        async function startRecording() {
+            console.log('开始录像...');
+            
+            // 检测是否在安全上下文中
+            const isSecureContext = window.isSecureContext;
+            if (!isSecureContext) {
+                alert('⚠️ 安全提示：\n\n摄像头功能需要在HTTPS环境下使用。\n\n请使用以下方式之一：\n1. 使用HTTPS访问此页面\n2. 使用localhost访问\n3. 使用127.0.0.1访问');
+                console.error('非安全上下文，无法访问摄像头');
+                return false;
+            }
+            
+            try {
+                // 检查浏览器是否支持getUserMedia
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    alert('❌ 错误：\n\n您的浏览器不支持摄像头功能。\n\n请使用以下浏览器：\n- Chrome 53+\n- Firefox 36+\n- Safari 11+\n- Edge 12+');
+                    console.error('浏览器不支持getUserMedia');
+                    return false;
+                }
+                
+                // 获取摄像头流
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'user'
+                    },
+                    audio: true
+                });
+                
+                // 显示在video元素中
+                const videoElement = document.getElementById('cameraVideo');
+                videoElement.srcObject = cameraStream;
+                
+                // 等待视频元数据加载
+                await new Promise((resolve, reject) => {
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play().then(resolve).catch(reject);
+                    };
+                    videoElement.onerror = reject;
+                    
+                    // 超时处理
+                    setTimeout(() => reject(new Error('视频加载超时')), 10000);
+                });
+                
+                // 创建MediaRecorder
+                recordedChunks = [];
+                
+                // 尝试使用MP4格式，如果浏览器不支持则使用WebM
+                let mimeType = 'video/mp4';
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    mimeType = 'video/webm;codecs=vp9,opus';
+                    console.log('浏览器不支持MP4格式，使用WebM格式');
+                }
+                
+                console.log(`使用的媒体格式: ${mimeType}`);
+                
+                mediaRecorder = new MediaRecorder(cameraStream, {
+                    mimeType: mimeType
+                });
+                
+                // 获取文件扩展名
+                const fileExtension = mimeType.includes('mp4') ? 'mp4' : 'webm';
+                
+                mediaRecorder.ondataavailable = function(event) {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+                
+                mediaRecorder.onstop = function() {
+                    // 生成文件名（年月日时分秒）
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    const seconds = String(now.getSeconds()).padStart(2, '0');
+                    const fileName = `${year}${month}${day}${hours}${minutes}${seconds}.${fileExtension}`;
+                    
+                    // 获取MIME类型
+                    const blobType = mimeType.includes('mp4') ? 'video/mp4' : 'video/webm';
+                    
+                    // 保存录像文件（使用浏览器下载）
+                    const blob = new Blob(recordedChunks, { type: blobType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    console.log(`录像已下载: ${fileName}`);
+                    
+                    const formatName = blobType.includes('mp4') ? 'MP4' : 'WebM';
+                    const saveDir = './record';
+                    
+                    alert(`✅ 录像下载成功！\n\n文件名：${fileName}\n格式：${formatName}\n\n📌 目标目录：${saveDir}\n\n� 设置方法：\n1. 打开浏览器设置\n2. 找到"下载内容"选项\n3. 将下载路径设置为项目的record目录\n4. 下次录像将自动保存到该目录`);
+                };
+                
+                mediaRecorder.start(1000); // 每秒收集一次数据
+                console.log('录像已开始');
+                return true;
+                
+            } catch (error) {
+                console.error('无法访问摄像头:', error);
+                
+                let errorMessage = '❌ 无法访问摄像头\n\n';
+                
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    errorMessage += '原因：摄像头权限被拒绝\n\n';
+                    errorMessage += '解决方法：\n';
+                    errorMessage += '1. 点击浏览器地址栏左边的摄像头图标\n';
+                    errorMessage += '2. 选择"允许"摄像头权限\n';
+                    errorMessage += '3. 刷新页面后重试';
+                } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                    errorMessage += '原因：未找到摄像头设备\n\n';
+                    errorMessage += '解决方法：\n';
+                    errorMessage += '1. 请确保摄像头已正确连接\n';
+                    errorMessage += '2. 检查系统设置中摄像头是否可用';
+                } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                    errorMessage += '原因：摄像头被其他应用占用\n\n';
+                    errorMessage += '解决方法：\n';
+                    errorMessage += '1. 关闭其他使用摄像头的应用\n';
+                    errorMessage += '2. 重启浏览器后重试';
+                } else if (error.name === 'OverconstrainedError') {
+                    errorMessage += '原因：摄像头不支持请求的分辨率\n\n';
+                    errorMessage += '系统将自动调整为支持的分辨率...';
+                } else {
+                    errorMessage += `原因：${error.message || '未知错误'}\n\n`;
+                    errorMessage += '请检查：\n';
+                    errorMessage += '1. 摄像头是否已连接\n';
+                    errorMessage += '2. 浏览器是否有摄像头权限\n';
+                    errorMessage += '3. 是否使用HTTPS或localhost访问';
+                }
+                
+                alert(errorMessage);
+                return false;
+            }
+        }
+
+        // 停止录像
+        function stopRecording() {
+            console.log('停止录像...');
+            
+            // 停止录像
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            
+            // 停止所有轨道
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            
+            // 清空video元素
+            const videoElement = document.getElementById('cameraVideo');
+            videoElement.srcObject = null;
+        }
+
+        // 拍照
+        async function capturePhoto() {
+            console.log('📸 准备拍照...');
+            
+            // 如果正在录像，提示用户先停止录像
+            if (isRecording) {
+                alert('⚠️ 提示：\n\n正在录像中，请先停止录像才能拍照！');
+                return;
+            }
+            
+            // 检测是否在安全上下文中
+            if (!window.isSecureContext) {
+                alert('⚠️ 安全提示：\n\n摄像头功能需要在HTTPS环境下使用。\n\n请使用以下方式之一：\n1. 使用HTTPS访问此页面\n2. 使用localhost访问\n3. 使用127.0.0.1访问');
+                return;
+            }
+            
+            try {
+                const videoElement = document.getElementById('cameraVideo');
+                const capturedImage = document.getElementById('capturedImage');
+                
+                // 检查是否已有摄像头流
+                if (!cameraStream) {
+                    console.log('摄像头未启动，正在启动...');
+                    
+                    // 隐藏已显示的照片，显示video
+                    capturedImage.style.display = 'none';
+                    videoElement.style.display = 'block';
+                    
+                    // 启动摄像头
+                    cameraStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        },
+                        audio: false
+                    });
+                    
+                    // 显示在video元素中
+                    videoElement.srcObject = cameraStream;
+                    
+                    // 等待视频元数据加载
+                    await new Promise((resolve, reject) => {
+                        videoElement.onloadedmetadata = () => {
+                            videoElement.play().then(resolve).catch(reject);
+                        };
+                        videoElement.onerror = reject;
+                        setTimeout(() => reject(new Error('视频加载超时')), 10000);
+                    });
+                    
+                    console.log('摄像头已启动');
+                    
+                    // 等待一小段时间让摄像头稳定
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                // 从视频流捕获当前帧
+                const canvas = document.createElement('canvas');
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+                
+                const ctx = canvas.getContext('2d');
+                // 绘制当前视频帧（镜像翻转以纠正方向）
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(videoElement, 0, 0);
+                
+                // 生成文件名（年月日时分秒）
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const fileName = `${year}${month}${day}${hours}${minutes}${seconds}.png`;
+                
+                // 转换为Blob并保存
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                
+                // 在上部分显示照片
+                const imageUrl = URL.createObjectURL(blob);
+                capturedImage.src = imageUrl;
+                capturedImage.style.display = 'block';
+                videoElement.style.display = 'none';
+                
+                // 停止摄像头
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                    cameraStream = null;
+                }
+                videoElement.srcObject = null;
+                
+                // 下载照片
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                console.log(`📸 照片已保存: ${fileName}`);
+                
+                const saveDir = './record';
+                alert(`✅ 照片保存成功！\n\n文件名：${fileName}\n格式：PNG\n\n📌 目标目录：${saveDir}\n\n🔧 设置方法：\n1. 打开浏览器设置\n2. 找到"下载内容"选项\n3. 将下载路径设置为项目的record目录\n4. 下次拍照将自动保存到该目录`);
+                
+            } catch (error) {
+                console.error('拍照失败:', error);
+                
+                let errorMessage = '❌ 拍照失败\n\n';
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += '原因：摄像头权限被拒绝\n\n';
+                    errorMessage += '解决方法：\n';
+                    errorMessage += '1. 点击浏览器地址栏左边的摄像头图标\n';
+                    errorMessage += '2. 选择"允许"摄像头权限';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += '原因：未找到摄像头设备\n\n';
+                    errorMessage += '解决方法：\n';
+                    errorMessage += '1. 请确保摄像头已正确连接';
+                } else {
+                    errorMessage += `原因：${error.message || '未知错误'}`;
+                }
+                
+                alert(errorMessage);
+            }
+        }
+
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchstart', function(e) {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(e) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey && (e.key === '+' || e.key === '-' || e.key === '0')) || 
+                (e.ctrlKey && e.keyCode === 107) || 
+                (e.ctrlKey && e.keyCode === 109) || 
+                (e.ctrlKey && e.keyCode === 96)) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

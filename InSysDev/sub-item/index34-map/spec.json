@@ -1,0 +1,302 @@
+{
+  "figures": [
+    {
+      "name": "boot-flow",
+      "size": [1700, 880],
+      "elements": [
+        {"type": "text", "x": 60, "y": 36, "text": "实验20 内部温度传感器实验 · 从复位到主循环", "font": "msyhbd", "size": 34, "color": "dark"},
+        {"type": "text", "x": 60, "y": 88, "text": "RESET -> Reset_Handler -> SystemInit -> __main -> main -> while(1)", "font": "mono", "size": 18, "color": "muted"},
+        {"type": "box", "x": 60, "y": 140, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "01  上电复位", "font": "msyhbd", "size": 22, "color": "dark"},
+          {"text": "MSP <- __initial_sp", "font": "mono", "size": 15, "color": "muted"},
+          {"text": "PC  <- Reset_Handler", "font": "mono", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 467, "y": 140, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "02  Reset_Handler", "font": "msyhbd", "size": 22, "color": "dark"},
+          {"text": "SystemInit -> __main", "font": "mono", "size": 15, "color": "muted"},
+          {"text": "C 库复制 .data / 清零 .bss", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 874, "y": 140, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "03  main()", "font": "msyhbd", "size": 22, "color": "dark"},
+          {"text": "USER/main.c", "font": "mono", "size": 15, "color": "muted"},
+          {"text": "short temp;", "font": "mono", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1281, "y": 140, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "04  HAL_Init()", "font": "msyhbd", "size": 22, "color": "dark"},
+          {"text": "1ms 时基 + 优先级分组", "font": "msyh", "size": 15, "color": "muted"},
+          {"text": "NVIC_PRIORITYGROUP_2", "font": "mono", "size": 14, "color": "muted"}
+        ]},
+        {"type": "box", "x": 60, "y": 370, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "05  Stm32_Clock_Init", "font": "msyhbd", "size": 20, "color": "dark"},
+          {"text": "360, 25, 2, 8", "font": "mono", "size": 16, "color": "orange"},
+          {"text": "SYSCLK = 180MHz", "font": "mono", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 467, "y": 370, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "06  delay_init(180)", "font": "msyhbd", "size": 20, "color": "dark"},
+          {"text": "fac_us = 180", "font": "mono", "size": 16, "color": "orange"},
+          {"text": "SysTick 时钟源 HCLK", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 874, "y": 370, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "07  uart_init(115200)", "font": "msyhbd", "size": 20, "color": "dark"},
+          {"text": "PA9 / PA10, AF7", "font": "mono", "size": 15, "color": "muted"},
+          {"text": "printf 重定向前提", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1281, "y": 370, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "08  LED_Init / KEY_Init", "font": "msyhbd", "size": 20, "color": "dark"},
+          {"text": "PB0 / PB1 推挽输出", "font": "msyh", "size": 15, "color": "muted"},
+          {"text": "DS0 = PB1", "font": "mono", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 60, "y": 600, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "09  SDRAM_Init / LCD_Init", "font": "msyhbd", "size": 19, "color": "dark"},
+          {"text": "先显存，后初始化屏", "font": "msyh", "size": 15, "color": "muted"},
+          {"text": "readme 要求串口在前", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 467, "y": 600, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "10  MY_ADC_Init()", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "ADC1 + 通道18", "font": "msyh", "size": 15, "color": "muted"},
+          {"text": "12 位、单次、软件触发", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 874, "y": 600, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "11  LCD 固定字符", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "TEMPERATE: 00.00C", "font": "mono", "size": 15, "color": "muted"},
+          {"text": "先打印小数点占位", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1281, "y": 600, "w": 360, "h": 120, "pad": 18, "fill": "box", "stroke": "green", "rich": [
+          {"text": "12  while(1)", "font": "msyhbd", "size": 22, "color": "dark"},
+          {"text": "10 次平均 -> 温度", "font": "msyh", "size": 15, "color": "muted"},
+          {"text": "显示 -> LED -> 250ms", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[420, 200], [467, 200]], "color": "dark"},
+        {"type": "arrow", "points": [[827, 200], [874, 200]], "color": "dark"},
+        {"type": "arrow", "points": [[1234, 200], [1281, 200]], "color": "dark"},
+        {"type": "arrow", "points": [[1461, 260], [1461, 315], [240, 315], [240, 370]], "color": "dark"},
+        {"type": "arrow", "points": [[420, 430], [467, 430]], "color": "dark"},
+        {"type": "arrow", "points": [[827, 430], [874, 430]], "color": "dark"},
+        {"type": "arrow", "points": [[1234, 430], [1281, 430]], "color": "dark"},
+        {"type": "arrow", "points": [[1461, 490], [1461, 545], [240, 545], [240, 600]], "color": "dark"},
+        {"type": "arrow", "points": [[420, 660], [467, 660]], "color": "dark"},
+        {"type": "arrow", "points": [[827, 660], [874, 660]], "color": "dark"},
+        {"type": "arrow", "points": [[1234, 660], [1281, 660]], "color": "dark"},
+        {"type": "note", "x": 60, "y": 750, "w": 1580, "size": 19, "text": "顺序要点：HAL_Init 先按复位后的 HSI 建立时基，切到 180MHz 后由 HAL_RCC_ClockConfig 重新校准；delay_init(180) 必须在时钟切换之后；MY_ADC_Init 放在最后，不影响其他外设。内部温度传感器实际走 ADC1 通道 18，不需要外部引脚，TSVREFE 在 HAL_ADC_ConfigChannel 中才置位。"}
+      ]
+    },
+    {
+      "name": "adc-clock",
+      "size": [1700, 780],
+      "elements": [
+        {"type": "text", "x": 60, "y": 36, "text": "ADC 时钟链路：HSE 25MHz -> ADCCLK 22.5MHz", "font": "msyhbd", "size": 34, "color": "dark"},
+        {"type": "text", "x": 60, "y": 88, "text": "Stm32_Clock_Init(360,25,2,8) + ADC_CLOCK_SYNC_PCLK_DIV4", "font": "mono", "size": 17, "color": "muted"},
+        {"type": "box", "x": 60, "y": 130, "w": 270, "h": 110, "pad": 18, "rich": [
+          {"text": "HSE 晶振", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "25 MHz", "font": "mono", "size": 17, "color": "orange"}
+        ]},
+        {"type": "box", "x": 390, "y": 130, "w": 320, "h": 110, "pad": 18, "rich": [
+          {"text": "主 PLL", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "PLLM=25 PLLN=360", "font": "mono", "size": 15, "color": "muted"},
+          {"text": "PLLP=2  PLLQ=8", "font": "mono", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 770, "y": 130, "w": 300, "h": 110, "pad": 18, "rich": [
+          {"text": "SYSCLK", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "360 / 2 = 180 MHz", "font": "mono", "size": 16, "color": "orange"}
+        ]},
+        {"type": "box", "x": 1130, "y": 130, "w": 250, "h": 110, "pad": 18, "rich": [
+          {"text": "HCLK", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "180 / 1 = 180 MHz", "font": "mono", "size": 16, "color": "orange"}
+        ]},
+        {"type": "box", "x": 60, "y": 330, "w": 300, "h": 110, "pad": 18, "rich": [
+          {"text": "PCLK2 (APB2)", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "180 / 2 = 90 MHz", "font": "mono", "size": 16, "color": "orange"}
+        ]},
+        {"type": "box", "x": 430, "y": 330, "w": 300, "h": 110, "pad": 18, "rich": [
+          {"text": "ADC 预分频", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "ADCPRE = 01  (/4)", "font": "mono", "size": 16, "color": "muted"}
+        ]},
+        {"type": "box", "x": 800, "y": 330, "w": 330, "h": 110, "pad": 18, "stroke": "green", "rich": [
+          {"text": "ADCCLK", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "90 / 4 = 22.5 MHz", "font": "mono", "size": 17, "color": "green"}
+        ]},
+        {"type": "box", "x": 1200, "y": 330, "w": 380, "h": 110, "pad": 18, "rich": [
+          {"text": "上限校验", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "22.5 MHz < 36 MHz (OK)", "font": "mono", "size": 16, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[330, 185], [390, 185]], "color": "dark"},
+        {"type": "arrow", "points": [[710, 185], [770, 185]], "color": "dark"},
+        {"type": "arrow", "points": [[1070, 185], [1130, 185]], "color": "dark"},
+        {"type": "arrow", "points": [[1255, 240], [1255, 290], [210, 290], [210, 330]], "color": "dark"},
+        {"type": "arrow", "points": [[360, 385], [430, 385]], "color": "dark"},
+        {"type": "arrow", "points": [[730, 385], [800, 385]], "color": "dark"},
+        {"type": "arrow", "points": [[1130, 385], [1200, 385]], "color": "dark"},
+        {"type": "box", "x": 60, "y": 500, "w": 1580, "h": 170, "pad": 24, "align": "left", "fill": "box", "rich": [
+          {"text": "计算过程（与 sys.c 注释一致）：", "font": "msyhbd", "size": 19, "color": "dark"},
+          {"text": "Fvco   = 25 MHz * (360 / 25) = 360 MHz", "font": "mono", "size": 19, "color": "text"},
+          {"text": "SYSCLK = Fvco / 2           = 180 MHz", "font": "mono", "size": 19, "color": "text"},
+          {"text": "PCLK2  = 180 MHz / 2        = 90 MHz", "font": "mono", "size": 19, "color": "text"},
+          {"text": "ADCCLK = PCLK2 / 4          = 22.5 MHz", "font": "mono", "size": 19, "color": "text"}
+        ]},
+        {"type": "note", "x": 60, "y": 700, "w": 1580, "size": 19, "text": "ADC_CLOCK_SYNC_PCLK_DIV4 写 ADC->CCR.ADCPRE=01，ADC1/2/3 共用该分频；F429 的 ADCCLK 上限为 36MHz，22.5MHz 合规。采样 480 个 ADCCLK 约 21.3us，再加 12 个转换周期约 0.53us，单次合计约 21.9us。"}
+      ]
+    },
+    {
+      "name": "temp-path",
+      "size": [1700, 820],
+      "elements": [
+        {"type": "text", "x": 60, "y": 36, "text": "内部温度传感器 -> ADC1_IN18 -> DR 的数据通路", "font": "msyhbd", "size": 34, "color": "dark"},
+        {"type": "text", "x": 60, "y": 88, "text": "TSVREFE -> CH18 -> SMPR1/SQR3 -> 480 cycles -> 12-bit -> DR", "font": "mono", "size": 17, "color": "muted"},
+        {"type": "box", "x": 60, "y": 150, "w": 250, "h": 120, "pad": 18, "rich": [
+          {"text": "01 温度传感器", "font": "msyhbd", "size": 19, "color": "dark"},
+          {"text": "结温 -> 电压", "font": "msyh", "size": 15, "color": "muted"},
+          {"text": "内部，无外部引脚", "font": "msyh", "size": 14, "color": "muted"}
+        ]},
+        {"type": "box", "x": 330, "y": 150, "w": 250, "h": 120, "pad": 18, "rich": [
+          {"text": "02 TSVREFE", "font": "msyhbd", "size": 19, "color": "dark"},
+          {"text": "ADC->CCR bit set", "font": "mono", "size": 14, "color": "muted"},
+          {"text": "温度或 Vrefint 才开", "font": "msyh", "size": 14, "color": "muted"}
+        ]},
+        {"type": "box", "x": 600, "y": 150, "w": 250, "h": 120, "pad": 18, "rich": [
+          {"text": "03 通道选择", "font": "msyhbd", "size": 19, "color": "dark"},
+          {"text": "SQR3.SQ1 = 18", "font": "mono", "size": 14, "color": "muted"},
+          {"text": "ADC_CHANNEL_18|dummy", "font": "mono", "size": 12, "color": "muted"}
+        ]},
+        {"type": "box", "x": 870, "y": 150, "w": 250, "h": 120, "pad": 18, "rich": [
+          {"text": "04 采样保持", "font": "msyhbd", "size": 19, "color": "dark"},
+          {"text": "SMPR1.SMP18 = 480", "font": "mono", "size": 13, "color": "muted"},
+          {"text": "21.3us @22.5MHz", "font": "mono", "size": 13, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1140, "y": 150, "w": 250, "h": 120, "pad": 18, "rich": [
+          {"text": "05 模数转换", "font": "msyhbd", "size": 19, "color": "dark"},
+          {"text": "12 ADCCLK ~ 0.53us", "font": "mono", "size": 13, "color": "muted"},
+          {"text": "右对齐，0~4095", "font": "msyh", "size": 14, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1410, "y": 150, "w": 250, "h": 120, "pad": 18, "rich": [
+          {"text": "06 数据寄存器 DR", "font": "msyhbd", "size": 18, "color": "dark"},
+          {"text": "低 12 位有效", "font": "msyh", "size": 14, "color": "muted"},
+          {"text": "EOC 置位后可读", "font": "msyh", "size": 14, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[310, 210], [330, 210]], "color": "dark"},
+        {"type": "arrow", "points": [[580, 210], [600, 210]], "color": "dark"},
+        {"type": "arrow", "points": [[850, 210], [870, 210]], "color": "dark"},
+        {"type": "arrow", "points": [[1120, 210], [1140, 210]], "color": "dark"},
+        {"type": "arrow", "points": [[1390, 210], [1410, 210]], "color": "dark"},
+        {"type": "text", "x": 60, "y": 325, "text": "控制与读取顺序（每次 Get_Adc 调用一次）", "font": "msyhbd", "size": 19, "color": "primary"},
+        {"type": "box", "x": 60, "y": 380, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "07 HAL_ADC_Start", "font": "msyhbd", "size": 19, "color": "dark"},
+          {"text": "ADON=1, wait 3us", "font": "mono", "size": 14, "color": "muted"},
+          {"text": "SWSTART=1", "font": "mono", "size": 14, "color": "muted"}
+        ]},
+        {"type": "box", "x": 470, "y": 380, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "08 轮询 EOC", "font": "msyhbd", "size": 19, "color": "dark"},
+          {"text": "HAL_ADC_PollForConversion", "font": "mono", "size": 13, "color": "muted"},
+          {"text": "超时 10ms", "font": "mono", "size": 14, "color": "muted"}
+        ]},
+        {"type": "box", "x": 880, "y": 380, "w": 360, "h": 120, "pad": 18, "rich": [
+          {"text": "09 HAL_ADC_GetValue", "font": "msyhbd", "size": 18, "color": "dark"},
+          {"text": "read ADC1->DR", "font": "mono", "size": 14, "color": "muted"},
+          {"text": "返回 0~4095", "font": "msyh", "size": 14, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1290, "y": 380, "w": 350, "h": 120, "pad": 18, "rich": [
+          {"text": "10 平均与换算", "font": "msyhbd", "size": 19, "color": "dark"},
+          {"text": "Get_Adc_Average(...,10)", "font": "mono", "size": 13, "color": "muted"},
+          {"text": "Get_Temprate()", "font": "mono", "size": 14, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[420, 440], [470, 440]], "color": "dark"},
+        {"type": "arrow", "points": [[830, 440], [880, 440]], "color": "dark"},
+        {"type": "arrow", "points": [[1240, 440], [1290, 440]], "color": "dark"},
+        {"type": "box", "x": 60, "y": 550, "w": 1580, "h": 150, "pad": 22, "align": "left", "fill": "box", "rich": [
+          {"text": "一次 Get_Temprate() 的实际调用链", "font": "msyhbd", "size": 19, "color": "dark"},
+          {"text": "Get_Temprate -> Get_Adc_Average -> 10 x Get_Adc -> ConfigChannel -> Start -> Poll -> GetValue -> DR", "font": "mono", "size": 16, "color": "text"},
+          {"text": "每次 Get_Adc 都重新写 SMPR1 / SQR3，并再次置 TSVREFE", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "note", "x": 60, "y": 720, "w": 1580, "size": 19, "text": "F429 的 HAL 将 ADC_CHANNEL_TEMPSENSOR 映射为 ADC_CHANNEL_18（含 dummy 位），写 SQR3 前强转 uint16 会丢弃 dummy。TSVREFE 置位后 HAL 还会空转约 10us 等待传感器稳定。"}
+      ]
+    },
+    {
+      "name": "temp-formula",
+      "size": [1700, 840],
+      "elements": [
+        {"type": "text", "x": 60, "y": 36, "text": "从 ADC 码值到温度：三步换算", "font": "msyhbd", "size": 34, "color": "dark"},
+        {"type": "text", "x": 60, "y": 88, "text": "V = code*3.3/4096 ; T = (V-0.76)/0.0025+25 ; result = T*100", "font": "mono", "size": 17, "color": "muted"},
+        {"type": "box", "x": 60, "y": 150, "w": 360, "h": 140, "pad": 20, "rich": [
+          {"text": "01 ADC 码值", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "adcx = 0~4095", "font": "mono", "size": 16, "color": "orange"},
+          {"text": "10 次平均后的 u16", "font": "msyh", "size": 14, "color": "muted"}
+        ]},
+        {"type": "box", "x": 467, "y": 150, "w": 360, "h": 140, "pad": 20, "rich": [
+          {"text": "02 转成电压", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "V = adcx * 3.3 / 4096", "font": "mono", "size": 15, "color": "orange"},
+          {"text": "1 LSB = 0.8057 mV", "font": "mono", "size": 14, "color": "muted"}
+        ]},
+        {"type": "box", "x": 874, "y": 150, "w": 360, "h": 140, "pad": 20, "rich": [
+          {"text": "03 转成温度", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "T = (V-0.76)/0.0025+25", "font": "mono", "size": 14, "color": "orange"},
+          {"text": "V25=0.76V, 斜率 2.5mV/C", "font": "msyh", "size": 14, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1281, "y": 150, "w": 360, "h": 140, "pad": 20, "rich": [
+          {"text": "04 放大 100 倍", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "result = T * 100", "font": "mono", "size": 16, "color": "orange"},
+          {"text": "short，截断取整", "font": "msyh", "size": 14, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[420, 220], [467, 220]], "color": "dark"},
+        {"type": "arrow", "points": [[827, 220], [874, 220]], "color": "dark"},
+        {"type": "arrow", "points": [[1234, 220], [1281, 220]], "color": "dark"},
+        {"type": "box", "x": 60, "y": 355, "w": 1580, "h": 180, "pad": 22, "align": "left", "fill": "box", "rich": [
+          {"text": "两个算例（按源码 double 运算，最后转 short 截断）", "font": "msyhbd", "size": 19, "color": "dark"},
+          {"text": "adcx=943 : V=0.7597V ; T=24.8965C ; result=2489 -> 24.89C", "font": "mono", "size": 16, "color": "text"},
+          {"text": "adcx=1000: V=0.8057V ; T=43.2656C ; result=4326 -> 43.26C", "font": "mono", "size": 16, "color": "text"},
+          {"text": "1000 的显示：temp/100 = 43，temp%100 = 26 -> TEMPERATE: 43.26C", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 60, "y": 565, "w": 1580, "h": 175, "pad": 22, "align": "left", "rich": [
+          {"text": "公式里四个常量都直接写死在 Get_Temprate()，工程中没有 V25 / Avg_Slope 宏：", "font": "msyhbd", "size": 18, "color": "dark"},
+          {"text": "3.3        : ADC 参考电压（readme: P5 接 3.3V）", "font": "msyh", "size": 16, "color": "text"},
+          {"text": "4096       : 12 位满量程分母（不是 4095）", "font": "msyh", "size": 16, "color": "text"},
+          {"text": "0.76 V     : 25C 时的传感器输出电压", "font": "msyh", "size": 16, "color": "text"},
+          {"text": "0.0025 V/C : 2.5 mV/C 的平均斜率", "font": "msyh", "size": 16, "color": "text"}
+        ]},
+        {"type": "note", "x": 60, "y": 770, "w": 1580, "size": 19, "text": "result 是 short，temperate *= 100 后向零截断，不四舍五入；main 里 temp<0 时先取反，再在固定位置显示负号。代码用 4096 而不是 4095，满量程 4095 码对应 3.2992V。"}
+      ]
+    },
+    {
+      "name": "temp-curve",
+      "size": [1700, 820],
+      "elements": [
+        {"type": "text", "x": 60, "y": 36, "text": "温度-电压关系：V = 0.76 + 0.0025 x (T - 25)", "font": "msyhbd", "size": 34, "color": "dark"},
+        {"type": "text", "x": 60, "y": 88, "text": "V25 = 0.76V   slope = 2.5mV/C   ADC: 3.3V / 4096", "font": "mono", "size": 17, "color": "muted"},
+        {"type": "arrow", "points": [[160, 640], [160, 120]], "color": "dark", "width": 3},
+        {"type": "arrow", "points": [[160, 640], [1610, 640]], "color": "dark", "width": 3},
+        {"type": "text", "x": 62, "y": 118, "text": "电压/V", "font": "msyh", "size": 17, "color": "muted"},
+        {"type": "text", "x": 1535, "y": 600, "text": "温度/C", "font": "msyh", "size": 17, "color": "muted"},
+        {"type": "dashed", "points": [[160, 590], [1600, 590]], "color": "border"},
+        {"type": "dashed", "points": [[160, 490], [1600, 490]], "color": "border"},
+        {"type": "dashed", "points": [[160, 390], [1600, 390]], "color": "border"},
+        {"type": "dashed", "points": [[160, 290], [1600, 290]], "color": "border"},
+        {"type": "dashed", "points": [[160, 190], [1600, 190]], "color": "border"},
+        {"type": "dashed", "points": [[509, 640], [509, 150]], "color": "border"},
+        {"type": "dashed", "points": [[727, 640], [727, 150]], "color": "border"},
+        {"type": "dashed", "points": [[946, 640], [946, 150]], "color": "border"},
+        {"type": "dashed", "points": [[1164, 640], [1164, 150]], "color": "border"},
+        {"type": "dashed", "points": [[1382, 640], [1382, 150]], "color": "border"},
+        {"type": "line", "points": [[160, 592], [1600, 180]], "color": "orange", "width": 4},
+        {"type": "ellipse", "x": 719, "y": 422, "w": 16, "h": 16, "fill": "green", "stroke": "green"},
+        {"type": "text", "x": 750, "y": 380, "text": "25C / 0.76V", "font": "msyhbd", "size": 17, "color": "green"},
+        {"type": "text", "x": 160, "y": 660, "text": "-40", "font": "mono", "size": 16, "color": "muted", "anchor": "ma"},
+        {"type": "text", "x": 509, "y": 660, "text": "0", "font": "mono", "size": 16, "color": "muted", "anchor": "ma"},
+        {"type": "text", "x": 727, "y": 660, "text": "25", "font": "mono", "size": 16, "color": "muted", "anchor": "ma"},
+        {"type": "text", "x": 946, "y": 660, "text": "50", "font": "mono", "size": 16, "color": "muted", "anchor": "ma"},
+        {"type": "text", "x": 1164, "y": 660, "text": "75", "font": "mono", "size": 16, "color": "muted", "anchor": "ma"},
+        {"type": "text", "x": 1382, "y": 660, "text": "100", "font": "mono", "size": 16, "color": "muted", "anchor": "ma"},
+        {"type": "text", "x": 1596, "y": 660, "text": "125", "font": "mono", "size": 16, "color": "muted", "anchor": "ma"},
+        {"type": "text", "x": 146, "y": 582, "text": "0.60", "font": "mono", "size": 16, "color": "muted", "anchor": "ra"},
+        {"type": "text", "x": 146, "y": 482, "text": "0.70", "font": "mono", "size": 16, "color": "muted", "anchor": "ra"},
+        {"type": "text", "x": 146, "y": 382, "text": "0.80", "font": "mono", "size": 16, "color": "muted", "anchor": "ra"},
+        {"type": "text", "x": 146, "y": 282, "text": "0.90", "font": "mono", "size": 16, "color": "muted", "anchor": "ra"},
+        {"type": "text", "x": 146, "y": 182, "text": "1.00", "font": "mono", "size": 16, "color": "muted", "anchor": "ra"},
+        {"type": "box", "x": 980, "y": 450, "w": 520, "h": 160, "pad": 20, "align": "left", "rich": [
+          {"text": "典型码值（3.3V / 4096）", "font": "msyhbd", "size": 18, "color": "dark"},
+          {"text": "25 C  -> 0.760V -> 943", "font": "mono", "size": 15, "color": "text"},
+          {"text": "0 C   -> 0.698V -> 866", "font": "mono", "size": 15, "color": "text"},
+          {"text": "100 C -> 0.948V -> 1176", "font": "mono", "size": 15, "color": "text"}
+        ]},
+        {"type": "note", "x": 60, "y": 720, "w": 1580, "size": 19, "text": "温度升高 -> 传感器输出电压升高 -> ADC 码值变大；公式反推时先减 0.76V 再除以 0.0025V/C。ADC 只能看到电压，温度精度受内部传感器与 MCU 自热影响（readme 注意事项 4）。"}
+      ]
+    }
+  ]
+}

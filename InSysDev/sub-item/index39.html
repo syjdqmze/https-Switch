@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验25 IO扩展实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2f7a52;
+            margin-bottom: 6px;
+        }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验25 IO扩展实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">两根线摊成 8 路 IO，一根 INT 收回状态。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">用一颗 PCF8574 把 8 路 IO 挂到 IIC 上，再借 INT 引脚回报状态</div>
+
+                    <p>实验25 仍然复用实验24 的软件 IIC，只把从机从 AT24C02 换成 PCF8574。这颗芯片的价值在于<strong>用两根线换 8 路 IO</strong>：P0～P7 在阿波罗板上各接一路外设，而 INT 引脚接回 STM32 的 PB12，端口电平一变就拉低通知主机。</p>
+
+                    <table class="data">
+                        <tr><th>功能</th><th>引脚 / 器件</th><th>工程中的初始化</th></tr>
+                        <tr><td>IIC 时钟线</td><td>PH4，推挽输出 + 上拉</td><td><code>IIC_Init()</code></td></tr>
+                        <tr><td>IIC 数据线</td><td>PH5，推挽输出 + 上拉</td><td><code>IIC_Init()</code></td></tr>
+                        <tr><td>IO 扩展芯片</td><td>PCF8574，地址 0x40</td><td><code>PCF8574_Init()</code></td></tr>
+                        <tr><td>中断输入</td><td>PB12，输入上拉</td><td><code>PCF8574_Init()</code></td></tr>
+                        <tr><td>蜂鸣器</td><td>PCF8574 的 P0（BEEP_IO）</td><td><code>PCF8574_WriteBit()</code></td></tr>
+                        <tr><td>扩展 IO</td><td>PCF8574 的 P4（EX_IO）</td><td><code>PCF8574_ReadBit()</code></td></tr>
+                        <tr><td>LED0 / LED1</td><td>PB1 / PB0，推挽输出</td><td><code>LED_Init()</code></td></tr>
+                        <tr><td>显示</td><td>LCD（LTDC + 外部 SDRAM）</td><td><code>SDRAM_Init()</code> + <code>LCD_Init()</code></td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">PCF8574 · 0x40</span>
+                        <span class="chip">P0 蜂鸣器</span>
+                        <span class="chip">P4 扩展 IO</span>
+                        <span class="chip">PB12 = INT</span>
+                        <span class="chip">上电写 0xFF</span>
+                    </div>
+
+                    <div class="note">注意 <code>PCF8574_ADDR</code> 定义为 <code>0x40</code>，是已经左移一位的 8 位写地址；读地址靠 <code>|0x01</code> 得到 <code>0x41</code>。写寄存器时不要再手动左移，否则会发出 0x80。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">IIC 时序复用，新增的只有 PCF8574 这一层协议</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本实验关注点</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化顺序与主循环</td><td>KEY0 控蜂鸣器，INT 控 DS1</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>异常与中断入口</td><td><code>SysTick_Handler()</code>、<code>HardFault_Handler()</code></td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>复位后的最小配置</td><td>FPU、RCC 复位、VTOR 重定位</td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>向量表、栈堆、复位入口</td><td>Stack 0x400、Heap 0x200、<code>Reset_Handler</code></td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td>时钟初始化</td><td><code>Stm32_Clock_Init()</code> 的 PLL 与 Flash 等待</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>微秒/毫秒延时</td><td>IIC 位时序与 <code>delay_ms(10)</code> 写周期</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>串口与 printf</td><td><code>fputc()</code> 重定向、PA9/PA10 配置</td></tr>
+                        <tr><td><code>HARDWARE/IIC/myiic.c</code></td><td>软件模拟 IIC 时序</td><td>与实验24 完全一致，直接复用</td></tr>
+                        <tr><td><code>HARDWARE/PCF8574/pcf8574.c</code></td><td>本实验核心</td><td>在位检测、整字节读写、位操作</td></tr>
+                        <tr><td><code>HARDWARE/led|key|sdram|lcd</code></td><td>板级外设</td><td>现象呈现：灯、按键、屏幕</td></tr>
+                    </table>
+
+                    <p>与实验24 相比，<code class="inline">myiic.c</code> 一行没改，只新增了 <code class="inline">pcf8574.c</code>。<strong>这就是分层的好处</strong>：总线协议稳定之后，换从机只需要再写一层“器件协议”。</p>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">12 个节点里，只有第 10、11 步换成了 PCF8574 的在位检测</div>
+
+                    <figure class="figure">
+                        <img src="./index39-map/boot-flow.png" alt="实验25 IO扩展 从上电复位到主循环的启动流程图">
+                        <figcaption>图 3-1　启动链路与初始化顺序</figcaption>
+                    </figure>
+
+                    <p>初始化顺序依旧是“芯片 → 板子 → 外部器件”：时钟与时基先立住，LED / 按键 / SDRAM / LCD 再亮起来，最后才去 <code class="inline">while(PCF8574_Init())</code> 里反复检测扩展芯片。检测失败不会卡死，而是闪 DS0 并不断重试，方便现场判断是排线没插还是芯片坏了。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>PCF8574_Init()</code> 出现在 <code>while()</code> 的条件里，返回 0 才跳出，返回 1 就继续循环重试。</li>
+                            <li>它内部先配 PB12 为上拉输入，再调 <code>IIC_Init()</code>，最后发一次 0x40 看有没有应答。</li>
+                            <li>无论检测是否成功，都会执行 <code>PCF8574_WriteOneByte(0xFF)</code>，把 P0～P7 默认置高。</li>
+                            <li>只有检测通过后才打印 <code>PCF8574 Ready!</code> 并进入主循环，此时 POINT_COLOR 被切成蓝色。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">栈 1KB、堆 512B，向量表第 0 字就是栈顶地址</div>
+
+                    <pre class="code">Stack_Size      EQU     0x400;                          <span class="cmt">// 栈 1KB，主栈 MSP 从这里向下生长</span>
+Heap_Size       EQU     0x200;                          <span class="cmt">// 堆 512B，本工程几乎不用 malloc</span>
+
+__Vectors       DCD     __initial_sp               ; Top of Stack
+                DCD     Reset_Handler              ; Reset Handler
+                DCD     NMI_Handler                ; NMI Handler
+                DCD     HardFault_Handler          ; Hard Fault Handler
+                ...
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0                              <span class="cmt">// 先跑 SystemInit</span>
+                 LDR     R0, =__main
+                 BX      R0                              <span class="cmt">// 再进 C 库，最终调用 main</span>
+                 ENDP</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>复位时内核从地址 0 取两个字：第 0 个字装入 MSP，第 1 个字装入 PC。</li>
+                            <li>F429 的 Flash 起始地址是 0x08000000，上电时 0x00000000 别名到 Flash，读到就是本工程的向量表。</li>
+                            <li>本实验的局部变量只有 <code>key</code>、<code>i</code>、<code>beepsta</code> 三个小变量，1KB 栈很宽裕；但 <code>LCD_ShowString</code> 调用层次较深，仍不建议在栈上放大数组。</li>
+                            <li><code>Reset_Handler</code> 里的 <code>BLX</code> 会保留返回地址，所以 <code>SystemInit</code> 结束后还会回到启动代码继续执行。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">先把时钟打回默认值、建好 1ms 时基，再谈外设</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  /* set CP10 and CP11 Full Access */
+  #endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;          <span class="cmt">// 先开内部 HSI，保证有饭吃</span>
+  RCC-&gt;CFGR = 0x00000000;                   <span class="cmt">// 清空分频配置</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;          <span class="cmt">// 关 HSEON / CSSON / PLLON</span>
+  RCC-&gt;PLLCFGR = 0x24003010;                <span class="cmt">// PLL 参数恢复复位值</span>
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET; <span class="cmt">// 向量表定位到 Flash 起始</span>
+}</pre>
+
+                    <p><code class="inline">SystemInit()</code> 只做“复位到安全状态”，真正把主频拉到 180MHz 的是 <code class="inline">main()</code> 里的 <code class="inline">Stm32_Clock_Init()</code>。<code class="inline">HAL_Init()</code> 则负责两件事：把 SysTick 配成 1ms 中断，并把 NVIC 优先级分组设为 4 位抢占、0 位子优先级。</p>
+
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);  <span class="cmt">// 4 位抢占 + 0 位子优先级</span>
+  HAL_InitTick(TICK_INT_PRIORITY);                     <span class="cmt">// SysTick 1ms</span>
+  ...
+}</pre>
+
+                    <div class="note">本实验没有使用任何外设中断，PB12 只是普通输入。也就是说 <code>PCF8574_INT==0</code> 是靠主循环反复读 IDR 得到的，不是中断触发，所以响应延迟取决于 <code>delay_ms(10)</code> 的节拍。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟、延时与串口">
+                    <h2>06　时钟、延时与串口</h2>
+                    <div class="sec-sub">180MHz 与 45MHz/90MHz 的分频结果，决定 IIC 位宽与串口波特率</div>
+
+                    <figure class="figure">
+                        <img src="./index39-map/clock-tree.png" alt="Stm32_Clock_Init 的时钟树与各总线分频结果">
+                        <figcaption>图 6-1　PLL 参数与总线分频</figcaption>
+                    </figure>
+
+                    <pre class="code">// SYSTEM/sys/sys.c
+RCC_OscInitStructure.PLL.PLLM = pllm;   <span class="cmt">// 25，HSE 先分频</span>
+RCC_OscInitStructure.PLL.PLLN = plln;   <span class="cmt">// 360，VCO = 25 / 25 × 360 = 360MHz</span>
+RCC_OscInitStructure.PLL.PLLP = pllp;   <span class="cmt">// 2，SYSCLK = 360 / 2 = 180MHz</span>
+RCC_OscInitStructure.PLL.PLLQ = pllq;   <span class="cmt">// 8，Fusb = 360 / 8 = 45MHz</span>
+RCC_ClkInitStructure.AHBCLKDivider  = RCC_SYSCLK_DIV1;  <span class="cmt">// HCLK = 180MHz</span>
+RCC_ClkInitStructure.APB1CLKDivider = RCC_HCLK_DIV4;    <span class="cmt">// PCLK1 = 45MHz</span>
+RCC_ClkInitStructure.APB2CLKDivider = RCC_HCLK_DIV2;    <span class="cmt">// PCLK2 = 90MHz</span>
+HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure, FLASH_LATENCY_5);</pre>
+
+                    <pre class="code">// SYSTEM/delay/delay.c
+void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">// SysTick 跟随 HCLK</span>
+    fac_us = SYSCLK;                                     <span class="cmt">// 180MHz → 每微秒 180 个节拍</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks = nus * fac_us;                            <span class="cmt">// 需要等的节拍数</span>
+    u32 told = SysTick-&gt;VAL;                             <span class="cmt">// SysTick 是递减计数器</span>
+    while (1) { ... if (tcnt &gt;= ticks) break; }          <span class="cmt">// 差值累加到 ticks 就退出</span>
+}
+
+void delay_ms(u16 nms)
+{
+    u32 i;
+    for (i = 0; i &lt; nms; i++) delay_us(1000);            <span class="cmt">// 毫秒靠微秒循环拼</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>fac_us</code> 必须与 HCLK 一致，否则 IIC 的 <code>delay_us(4)</code> 与 <code>delay_us(2)</code> 都会失真，PCF8574 可能时通时不通。</li>
+                            <li><code>delay_us()</code> 是轮询实现，不依赖中断，所以在 <code>while(PCF8574_Init())</code> 的失败分支里也能正常闪灯。</li>
+                            <li>GPIOB 与 GPIOH 都挂在 AHB1，读写端口寄存器不需要额外的总线分频换算。</li>
+                            <li>串口配置为 8N1、无硬件流控，仅用于 printf 输出；DMA 未参与本实验。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="PCF8574 与地址编码">
+                    <h2>07　PCF8574 与地址编码</h2>
+                    <div class="sec-sub">8 位准双向口，写 1 为高、写 0 为低，读之前先写 1</div>
+
+                    <p>PCF8574 是 IIC 转 8 位并行口的芯片，7 位地址为 <code class="inline">0100 A2 A1 A0</code>，阿波罗板上地址脚接地，所以 8 位写地址就是 <code class="inline">0x40</code>、读地址 <code class="inline">0x41</code>。它的端口是准双向结构：<strong>输出高电平时内部弱上拉，输出低电平时强下拉</strong>，因此把某一位当输入用时，必须先把它写成 1。</p>
+
+                    <pre class="code">// HARDWARE/PCF8574/pcf8574.h
+#define PCF8574_ADDR    0X40     <span class="cmt">// 已左移一位的写地址</span>
+#define PCF8574_INT     PBin(12) <span class="cmt">// INT 接 PB12</span>
+
+#define BEEP_IO         0        <span class="cmt">// P0 蜂鸣器</span>
+#define AP_INT_IO       1        <span class="cmt">// P1 AP3216C 中断</span>
+#define DCMI_PWDN_IO    2        <span class="cmt">// P2 DCMI 电源</span>
+#define USB_PWR_IO      3        <span class="cmt">// P3 USB 电源</span>
+#define EX_IO           4        <span class="cmt">// P4 扩展 IO（本实验按键）</span>
+#define MPU_INT_IO      5        <span class="cmt">// P5 MPU9250 中断</span>
+#define RS485_RE_IO     6        <span class="cmt">// P6 RS485_RE</span>
+#define ETH_RESET_IO    7        <span class="cmt">// P7 以太网复位</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>0x40</code> 是写地址，读地址要在最低位置 1，也就是 <code>0x41</code>。</li>
+                            <li>宏名统一以 <code>_IO</code> 结尾，业务层只写 <code>BEEP_IO</code>、<code>EX_IO</code>，不需要记住具体位号。</li>
+                            <li>PB12 读 INT 用 <code>PBin(12)</code>，本质是读 GPIOB 的 IDR 第 12 位。</li>
+                            <li>上电默认 <code>0xFF</code> 全部写 1，这样 P4 这类被外部按键拉低的引脚才有机会读到 0。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="IIC 扩展 8 路 IO">
+                    <h2>08　IIC 扩展 8 路 IO</h2>
+                    <div class="sec-sub">两根线换 8 路输出，每一路的板级用途都在宏里写清楚</div>
+
+                    <figure class="figure">
+                        <img src="./index39-map/pcf8574-chain.png" alt="STM32F429 通过 IIC 连接 PCF8574 并引出 8 路 IO 的示意图">
+                        <figcaption>图 8-1　IIC 总线、PCF8574 与 P0～P7 的分配</figcaption>
+                    </figure>
+
+                    <pre class="code">// HARDWARE/PCF8574/pcf8574.c
+u8 PCF8574_ReadOneByte(void)
+{
+    u8 temp = 0;
+    IIC_Start();
+    IIC_Send_Byte(PCF8574_ADDR|0X01);   <span class="cmt">// 0x41，进入接收模式</span>
+    IIC_Wait_Ack();
+    temp = IIC_Read_Byte(0);            <span class="cmt">// 读 8 位，回 NACK</span>
+    IIC_Stop();
+    return temp;
+}
+
+void PCF8574_WriteOneByte(u8 DataToWrite)
+{
+    IIC_Start();
+    IIC_Send_Byte(PCF8574_ADDR|0X00);   <span class="cmt">// 0x40，写 8 位端口</span>
+    IIC_Wait_Ack();
+    IIC_Send_Byte(DataToWrite);         <span class="cmt">// 一次写满 8 路</span>
+    IIC_Wait_Ack();
+    IIC_Stop();
+    delay_ms(10);                       <span class="cmt">// 给芯片留出锁存时间</span>
+}</pre>
+
+                    <p>把 <code class="inline">PCF8574_WriteOneByte()</code> 摊到总线上看，一帧只有三段：地址字节 <code class="inline">0x40</code> 加写位、一个数据字节、两次 ACK，两头各一个 START 与 STOP。</p>
+
+                    <figure class="figure">
+                        <img src="./index39-map/iic-write-timing.png" alt="软件 IIC 写 PCF8574 的完整时序：START、地址 0x40 加 W、ACK、数据字节、ACK、STOP">
+                        <figcaption>图 8-2　写 PCF8574 的一帧：START → 0x40+W → ACK → 数据 → ACK → STOP</figcaption>
+                    </figure>
+
+                    <p>每一位的时间来自 <code class="inline">IIC_Send_Byte()</code> 里的三次 <code class="inline">delay_us(2)</code>，合计约 6 µs，整帧约 116 µs（推算值）；写完之后源码又补了 <code class="inline">delay_ms(10)</code>，所以实际一次写操作远不止 116 µs。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>PCF8574 没有“寄存器地址”的概念，写一个字节就是写整个端口，所以协议比 EEPROM 简单得多。</li>
+                            <li>读的时候必须发 <code>0x41</code>，否则芯片仍处于写方向，SDA 上不会有数据。</li>
+                            <li><code>IIC_Read_Byte(0)</code> 传 0 表示只读一个字节并回 NACK，正好匹配 PCF8574 的读长度。</li>
+                            <li>写周期只需几十微秒，源码仍保留 <code>delay_ms(10)</code>，属于保守写法，也方便示波器观察。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="初始化与在位检测">
+                    <h2>09　初始化与在位检测</h2>
+                    <div class="sec-sub">发一次 0x40 看应答，顺便把 8 路默认置高</div>
+
+                    <pre class="code">u8 PCF8574_Init(void)
+{
+    u8 temp = 0;
+    __HAL_RCC_GPIOB_CLK_ENABLE();        <span class="cmt">// 先开 GPIOB 时钟</span>
+    GPIO_Initure.Pin   = GPIO_PIN_12;    <span class="cmt">// PB12 作 INT 输入</span>
+    GPIO_Initure.Mode  = GPIO_MODE_INPUT;
+    GPIO_Initure.Pull  = GPIO_PULLUP;    <span class="cmt">// INT 是开漏，必须上拉</span>
+    GPIO_Initure.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOB, &amp;GPIO_Initure);
+
+    IIC_Init();                          <span class="cmt">// PH4 / PH5 就绪</span>
+
+    IIC_Start();
+    IIC_Send_Byte(PCF8574_ADDR);         <span class="cmt">// 只发地址，不发数据</span>
+    temp = IIC_Wait_Ack();               <span class="cmt">// 0 = 有应答 = 芯片在位</span>
+    IIC_Stop();
+
+    PCF8574_WriteOneByte(0XFF);          <span class="cmt">// 默认 8 路全高</span>
+    return temp;                         <span class="cmt">// main 用 while 判返回值</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>返回值直接来自 <code>IIC_Wait_Ack()</code>：0 表示从机拉低了 SDA，1 表示 250 次计数内一直为高，判定为无应答。</li>
+                            <li>检测只发地址不发数据，是最轻量的“在不在”探测方式，不会改动端口状态。</li>
+                            <li>最后统一写 <code>0xFF</code>，保证 P0～P7 全部为高；对 P4 这种外部按键接地的引脚，写 1 才能读回真实电平。</li>
+                            <li><code>main()</code> 把它放进 <code>while()</code> 条件，返回 1 就继续重试，所以即使热插拔也能自愈。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="中断链路：INT 到 DS1">
+                    <h2>10　中断链路：INT 到 DS1</h2>
+                    <div class="sec-sub">P4 变化 → INT 拉低 → 主循环读 8 位 → INT 释放 → 翻转 DS1</div>
+
+                    <figure class="figure">
+                        <img src="./index39-map/int-path.png" alt="PCF8574 的 EX_IO 按下到 DS1 翻转的完整链路图">
+                        <figcaption>图 10-1　从 EX_IO 到 LED1 的七步链路</figcaption>
+                    </figure>
+
+                    <pre class="code">void PCF8574_WriteBit(u8 bit, u8 sta)
+{
+    u8 data;
+    data = PCF8574_ReadOneByte();        <span class="cmt">// 先读回当前 8 位</span>
+    if (sta == 0) data &amp;= ~(1 &lt;&lt; bit);   <span class="cmt">// 清这一位</span>
+    else          data |= 1 &lt;&lt; bit;      <span class="cmt">// 置这一位</span>
+    PCF8574_WriteOneByte(data);          <span class="cmt">// 再整体写回</span>
+}
+
+u8 PCF8574_ReadBit(u8 bit)
+{
+    u8 data = PCF8574_ReadOneByte();     <span class="cmt">// 读操作同时清中断</span>
+    if (data &amp; (1 &lt;&lt; bit)) return 1;
+    else return 0;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>PCF8574 不能按位写，只能整字节覆盖，所以 <code>WriteBit()</code> 必须“读—改—写”，否则会把其他 7 路一起冲掉。</li>
+                            <li>INT 是开漏输出，任何一个输入脚的电平与上次写入值不同都会把它拉低；对 PCF8574 执行一次读操作后自动释放。</li>
+                            <li><code>ReadBit()</code> 返回的是引脚真实电平：EX_IO 外接按键接地，按下时为 0，所以主循环用 <code>if(key==0)</code> 才翻转 LED1。</li>
+                            <li>链路里没有用到外部中断，靠 <code>while(1)</code> 每圈判断 <code>PCF8574_INT==0</code>，响应延迟约 10ms。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="主循环与按键逻辑">
+                    <h2>11　主循环与按键逻辑</h2>
+                    <div class="sec-sub">KEY0 控蜂鸣器，INT 控 DS1，DS0 做 200ms 心跳</div>
+
+                    <pre class="code">// USER/main.c
+u8 beepsta = 1;                          <span class="cmt">// 初始状态：蜂鸣器位为 1</span>
+
+while (PCF8574_Init())                   <span class="cmt">// 检测不到就闪 DS0 重试</span>
+{
+    LCD_ShowString(30,170,200,16,16,"PCF8574 Check Failed!");
+    delay_ms(500);
+    LCD_ShowString(30,170,200,16,16,"Please Check!      ");
+    delay_ms(500);
+    LED0 = !LED0;
+}
+LCD_ShowString(30,170,200,16,16,"PCF8574 Ready!");
+
+while (1)
+{
+    key = KEY_Scan(0);
+    if (key == KEY0_PRES)                <span class="cmt">// KEY0：切蜂鸣器</span>
+    {
+        beepsta = !beepsta;
+        PCF8574_WriteBit(BEEP_IO, beepsta);
+    }
+    if (PCF8574_INT == 0)                <span class="cmt">// 有输入变化</span>
+    {
+        key = PCF8574_ReadBit(EX_IO);    <span class="cmt">// 读 P4，同时清中断</span>
+        if (key == 0) LED1 = !LED1;      <span class="cmt">// 按下才翻转 DS1</span>
+    }
+    i++;
+    delay_ms(10);
+    if (i == 20) { LED0 = !LED0; i = 0; }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>beepsta</code> 初值为 1，第一次按 KEY0 变成 0，也就是把 P0 拉低；具体响不响取决于板上蜂鸣器的驱动极性。</li>
+                            <li><code>PCF8574_INT == 0</code> 是电平判断，不是边沿判断，所以按住不放会反复读到 0，但 <code>LED1</code> 只在每次按键松开前翻转一次（因为读操作会刷新）。</li>
+                            <li><code>KEY_Scan(0)</code> 与 <code>ReadBit</code> 共用变量 <code>key</code>，顺序上先判 KEY0 再判 INT，互不干扰。</li>
+                            <li>主循环每圈 <code>delay_ms(10)</code>，累计 20 圈翻转 DS0，约 200ms 一次，用来证明系统没卡死。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="交互演示：按键与中断">
+                    <h2>12　交互演示：按键与中断</h2>
+                    <div class="sec-sub">点按钮模拟 KEY0 与 EX_IO，观察 P0 / P4 与 INT 的变化</div>
+
+                    <div class="sim">
+                        <div class="sim-title">KEY0 控蜂鸣器 → EX_IO 触发 INT → DS1 翻转</div>
+                        <div class="sim-buttons">
+                            <button data-act="key0">按 KEY0（蜂鸣器）</button>
+                            <button data-act="exio">按下 EX_IO</button>
+                            <button data-act="release">松开 EX_IO</button>
+                            <button data-act="reset">复位</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="d39a"></span>蜂鸣器位 P0</div>
+                            <div class="led-item"><span class="led-dot" id="d39b"></span>INT（PB12）</div>
+                            <div class="led-item"><span class="led-dot" id="d39c"></span>DS1</div>
+                        </div>
+                        <div class="sim-log" id="log39">上电：PCF8574_Init 写 0xFF，P0 为高，INT 为高，DS1 灭。</div>
+                    </div>
+
+                    <div class="note">演示复现的是源码的三条分支：KEY0 走 <code>PCF8574_WriteBit(BEEP_IO, beepsta)</code>，EX_IO 按下走 <code>PCF8574_INT==0</code> 判断，读 <code>EX_IO</code> 后 INT 自动回高。以上仅演示逻辑。</div>
+
+                    <script>
+                    (function () {
+                        var beep = true, intLow = false, ds1 = false;
+                        var log = document.getElementById('log39');
+                        var dotA = document.getElementById('d39a');
+                        var dotB = document.getElementById('d39b');
+                        var dotC = document.getElementById('d39c');
+
+                        function render(msg) {
+                            dotA.classList.toggle('on', beep);
+                            dotB.classList.toggle('on', intLow);
+                            dotC.classList.toggle('on', ds1);
+                            if (msg) log.textContent = msg;
+                        }
+
+                        document.querySelectorAll('.sim-buttons button').forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                var act = btn.getAttribute('data-act');
+                                if (act === 'reset') {
+                                    beep = true; intLow = false; ds1 = false;
+                                    render('已复位：PORT = 0xFF，P0 高，INT 高，DS1 灭。');
+                                    return;
+                                }
+                                if (act === 'key0') {
+                                    beep = !beep;
+                                    render('KEY0：beepsta 取反 → PCF8574_WriteBit(0, ' + (beep ? 1 : 0) + ')，先读回整字节再改 P0 写回。');
+                                    return;
+                                }
+                                if (act === 'exio') {
+                                    intLow = true;
+                                    ds1 = !ds1;
+                                    intLow = false;
+                                    render('EX_IO 按下：P4 被拉低，INT 随之为低；主循环判到 PCF8574_INT==0，ReadBit(4) 读回 0 → DS1 翻转，读操作同时释放 INT。');
+                                    return;
+                                }
+                                if (act === 'release') {
+                                    render('松开 EX_IO：P4 回到高电平，INT 短暂拉低后再次被读操作释放，ReadBit(4) 返回 1，DS1 保持不变。');
+                                    return;
+                                }
+                            });
+                        });
+                    })();
+                    </script>
+                </section>
+
+                <section class="content-card" id="s13" data-title="操作与现象对照">
+                    <h2>13　操作与现象对照</h2>
+                    <div class="sec-sub">从屏幕提示到板上 LED，每一步都能对上代码</div>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>代码路径</th><th>现象</th></tr>
+                        <tr><td>上电 / 复位</td><td><code>PCF8574_Init()</code></td><td>屏幕显示 PCF8574 TEST，检测通过后出现 <code>PCF8574 Ready!</code></td></tr>
+                        <tr><td>扩展板未接</td><td><code>while(PCF8574_Init())</code></td><td>DS0 约 1 秒闪一次，屏幕交替显示 Check Failed 与 Please Check</td></tr>
+                        <tr><td>按 KEY0</td><td><code>PCF8574_WriteBit(BEEP_IO, ...)</code></td><td>板上蜂鸣器状态切换，LCD 无变化</td></tr>
+                        <tr><td>按下 EX_IO</td><td><code>PCF8574_INT==0</code> → <code>ReadBit(EX_IO)</code></td><td>DS1 状态翻转，INT 随即回高</td></tr>
+                        <tr><td>松开 EX_IO</td><td>INT 保持高</td><td>主循环不再进入 INT 分支，DS1 保持</td></tr>
+                        <tr><td>空闲</td><td>主循环 <code>i++</code></td><td>DS0 约每 200ms 翻转一次</td></tr>
+                    </table>
+                </section>
+
+                <section class="content-card" id="s14" data-title="常见问题排查">
+                    <h2>14　常见问题排查</h2>
+                    <div class="sec-sub">“读不到中断”与“写坏其他 IO”是两个高频坑</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>可能原因</th><th>排查方法</th></tr>
+                        <tr><td>一直显示 PCF8574 Check Failed</td><td>地址写成 0x20 或 0x80（多左移一位）</td><td>确认宏值是 <code>0x40</code>，逻辑分析仪看首字节</td></tr>
+                        <tr><td>INT 一直为高，按键没反应</td><td>PB12 没上拉，或外部中断脚焊错</td><td>用万用表量 PB12 静态电平，应为 3.3V</td></tr>
+                        <tr><td>按一次键 DS1 连翻多次</td><td>INT 未在读操作后释放，抖动被反复采样</td><td>确认 <code>ReadBit</code> 真的执行了 <code>0x41</code> 读</td></tr>
+                        <tr><td>蜂鸣器一响其他 IO 也变了</td><td>直接写单字节而没有先读回</td><td>坚持用 <code>WriteBit</code> 而不是手写 <code>WriteOneByte</code></td></tr>
+                        <tr><td>P4 永远读 0</td><td>初始化没写 <code>0xFF</code>，端口停在低电平</td><td>检查 <code>PCF8574_Init()</code> 末尾的写 0xFF</td></tr>
+                    </table>
+
+                    <div class="note">PCF8574 的端口是准双向口，写 1 才能当输入用。如果初始化漏写 <code>0xFF</code>，P4 会被内部强下拉，无论按键是否按下都读到 0，现象很像“按键坏了”。</div>
+                </section>
+
+                <section class="content-card" id="s15" data-title="总结">
+                    <h2>15　总结</h2>
+                    <div class="sec-sub">IIC 是总线，PCF8574 是“把总线摊成 8 根线”的桥</div>
+
+                    <p>实验25 没有改一行 IIC 时序，却多出 8 路 IO，靠的就是 PCF8574 这层协议封装：<code class="inline">ReadOneByte</code> / <code class="inline">WriteOneByte</code> 管整字节，<code class="inline">ReadBit</code> / <code class="inline">WriteBit</code> 管单个引脚。<strong>“读—改—写”是位操作的通用套路</strong>，后面操作任何“只能整字节写”的扩展芯片都能照搬。</p>
+
+                    <p>另一条值得记住的经验是 INT 的用法：开漏输出加 MCU 上拉，任何一个输入变化都会拉低，而“读一次端口”就是清中断。它把 8 路输入压缩成 1 根中断线，代价是需要主循环轮询或额外接外部中断。</p>
+
+                    <div class="chips">
+                        <span class="chip">PCF8574 · 0x40</span>
+                        <span class="chip">整字节读写</span>
+                        <span class="chip">读—改—写</span>
+                        <span class="chip">INT 开漏 + 上拉</span>
+                        <span class="chip">KEY0 控蜂鸣器</span>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-12 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

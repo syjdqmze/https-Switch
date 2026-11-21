@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429中断系统详解</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-actions {
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .sidebar-actions button {
+            flex: 1;
+            padding: 5px 0;
+            font-size: 12px;
+            border: 1px solid #d9d9d9;
+            background: #fff;
+            color: #595959;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sidebar-actions button:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+            background: #e6f7ff;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+            margin: 0;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-menu::-webkit-scrollbar-thumb {
+            background-color: #c5d8e8;
+            border-radius: 3px;
+        }
+
+        .sidebar-menu::-webkit-scrollbar-track {
+            background-color: transparent;
+        }
+
+        .sidebar-menu > li {
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu > li > .menu-title {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .sidebar-menu > li > .menu-title:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu > li.active > .menu-title {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            font-weight: 600;
+        }
+
+        .sidebar-menu > li.active {
+            border-left-color: #1890ff;
+        }
+
+        .sidebar-menu .icon {
+            display: inline-block;
+            width: 16px;
+            margin-right: 8px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-menu .arrow {
+            margin-left: auto;
+            font-size: 10px;
+            transition: transform 0.25s;
+            color: #bbb;
+        }
+
+        .sidebar-menu > li.open > .menu-title .arrow {
+            transform: rotate(90deg);
+        }
+
+        /* 二级子菜单 */
+        .submenu {
+            list-style: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu > li.open > .submenu {
+            max-height: 1000px;
+        }
+
+        .submenu li {
+            padding: 8px 20px 8px 44px;
+            cursor: pointer;
+            color: #777;
+            font-size: 13px;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            margin-left: 3px;
+        }
+
+        .submenu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .submenu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        [id] {
+            scroll-margin-top: 8px;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* 内容小节标题 */
+        .content-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 22px 0 12px 0;
+            padding: 4px 0 4px 12px;
+            border-left: 4px solid #1890ff;
+            background: linear-gradient(90deg, rgba(24,144,255,0.06), transparent);
+        }
+
+        /* 内容图片 */
+        .content-card img {
+            display: block;
+            max-width: 88%;
+            margin: 14px auto;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+        }
+
+        /* 图注 */
+        .img-caption {
+            text-align: center;
+            color: #888;
+            font-size: 13px;
+            margin: 4px auto 18px auto;
+            max-width: 86%;
+            line-height: 1.6;
+        }
+
+        /* 数据表格 */
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0 18px 0;
+            font-size: 13px;
+        }
+
+        .api-table th {
+            background-color: #1890ff;
+            color: #fff;
+            font-weight: 500;
+            padding: 9px 10px;
+            border: 1px solid #d5e3f0;
+            text-align: left;
+        }
+
+        .api-table td {
+            padding: 8px 10px;
+            border: 1px solid #dce8f2;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .api-table tr:nth-child(even) td {
+            background-color: #f7fafd;
+        }
+
+        .api-table td.c, .api-table th.c {
+            text-align: center;
+        }
+
+        /* 代码块 */
+        .code-block {
+            background-color: #282c34;
+            color: #abb2bf;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.65;
+            padding: 14px 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 10px 0 16px 0;
+            white-space: pre;
+        }
+
+        .code-block .cm {
+            color: #7f848e;
+        }
+
+        .code-block .kw {
+            color: #c678dd;
+        }
+
+        .code-block .fn {
+            color: #61afef;
+        }
+
+        /* 章节小结框 */
+        .summary-box {
+            background: #f2f9f2;
+            border-left: 4px solid #52c41a;
+            border-radius: 0 4px 4px 0;
+            padding: 12px 16px;
+            margin: 18px 0 6px 0;
+            line-height: 1.8;
+        }
+
+        .summary-box .sb-title {
+            font-weight: 600;
+            color: #237804;
+            margin-bottom: 4px;
+        }
+
+        .summary-box p {
+            color: #555;
+            margin-bottom: 4px;
+        }
+
+        /* 操作步骤列表 */
+        .steps {
+            margin: 8px 0 14px 0;
+            padding-left: 4px;
+            list-style: none;
+        }
+
+        .steps li {
+            color: #555;
+            line-height: 1.85;
+            margin-bottom: 7px;
+            padding-left: 26px;
+            position: relative;
+        }
+
+        .steps li .no {
+            position: absolute;
+            left: 0;
+            top: 3px;
+            width: 19px;
+            height: 19px;
+            border-radius: 50%;
+            background: #1890ff;
+            color: #fff;
+            font-size: 12px;
+            text-align: center;
+            line-height: 19px;
+            font-weight: 600;
+        }
+
+        .steps li b, .content-card p b {
+            color: #333;
+        }
+
+        /* 提示/警告框 */
+        .tip {
+            background: #fffbe6;
+            border: 1px solid #ffe58f;
+            border-radius: 4px;
+            padding: 9px 14px;
+            margin: 10px 0 14px 0;
+            color: #6b5900;
+            line-height: 1.7;
+            font-size: 13px;
+        }
+
+        .warn {
+            background: #fff1f0;
+            border: 1px solid #ffa39e;
+            border-radius: 4px;
+            padding: 9px 14px;
+            margin: 10px 0 14px 0;
+            color: #8c3a2e;
+            line-height: 1.7;
+            font-size: 13px;
+        }
+
+        /* 文内目录 */
+        .toc-card {
+            background: #f7fafd;
+            border: 1px solid #dce8f2;
+            border-radius: 6px;
+            padding: 14px 20px;
+            margin: 12px 0 20px 0;
+        }
+
+        .toc-card .toc-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .toc-card ol {
+            margin-left: 20px;
+            color: #555;
+            line-height: 2;
+        }
+
+        .toc-card a {
+            color: #1890ff;
+            text-decoration: none;
+        }
+
+        .toc-card a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">STM32F429中断系统详解</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <div class="sidebar-actions">
+                    <button class="btn-expand-all">全部展开</button>
+                    <button class="btn-collapse-all">全部收起</button>
+                </div>
+                <ul class="sidebar-menu">
+                    <li class="active open" data-target="sec-intro">
+                        <div class="menu-title"><span class="icon">&#9654;</span>1 中断概述<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-what">1.1 什么是中断</li>
+                            <li data-target="sec-why">1.2 中断的作用与意义</li>
+                            <li data-target="sec-system">1.3 F429中断体系概览</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-nvic">
+                        <div class="menu-title"><span class="icon">&#9654;</span>2 NVIC详解<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-nvic-basic">2.1 NVIC基本概念</li>
+                            <li data-target="sec-vector">2.2 中断向量表</li>
+                            <li data-target="sec-nvic-work">2.3 NVIC工作原理</li>
+                            <li data-target="sec-priority">2.4 中断优先级概念</li>
+                            <li data-target="sec-group">2.5 中断优先级分组</li>
+                            <li data-target="sec-nvic-use">2.6 NVIC的使用</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-exti">
+                        <div class="menu-title"><span class="icon">&#9654;</span>3 EXTI详解<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-exti-basic">3.1 EXTI基本概念</li>
+                            <li data-target="sec-exti-feat">3.2 EXTI主要特性</li>
+                            <li data-target="sec-exti-work">3.3 EXTI工作原理</li>
+                            <li data-target="sec-exti-line">3.4 EXTI中断/事件线</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-map">
+                        <div class="menu-title"><span class="icon">&#9654;</span>4 EXTI与IO映射关系<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-syscfg">4.1 SYSCFG简介</li>
+                            <li data-target="sec-map-rule">4.2 EXTI与IO对应关系</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-regs">
+                        <div class="menu-title"><span class="icon">&#9654;</span>5 中断相关寄存器汇总<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-reg-nvic">5.1 NVIC寄存器</li>
+                            <li data-target="sec-reg-exti">5.2 EXTI寄存器</li>
+                            <li data-target="sec-reg-exticr">5.3 SYSCFG_EXTICR寄存器</li>
+                        </ul>
+                    </li>
+                    <li data-target="sec-method">
+                        <div class="menu-title"><span class="icon">&#9654;</span>6 中断配置方法</div>
+                    </li>
+                    <li class="open" data-target="sec-hal">
+                        <div class="menu-title"><span class="icon">&#9654;</span>7 HAL库中断配置详解<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-hal-steps">7.1 HAL库配置步骤</li>
+                            <li data-target="sec-hal-isr">7.2 外部中断服务函数</li>
+                            <li data-target="sec-hal-callback">7.3 HAL回调处理机制</li>
+                            <li data-target="sec-hal-demo">7.4 编程实战</li>
+                        </ul>
+                    </li>
+                    <li data-target="sec-summary">
+                        <div class="menu-title"><span class="icon">&#9654;</span>8 小结</div>
+                    </li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+
+                    <!-- ═══════════ 第1章 中断概述 ═══════════ -->
+                    <div class="content-card">
+                        <h3 id="sec-intro">1 中断概述</h3>
+                        <div class="toc-card">
+                            <div class="toc-title">本教程目录</div>
+                            <ol>
+                                <li><a href="#sec-intro">中断概述</a>：什么是中断、中断的作用与意义、F429 中断体系概览</li>
+                                <li><a href="#sec-nvic">NVIC 详解</a>：基本概念、中断向量表、工作原理、优先级概念、优先级分组与使用方法</li>
+                                <li><a href="#sec-exti">EXTI 详解</a>：基本概念、主要特性、工作原理（框图）、中断/事件线</li>
+                                <li><a href="#sec-map">EXTI 与 IO 映射关系</a>：SYSCFG 简介、映射规则</li>
+                                <li><a href="#sec-regs">中断相关寄存器</a>：NVIC / EXTI / EXTICR 寄存器的位定义与使用方法</li>
+                                <li><a href="#sec-method">中断配置方法</a>：使用中断的通用流程</li>
+                                <li><a href="#sec-hal">HAL 库中断配置详解</a>：配置步骤、服务函数、回调机制、编程实战</li>
+                                <li><a href="#sec-summary">小结</a></li>
+                            </ol>
+                        </div>
+
+                        <h4 id="sec-what">1.1 什么是中断</h4>
+                        <p>　　打断 CPU 执行正常的程序，转而处理紧急程序，然后返回原暂停的程序继续运行，这个过程就叫<strong>中断（Interrupt）</strong>。生活中的例子：正在做作业时电话响了（中断请求），先去接电话（执行中断服务程序），接完电话回来继续做作业（返回断点继续执行）。</p>
+                        <img src="./index13-map/interrupt-flow.png" alt="中断执行过程示意">
+                        <div class="img-caption">图 1-1 中断执行过程示意：断点保护与现场恢复由硬件自动完成</div>
+
+                        <h4 id="sec-why">1.2 中断的作用与意义</h4>
+                        <p><strong>● 实时控制</strong>　在确定时间内对响应事件作出响应，例如温度监控超限报警。</p>
+                        <p><strong>● 故障处理</strong>　检测到故障时需要第一时间处理，例如电梯门夹到人必须立即响应。</p>
+                        <p><strong>● 数据传输</strong>　不确定数据何时会来，例如串口数据接收，用轮询方式会浪费大量 CPU 资源。</p>
+                        <p>　　中断的意义：<strong>高效处理紧急程序，不需要一直占用 CPU 资源</strong>。没有中断时 CPU 只能不断轮询查询状态，有了中断，CPU 平时可以处理其他任务，事件到来时才被"打断"。</p>
+
+                        <h4 id="sec-system">1.3 F429 中断体系概览</h4>
+                        <p>　　Cortex-M4 内核搭载了一个异常响应系统，STM32F429 在内核层面支持 10 个系统异常，在芯片层面通过 NVIC 管理多达 86 个可屏蔽外部中断通道（《STM32F4xx 中文参考手册》第 10 章）。系统异常与外部中断统一编排在<strong>中断向量表</strong>中，异常和中断的处理机制是统一的，本教程如无特别说明，不严格区分"异常"与"中断"。</p>
+                        <p>　　下表节选了 F429 向量表中的系统异常部分（完整内容见参考手册表 45/表 46）：</p>
+                        <table class="api-table">
+                            <tr><th class="c">优先级编号</th><th class="c">优先级类型</th><th>名称</th><th>说明</th><th class="c">向量地址</th></tr>
+                            <tr><td class="c">-3</td><td class="c">固定</td><td>Reset</td><td>复位</td><td class="c">0x0000 0004</td></tr>
+                            <tr><td class="c">-2</td><td class="c">固定</td><td>NMI</td><td>不可屏蔽中断（RCC 时钟安全系统 CSS 连接到 NMI 向量）</td><td class="c">0x0000 0008</td></tr>
+                            <tr><td class="c">-1</td><td class="c">固定</td><td>HardFault</td><td>所有类型的错误</td><td class="c">0x0000 000C</td></tr>
+                            <tr><td class="c">0</td><td class="c">可设置</td><td>MemManage</td><td>存储器管理</td><td class="c">0x0000 0010</td></tr>
+                            <tr><td class="c">1</td><td class="c">可设置</td><td>BusFault</td><td>预取指失败、存储器访问失败</td><td class="c">0x0000 0014</td></tr>
+                            <tr><td class="c">2</td><td class="c">可设置</td><td>UsageFault</td><td>未定义的指令或非法状态</td><td class="c">0x0000 0018</td></tr>
+                            <tr><td class="c">3</td><td class="c">可设置</td><td>SVCall</td><td>通过 SWI 指令调用的系统服务</td><td class="c">0x0000 002C</td></tr>
+                            <tr><td class="c">5</td><td class="c">可设置</td><td>PendSV</td><td>可挂起的系统服务</td><td class="c">0x0000 0038</td></tr>
+                            <tr><td class="c">6</td><td class="c">可设置</td><td>SysTick</td><td>系统嘀嗒定时器</td><td class="c">0x0000 003C</td></tr>
+                        </table>
+                        <p>　　外部中断部分节选（手册表 46 自位置 0 排至位置 86，下表节选常用行）：</p>
+                        <table class="api-table">
+                            <tr><th class="c">位置</th><th class="c">优先级</th><th>名称</th><th>说明</th><th class="c">向量地址</th></tr>
+                            <tr><td class="c">0</td><td class="c">7</td><td>WWDG</td><td>窗口看门狗中断</td><td class="c">0x0000 0040</td></tr>
+                            <tr><td class="c">1</td><td class="c">8</td><td>PVD</td><td>连接到 EXTI 线 16 的可编程电压检测中断</td><td class="c">0x0000 0044</td></tr>
+                            <tr><td class="c">6</td><td class="c">13</td><td>EXTI0</td><td>EXTI 线 0 中断</td><td class="c">0x0000 0058</td></tr>
+                            <tr><td class="c">7</td><td class="c">14</td><td>EXTI1</td><td>EXTI 线 1 中断</td><td class="c">0x0000 005C</td></tr>
+                            <tr><td class="c">10</td><td class="c">17</td><td>EXTI4</td><td>EXTI 线 4 中断</td><td class="c">0x0000 0068</td></tr>
+                            <tr><td class="c">23</td><td class="c">30</td><td>EXTI9_5</td><td>EXTI 线 [9:5] 中断</td><td class="c">0x0000 009C</td></tr>
+                            <tr><td class="c">37</td><td class="c">44</td><td>USART1</td><td>USART1 全局中断</td><td class="c">0x0000 00D4</td></tr>
+                            <tr><td class="c">40</td><td class="c">47</td><td>EXTI15_10</td><td>EXTI 线 [15:10] 中断</td><td class="c">0x0000 00E0</td></tr>
+                            <tr><td class="c">86</td><td class="c">93</td><td>SPI6</td><td>SPI6 全局中断</td><td class="c">0x0000 0198</td></tr>
+                        </table>
+                        <p>　　所有外设（USART、TIM、SPI、DMA、ADC……）都可以产生中断，EXTI 外部中断只是其中之一。这些中断最终都汇聚到 NVIC 统一管理。以最常用的 GPIO 外部中断为例，其信号链路如下：</p>
+                        <img src="./index13-map/exti-arch.png" alt="GPIO外部中断整体结构简图">
+                        <div class="img-caption">图 1-2 STM32F429 GPIO 外部中断/事件整体结构简图：GPIO → SYSCFG → EXTI → NVIC → CPU</div>
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>中断 = 打断正常程序 → 处理紧急事务 → 返回断点继续执行；核心价值是实时响应且不浪费 CPU 资源。F429 的系统异常与外部中断由向量表统一编排、NVIC 统一管理。</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ 第2章 NVIC详解 ═══════════ -->
+                    <div class="content-card">
+                        <h3 id="sec-nvic">2 NVIC 详解</h3>
+
+                        <h4 id="sec-nvic-basic">2.1 NVIC 基本概念</h4>
+                        <p>　　NVIC（Nested Vectored Interrupt Controller），即<strong>嵌套向量中断控制器</strong>，属于 Cortex-M4 内核的一部分，与 CPU 内核紧密耦合，控制着芯片中断相关的所有功能。各芯片厂商在设计芯片时会对内核的 NVIC 进行裁剪，因此 STM32 的 NVIC 是 Cortex-M4 NVIC 的一个子集。</p>
+                        <p>　　NVIC 最多支持 <strong>256 个中断</strong>（16 内核异常 + 240 外部中断）和 <strong>256 个优先级</strong>（8 位），但允许裁剪。STM32F429 实际使用情况（《STM32F4xx 中文参考手册》10.1.1 节）：</p>
+                        <p>　　— F42x/F43x 系列具有多达 <strong>86 个可屏蔽中断通道</strong>（不包括 Cortex-M4F 的 16 根内核中断线）；</p>
+                        <p>　　— 使用 <strong>4 位中断优先级</strong>，即仅有 16 级可编程优先级；</p>
+                        <p>　　— 低延迟异常和中断处理、支持晚到中断的高效处理。</p>
+                        <p>　　参考课件给出的常见 STM32 型号中断资源对比（内核中断均 10 个、优先级均为 16 级）：</p>
+                        <table class="api-table">
+                            <tr><th class="c">STM32 型号</th><th class="c">内核中断</th><th class="c">外部中断</th><th class="c">中断优先级</th></tr>
+                            <tr><td class="c">STM32F103xx</td><td class="c">10</td><td class="c">60</td><td class="c">16</td></tr>
+                            <tr><td class="c">STM32F407xx</td><td class="c">10</td><td class="c">82</td><td class="c">16</td></tr>
+                            <tr><td class="c">STM32F429xx</td><td class="c">10</td><td class="c">91</td><td class="c">16</td></tr>
+                            <tr><td class="c">STM32F750xx</td><td class="c">10</td><td class="c">98</td><td class="c">16</td></tr>
+                            <tr><td class="c">STM32F767xx</td><td class="c">10</td><td class="c">110</td><td class="c">16</td></tr>
+                        </table>
+                        <div class="tip">关于 F429 中断数量的两种口径：《STM32F4xx 中文参考手册》10.1 节概述为"86 个可屏蔽中断通道"（其向量表表格排至位置 86 的 SPI6）；而启动文件/CMSIS 头文件 stm32f429xx.h 实际定义了 IRQ0~90 共 <strong>91 个</strong>外部中断（含手册表格未列出的 SAI1、LTDC、DMA2D 等 F429 特有外设）。编程时以 CMSIS 头文件为准；本教程正文叙述跟随手册口径，特此说明差异。</div>
+
+                        <h4 id="sec-vector">2.2 中断向量表</h4>
+                        <p>　　<strong>中断向量表（Vector Table）</strong>是定义在固定内存中的一块区域，以 4 字节对齐，存放着各个中断服务函数入口地址。中断向量表定义在启动文件（startup_stm32f429xx.s）中，当发生中断时，CPU 自动根据中断号查表跳转到对应的中断服务函数执行。</p>
+                        <p>　　向量表本质是一个 32 位整数数组，下标对应中断号，元素的值就是该中断服务函数的入口地址。例如发生了 EXTI0 中断（位置编号 6），NVIC 在外部中断区基址 0x0000 0040 的基础上计算偏移量 6×4=24 字节，从 0x0000 0058 处取出 EXTI0_IRQHandler 的入口地址并跳入执行。注意：地址 0x0000 0000 处存放的并不是服务函数地址，而是复位后主堆栈指针 MSP 的初始值，真正的第一个异常入口（Reset_Handler）存放在 0x0000 0004 处——这一点与第 3 篇《启动过程》中的内容相呼应。</p>
+                        <p>　　启动文件中已为每个中断预先填好了默认（空）服务函数。若用户编写的中断服务函数名与向量表中不一致，中断发生时将跳入启动文件中的死循环空函数，导致程序"卡死"。</p>
+
+                        <h4 id="sec-nvic-work">2.3 NVIC 工作原理</h4>
+                        <p>　　NVIC 通过三组关键寄存器协同工作：ISER/ICER 控制"中断能不能进来"，IPR 决定"谁先处理"，AIRCR 中的分组位决定优先级如何划分。</p>
+                        <img src="./index13-map/nvic-principle.png" alt="NVIC工作原理示意">
+                        <div class="img-caption">图 2-1 NVIC 工作原理示意：使能（ISER/ICER）、优先级（IPR）、分组（AIRCR）三要素</div>
+
+                        <h4 id="sec-priority">2.4 STM32 中断优先级基本概念</h4>
+                        <p>　　STM32 中断优先级有三个层次：</p>
+                        <p><strong>● 抢占优先级（Preemption Priority）</strong>　高抢占优先级可以打断正在执行的低抢占优先级中断，形成中断嵌套。</p>
+                        <p><strong>● 响应优先级（Sub Priority）</strong>　当两个中断的抢占优先级相同时，响应优先级高的先执行；但响应优先级不能互相打断。</p>
+                        <p><strong>● 自然优先级</strong>　当抢占优先级和响应优先级都相同时，向量表中位置编号越小的（自然优先级越高的）先执行。</p>
+                        <div class="tip">优先级数值越小，表示优先级越高（0 是最高优先级）。</div>
+                        <p>　　举例（假设使用分组 2）：设 EXTI0 抢占 0/响应 0，SysTick 抢占 0/响应 1，EXTI1 抢占 1/响应 0，RTC 抢占 1/响应 1。则 EXTI1 和 RTC 均可打断 EXTI0 与 SysTick（抢占优先级高），而 EXTI0 与 SysTick 之间、EXTI1 与 RTC 之间互相不能打断，只能按响应优先级排队。</p>
+
+                        <h4 id="sec-group">2.5 STM32 中断优先级分组</h4>
+                        <p>　　F429 使用 4 位（bit[7:4]）表达中断优先级，这 4 位又被划分为抢占优先级和响应优先级两部分，划分方式由内核外设 SCB 的应用程序中断及复位控制寄存器 <strong>AIRCR 的 PRIGROUP[10:8] 位</strong>决定，共分为 5 组：</p>
+                        <table class="api-table">
+                            <tr><th class="c">分组</th><th class="c">PRIGROUP[10:8]</th><th class="c">抢占优先级位数</th><th class="c">响应优先级位数</th><th class="c">抢占级数</th><th class="c">响应级数</th></tr>
+                            <tr><td class="c">0</td><td class="c">0b011</td><td class="c">0 位</td><td class="c">4 位</td><td class="c">0~0</td><td class="c">0~15</td></tr>
+                            <tr><td class="c">1</td><td class="c">0b100</td><td class="c">1 位</td><td class="c">3 位</td><td class="c">0~1</td><td class="c">0~7</td></tr>
+                            <tr><td class="c">2</td><td class="c">0b101</td><td class="c">2 位</td><td class="c">2 位</td><td class="c">0~3</td><td class="c">0~3</td></tr>
+                            <tr><td class="c">3</td><td class="c">0b110</td><td class="c">3 位</td><td class="c">1 位</td><td class="c">0~7</td><td class="c">0~1</td></tr>
+                            <tr><td class="c">4</td><td class="c">0b111</td><td class="c">4 位</td><td class="c">0 位</td><td class="c">0~15</td><td class="c">0~0</td></tr>
+                        </table>
+                        <img src="./index13-map/priority-group.png" alt="中断优先级分组位分配示意">
+                        <div class="img-caption">图 2-2 优先级分组位分配示意：PRIGROUP 决定 4 位优先级中抢占位与响应位的划分</div>
+                        <div class="warn">特别提示：一个工程中，<strong>一般只设置一次中断优先级分组</strong>。正点原子例程已在 HAL_Init() 函数中将分组设置为分组 2（HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2)），用户无需再重复设置。</div>
+
+                        <h4 id="sec-nvic-use">2.6 STM32 NVIC 的使用</h4>
+                        <p>　　配置一个中断的 NVIC，只需三步：</p>
+                        <ul class="steps">
+                            <li><span class="no">1</span><b>设置中断分组</b>　写 AIRCR[10:8]，HAL 库函数 HAL_NVIC_SetPriorityGrouping()，整个工程仅需一次；</li>
+                            <li><span class="no">2</span><b>设置中断优先级</b>　写 IPRx bit[7:4]，HAL 库函数 HAL_NVIC_SetPriority()；</li>
+                            <li><span class="no">3</span><b>使能中断</b>　写 ISERx，HAL 库函数 HAL_NVIC_EnableIRQ()。</li>
+                        </ul>
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>NVIC 是内核的嵌套向量中断控制器，通过向量表索引中断服务函数；F429 有 86 个可屏蔽中断通道、4 位优先级（16 级）；优先级 = 抢占（可嵌套打断）+ 响应（排队不嵌套）+ 自然优先级（编号小者优先）；分组由 AIRCR[10:8] 决定，一个工程只设一次。</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ 第3章 EXTI详解 ═══════════ -->
+                    <div class="content-card">
+                        <h3 id="sec-exti">3 EXTI 详解</h3>
+
+                        <h4 id="sec-exti-basic">3.1 EXTI 基本概念</h4>
+                        <p>　　EXTI（External interrupt/event Controller），即<strong>外部中断/事件控制器</strong>。STM32F429 的 EXTI 包含 <strong>23 个用于产生事件/中断请求的边沿检测器</strong>，即 23 条 EXTI 线，每条线都可以单独配置触发方式和屏蔽。</p>
+                        <p>　　EXTI 有两个输出方向，需要区分"中断"与"事件"两个概念：</p>
+                        <p><strong>● 中断（Interrupt）</strong>　信号要进入 NVIC，有相应的中断服务函数，需要 CPU 参与处理，属于"软件级"。</p>
+                        <p><strong>● 事件（Event）</strong>　不进入 NVIC，仅由内部硬件自动完成，如触发 TIM、DMA、ADC 等，属于"硬件级"，响应速度更快。</p>
+
+                        <h4 id="sec-exti-feat">3.2 EXTI 主要特性</h4>
+                        <p>　　每条 EXTI 线都可以独立配置：</p>
+                        <p>　　— 选择类型（<strong>中断</strong>或者<strong>事件</strong>）；</p>
+                        <p>　　— 触发方式（<strong>上升沿</strong>、<strong>下降沿</strong>或者<strong>双边沿</strong>触发）；</p>
+                        <p>　　— 支持软件触发（SWIER）；</p>
+                        <p>　　— 独立开启/屏蔽（IMR/EMR），每根中断线都有专用的挂起状态位（PR）。</p>
+                        <p>　　此外，EXTI 还能检测脉冲宽度低于 APB2 时钟周期的外部信号。</p>
+
+                        <h4 id="sec-exti-work">3.3 EXTI 工作原理</h4>
+                        <p>　　EXTI 的功能框图是理解其工作原理的关键，掌握了框图，编程时思路就非常清晰：</p>
+                        <img src="./index13-map/exti-block.png" alt="EXTI框图">
+                        <div class="img-caption">图 3-1 EXTI 框图（摘自参考课件）：信号线上标注"20"表示内部同类线路有多条，F429 为 23 条</div>
+                        <p>　　按信号流向逐环节解读（以一条输入线为例）：</p>
+                        <ul class="steps">
+                            <li><span class="no">①</span><b>边沿检测电路</b>　由上升沿触发选择寄存器 EXTI_RTSR 和下降沿触发选择寄存器 EXTI_FTSR 控制，检测到设定边沿跳变时输出有效信号 1；</li>
+                            <li><span class="no">②</span><b>软件触发</b>　边沿检测输出与软件中断事件寄存器 EXTI_SWIER 经过一个或门——即使没有外部信号，也可以通过软件写 SWIER 主动产生中断/事件请求；</li>
+                            <li><span class="no">③</span><b>中断屏蔽/挂起</b>　或门输出再与中断屏蔽寄存器 EXTI_IMR 进入与门：IMR=1 时信号放行，并置位挂起寄存器 EXTI_PR 对应位，最终送入 NVIC；IMR=0 时中断请求被屏蔽；</li>
+                            <li><span class="no">④</span><b>事件屏蔽</b>　或门输出同时与事件屏蔽寄存器 EXTI_EMR 进入另一个与门，EMR=1 时信号经脉冲发生器输出一个事件脉冲，供 TIM/DMA/ADC 等外设使用，不经过 NVIC。</li>
+                        </ul>
+                        <p>　　用一句话概括：<strong>中断线路走 NVIC、由软件（中断服务函数）处理；事件线路走硬件脉冲、由其他外设自动处理</strong>。要产生中断，必须配置好触发寄存器（RTSR/FTSR）并在 IMR 相应位写 1；当选定信号沿出现时，挂起位 PR 置 1 并向 NVIC 发出请求，向 PR 对应位写 1 即可清除该请求。</p>
+
+                        <h4 id="sec-exti-line">3.4 EXTI 中断/事件线</h4>
+                        <p>　　F429 的 23 条 EXTI 线分配如下，EXTI0~15 用于 GPIO，另外 7 条用于特定外设事件：</p>
+                        <table class="api-table">
+                            <tr><th class="c">中断/事件线</th><th>输入源</th></tr>
+                            <tr><td class="c">EXTI0 ~ EXTI15</td><td>PX0 ~ PX15（X 可为 A、B、C、D、E、F、G、H、I 等 GPIO 端口）</td></tr>
+                            <tr><td class="c">EXTI16</td><td>可编程电压检测器（PVD）输出</td></tr>
+                            <tr><td class="c">EXTI17</td><td>RTC 闹钟（Alarm）事件</td></tr>
+                            <tr><td class="c">EXTI18</td><td>USB OTG FS 唤醒事件</td></tr>
+                            <tr><td class="c">EXTI19</td><td>以太网唤醒事件</td></tr>
+                            <tr><td class="c">EXTI20</td><td>USB OTG HS（在 FS 中配置）唤醒事件</td></tr>
+                            <tr><td class="c">EXTI21</td><td>RTC 入侵和时间戳事件</td></tr>
+                            <tr><td class="c">EXTI22</td><td>RTC 唤醒事件</td></tr>
+                        </table>
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>EXTI 是外部中断/事件控制器，F429 有 23 条线（EXTI0~15 给 GPIO、EXTI16~22 给特定外设）；每条线可独立选择中断/事件类型、三种触发方式、独立屏蔽并有挂起标志；中断走 NVIC 由 CPU 处理，事件走硬件脉冲由外设使用。</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ 第4章 EXTI与IO映射关系 ═══════════ -->
+                    <div class="content-card">
+                        <h3 id="sec-map">4 EXTI 与 IO 映射关系</h3>
+
+                        <h4 id="sec-syscfg">4.1 SYSCFG 简介（F4）</h4>
+                        <p>　　F1 系列使用 AFIO（复用功能 IO）完成外部中断映射等配置，而 <strong>F4/F7/H7 系列改用 SYSCFG（System configuration controller，系统配置控制器）</strong>。在 STM32F429 中，SYSCFG 的外部中断配置寄存器 <strong>SYSCFG_EXTICR1~4</strong> 用于配置 EXTI 中断线 0~15 分别对应哪个 IO 端口。</p>
+                        <div class="warn">特别注意：配置 SYSCFG 寄存器之前必须先使能 SYSCFG 时钟，方法：<br>__HAL_RCC_SYSCFG_CLK_ENABLE();　对应 RCC_APB2ENR 寄存器（F1 中 AFIO 对应的是 RCC_APB2ENR 的位 0）。</div>
+
+                        <h4 id="sec-map-rule">4.2 EXTI 与 IO 对应关系</h4>
+                        <p>　　每条 EXTI 线通过 SYSCFG_EXTICR 寄存器的 4 位选择字段（如 EXTICR1 中的 EXTI0[3:0]）选择接通哪个端口的同号引脚：</p>
+                        <img src="./index13-map/exti-io-mux.png" alt="EXTI与IO映射关系">
+                        <div class="img-caption">图 4-1 EXTI0 输入线多路选择示意：PA0~PK0 经 SYSCFG_EXTICR1 选择后接入 EXTI0</div>
+                        <p>　　映射规律非常简单：</p>
+                        <p>　　— Px0（PA0/PB0/PC0/…）映射到 EXTI0；</p>
+                        <p>　　— Px1 映射到 EXTI1；……以此类推，Px15 映射到 EXTI15。</p>
+                        <p>　　也就是说，<strong>引脚号决定 EXTI 线号，端口（A~K）由 EXTICR 寄存器选择</strong>。由此带来一个重要限制：<strong>同一时刻，同号引脚只能有一个用作外部中断</strong>——例如 PA0 已映射到 EXTI0，则 PB0、PC0 等就不能再使用 EXTI0 中断（它们共用同一条 EXTI 线和同一个中断服务函数）。</p>
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>F4 用 SYSCFG（F1 用 AFIO）管理 EXTI 与 IO 的映射：EXTICR1~4 决定 EXTI0~15 分别接通哪组端口，引脚号对应线号；同号引脚同一时刻只能选一个端口作外部中断，使用前需使能 SYSCFG 时钟。</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ 第5章 中断相关寄存器 ═══════════ -->
+                    <div class="content-card">
+                        <h3 id="sec-regs">5 中断相关寄存器汇总</h3>
+                        <p>　　本章将前文涉及的中断相关寄存器集中列表，并<strong>逐个给出位定义与使用方法</strong>，方便速查。</p>
+
+                        <h4 id="sec-reg-nvic">5.1 NVIC 寄存器（core_cm4.h）</h4>
+                        <table class="api-table">
+                            <tr><th class="c">寄存器</th><th>名称</th><th>作用</th></tr>
+                            <tr><td class="c">NVIC_ISER[8]</td><td>中断使能寄存器</td><td>写 1 使能对应中断，1 位控制 1 个中断（常用）</td></tr>
+                            <tr><td class="c">NVIC_ICER[8]</td><td>中断失能寄存器</td><td>写 1 失能对应中断（常用）</td></tr>
+                            <tr><td class="c">NVIC_ISPR[8]</td><td>中断挂起置位寄存器</td><td>写 1 将中断挂起（软件强制触发请求）</td></tr>
+                            <tr><td class="c">NVIC_ICPR[8]</td><td>中断挂起清除寄存器</td><td>写 1 清除挂起状态</td></tr>
+                            <tr><td class="c">NVIC_IABR[8]</td><td>中断激活标志寄存器</td><td>只读，指示正在服务的中断</td></tr>
+                            <tr><td class="c">NVIC_IPR[240]</td><td>中断优先级寄存器</td><td>每个中断 8 位，F429 仅使用高 4 位 bit[7:4]（常用）</td></tr>
+                            <tr><td class="c">SCB_AIRCR</td><td>应用中断及复位控制寄存器</td><td>PRIGROUP[10:8] 控制优先级分组（8 种分组中的 5 种有效）</td></tr>
+                            <tr><td class="c">SCB_SHPR</td><td>系统处理优先级寄存器</td><td>设置 SysTick、PendSV 等内核中断的优先级</td></tr>
+                        </table>
+                        <p>　　配置中断时最常用的是 <strong>ISER（使能）、ICER（失能）和 IPR（优先级）</strong>三个寄存器；挂起、解挂、激活标志等功能了解即可。下面逐个说明位定义与使用方法。</p>
+
+                        <p><strong>（1）NVIC_ISER0~2 / NVIC_ICER0~2：中断使能与失能</strong></p>
+                        <table class="api-table">
+                            <tr><th class="c">位域</th><th class="c">名称</th><th class="c">类型</th><th class="c">复位值</th><th>说明</th></tr>
+                            <tr><td class="c">31:0</td><td class="c">SETENA[31:0] / CLRENA[31:0]</td><td class="c">rw</td><td class="c">0x0000 0000</td><td>每一位对应一个中断通道：写 1 使能（ISER）/失能（ICER），<b>写 0 无任何作用</b></td></tr>
+                        </table>
+                        <p>　　位与中断号的换算关系：<strong>ISER0 管理中断 0~31（位 n 对应中断 n）</strong>，ISER1 管理中断 32~63（位 n 对应中断 32+n），ISER2 管理中断 64~95。F429 的 86 个中断通道需要用到 ISER0~2 共 3 个寄存器。使用方法：</p>
+                        <div class="code-block"><span class="cm">/* 直接寄存器操作：使能中断号 IRQn（如 EXTI0 中断号 = 6）*/</span>
+NVIC-&gt;ISER[IRQn / <span class="cm">32</span>] = (<span class="cm">1</span> &lt;&lt; (IRQn % <span class="cm">32</span>));  <span class="cm">/* 写 1 使能，写 0 无效 */</span>
+NVIC-&gt;ICER[IRQn / <span class="cm">32</span>] = (<span class="cm">1</span> &lt;&lt; (IRQn % <span class="cm">32</span>));  <span class="cm">/* 写 1 失能 */</span>
+
+<span class="cm">/* HAL 库等价封装 */</span>
+HAL_NVIC_EnableIRQ(EXTI0_IRQn);   <span class="cm">/* 内部就是写 ISER */</span>
+HAL_NVIC_DisableIRQ(EXTI0_IRQn);  <span class="cm">/* 内部就是写 ICER */</span></div>
+
+                        <p><strong>（2）NVIC_ISPR0~2 / NVIC_ICPR0~2：中断挂起置位与清除</strong></p>
+                        <p>　　位布局与 ISER/ICER 完全相同（SETPEND[31:0] / CLRPEND[31:0]，rw，复位值 0）。写 ISPR 某位为 1 可<strong>软件强制挂起</strong>对应中断（模拟一次中断请求，常用于调试）；写 ICPR 某位为 1 可清除挂起状态（对正在服务的中断无效）。</p>
+
+                        <p><strong>（3）NVIC_IABR0~2：中断激活标志</strong></p>
+                        <p>　　位布局同上，<strong>只读</strong>。某位读出 1 表示对应中断正在被 CPU 服务（尚未执行完服务函数），可用于调试断点分析中断嵌套关系。</p>
+
+                        <p><strong>（4）NVIC_IPR[240]：中断优先级寄存器</strong></p>
+                        <table class="api-table">
+                            <tr><th class="c">位域</th><th class="c">名称</th><th class="c">类型</th><th class="c">复位值</th><th>说明</th></tr>
+                            <tr><td class="c">7:4</td><td class="c">PRI_x[7:4]</td><td class="c">rw</td><td class="c">0x0</td><td><b>仅高 4 位有效</b>（F429 只实现 4 位优先级，16 级），决定抢占/响应优先级（按分组拆分）</td></tr>
+                            <tr><td class="c">3:0</td><td class="c">—</td><td class="c">r</td><td class="c">0x0</td><td>未实现，读出恒为 0</td></tr>
+                        </table>
+                        <p>　　IPR 数组<strong>每个字节对应一个中断</strong>：IPR[0] 对应中断 0，IPR[1] 对应中断 1……F429 用到 IPR[0]~IPR[85]。使用方法：</p>
+                        <div class="code-block"><span class="cm">/* 直接寄存器操作：设置中断 IRQn 的优先级字节 */</span>
+NVIC-&gt;IP[IRQn] = (prio &lt;&lt; <span class="cm">4</span>);               <span class="cm">/* 优先级值左移 4 位放到高 4 位 */</span>
+
+<span class="cm">/* HAL 库等价封装：抢占 5、响应 0（在分组 2 下）*/</span>
+HAL_NVIC_SetPriority(EXTI0_IRQn, <span class="cm">5</span>, <span class="cm">0</span>);     <span class="cm">/* 函数内部完成拆分与移位 */</span></div>
+
+                        <p><strong>（5）SCB_AIRCR：应用中断及复位控制寄存器（0xE000ED0C）</strong></p>
+                        <table class="api-table">
+                            <tr><th class="c">位域</th><th class="c">名称</th><th class="c">类型</th><th class="c">复位值</th><th>说明</th></tr>
+                            <tr><td class="c">31:16</td><td class="c">VECTKEY</td><td class="c">rw</td><td class="c">0xFA05</td><td>访问密钥：<b>写入时必须为 0x5FA</b>，否则写入被忽略；读出恒为 0xFA05</td></tr>
+                            <tr><td class="c">15</td><td class="c">ENDIANNESS</td><td class="c">r</td><td class="c">—</td><td>只读，指示端序（F429 为小端，读 0）</td></tr>
+                            <tr><td class="c">10:8</td><td class="c">PRIGROUP</td><td class="c">rw</td><td class="c">0b000</td><td><b>优先级分组位</b>：决定优先级字节中"抢占：响应"的位数划分（详见 2.5 节分组表）</td></tr>
+                            <tr><td class="c">2</td><td class="c">SYSRESETREQ</td><td class="c">rw</td><td class="c">0</td><td>写 1 请求系统复位（NVIC_SystemReset() 的实现）</td></tr>
+                        </table>
+                        <p>　　使用方法：改分组前必须先写入密钥，因此 HAL 库的 HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2) 内部完成"写 0x5FA 到 [31:16] + 写分组码到 [10:8]"两步，<strong>整个工程只需调用一次</strong>（HAL_Init() 中已默认设为分组 2）。</p>
+
+                        <p><strong>（6）SCB_SHPR：系统处理优先级寄存器（0xE000ED18~0xE000ED23）</strong></p>
+                        <p>　　共 12 字节，每字节对应一个内核异常的优先级，布局与 IPR 相同（仅 bit[7:4] 有效）。常用的两个：<strong>字节 10 对应 PendSV</strong>（任务切换，RTOS 中常设最低 0xFF），<strong>字节 11 对应 SysTick</strong>。使用方法：HAL_NVIC_SetPriority(SysTick_IRQn, tick_prio, 0)，HAL_Init() 中默认将 SysTick 设为最低优先级。</p>
+
+                        <h4 id="sec-reg-exti">5.2 EXTI 寄存器（参考手册 10.3 节）</h4>
+                        <table class="api-table">
+                            <tr><th class="c">寄存器</th><th class="c">偏移地址</th><th>名称</th><th>作用</th></tr>
+                            <tr><td class="c">EXTI_IMR</td><td class="c">0x00</td><td>中断屏蔽寄存器</td><td>对应位写 1 开放该线的中断请求，写 0 屏蔽</td></tr>
+                            <tr><td class="c">EXTI_EMR</td><td class="c">0x04</td><td>事件屏蔽寄存器</td><td>对应位写 1 开放该线的事件请求，写 0 屏蔽</td></tr>
+                            <tr><td class="c">EXTI_RTSR</td><td class="c">0x08</td><td>上升沿触发选择寄存器</td><td>写 1 允许该线上升沿触发</td></tr>
+                            <tr><td class="c">EXTI_FTSR</td><td class="c">0x0C</td><td>下降沿触发选择寄存器</td><td>写 1 允许该线下降沿触发</td></tr>
+                            <tr><td class="c">EXTI_SWIER</td><td class="c">0x10</td><td>软件中断事件寄存器</td><td>写 1 软件触发该线的中断/事件请求（同时置位 PR）</td></tr>
+                            <tr><td class="c">EXTI_PR</td><td class="c">0x14</td><td>挂起寄存器</td><td>中断发生时硬件置 1；<b>向对应位写 1 清除挂起标志</b>（写 0 无效）</td></tr>
+                        </table>
+                        <p>　　六个寄存器的位布局完全相同：<strong>位 31:23 保留（必须保持复位值），位 22:0 为 MRx / TRx / SWIERx / PRx</strong>，每一位对应一条 EXTI 线（F429 使用线 0~22）。EXTI 基地址 0x4001 3C00，挂接在 APB2 总线上。逐个说明：</p>
+
+                        <p><strong>（1）EXTI_IMR：中断屏蔽寄存器（0x00）</strong></p>
+                        <table class="api-table">
+                            <tr><th class="c">位域</th><th class="c">名称</th><th class="c">类型</th><th class="c">复位值</th><th>说明</th></tr>
+                            <tr><td class="c">31:23</td><td class="c">—</td><td class="c">—</td><td class="c">保留</td><td>必须保持复位值</td></tr>
+                            <tr><td class="c">22:0</td><td class="c">MRx</td><td class="c">rw</td><td class="c">0</td><td>x 线上的中断屏蔽：<b>0 = 屏蔽</b>来自 x 线的中断请求；<b>1 = 开放</b></td></tr>
+                        </table>
+                        <p>　　复位值全 0，即<strong>默认所有线的中断请求都被屏蔽</strong>，使用外部中断必须将对应位置 1。如开放线 6：EXTI-&gt;IMR |= (1 &lt;&lt; 6)。</p>
+
+                        <p><strong>（2）EXTI_EMR：事件屏蔽寄存器（0x04）</strong></p>
+                        <p>　　位定义与 IMR 完全相同（MRx，rw，复位 0），只是控制对象为<strong>事件请求</strong>（唤醒事件不进中断服务函数，直接产生脉冲，用于低功耗唤醒等场景）。只做中断时可保持复位值 0 不动。</p>
+
+                        <p><strong>（3）EXTI_RTSR / EXTI_FTSR：上升沿 / 下降沿触发选择寄存器（0x08 / 0x0C）</strong></p>
+                        <table class="api-table">
+                            <tr><th class="c">位域</th><th class="c">名称</th><th class="c">类型</th><th class="c">复位值</th><th>说明</th></tr>
+                            <tr><td class="c">31:23</td><td class="c">—</td><td class="c">—</td><td class="c">保留</td><td>必须保持复位值</td></tr>
+                            <tr><td class="c">22:0</td><td class="c">TRx</td><td class="c">rw</td><td class="c">0</td><td>RTSR：0 = 禁止上升沿触发，1 = <b>允许上升沿触发</b>；<br>FTSR：0 = 禁止下降沿触发，1 = <b>允许下降沿触发</b></td></tr>
+                        </table>
+                        <p>　　使用要点：① <strong>RTSR 与 FTSR 同一位同时置 1 即双边沿触发</strong>；② 参考手册特别提示：<strong>某线禁止上升沿（或下降沿）触发时，其挂起位不会被清除</strong>——因此改变触发极性时，应先向 EXTI_PR 对应位写 1 清挂起，再修改 RTSR/FTSR。</p>
+
+                        <p><strong>（4）EXTI_SWIER：软件中断事件寄存器（0x10）</strong></p>
+                        <table class="api-table">
+                            <tr><th class="c">位域</th><th class="c">名称</th><th class="c">类型</th><th class="c">复位值</th><th>说明</th></tr>
+                            <tr><td class="c">31:23</td><td class="c">—</td><td class="c">—</td><td class="c">保留</td><td>必须保持复位值</td></tr>
+                            <tr><td class="c">22:0</td><td class="c">SWIERx</td><td class="c">rw</td><td class="c">0</td><td><b>写 1</b>：使 PRx 挂起位置 1（软件产生一次中断/事件请求）；<b>写 1 清除本位</b>（硬件置 1 后需写 1 复位）</td></tr>
+                        </table>
+                        <p>　　使用方法：向 SWIERx 写 1 可在无外部信号的情况下<strong>软件模拟一次中断</strong>（该线须已在 IMR 开放），常用于调试服务函数；产生请求后 SWIERx 会保持 1，需再写 1 将其清零。</p>
+
+                        <p><strong>（5）EXTI_PR：挂起寄存器（0x14）</strong></p>
+                        <table class="api-table">
+                            <tr><th class="c">位域</th><th class="c">名称</th><th class="c">类型</th><th class="c">复位值</th><th>说明</th></tr>
+                            <tr><td class="c">31:23</td><td class="c">—</td><td class="c">—</td><td class="c">保留</td><td>必须保持复位值</td></tr>
+                            <tr><td class="c">22:0</td><td class="c">PRx</td><td class="c">rc_w1</td><td class="c">未定义</td><td>挂起标志：0 = 没有发生触发请求；<b>1 = 发生了所选边沿的触发请求</b>（硬件置 1）；<b>写 1 清除</b>（写 0 无效）</td></tr>
+                        </table>
+                        <p>　　PR 是中断编程中最关键的寄存器，使用要点：① 检测到所选边沿时硬件置 1，若 IMR 已开放则向 NVIC 发出请求；② <strong>写 1 清零</strong>，此外改变该线触发极性（RTSR/FTSR）也会清挂起；③ <strong>服务函数中不清 PR 会导致中断被反复触发</strong>（退出服务函数后挂起仍有效，立即重新进入）；④ 清除时应<strong>直接赋值而不是按位或</strong>——<code>EXTI-&gt;PR = (1 &lt;&lt; x)</code> 是安全的，而 <code>EXTI-&gt;PR |= (1 &lt;&lt; x)</code> 会把读到的其他已挂起位一并写 1 清除，可能误清其它 EXTI 线的标志。</p>
+
+                        <h4 id="sec-reg-exticr">5.3 SYSCFG_EXTICR1~4：外部中断配置寄存器（参考手册 8.2 节）</h4>
+                        <p>　　EXTICR1~4 共 4 个 32 位寄存器，每个管理 4 条 EXTI 线的端口选择：<strong>EXTICR1 管 EXTI0~3、EXTICR2 管 EXTI4~7、EXTICR3 管 EXTI8~11、EXTICR4 管 EXTI12~15</strong>。以 EXTICR1 为例：</p>
+                        <table class="api-table">
+                            <tr><th class="c">位域</th><th class="c">名称</th><th class="c">类型</th><th class="c">复位值</th><th>说明</th></tr>
+                            <tr><td class="c">31:16</td><td class="c">—</td><td class="c">—</td><td class="c">保留</td><td>必须保持复位值</td></tr>
+                            <tr><td class="c">15:12</td><td class="c">EXTI3[3:0]</td><td class="c">rw</td><td class="c">0b0000</td><td rowspan="4">选择 EXTIx 外部中断的源输入端口，编码相同：<br>0000 = PA[x]、0001 = PB[x]、0010 = PC[x]、0011 = PD[x]、<br>0100 = PE[x]、0101 = PF[x]、0110 = PG[x]、0111 = PH[x]、<br>1000 = PI[x]（F429 另有 PJ=1001、PK=1010）</td></tr>
+                            <tr><td class="c">11:8</td><td class="c">EXTI2[3:0]</td><td class="c">rw</td><td class="c">0b0000</td></tr>
+                            <tr><td class="c">7:4</td><td class="c">EXTI1[3:0]</td><td class="c">rw</td><td class="c">0b0000</td></tr>
+                            <tr><td class="c">3:0</td><td class="c">EXTI0[3:0]</td><td class="c">rw</td><td class="c">0b0000</td></tr>
+                        </table>
+                        <p>　　使用方法：① <strong>写 EXTICR 前必须先使能 SYSCFG 时钟</strong>（__HAL_RCC_SYSCFG_CLK_ENABLE()）；② 复位值全 0 表示<strong>默认全部映射到 PA 端口</strong>，如将 PB6 接入 EXTI6：SYSCFG-&gt;EXTICR[1] |= (1 &lt;&lt; 8)；③ 每个 4 位字段一次只能选一个端口，因此<strong>同号引脚互斥</strong>（见 4.2 节）；④ HAL 库中由 HAL_GPIO_Init() 根据传入的 GPIOx 与 GPIO_Pin 自动计算写入，无需手动配置。</p>
+
+                        <div class="tip">EXTI_PR 挂起标志是"写 1 清零"（rc_w1），中断服务函数中务必清除，否则中断会被反复触发；NVIC 的 ISER/ICER 同样是"写 1 有效、写 0 无效"的置位/清零型寄存器，二者都不要用"读-改-写"想当然地操作。</div>
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>NVIC 侧：ISER/ICER/ISPR/ICPR/IABR 按"32 位管 32 个中断"分 3 组，写 1 生效、写 0 无效；IPR 每字节管 1 个中断、仅高 4 位有效；AIRCR 需先写 0x5FA 密钥再设 PRIGROUP 分组。EXTI 侧：六个寄存器同布局（[31:23] 保留、[22:0] 每位对应一条线）——IMR/EMR 开放请求（复位全 0 默认屏蔽）、RTSR/FTSR 选触发沿（同置 1 为双边沿）、SWIER 写 1 软件触发、PR 硬件置 1 且写 1 清零（用直接赋值清除）；EXTICR1~4 每 4 位字段选端口（0=PA 起始，复位默认 PA），写前先开 SYSCFG 时钟。</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ 第6章 中断配置方法 ═══════════ -->
+                    <div class="content-card">
+                        <h3 id="sec-method">6 中断配置方法（通用流程）</h3>
+                        <p>　　STM32 的中断分为两大类：<strong>GPIO 外部中断</strong>（信号链：GPIO → SYSCFG → EXTI → NVIC → CPU）和<strong>外设中断</strong>（信号链：USART/TIM/SPI… → NVIC → CPU，不需要经过 SYSCFG/EXTI）。外设中断只需"开启外设相关中断 + 配置 NVIC"两步；GPIO 外部中断的完整配置步骤如下：</p>
+                        <ul class="steps">
+                            <li><span class="no">1</span><b>使能 GPIO 时钟</b>　如 __HAL_RCC_GPIOA_CLK_ENABLE()；</li>
+                            <li><span class="no">2</span><b>设置 GPIO 输入模式</b>　根据按键电路选择上拉输入/下拉输入/浮空输入（按下接地选上拉+下降沿触发；按下接电源选下拉+上升沿触发）；</li>
+                            <li><span class="no">3</span><b>使能 SYSCFG 时钟</b>　__HAL_RCC_SYSCFG_CLK_ENABLE()（F1 对应使能 AFIO 时钟）；</li>
+                            <li><span class="no">4</span><b>设置 EXTI 与 IO 的对应关系</b>　配置 SYSCFG_EXTICR，选择 PA~PI 到底哪组 IO 对应 EXTI 输入线；</li>
+                            <li><span class="no">5</span><b>设置 EXTI 屏蔽与触发沿</b>　配置 IMR、RTSR/FTSR，开放对应通道并选择上升沿/下降沿触发；</li>
+                            <li><span class="no">6</span><b>设置 NVIC</b>　分三步：设置优先级分组 → 设置抢占/响应优先级 → 使能中断；</li>
+                            <li><span class="no">7</span><b>设计中断服务函数</b>　编写对应中断的服务函数，<b>务必清中断标志！</b></li>
+                        </ul>
+                        <div class="tip">注意：步骤 2~5（GPIO 输入模式、SYSCFG 映射、EXTI 屏蔽与触发沿）在使用 HAL 库时由 HAL_GPIO_Init() 一个函数即可完成，无需手动操作寄存器。</div>
+                        <p>　　中断请求到达 NVIC 后，NVIC 按优先级顺序（抢占 → 响应 → 自然优先级）依次提交 CPU 处理，多个中断同时挂起时高优先级者先获得服务。</p>
+                        <img src="./index13-map/config-flow.png" alt="中断配置方法流程图">
+                        <div class="img-caption">图 6-1 中断配置方法流程：GPIO 外部中断七步与外设中断两步对比（右下为 HAL 库对应关系）</div>
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>外设中断只需"开外设中断 + 配 NVIC"两步；GPIO 外部中断完整七步：开 GPIO 时钟 → 设输入模式（依按键电路选上/下拉）→ 开 SYSCFG 时钟 → EXTICR 映射 → IMR/触发沿配置 → NVIC 三步（分组/优先级/使能）→ 编写服务函数并清标志；步骤 2~5 可由 HAL_GPIO_Init() 一步到位。</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ 第7章 HAL库中断配置详解 ═══════════ -->
+                    <div class="content-card">
+                        <h3 id="sec-hal">7 HAL 库中断配置详解</h3>
+
+                        <h4 id="sec-hal-steps">7.1 HAL 库配置步骤</h4>
+                        <p>　　使用 HAL 库配置 GPIO 外部中断只需 6 步，其中 GPIO/映射/EXTI 配置由 HAL_GPIO_Init() 一步到位：</p>
+                        <ul class="steps">
+                            <li><span class="no">1</span><b>使能 GPIO 时钟</b>　使用 __HAL_RCC_GPIOx_CLK_ENABLE()；</li>
+                            <li><span class="no">2</span><b>GPIO / SYSCFG / EXTI 配置</b>　使用 HAL_GPIO_Init() 一步到位（自动完成 SYSCFG 时钟使能、EXTICR 映射、IMR/触发沿设置）；</li>
+                            <li><span class="no">3</span><b>设置中断分组</b>　使用 HAL_NVIC_SetPriorityGrouping()，此函数整个工程仅需设置一次（HAL_Init() 中已设为分组 2）；</li>
+                            <li><span class="no">4</span><b>设置中断优先级</b>　使用 HAL_NVIC_SetPriority()；</li>
+                            <li><span class="no">5</span><b>使能中断</b>　使用 HAL_NVIC_EnableIRQ()；</li>
+                            <li><span class="no">6</span><b>设计中断服务函数</b>　编写 EXTIx_IRQHandler，清中断标志并处理业务。</li>
+                        </ul>
+                        <table class="api-table">
+                            <tr><th>HAL 库函数 / 宏</th><th>作用</th><th>对应寄存器</th></tr>
+                            <tr><td>__HAL_RCC_GPIOx_CLK_ENABLE()</td><td>使能 GPIO 端口时钟</td><td>RCC_AHB1ENR</td></tr>
+                            <tr><td>HAL_GPIO_Init()</td><td>输入模式、上下拉、EXTI 映射与触发方式一步到位</td><td>GPIOx_MODER/PUPDR + SYSCFG_EXTICR + EXTI_IMR/RTSR/FTSR</td></tr>
+                            <tr><td>HAL_NVIC_SetPriorityGrouping()</td><td>设置中断优先级分组（仅一次）</td><td>SCB_AIRCR[10:8]</td></tr>
+                            <tr><td>HAL_NVIC_SetPriority()</td><td>设置中断抢占/响应优先级</td><td>NVIC_IPRx bit[7:4]</td></tr>
+                            <tr><td>HAL_NVIC_EnableIRQ()</td><td>使能中断</td><td>NVIC_ISERx</td></tr>
+                            <tr><td>HAL_NVIC_DisableIRQ()</td><td>失能中断</td><td>NVIC_ICERx</td></tr>
+                            <tr><td>HAL_GPIO_EXTI_IRQHandler()</td><td>EXTI 公用中断处理（查标志→清标志→调回调）</td><td>EXTI_PR</td></tr>
+                            <tr><td>HAL_GPIO_EXTI_Callback()</td><td>EXTI 中断回调（弱定义，由用户重写）</td><td>—</td></tr>
+                        </table>
+
+                        <h4 id="sec-hal-isr">7.2 外部中断服务函数</h4>
+                        <p>　　虽然 GPIO 引脚很多，但 STM32 仅有 <strong>7 个外部中断服务函数</strong>：</p>
+                        <p>　　EXTI0_IRQHandler（线 0）、EXTI1_IRQHandler（线 1）、EXTI2_IRQHandler（线 2）、EXTI3_IRQHandler（线 3）、EXTI4_IRQHandler（线 4）、<strong>EXTI9_5_IRQHandler</strong>（线 5~9 共用）、<strong>EXTI15_10_IRQHandler</strong>（线 10~15 共用）。</p>
+                        <p>　　EXTI5~9、EXTI10~15 各自共用一个服务函数，因此在中断回调中需要根据 GPIO_Pin 参数进一步区分具体是哪一条线触发的。</p>
+
+                        <h4 id="sec-hal-callback">7.3 HAL 库中断回调处理机制</h4>
+                        <p>　　HAL 库把"与硬件相关"和"与业务相关"的代码分离：硬件中断服务函数只做异常处理和清标志，然后调用各种回调函数，业务逻辑写在回调里。其处理链条如下：</p>
+                        <img src="./index13-map/hal-callback.png" alt="HAL库中断回调处理机制">
+                        <div class="img-caption">图 7-1 HAL 库外部中断回调处理机制：服务函数 → 公用处理函数（清标志）→ 用户回调</div>
+                        <p>　　HAL_GPIO_EXTI_Callback() 在 HAL 库中是 <strong>__weak 弱定义</strong>的空函数，用户在任意 .c 文件中重新实现同名函数，编译器就会采用用户版本。这种"公用函数 + 回调"的设计使 HAL 库各外设的中断处理风格高度统一（其源码实现见 7.4 节第（2）部分）。</p>
+
+                        <h4 id="sec-hal-demo">7.4 编程实战：外部中断控制 LED 亮灭</h4>
+                        <p>　　以阿波罗 STM32F429 开发板为例：WK_UP 按键接 PA0，按下时 PA0 接通 3.3V（高电平），因此 PA0 应配置为<strong>下拉输入、上升沿触发</strong>；LED0 由 PB1 控制，低电平点亮。目标：每按一次 WK_UP，LED0 翻转一次。</p>
+                        <p><strong>（1）外部中断初始化（exti.c）</strong></p>
+                        <div class="code-block"><span class="kw">void</span> <span class="fn">exti_init</span>(<span class="kw">void</span>)
+{
+    GPIO_InitTypeDef gpio_init_struct = {<span class="cm">0</span>};
+
+    <span class="cm">/* 步骤1：使能GPIO时钟 */</span>
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    <span class="cm">/* 步骤2：PA0 配置为中断上升沿触发、下拉输入
+       （HAL_GPIO_Init内部自动完成：使能SYSCFG时钟、
+         SYSCFG_EXTICR映射、EXTI_IMR/RTSR配置） */</span>
+    gpio_init_struct.Pin   = GPIO_PIN_0;
+    gpio_init_struct.Mode  = GPIO_MODE_IT_RISING;   <span class="cm">/* 上升沿触发 */</span>
+    gpio_init_struct.Pull  = GPIO_PULLDOWN;         <span class="cm">/* 下拉输入 */</span>
+    gpio_init_struct.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(GPIOA, &amp;gpio_init_struct);
+
+    <span class="cm">/* 步骤3~5：配置NVIC（分组已在HAL_Init()中设置为分组2） */</span>
+    HAL_NVIC_SetPriority(EXTI0_IRQn, 2, 2);         <span class="cm">/* 抢占2，响应2 */</span>
+    HAL_NVIC_EnableIRQ(EXTI0_IRQn);                 <span class="cm">/* 使能EXTI0中断 */</span>
+}</div>
+                        <p><strong>（2）中断服务函数（stm32f4xx_it.c）</strong></p>
+                        <div class="code-block"><span class="cm">/* EXTI0 中断服务函数：WK_UP(PA0) 触发 */</span>
+<span class="kw">void</span> <span class="fn">EXTI0_IRQHandler</span>(<span class="kw">void</span>)
+{
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);  <span class="cm">/* 调用HAL公用处理：清中断标志 + 调回调函数 */</span>
+}</div>
+                        <p>　　服务函数里的一行转发，实际调用的是 HAL 库源码 <code>stm32f4xx_hal_gpio.c</code> 中的公用处理函数 <strong>HAL_GPIO_EXTI_IRQHandler()</strong>。以 GPIO_PIN_0（对应 EXTI 线 0，即 EXTI_PR 的位 0）为例，其完整实现只有"查标志 → 清标志 → 调回调"三步：</p>
+                        <div class="code-block"><span class="cm">/* HAL 库源码：stm32f4xx_hal_gpio.c */</span>
+<span class="kw">void</span> <span class="fn">HAL_GPIO_EXTI_IRQHandler</span>(uint16_t GPIO_Pin)
+{
+  <span class="cm">/* EXTI line interrupt detected */</span>
+  <span class="kw">if</span> (__HAL_GPIO_EXTI_GET_IT(GPIO_Pin) != RESET)   <span class="cm">/* ① 查挂起标志 */</span>
+  {
+    __HAL_GPIO_EXTI_CLEAR_IT(GPIO_Pin);            <span class="cm">/* ② 清挂起标志 */</span>
+    HAL_GPIO_EXTI_Callback(GPIO_Pin);              <span class="cm">/* ③ 调用户回调 */</span>
+  }
+}</div>
+                        <p>　　三步对应的宏与弱定义回调（stm32f4xx_hal_gpio.h / .c）：</p>
+                        <div class="code-block"><span class="cm">/* ① 读标志：读 EXTI_PR，位为 1 说明该线有触发 */</span>
+<span class="kw">#define</span> __HAL_GPIO_EXTI_GET_IT(__EXTI_LINE__)    (EXTI-&gt;PR &amp; (__EXTI_LINE__))
+
+<span class="cm">/* ② 清标志：直接赋值向对应位写 1（rc_w1），其余位写 0 不受影响 */</span>
+<span class="kw">#define</span> __HAL_GPIO_EXTI_CLEAR_IT(__EXTI_LINE__)  (EXTI-&gt;PR = (__EXTI_LINE__))
+
+<span class="cm">/* ③ 用户回调：__weak 弱定义空函数，用户重写同名函数后编译器采用用户版本 */</span>
+<span class="kw">__weak void</span> <span class="fn">HAL_GPIO_EXTI_Callback</span>(uint16_t GPIO_Pin)
+{
+  UNUSED(GPIO_Pin);
+}</div>
+                        <p>　　注意两点：① <strong>清 PR 用"直接赋值"而非 |=</strong>——这正是 5.2 节 PR 寄存器要点④ 的源码依据；② 先判断标志再调回调，因此在 EXTI9_5、EXTI15_10 这类<strong>共用中断</strong>里不会误执行其他线的业务（见 7.2 节）。</p>
+                        <p><strong>（3）中断回调函数（main.c，用户重写弱定义函数）</strong></p>
+                        <div class="code-block"><span class="cm">/* 外部中断回调函数：按键按下（上升沿）翻转LED0 */</span>
+<span class="kw">void</span> <span class="fn">HAL_GPIO_EXTI_Callback</span>(uint16_t GPIO_Pin)
+{
+    <span class="kw">if</span> (GPIO_Pin == GPIO_PIN_0)          <span class="cm">/* 判断是EXTI0触发，防止误触发 */</span>
+    {
+        LED0_TOGGLE();                    <span class="cm">/* 翻转LED0（若共用EXTI9_5/EXTI15_10，此处再细分其他引脚） */</span>
+    }
+}</div>
+                        <p><strong>（4）主函数调用（main.c）</strong></p>
+                        <div class="code-block"><span class="kw">int</span> <span class="fn">main</span>(<span class="kw">void</span>)
+{
+    HAL_Init();                           <span class="cm">/* 初始化HAL库（内含优先级分组2设置） */</span>
+    sys_stm32_clock_init(<span class="cm">360</span>, <span class="cm">25</span>, <span class="cm">2</span>, <span class="cm">8</span>);<span class="cm">/* 设置时钟：360MHz */</span>
+    delay_init(<span class="cm">180</span>);                     <span class="cm">/* 延时初始化 */</span>
+    led_init();                           <span class="cm">/* LED初始化 */</span>
+    exti_init();                          <span class="cm">/* 外部中断初始化 */</span>
+
+    <span class="kw">while</span> (<span class="cm">1</span>)
+    {
+        delay_ms(<span class="cm">100</span>);                    <span class="cm">/* 主循环空转，按键完全由中断响应 */</span>
+    }
+}</div>
+                        <div class="warn">中断服务函数与回调函数中不要使用 delay_ms 之类的阻塞延时，处理逻辑应尽量短小快速；耗时操作建议置标志位后交由主循环处理。</div>
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>HAL 库配置外部中断六步走：开时钟 → HAL_GPIO_Init（一步到位）→ 设分组（仅一次）→ 设优先级 → 使能中断 → 编写服务函数；7 个外部中断服务函数中 EXTI9_5/EXTI15_10 需在回调中用 GPIO_Pin 区分引脚；业务逻辑统一写在 HAL_GPIO_EXTI_Callback 回调里，保持中断处理短小。</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ 第8章 小结 ═══════════ -->
+                    <div class="content-card">
+                        <h3 id="sec-summary">8 小结</h3>
+                        <img src="./index13-map/summary-mind.png" alt="中断系统知识总结脑图">
+                        <div class="img-caption">图 8-1 中断系统知识总结脑图：六大要点一览</div>
+                        <div class="summary-box">
+                            <div class="sb-title">中断系统知识要点回顾</div>
+                            <p><b>① 中断概念</b>：打断 CPU 正常程序 → 处理紧急事务 → 返回断点；价值在于实时响应、不占用 CPU 资源。</p>
+                            <p><b>② NVIC</b>：内核的嵌套向量中断控制器，F429 支持 86 个可屏蔽中断通道、4 位优先级；中断向量表存于启动文件，服务函数名必须与向量表一致；优先级分抢占（可嵌套）、响应（排队）、自然三级，数值越小级别越高，分组写 AIRCR[10:8] 且全工程只设一次。</p>
+                            <p><b>③ EXTI</b>：外部中断/事件控制器，F429 有 23 条线；EXTI0~15 接 GPIO，EXTI16~22 接 PVD/RTC/USB 等外设；中断走 NVIC（软件处理），事件走硬件脉冲（外设自动处理）。</p>
+                            <p><b>④ EXTI 与 IO 映射</b>：引脚号决定 EXTI 线号，端口由 SYSCFG_EXTICR1~4 选择；同号引脚同一时刻只能有一个使用外部中断。</p>
+                            <p><b>⑤ 关键寄存器</b>：NVIC 的 ISER/ICER/IPR；EXTI 的 IMR/EMR/RTSR/FTSR/SWIER/PR（挂起标志写 1 清零，服务函数中必须清除）。</p>
+                            <p><b>⑥ HAL 库配置流程</b>：开 GPIO 时钟 → HAL_GPIO_Init（模式/映射/触发一步到位）→ HAL_NVIC_SetPriorityGrouping（一次）→ HAL_NVIC_SetPriority → HAL_NVIC_EnableIRQ → 服务函数 EXTIx_IRQHandler 调 HAL_GPIO_EXTI_IRQHandler 清标志 → 用户重写 HAL_GPIO_EXTI_Callback 处理业务。</p>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 侧边栏：一级菜单展开/折叠 + 滚动跳转
+        const topItems = document.querySelectorAll('.sidebar-menu > li');
+        const subItems = document.querySelectorAll('.submenu li');
+
+        // 全部展开 / 全部收起按钮
+        document.querySelector('.btn-expand-all').addEventListener('click', function(e) {
+            e.stopPropagation();
+            topItems.forEach(function(li) { li.classList.add('open'); });
+        });
+        document.querySelector('.btn-collapse-all').addEventListener('click', function(e) {
+            e.stopPropagation();
+            topItems.forEach(function(li) { li.classList.remove('open'); });
+        });
+
+        function clearActive() {
+            document.querySelectorAll('.sidebar-menu .active').forEach(function(el) {
+                el.classList.remove('active');
+            });
+        }
+
+        function scrollToTarget(targetId) {
+            if (!targetId) return;
+            const target = document.getElementById(targetId);
+            if (target) {
+                target.scrollIntoView({ behavior: 'auto', block: 'start' });
+            }
+        }
+
+        // 一级菜单：点击独立切换展开/折叠，并滚动到对应章节
+        topItems.forEach(function(li) {
+            const title = li.querySelector('.menu-title');
+            title.addEventListener('click', function(e) {
+                e.stopPropagation();
+                // 仅切换当前菜单的展开状态，不影响其他菜单
+                li.classList.toggle('open');
+                // 高亮 + 滚动
+                clearActive();
+                li.classList.add('active');
+                scrollToTarget(li.getAttribute('data-target'));
+            });
+        });
+
+        // 二级菜单：点击滚动到对应小节，并高亮自身与父级
+        subItems.forEach(function(li) {
+            li.addEventListener('click', function(e) {
+                e.stopPropagation();
+                clearActive();
+                li.classList.add('active');
+                const parentLi = li.closest('.sidebar-menu > li');
+                if (parentLi) {
+                    parentLi.classList.add('open');
+                    parentLi.classList.add('active');
+                }
+                scrollToTarget(li.getAttribute('data-target'));
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验40 NAND FLASH实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验40 NAND FLASH实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">NAND 有坏块、必须整块擦除；FTL 层用 LUT 把逻辑块映射到物理好块。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">通过 FMC 的 NAND 控制器访问 NAND FLASH，并在其上实现坏块管理与扇区读写</div>
+
+                    <p>NAND FLASH 与 SD 卡一样是块设备，但多了两个硬约束：<strong>写入前必须整块擦除</strong>、<strong>出厂就可能存在坏块</strong>。本实验分两层完成：底层 <code class="inline">nand.c</code> 负责 FMC 时序、命令/地址/数据收发与硬件 ECC；上层 <code class="inline">ftl.c</code> 负责坏块表（LUT）、逻辑扇区到物理页的转换，以及“异地更新”式的写算法，使上层可以像访问连续扇区一样读写。</p>
+
+                    <table class="data">
+                        <tr><th>对比项</th><th>实验39 SD 卡</th><th>实验40 NAND（本页）</th><th>实验41 FATFS</th></tr>
+                        <tr><td>接口</td><td>SDIO（PC8~PC12/PD2）</td><td>FMC Bank3（PD/PE 复用）</td><td>沿用 NAND 或 SD</td></tr>
+                        <tr><td>最小擦除单位</td><td>扇区（512B）可覆写</td><td>块（64/128 页）</td><td>簇</td></tr>
+                        <tr><td>坏块管理</td><td>卡内部处理</td><td>软件 LUT + 坏块标记</td><td>由 FTL 屏蔽</td></tr>
+                        <tr><td>上层接口</td><td><code>SD_ReadDisk</code></td><td><code>FTL_ReadSectors</code></td><td><code>f_read</code></td></tr>
+                    </table>
+
+                    <table class="data">
+                        <tr><th>信号</th><th>引脚</th><th>FMC 功能</th><th>说明</th></tr>
+                        <tr><td>NCE3</td><td>PG9</td><td>FMC_NCE3</td><td>片选，Bank3 起始 0x80000000</td></tr>
+                        <tr><td>CLE</td><td>PD11</td><td>FMC_CLE</td><td>命令锁存，地址线 A16</td></tr>
+                        <tr><td>ALE</td><td>PD12</td><td>FMC_ALE</td><td>地址锁存，地址线 A17</td></tr>
+                        <tr><td>RE / WE</td><td>PD4 / PD5</td><td>FMC_NOE / FMC_NWE</td><td>读使能 / 写使能</td></tr>
+                        <tr><td>D0~D7</td><td>PD14,PD15,PD0,PD1,PE7~PE10</td><td>FMC_D0~D7</td><td>8 位数据总线</td></tr>
+                        <tr><td>R/B</td><td>PD6</td><td>普通输入（上拉）</td><td><code>NAND_RB</code> 软件轮询</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">FMC Bank3 0x80000000</span>
+                        <span class="chip">8bit 总线</span>
+                        <span class="chip">MT29F4G08ABADA 512MB</span>
+                        <span class="chip">MT29F16G08ABABA 2GB</span>
+                        <span class="chip">硬件 ECC 4B/512B</span>
+                        <span class="chip">THCLK 5.5ns</span>
+                    </div>
+
+                    <div class="note">本实验的容量显示算式是 <code>(block_totalnum/1024)*(page_mainsize/1024)*block_pagenum</code>，结果单位 MB。以 MT29F4G08ABADA 为例：4096/1024=4，2048/1024=2，4×2×64=512，正好是 512MB。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">nand.c 管时序与 ECC，ftl.c 管坏块与映射，main.c 只负责调用</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本页关注点</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化、容量显示、三个按键分支</td><td><code>while(FTL_Init())</code> 重试、备份扇区</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>异常与 SysTick</td><td><code>SysTick_Handler</code> → <code>HAL_IncTick()</code></td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>SystemInit</td><td>FPU、RCC 复位、VTOR</td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>向量表与复位入口</td><td>栈 0x400 / 堆 0x200</td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td>时钟与中断开关</td><td><code>Stm32_Clock_Init</code>、<code>INTX_DISABLE</code></td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>us/ms 延时</td><td>擦除/编程后的等待</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>串口与 printf 重定向</td><td>调试输出、USMART 通道</td></tr>
+                        <tr><td><code>HARDWARE/NAND/nand.c</code></td><td>NAND 底层：ID、读页、写页、擦块、ECC</td><td><code>NAND_Init</code>、<code>NAND_WritePage</code></td></tr>
+                        <tr><td><code>HARDWARE/NAND/ftl.c</code></td><td>FTL：LUT、坏块、扇区读写</td><td><code>FTL_Init</code>、<code>FTL_WriteSectors</code></td></tr>
+                        <tr><td><code>USMART/usmart.c</code></td><td>串口命令行调试组件</td><td>TIM4 每 100ms 扫描</td></tr>
+                        <tr><td><code>MALLOC/malloc.c</code></td><td>内存池</td><td>LUT 与两个 512B 缓冲</td></tr>
+                        <tr><td><code>HALLIB/.../stm32f4xx_hal_nand.c</code></td><td>FMC NAND 时序配置</td><td><code>HAL_NAND_Init</code> 写 FMC 寄存器</td></tr>
+                    </table>
+
+                    <p>调用关系是单向的：<code class="inline">main</code> → <code class="inline">FTL_*</code> → <code class="inline">NAND_*</code> → FMC 寄存器。应用层永远不需要知道物理块号，也不直接碰 spare 区，这正是 FTL 存在的意义。</p>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电到 FTL 可用，初始化顺序与 SD 卡实验一致，但多了一个“建表/格式化”阶段</div>
+
+                    <figure class="figure">
+                        <img src="./index54-map/boot-flow.png" alt="实验40 NAND FLASH实验启动流程图">
+                        <figcaption>图 3-1　实验40 启动链路：复位 → FTL_Init → LUT 建表 → 扇区读写</figcaption>
+                    </figure>
+
+                    <p><code class="inline">FTL_Init()</code> 是整页的分水岭：它先调 <code class="inline">NAND_Init()</code> 拿到芯片参数，再为 LUT 申请 <code class="inline">block_totalnum×2</code> 字节内存，然后尝试 <code class="inline">FTL_CreateLUT(1)</code>。如果 LUT 建不起来（有效块少于 100），就自动执行 <code class="inline">FTL_Format()</code> 重建逻辑块编号。</p>
+
+                    <h3>main() 全文</h3>
+                    <pre class="code">int main(void)
+{
+	u8 key,t=0;
+	u16 i;
+	u8 *buf;
+	u8 *backbuf;
+
+    HAL_Init();                     <span class="cmt">// Flash 缓存 + 优先级分组 2 + 1ms 时基</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// SYSCLK=180MHz，FMC 时基 THCLK=5.5ns</span>
+    delay_init(180);                <span class="cmt">// fac_us=180</span>
+    uart_init(115200);              <span class="cmt">// USART1：PA9/PA10</span>
+    usmart_dev.init(90);            <span class="cmt">// TIM4 扫描，APB1 定时器时钟 90MHz</span>
+    LED_Init();                     <span class="cmt">// PB0/PB1</span>
+    KEY_Init();                     <span class="cmt">// PA0/PC13/PH2/PH3</span>
+    SDRAM_Init();                   <span class="cmt">// 外部 SDRAM</span>
+    LCD_Init();                     <span class="cmt">// LCD</span>
+    my_mem_init(SRAMIN);            <span class="cmt">// 内部内存池</span>
+    my_mem_init(SRAMEX);            <span class="cmt">// 外部内存池</span>
+    my_mem_init(SRAMCCM);		    <span class="cmt">// CCM 内存池，本实验只初始化未使用</span>
+   	POINT_COLOR=RED;
+	LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7");
+	LCD_ShowString(30,70,200,16,16,"NAND TEST");
+	LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");
+	LCD_ShowString(30,110,200,16,16,"2016/2/16");
+	LCD_ShowString(30,130,200,16,16,"KEY0:Read Sector 2");
+	LCD_ShowString(30,150,200,16,16,"KEY1:Write Sector 2");
+	LCD_ShowString(30,170,200,16,16,"KEY2:Recover Sector 2");
+ 	while(FTL_Init())			    <span class="cmt">// 非 0 表示 NAND 或 FTL 初始化失败，重试</span>
+	{
+		LCD_ShowString(30,190,200,16,16,"NAND Error!");
+		delay_ms(500);
+		LCD_ShowString(30,190,200,16,16,"Please Check");
+		delay_ms(500);
+		LED0=!LED0;                 <span class="cmt">// DS0 闪烁</span>
+	}
+	backbuf=mymalloc(SRAMIN,NAND_ECC_SECTOR_SIZE);	<span class="cmt">// 备份缓冲 512B</span>
+	buf=mymalloc(SRAMIN,NAND_ECC_SECTOR_SIZE);		<span class="cmt">// 数据缓冲 512B</span>
+ 	POINT_COLOR=BLUE;
+	sprintf((char*)buf,"NAND Size:%dMB",(nand_dev.block_totalnum/1024)*(nand_dev.page_mainsize/1024)*nand_dev.block_pagenum);
+	LCD_ShowString(30,190,200,16,16,buf);	<span class="cmt">// 显示容量，如 NAND Size:512MB</span>
+	FTL_ReadSectors(backbuf,2,NAND_ECC_SECTOR_SIZE,1);<span class="cmt">// 预读扇区 2，便于恢复</span>
+	while(1)
+	{
+		key=KEY_Scan(0);
+		switch(key)
+		{
+			case KEY0_PRES:         <span class="cmt">// 读扇区 2</span>
+				key=FTL_ReadSectors(buf,2,NAND_ECC_SECTOR_SIZE,1);
+				if(key==0)//读取成功
+				{
+					LCD_ShowString(30,210,200,16,16,"USART1 Sending Data...  ");
+					printf("Sector 2 data is:\r\n");
+					for(i=0;i&lt;NAND_ECC_SECTOR_SIZE;i++)
+					{
+						printf("%x ",buf[i]);//输出数据
+					}
+					printf("\r\ndata end.\r\n");
+					LCD_ShowString(30,210,200,16,16,"USART1 Send Data Over!  ");
+				}
+				break;
+			case KEY1_PRES:         <span class="cmt">// 写扇区 2</span>
+				for(i=0;i&lt;NAND_ECC_SECTOR_SIZE;i++)buf[i]=i+t;<span class="cmt">// 用 t 制造变化的数据</span>
+				LCD_ShowString(30,210,210,16,16,"Writing data to sector..");
+				key=FTL_WriteSectors(buf,2,NAND_ECC_SECTOR_SIZE,1);
+				if(key==0)LCD_ShowString(30,210,200,16,16,"Write data successed    ");
+				else LCD_ShowString(30,210,200,16,16,"Write data failed       ");
+				break;
+			case KEY2_PRES:         <span class="cmt">// 用备份恢复扇区 2</span>
+				LCD_ShowString(30,210,210,16,16,"Recovering data...      ");
+				key=FTL_WriteSectors(backbuf,2,NAND_ECC_SECTOR_SIZE,1);
+				if(key==0)LCD_ShowString(30,210,200,16,16,"Recovering data OK      ");
+				else LCD_ShowString(30,210,200,16,16,"Recovering data failed  ");
+				break;
+		}
+		t++;
+		delay_ms(10);
+		if(t==20)
+		{
+			LED0=!LED0;             <span class="cmt">// 200ms 心跳</span>
+			t=0;
+		}
+	}
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明</div><ol>
+                        <li><strong>为什么先 <code>usmart_dev.init(90)</code> 再初始化外设：</strong>USMART 初始化只配置 TIM4 与函数表，不依赖 NAND；放在前面可以在后续任何阶段用串口命令干预调试。</li>
+                        <li><strong><code>while(FTL_Init())</code> 的重试代价：</strong>首次运行若需格式化，会逐块检查坏块并擦除，耗时可能达到秒级；卡住时 DS0 闪烁是正常提示，不是死机。</li>
+                        <li><strong>两个缓冲为什么都要 512B：</strong><code>NAND_ECC_SECTOR_SIZE</code> 定义为 512，只有按 512 对齐读写才会启用硬件 ECC；<code>backbuf</code> 保存写入前的原始内容，实现“可恢复写”。</li>
+                        <li><strong>预读扇区 2 的意义：</strong>源码注释写明“防止乱写导致文件系统损坏”，因为扇区 2 常被 FAT 区使用，先备份再随便写、再按 KEY2 恢复，是安全的实验方式。</li>
+                        <li><strong>容量算式为什么能直接乘：</strong>块数/1024 与页大小/1024 都是整数除法，先转成 KB 再乘页数，避免 <code>block_totalnum×page_mainsize</code> 在 32 位下溢出。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">Reset_Handler 只做两件事：调 SystemInit、跳 __main</div>
+
+                    <pre class="code">Stack_Size      EQU     0x400;                    <span class="cmt">// 主栈 1KB</span>
+Heap_Size       EQU     0x200;                    <span class="cmt">// 标准库堆 512B</span>
+
+                AREA    RESET, DATA, READONLY
+                EXPORT  __Vectors
+__Vectors       DCD     __initial_sp               <span class="cmt">// 0：栈顶</span>
+                DCD     Reset_Handler              <span class="cmt">// 1：复位入口</span>
+                DCD     NMI_Handler
+                DCD     HardFault_Handler
+                DCD     MemManage_Handler
+                DCD     BusFault_Handler
+                DCD     UsageFault_Handler
+                DCD     0
+                DCD     0
+                DCD     0
+                DCD     0
+                DCD     SVC_Handler
+                DCD     DebugMon_Handler
+                DCD     0
+                DCD     PendSV_Handler
+                DCD     SysTick_Handler            <span class="cmt">// 1ms 时基</span>
+                <span class="cmt">// …TIM4_IRQHandler 等外设中断入口在表的后半段…</span>
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0                         <span class="cmt">// 芯片级初始化</span>
+                 LDR     R0, =__main
+                 BX      R0                         <span class="cmt">// C 库初始化后进入 main</span>
+                 ENDP</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明</div><ol>
+                        <li><strong>向量表位置：</strong>默认位于内部 Flash 0x08000000，<code>SystemInit</code> 会把 <code>SCB-&gt;VTOR</code> 指向这里；若做 Bootloader 需要改 <code>VECT_TAB_OFFSET</code>。</li>
+                        <li><strong>栈大小与 FTL 的关系：</strong>FTL 与 NAND 函数大多是“小局部变量 + 全局缓冲”，1KB 栈足够；但 <code>FTL_SearchBadBlock</code> 若被启用，缓冲是从内存池申请的，也不占栈。</li>
+                        <li><strong>堆 0x200 不等于内存池：</strong>工程用 <code>mymalloc</code> 管理 SRAMIN/SRAMEX/SRAMCCM 三块池子，标准库堆只服务于 <code>sprintf</code> 等少数调用。</li>
+                        <li><strong>弱符号覆盖：</strong><code>TIM4_IRQHandler</code> 在 <code>usmart.c</code> 中定义，<code>SysTick_Handler</code> 在 <code>stm32f4xx_it.c</code> 中定义，都靠覆盖启动文件里的 <code>[WEAK]</code> 空实现生效。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">HAL_Init 的优先级分组会直接影响 TIM4、USART1 与 SysTick 的优先级解释</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">// 开 FPU</span>
+  #endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;                <span class="cmt">// HSI 开</span>
+  RCC-&gt;CFGR = 0x00000000;                         <span class="cmt">// 时钟源回 HSI</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;                <span class="cmt">// 关 HSEON/CSSON/PLLON</span>
+  RCC-&gt;PLLCFGR = 0x24003010;
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;
+  RCC-&gt;CIR = 0x00000000;
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;       <span class="cmt">// 向量表基址</span>
+}
+
+HAL_StatusTypeDef HAL_Init(void)
+{
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
+  __HAL_FLASH_DATA_CACHE_ENABLE();
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();           <span class="cmt">// 三条缓存全开</span>
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);  <span class="cmt">// 2 位抢占 + 2 位子优先级</span>
+  HAL_InitTick(TICK_INT_PRIORITY);                <span class="cmt">// 0x0F，SysTick 起振</span>
+  HAL_MspInit();                                  <span class="cmt">// 空实现</span>
+  return HAL_OK;
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明</div><ol>
+                        <li><strong>SystemInit 无参无返回：</strong>由汇编直接 <code>BLX</code> 调用，不能依赖 C 运行时，全部是寄存器操作。</li>
+                        <li><strong>HAL_Init 的返回值：</strong>固定返回 <code>HAL_OK</code>，调用方通常不检查；真正可能失败的是后面的 <code>HAL_RCC_OscConfig</code>。</li>
+                        <li><strong>分组 2 的后果：</strong>TIM4 的 3/3、USART1 的 3/3 都是“最低抢占 + 最低子优先级”，SysTick 的 0x0F 实际也落在最低组，所以三者之间不会形成复杂嵌套。</li>
+                        <li><strong>缓存与 NAND 性能：</strong>指令/数据缓存对 FMC 访问无效（外部存储不经过 Flash 缓存），但能加速 FTL 的查表与循环代码。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟树与 FMC 时序基准">
+                    <h2>06　时钟树与 FMC 时序基准</h2>
+                    <div class="sec-sub">FMC 的 THCLK 就是 HCLK 180MHz，所有 NAND 时序参数都以 5.5ns 为 1 个数</div>
+
+                    <table class="data">
+                        <tr><th>节点</th><th>算式</th><th>结果</th><th>与 NAND 的关系</th></tr>
+                        <tr><td>HSE</td><td>晶振</td><td>25MHz</td><td>PLL 输入</td></tr>
+                        <tr><td>Fvco</td><td>25 × 360 / 25</td><td>360MHz</td><td>PLL 输出</td></tr>
+                        <tr><td>SYSCLK</td><td>360 / 2</td><td>180MHz</td><td>系统主频</td></tr>
+                        <tr><td>HCLK</td><td>SYSCLK / 1</td><td>180MHz</td><td>FMC 内核时钟 THCLK = 5.5ns</td></tr>
+                        <tr><td>PCLK1</td><td>HCLK / 4</td><td>45MHz</td><td>APB1 外设</td></tr>
+                        <tr><td>APB1 定时器时钟</td><td>PCLK1 × 2</td><td>90MHz</td><td>TIM4 计数基准</td></tr>
+                        <tr><td>PCLK2</td><td>HCLK / 2</td><td>90MHz</td><td>APB2 外设</td></tr>
+                        <tr><td>FMC 时序单位</td><td>1 / 180MHz</td><td>5.5ns</td><td>Setup/Wait/Hold/HiZ 的步长</td></tr>
+                    </table>
+
+                    <pre class="code">void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq)
+{
+    HAL_StatusTypeDef ret = HAL_OK;
+    RCC_OscInitTypeDef RCC_OscInitStructure;
+    RCC_ClkInitTypeDef RCC_ClkInitStructure;
+
+    __HAL_RCC_PWR_CLK_ENABLE();
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);  <span class="cmt">// 电压等级 1</span>
+
+    RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE;
+    RCC_OscInitStructure.HSEState=RCC_HSE_ON;
+    RCC_OscInitStructure.PLL.PLLState=RCC_PLL_ON;
+    RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;
+    RCC_OscInitStructure.PLL.PLLM=pllm;
+    RCC_OscInitStructure.PLL.PLLN=plln;
+    RCC_OscInitStructure.PLL.PLLP=pllp;
+    RCC_OscInitStructure.PLL.PLLQ=pllq;
+    ret=HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+    if(ret!=HAL_OK) while(1);
+
+    ret=HAL_PWREx_EnableOverDrive();                <span class="cmt">// 180MHz 必须 OverDrive</span>
+    if(ret!=HAL_OK) while(1);
+
+    RCC_ClkInitStructure.ClockType=(RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2);
+    RCC_ClkInitStructure.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;
+    RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;
+    RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;
+    ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5);
+    if(ret!=HAL_OK) while(1);
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（时钟）</div><ol>
+                        <li><strong>参数：</strong><code>plln/pllm/pllp/pllq</code> 分别对应倍频、前分频、系统分频、48MHz 域分频；本实验传入 360/25/2/8。</li>
+                        <li><strong>返回值：</strong>函数无返回值；失败时 <code>while(1)</code> 停机，便于调试器定位。</li>
+                        <li><strong>为什么 FMC 用 HCLK：</strong>FMC 挂在 AHB 总线上，时序寄存器以 HCLK 周期计数，所以 180MHz 决定 5.5ns 的步长，改主频必须重新核算 <code>SetupTime</code> 等参数。</li>
+                        <li><strong>APB1 定时器为什么是 90MHz：</strong>APB1 分频系数为 4（≠1），定时器时钟自动 ×2，因此 TIM4 是 90MHz，而 <code>usmart_init(90)</code> 正是按这个值算分频。</li>
+                    </ol></div>
+
+                    <h3>delay 与 NAND_Delay</h3>
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);  <span class="cmt">// SysTick 用 HCLK</span>
+	fac_us=SYSCLK;                          <span class="cmt">// 180 → 1us 计 180 个数</span>
+}
+
+// NAND 的短延时：一个 i-- 约 4ns（180MHz 下约 2 条指令）
+void NAND_Delay(vu32 i)
+{
+	while(i&gt;0)i--;                          <span class="cmt">// 用于 tADL / tWHR / tRHW</span>
+}
+
+// 擦除后必须等够 tBERS（典型 3.5ms，最大 10ms）
+u8 NAND_EraseBlock(u32 BlockNum)
+{
+	if(nand_dev.id==MT29F16G08ABABA)BlockNum&lt;&lt;=7;  	<span class="cmt">// 块号→页号：×128</span>
+    else if(nand_dev.id==MT29F4G08ABADA)BlockNum&lt;&lt;=6;  <span class="cmt">// ×64</span>
+    *(vu8*)(NAND_ADDRESS|NAND_CMD)=NAND_ERASE0;
+    *(vu8*)(NAND_ADDRESS|NAND_ADDR)=(u8)BlockNum;
+    *(vu8*)(NAND_ADDRESS|NAND_ADDR)=(u8)(BlockNum&gt;&gt;8);
+    *(vu8*)(NAND_ADDRESS|NAND_ADDR)=(u8)(BlockNum&gt;&gt;16);
+    *(vu8*)(NAND_ADDRESS|NAND_CMD)=NAND_ERASE1;
+	delay_ms(NAND_TBERS_DELAY);		<span class="cmt">// 宏值为 4，保证 ≥3.5ms</span>
+	if(NAND_WaitForReady()!=NSTA_READY)return NSTA_ERROR;
+    return 0;
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（延时与擦除）</div><ol>
+                        <li><strong>参数与返回值：</strong><code>NAND_Delay(vu32 i)</code> 是忙等循环，无返回值；<code>NAND_EraseBlock(u32 BlockNum)</code> 返回 0 成功、<code>NSTA_ERROR</code> 失败。</li>
+                        <li><strong>块号左移的意义：</strong>NAND 擦除命令接收的是“行地址（页地址）”，块内页数为 64 或 128，所以块号要 ×64 或 ×128 才是该块第一页的地址。</li>
+                        <li><strong>为什么擦除要 <code>delay_ms(4)</code>：</strong>擦除是内部高压操作，R/B 拉低到拉高可能持续数毫秒；源码升级说明 V1.5 专门加了 ms 级延时，防止“还没擦完就读状态”导致误判。</li>
+                        <li><strong><code>NAND_Delay</code> 不是精确延时：</strong>注释写“一个 i++ 至少 4ns”，只用于满足 tADL/tWHR 这类百纳秒级要求，不能用它做毫秒计时。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="NAND 初始化与 FMC 引脚配置">
+                    <h2>07　NAND 初始化与 FMC 引脚配置</h2>
+                    <div class="sec-sub">Bank3、8 位总线、四个时序参数，缺一项就读不到 ID</div>
+
+                    <figure class="figure">
+                        <img src="./index54-map/nand-init-flow.png" alt="NAND 初始化与 FTL 建表流程图">
+                        <figcaption>图 7-1　NAND 初始化链路：MspInit → 复位 → 读 ID → 填参数 → 建 LUT</figcaption>
+                    </figure>
+
+                    <pre class="code">u8 NAND_Init(void)
+{
+    FMC_NAND_PCC_TimingTypeDef ComSpaceTiming,AttSpaceTiming;
+
+    NAND_Handler.Instance=FMC_NAND_DEVICE;
+    NAND_Handler.Init.NandBank=FMC_NAND_BANK3;                          <span class="cmt">// 片选 NCE3</span>
+    NAND_Handler.Init.Waitfeature=FMC_NAND_PCC_WAIT_FEATURE_DISABLE;    <span class="cmt">// 不用硬件等待</span>
+    NAND_Handler.Init.MemoryDataWidth=FMC_NAND_PCC_MEM_BUS_WIDTH_8;     <span class="cmt">// 8 位数据</span>
+    NAND_Handler.Init.EccComputation=FMC_NAND_ECC_DISABLE;              <span class="cmt">// 初始化阶段先关 ECC</span>
+    NAND_Handler.Init.ECCPageSize=FMC_NAND_ECC_PAGE_SIZE_2048BYTE;
+    NAND_Handler.Init.TCLRSetupTime=0;                                  <span class="cmt">// tCLR=(0+2+2)×5.5ns</span>
+    NAND_Handler.Init.TARSetupTime=1;                                   <span class="cmt">// tAR=(1+2+2)×5.5ns</span>
+
+    ComSpaceTiming.SetupTime=2;         <span class="cmt">// 建立 2 个 HCLK</span>
+    ComSpaceTiming.WaitSetupTime=3;     <span class="cmt">// 等待 3 个 HCLK</span>
+    ComSpaceTiming.HoldSetupTime=2;     <span class="cmt">// 保持 2 个 HCLK</span>
+    ComSpaceTiming.HiZSetupTime=1;      <span class="cmt">// 高阻 1 个 HCLK</span>
+
+    AttSpaceTiming.SetupTime=2;
+    AttSpaceTiming.WaitSetupTime=3;
+    AttSpaceTiming.HoldSetupTime=2;
+    AttSpaceTiming.HiZSetupTime=1;
+
+    HAL_NAND_Init(&amp;NAND_Handler,&amp;ComSpaceTiming,&amp;AttSpaceTiming);
+    NAND_Reset();       		        <span class="cmt">// 0xFF 复位</span>
+    delay_ms(100);
+    nand_dev.id=NAND_ReadID();	        <span class="cmt">// 0x90 读 5 字节 ID</span>
+	NAND_ModeSet(4);			        <span class="cmt">// 0xEF 设置 Mode4 高速</span>
+    if(nand_dev.id==MT29F16G08ABABA)
+    {
+        nand_dev.page_totalsize=4320;
+        nand_dev.page_mainsize=4096;
+        nand_dev.page_sparesize=224;
+        nand_dev.block_pagenum=128;
+        nand_dev.plane_blocknum=2048;
+        nand_dev.block_totalnum=4096;
+    }
+    else if(nand_dev.id==MT29F4G08ABADA)
+    {
+        nand_dev.page_totalsize=2112;
+        nand_dev.page_mainsize=2048;
+        nand_dev.page_sparesize=64;
+        nand_dev.block_pagenum=64;
+        nand_dev.plane_blocknum=2048;
+        nand_dev.block_totalnum=4096;
+    }else return 1;	<span class="cmt">// 不认识的 ID</span>
+    return 0;
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（NAND_Init）</div><ol>
+                        <li><strong>作用：</strong>把 NAND 芯片的物理参数（页大小、块页数、总块数）填进全局 <code>nand_dev</code>，后续所有地址计算都依赖它。</li>
+                        <li><strong>参数与返回值：</strong>无入参；返回 0 成功、1 表示 ID 不在支持列表。</li>
+                        <li><strong>ECC 为什么先关：</strong><code>EccComputation</code> 只决定 FMC 是否自动累计 ECC；真正的 ECC 使能是在读写页函数里对 <code>PCR3</code> 的 bit6 逐段开关，这样能按 512B 分段取 ECC 值。</li>
+                        <li><strong>TCLR/TAR 的算式：</strong>FMC 手册给出 tCLR=(TCLR+TSET+2)×THCLK、tAR=(TAR+TSET+2)×THCLK，代码里 TSET 即 SetupTime=2，所以 TCLR=0 得 4×5.5=22ns，TAR=1 得 5×5.5=27.5ns。</li>
+                        <li><strong>Mode4 的意义：</strong>0xEF 命令把芯片特性寄存器 P1 设为 4，缩短 tADL/tWHR 等内部延时，使高速读写成为可能；不同型号需查数据手册确认。</li>
+                    </ol></div>
+
+                    <h3>HAL_NAND_MspInit：引脚复用</h3>
+                    <pre class="code">void HAL_NAND_MspInit(NAND_HandleTypeDef *hnand)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+
+    __HAL_RCC_FMC_CLK_ENABLE();             <span class="cmt">// FMC 时钟</span>
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+    __HAL_RCC_GPIOE_CLK_ENABLE();
+    __HAL_RCC_GPIOG_CLK_ENABLE();
+
+	//PD6 R/B
+	GPIO_Initure.Pin=GPIO_PIN_6;
+    GPIO_Initure.Mode=GPIO_MODE_INPUT;      <span class="cmt">// 普通输入，软件读电平</span>
+    GPIO_Initure.Pull=GPIO_PULLUP;
+    GPIO_Initure.Speed=GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOD,&amp;GPIO_Initure);
+
+	//PG9 NCE3
+    GPIO_Initure.Pin=GPIO_PIN_9;
+    GPIO_Initure.Mode=GPIO_MODE_AF_PP;      <span class="cmt">// 复用推挽</span>
+    GPIO_Initure.Pull=GPIO_NOPULL;
+    GPIO_Initure.Speed=GPIO_SPEED_HIGH;
+    GPIO_Initure.Alternate=GPIO_AF12_FMC;   <span class="cmt">// AF12 = FMC</span>
+    HAL_GPIO_Init(GPIOG,&amp;GPIO_Initure);
+
+    //PD0,1,4,5,11,12,14,15：D2/D3/NOE/NWE/CLE/ALE/D0/D1
+    GPIO_Initure.Pin=GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5|\
+                     GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_14|GPIO_PIN_15;
+    GPIO_Initure.Pull=GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOD,&amp;GPIO_Initure);
+
+    //PE7,8,9,10：D4~D7
+    GPIO_Initure.Pin=GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10;
+    HAL_GPIO_Init(GPIOE,&amp;GPIO_Initure);
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（MspInit）</div><ol>
+                        <li><strong>作用与时机：</strong>由 <code>HAL_NAND_Init()</code> 内部回调，负责时钟与 GPIO；main 不需要手动调用。</li>
+                        <li><strong>参数与返回值：</strong>入参 <code>hnand</code> 句柄（本函数未使用）；无返回值。</li>
+                        <li><strong>为什么 R/B 不用复用：</strong>FMC 的 NWAIT 功能需要额外时序配合，本工程直接把它当普通 IO 读 <code>PDin(6)</code>，用 <code>NAND_WaitRB</code> 轮询，简单可靠。</li>
+                        <li><strong>引脚分组依据：</strong>AF12 是 FMC 的复用号；PD0/PD1 是 D2/D3，PD14/PD15 是 D0/D1，PE7~PE10 是 D4~D7，PD4/PD5 是 RE/WE，PD11/PD12 是 CLE/ALE。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="FTL 读写时序与页编程">
+                    <h2>08　FTL 读写时序与页编程</h2>
+                    <div class="sec-sub">逻辑扇区 → LUT → 物理页 → FMC 命令/地址/数据，一条写请求要跨四层</div>
+
+                    <figure class="figure">
+                        <img src="./index54-map/nand-ftl-timing.png" alt="FTL 读写扇区与 NAND 页编程时序图">
+                        <figcaption>图 8-1　FTL 逻辑扇区映射流程与 NAND 页编程波形</figcaption>
+                    </figure>
+
+                    <p>写扇区的难点不在“写”，而在“不能原地改写”：NAND 的编程只能把 1 变 0，要让某位回到 1 必须整块擦除。因此 FTL 的策略是——若目标区域当前全是 0xFF（擦除态），直接写；否则把整块数据搬到同 plane 的空闲块，写入新数据后再擦除源块，最后修正 LUT。这个过程叫“异地更新”。</p>
+
+                    <pre class="code">u8 FTL_WriteSectors(u8 *pBuffer,u32 SectorNo,u16 SectorSize,u32 SectorCount)
+{
+    u8 flag=0;
+	u16 temp;
+    u32 i=0;
+	u16 wsecs;		<span class="cmt">// 单次写入的扇区数</span>
+	u32 wlen;
+    u32 LBNNo;      <span class="cmt">// 逻辑块号</span>
+    u32 PBNNo;      <span class="cmt">// 物理块号</span>
+    u32 PhyPageNo;  <span class="cmt">// 物理页号</span>
+    u32 PageOffset; <span class="cmt">// 页内偏移</span>
+    u32 BlockOffset;<span class="cmt">// 块内偏移</span>
+	u32 markdpbn=0XFFFFFFFF;
+	for(i=0;i&lt;SectorCount;i++)
+    {
+        LBNNo=(SectorNo+i)/(nand_dev.block_pagenum*(nand_dev.page_mainsize/SectorSize));
+        PBNNo=FTL_LBNToPBN(LBNNo);					<span class="cmt">// 查 LUT</span>
+        if(PBNNo&gt;=nand_dev.block_totalnum)return 1;
+        BlockOffset=((SectorNo+i)%(nand_dev.block_pagenum*(nand_dev.page_mainsize/SectorSize)))*SectorSize;
+        PhyPageNo=PBNNo*nand_dev.block_pagenum+BlockOffset/nand_dev.page_mainsize;
+        PageOffset=BlockOffset%nand_dev.page_mainsize;
+ 		temp=nand_dev.page_mainsize-PageOffset;	<span class="cmt">// 本页还能放多少字节</span>
+		temp/=SectorSize;
+		wsecs=SectorCount-i;
+		if(wsecs&gt;=temp)wsecs=temp;
+		wlen=wsecs*SectorSize;
+		flag=NAND_ReadPageComp(PhyPageNo,PageOffset,0XFFFFFFFF,wlen/4,&amp;temp);  <span class="cmt">// 判断是否全 0xFF</span>
+		if(flag)return 2;
+		if(temp==(wlen/4)) flag=NAND_WritePage(PhyPageNo,PageOffset,pBuffer,wlen);  <span class="cmt">// 全 1，直接写</span>
+		else flag=1;							<span class="cmt">// 已有数据，需搬块</span>
+		if(flag==0&amp;&amp;(markdpbn!=PBNNo))
+		{
+			flag=FTL_UsedBlockMark(PBNNo);		<span class="cmt">// spare[1] 写 0xCC</span>
+			markdpbn=PBNNo;
+		}
+		if(flag)	<span class="cmt">// 搬块 + 写入</span>
+        {
+			temp=((u32)nand_dev.block_pagenum*nand_dev.page_mainsize-BlockOffset)/SectorSize;
+			wsecs=SectorCount-i;
+			if(wsecs&gt;=temp)wsecs=temp;
+			wlen=wsecs*SectorSize;
+            flag=FTL_CopyAndWriteToBlock(PhyPageNo,PageOffset,pBuffer,wlen);
+            if(flag)return 3;
+        }
+		i+=wsecs-1;
+		pBuffer+=wlen;
+    }
+    return 0;
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（FTL_WriteSectors）</div><ol>
+                        <li><strong>作用：</strong>把“连续逻辑扇区”翻译成若干物理页写操作，必要时触发整块搬移，保证 NAND 的物理限制被完全屏蔽。</li>
+                        <li><strong>参数：</strong><code>pBuffer</code> 数据、<code>SectorNo</code> 起始逻辑扇区、<code>SectorSize</code> 扇区大小（≤512）、<code>SectorCount</code> 数量；返回 0 成功，1/2/3 分别表示物理块越界、读校验失败、搬块失败。</li>
+                        <li><strong>一个块能放多少扇区：</strong><code>block_pagenum × (page_mainsize / SectorSize)</code>，4G 芯片为 64×4=256 个 512B 扇区，所以扇区 2 落在块 0、页 0、页内偏移 1024。</li>
+                        <li><strong>为什么先读再写：</strong><code>NAND_ReadPageComp</code> 与 0xFFFFFFFF 比较，既判断是否需要搬块，也顺带确认该页可读（坏块会在这一步暴露）。</li>
+                        <li><strong>搬块为何只能同 plane：</strong>NAND 的内部拷贝命令要求源/目的页在同一个 plane，<code>FTL_FindSamePlaneUnusedBlock</code> 用块号奇偶判断 plane，跨 plane 会直接失败。</li>
+                    </ol></div>
+
+                    <h3>NAND_WritePage：命令、地址、数据与 ECC</h3>
+                    <pre class="code">u8 NAND_WritePage(u32 PageNum,u16 ColNum,u8 *pBuffer,u16 NumByteToWrite)
+{
+    vu16 i=0;
+	u8 res=0;
+	u8 eccnum=0;		<span class="cmt">// 需要计算 ECC 的 512B 段数</span>
+	u8 eccstart=0;		<span class="cmt">// 第一个 ECC 所属的段号</span>
+
+	*(vu8*)(NAND_ADDRESS|NAND_CMD)=NAND_WRITE0;      <span class="cmt">// 0x80</span>
+    *(vu8*)(NAND_ADDRESS|NAND_ADDR)=(u8)ColNum;      <span class="cmt">// 列地址低字节</span>
+    *(vu8*)(NAND_ADDRESS|NAND_ADDR)=(u8)(ColNum&gt;&gt;8);<span class="cmt">// 列地址高字节</span>
+    *(vu8*)(NAND_ADDRESS|NAND_ADDR)=(u8)PageNum;     <span class="cmt">// 行地址 3 字节</span>
+    *(vu8*)(NAND_ADDRESS|NAND_ADDR)=(u8)(PageNum&gt;&gt;8);
+    *(vu8*)(NAND_ADDRESS|NAND_ADDR)=(u8)(PageNum&gt;&gt;16);
+	NAND_Delay(NAND_TADL_DELAY);                    <span class="cmt">// 等 tADL</span>
+	if(NumByteToWrite%NAND_ECC_SECTOR_SIZE)         <span class="cmt">// 非 512 整数倍，不算 ECC</span>
+	{
+		for(i=0;i&lt;NumByteToWrite;i++)
+		{
+			*(vu8*)NAND_ADDRESS=*(vu8*)pBuffer++;
+		}
+	}else
+	{
+		eccnum=NumByteToWrite/NAND_ECC_SECTOR_SIZE;
+		eccstart=ColNum/NAND_ECC_SECTOR_SIZE;
+ 		for(res=0;res&lt;eccnum;res++)
+		{
+			FMC_Bank2_3-&gt;PCR3|=1&lt;&lt;6;					<span class="cmt">// 使能 ECC</span>
+			for(i=0;i&lt;NAND_ECC_SECTOR_SIZE;i++)
+			{
+				*(vu8*)NAND_ADDRESS=*(vu8*)pBuffer++;
+			}
+			while(!(FMC_Bank2_3-&gt;SR3&amp;(1&lt;&lt;6)));			<span class="cmt">// 等 FIFO 空</span>
+			nand_dev.ecc_hdbuf[res+eccstart]=FMC_Bank2_3-&gt;ECCR3;  <span class="cmt">// 取硬件 ECC</span>
+  			FMC_Bank2_3-&gt;PCR3&amp;=~(1&lt;&lt;6);
+		}
+		i=nand_dev.page_mainsize+0X10+eccstart*4;	<span class="cmt">// ECC 存到 spare 0x10 起</span>
+		NAND_Delay(NAND_TADL_DELAY);
+		*(vu8*)(NAND_ADDRESS|NAND_CMD)=0X85;			<span class="cmt">// 随机写命令</span>
+		*(vu8*)(NAND_ADDRESS|NAND_ADDR)=(u8)i;
+		*(vu8*)(NAND_ADDRESS|NAND_ADDR)=(u8)(i&gt;&gt;8);
+		NAND_Delay(NAND_TADL_DELAY);
+		pBuffer=(u8*)&amp;nand_dev.ecc_hdbuf[eccstart];
+		for(i=0;i&lt;eccnum;i++)
+		{
+			for(res=0;res&lt;4;res++)				 <span class="cmt">// 每个 ECC 4 字节</span>
+			{
+				*(vu8*)NAND_ADDRESS=*(vu8*)pBuffer++;
+			}
+		}
+	}
+    *(vu8*)(NAND_ADDRESS|NAND_CMD)=NAND_WRITE_TURE1;  <span class="cmt">// 0x10 启动编程</span>
+ 	delay_us(NAND_TPROG_DELAY);	<span class="cmt">// tPROG 200us</span>
+	if(NAND_WaitForReady()!=NSTA_READY)return NSTA_ERROR;
+    return 0;
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（NAND_WritePage）</div><ol>
+                        <li><strong>参数与返回值：</strong><code>PageNum</code> 页号、<code>ColNum</code> 页内列地址、<code>pBuffer</code> 数据、<code>NumByteToWrite</code> 字节数；返回 0 成功、<code>NSTA_ERROR</code> 失败。</li>
+                        <li><strong>地址为什么是 5 字节：</strong>2 字节列地址（页内 0~2111/4319）+ 3 字节行地址（页号），这是大页 NAND 的标准寻址方式。</li>
+                        <li><strong>ECC 存哪里：</strong>main 区结束后 spare 的 0x10 偏移开始，每 4 字节对应一个 512B 段；所以 spare 前 16 字节必须保留给坏块/使用/LBN 标记。</li>
+                        <li><strong>0x85 随机写的作用：</strong>把指针从 main 区移到 spare 区继续写 ECC，不需要重新发 0x80 和完整地址。</li>
+                        <li><strong>最后 0x10 与 tPROG：</strong>0x10 才真正启动内部编程，之后必须等 <code>NAND_TPROG_DELAY</code>（200us）并确认 R/B 回高，否则立刻读会得到忙状态。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="中断链路">
+                    <h2>09　中断链路</h2>
+                    <div class="sec-sub">三条中断线各司其职，NAND 本身完全靠轮询 R/B 引脚</div>
+
+                    <figure class="figure">
+                        <img src="./index54-map/nand-irq-chain.png" alt="实验40 中断链路图">
+                        <figcaption>图 9-1　SysTick / USART1 / TIM4 中断链路与 NAND 的软件轮询</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>触发源</th><th>外设 / 寄存器</th><th>NVIC 优先级</th><th>ISR</th><th>动作</th></tr>
+                        <tr><td>SysTick 1ms</td><td>SysTick LOAD/VAL</td><td><code>SysTick_IRQn</code>，0x0F</td><td><code>SysTick_Handler</code></td><td><code>HAL_IncTick()</code></td></tr>
+                        <tr><td>USART1 RXNE</td><td>USART1-&gt;SR bit5</td><td><code>USART1_IRQn</code>，3/3</td><td><code>USART1_IRQHandler</code></td><td>接收字节进 <code>USART_RX_BUF</code></td></tr>
+                        <tr><td>TIM4 更新</td><td>TIM4 SR 的 UIF</td><td><code>TIM4_IRQn</code>，3/3</td><td><code>TIM4_IRQHandler</code></td><td><code>usmart_dev.scan()</code> 解析命令</td></tr>
+                        <tr><td>NAND R/B 变化</td><td>PD6 输入电平</td><td>无（未配 NVIC）</td><td>无</td><td><code>NAND_WaitRB</code> 忙等轮询</td></tr>
+                    </table>
+
+                    <pre class="code">// usmart.c：TIM4 每 100ms 扫描一次串口命令
+void TIM4_IRQHandler(void)
+{
+    if(__HAL_TIM_GET_IT_SOURCE(&amp;TIM4_Handler,TIM_IT_UPDATE)==SET)  <span class="cmt">// 更新中断</span>
+    {
+        usmart_dev.scan();                 <span class="cmt">// 解析 USART_RX_BUF 并执行函数</span>
+        __HAL_TIM_SET_COUNTER(&amp;TIM4_Handler,0);
+        __HAL_TIM_SET_AUTORELOAD(&amp;TIM4_Handler,100);  <span class="cmt">// 恢复 100ms</span>
+    }
+    __HAL_TIM_CLEAR_IT(&amp;TIM4_Handler, TIM_IT_UPDATE);
+}
+
+// usmart.c：初始化，sysclk 传 90（APB1 定时器时钟）
+void usmart_init(u8 sysclk)
+{
+	Timer4_Init(1000,(u32)sysclk*100-1);  <span class="cmt">// 90M/(8999+1)=10kHz，计 1000 次=100ms</span>
+	usmart_dev.sptype=1;                  <span class="cmt">// 参数按十六进制显示</span>
+}
+
+// nand.c：等待 R/B，纯软件轮询，不占中断
+u8 NAND_WaitRB(vu8 rb)
+{
+    vu32 time=0;
+	while(time&lt;0X1FFFFFF)
+	{
+		time++;
+		if(NAND_RB==rb)return 0;          <span class="cmt">// PDin(6) 读到目标电平</span>
+	}
+	return 1;                             <span class="cmt">// 超时</span>
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明</div><ol>
+                        <li><strong>为什么 TIM4 不自动重装载：</strong>USMART 要用 CNT 统计函数执行时间（单位 0.1ms），进入中断后把 ARR 改为 0xFFFF 由软件计时，退出前再恢复 100，源码注释明确“不要开启自动重装载”。</li>
+                        <li><strong>10kHz 的来历：</strong>90MHz/(8999+1)=10kHz，计数 1000 个数正好 100ms，同时 1 个计数就是 0.1ms，与 runtime 单位一致。</li>
+                        <li><strong>NAND 为什么不用中断：</strong>NAND 的 R/B 是电平信号，不是 FMC 中断源；FMC 的 NAND 控制器只在 ECC 错误等场景才可能产生中断，本工程索性全查询，逻辑更直观。</li>
+                        <li><strong>轮询会不会卡死：</strong><code>NAND_WaitRB</code> 有 <code>0x1FFFFFF</code> 次上限，<code>NAND_WaitForReady</code> 有 <code>0x1FFFFFFF</code> 次上限，超时返回错误码而不是死等。</li>
+                        <li><strong>优先级相同的影响：</strong>TIM4 与 USART1 都是 3/3，不能互相抢占；USMART 在 TIM4 里执行函数期间，串口只能缓存一个字节，长命令要分多次发送。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="主循环与现象">
+                    <h2>10　主循环与现象</h2>
+                    <div class="sec-sub">三个按键对应读、写、恢复，写入的数据随 t 变化，便于观察扇区真的被改写</div>
+
+                    <pre class="code">while(1)
+{
+    key=KEY_Scan(0);              <span class="cmt">// 0：不支持连按</span>
+    switch(key)
+    {
+        case KEY0_PRES:           <span class="cmt">// 读扇区 2</span>
+            key=FTL_ReadSectors(buf,2,NAND_ECC_SECTOR_SIZE,1);
+            if(key==0)
+            {
+                LCD_ShowString(30,210,200,16,16,"USART1 Sending Data...  ");
+                printf("Sector 2 data is:\r\n");
+                for(i=0;i&lt;NAND_ECC_SECTOR_SIZE;i++)
+                    printf("%x ",buf[i]);
+                printf("\r\ndata end.\r\n");
+                LCD_ShowString(30,210,200,16,16,"USART1 Send Data Over!  ");
+            }
+            break;
+        case KEY1_PRES:           <span class="cmt">// 写扇区 2</span>
+            for(i=0;i&lt;NAND_ECC_SECTOR_SIZE;i++)buf[i]=i+t;  <span class="cmt">// 每次按键内容不同</span>
+            key=FTL_WriteSectors(buf,2,NAND_ECC_SECTOR_SIZE,1);
+            if(key==0)LCD_ShowString(30,210,200,16,16,"Write data successed    ");
+            else LCD_ShowString(30,210,200,16,16,"Write data failed       ");
+            break;
+        case KEY2_PRES:           <span class="cmt">// 恢复原始内容</span>
+            key=FTL_WriteSectors(backbuf,2,NAND_ECC_SECTOR_SIZE,1);
+            if(key==0)LCD_ShowString(30,210,200,16,16,"Recovering data OK      ");
+            else LCD_ShowString(30,210,200,16,16,"Recovering data failed  ");
+            break;
+    }
+    t++;
+    delay_ms(10);
+    if(t==20)
+    {
+        LED0=!LED0;               <span class="cmt">// 200ms 心跳</span>
+        t=0;
+    }
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明</div><ol>
+                        <li><strong>switch 与 if 的差别：</strong>三个按键互斥，用 switch 比串行 if 更清晰；没有 default，其他按键（WK_UP）按下不做任何事。</li>
+                        <li><strong><code>buf[i]=i+t</code> 的意义：</strong>t 每 200ms 自增，按键时刻不同填充内容就不同，读出对比即可确认写入确实生效，而不是读到旧缓存。</li>
+                        <li><strong>KEY2 的数据来源：</strong><code>backbuf</code> 在进主循环前已由 <code>FTL_ReadSectors</code> 读入，是扇区 2 的原始内容；恢复本质就是一次普通写。</li>
+                        <li><strong>返回值检查：</strong>三个分支都判断 <code>key==0</code>，失败时只改 LCD 文案，不打印错误码；实际调试可用 USMART 直接调用 <code>FTL_ReadSectors</code> 查看返回值。</li>
+                        <li><strong>心跳与 NAND 操作的时间关系：</strong>写一个已有数据的扇区会触发整块搬移（64 页拷贝 + 擦除），耗时可能几十毫秒，期间心跳会停顿，属正常现象。</li>
+                    </ol></div>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>现象</th><th>对应代码</th></tr>
+                        <tr><td>上电无 NAND 或型号不识</td><td>LCD 交替 “NAND Error!” / “Please Check”，DS0 闪烁</td><td><code>while(FTL_Init())</code></td></tr>
+                        <tr><td>首次运行且 LUT 无效</td><td>串口打印 “format nand flash...” 与好块数量</td><td><code>FTL_CreateLUT</code> / <code>FTL_Format</code></td></tr>
+                        <tr><td>正常启动</td><td>LCD 显示 “NAND Size:512MB”（4G 芯片）</td><td><code>sprintf</code> + <code>LCD_ShowString</code></td></tr>
+                        <tr><td>KEY0</td><td>串口输出 512 个十六进制字节</td><td><code>FTL_ReadSectors</code></td></tr>
+                        <tr><td>KEY1 / KEY2</td><td>LCD 提示写入成功/失败，再按 KEY0 内容变化/还原</td><td><code>FTL_WriteSectors</code></td></tr>
+                    </table>
+                </section>
+
+                <section class="content-card" id="s11" data-title="页结构、LUT 与 ECC">
+                    <h2>11　页结构、LUT 与 ECC</h2>
+                    <div class="sec-sub">spare 区的前 16 字节是 FTL 的元数据，0x10 之后才是 ECC</div>
+
+                    <figure class="figure">
+                        <img src="./index54-map/nand-page-layout.png" alt="NAND 页、块、spare 区与 ECC 布局">
+                        <figcaption>图 11-1　页 / 块 / spare 区布局与 ECC 存放位置</figcaption>
+                    </figure>
+
+                    <pre class="code">typedef struct
+{
+    u16 page_totalsize;     	<span class="cmt">// main + spare 总大小</span>
+    u16 page_mainsize;      	<span class="cmt">// 有效数据区</span>
+    u16 page_sparesize;     	<span class="cmt">// spare 区</span>
+    u8  block_pagenum;      	<span class="cmt">// 每块页数：64 或 128</span>
+    u16 plane_blocknum;     	<span class="cmt">// 每 plane 块数</span>
+    u16 block_totalnum;     	<span class="cmt">// 总块数 4096</span>
+    u16 good_blocknum;      	<span class="cmt">// 好块数</span>
+    u16 valid_blocknum;     	<span class="cmt">// 可用于文件系统的块数</span>
+    u32 id;             		<span class="cmt">// NAND ID</span>
+    u16 *lut;      			   	<span class="cmt">// 逻辑块 → 物理块</span>
+	u32 ecc_hard;				<span class="cmt">// 保留</span>
+	u32 ecc_hdbuf[NAND_MAX_PAGE_SIZE/NAND_ECC_SECTOR_SIZE];  <span class="cmt">// 硬件算出的 ECC</span>
+	u32 ecc_rdbuf[NAND_MAX_PAGE_SIZE/NAND_ECC_SECTOR_SIZE];  <span class="cmt">// 从 spare 读回的 ECC</span>
+}nand_attriute;
+
+// 建表：扫描每个块的 spare[0..3]
+u8 FTL_CreateLUT(u8 mode)
+{
+    u32 i;
+ 	u8 buf[4];
+    u32 LBNnum=0;
+    for(i=0;i&lt;nand_dev.block_totalnum;i++)
+    {
+        nand_dev.lut[i]=0XFFFF;              <span class="cmt">// 先全部置无效</span>
+    }
+	nand_dev.good_blocknum=0;
+    for(i=0;i&lt;nand_dev.block_totalnum;i++)
+    {
+		NAND_ReadSpare(i*nand_dev.block_pagenum,0,buf,4);
+		if(buf[0]==0XFF&amp;&amp;mode)NAND_ReadSpare(i*nand_dev.block_pagenum+1,0,buf,1);  <span class="cmt">// 查备份标记</span>
+		if(buf[0]==0XFF)				 <span class="cmt">// 好块</span>
+        {
+			LBNnum=((u16)buf[3]&lt;&lt;8)+buf[2];	 <span class="cmt">// 小端拼 LBN</span>
+            if(LBNnum&lt;nand_dev.block_totalnum)
+            {
+                nand_dev.lut[LBNnum]=i;		 <span class="cmt">// LBN → PBN</span>
+            }
+			nand_dev.good_blocknum++;
+		}else printf("bad block index:%d\r\n",i);
+    }
+    for(i=0;i&lt;nand_dev.block_totalnum;i++)
+    {
+        if(nand_dev.lut[i]&gt;=nand_dev.block_totalnum)
+        {
+            nand_dev.valid_blocknum=i;
+            break;
+        }
+    }
+    if(nand_dev.valid_blocknum&lt;100)return 2;	<span class="cmt">// 有效块太少，需要格式化</span>
+    return 0;
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（结构与 LUT）</div><ol>
+                        <li><strong>LUT 的大小：</strong><code>block_totalnum×2</code> 字节，每个表项是 <code>u16</code> 物理块号，4096 块即 8KB，从内部 SRAM 池申请。</li>
+                        <li><strong>LUT 的建立依据：</strong>每个好块第一页 spare[2..3] 保存了逻辑块号，建表就是“反向索引”：把 LBN 作为下标，把物理块号填入。</li>
+                        <li><strong>坏块判断：</strong>spare[0] 为 0xFF 是出厂好块；部分芯片还需要检查第二页的备份标记，<code>mode=1</code> 时两处都查。</li>
+                        <li><strong>valid_blocknum 的算法：</strong>LUT 从下标 0 开始连续有效，遇到第一个无效项即认为有效块到此为止，所以格式化时写入 LBN 必须从 0 连续编号。</li>
+                        <li><strong>为什么有效块少于 100 就报错：</strong>FATFS 需要足够的簇空间，块太少说明坏块过多或元数据损坏，直接触发重新格式化比继续用更安全。</li>
+                    </ol></div>
+
+                    <h3>ECC 校正：1bit 可救，2bit 只能报错</h3>
+                    <pre class="code">// 取 ECC 的奇数位 / 偶数位
+u16 NAND_ECC_Get_OE(u8 oe,u32 eccval)
+{
+	u8 i;
+	u16 ecctemp=0;
+	for(i=0;i&lt;24;i++)
+	{
+		if((i%2)==oe)
+		{
+			if((eccval&gt;&gt;i)&amp;0X01)ecctemp+=1&lt;&lt;(i&gt;&gt;1);
+		}
+	}
+	return ecctemp;
+}
+
+// 返回 0：已修正；返回 1：≥2bit 错误，无法恢复
+u8 NAND_ECC_Correction(u8* data_buf,u32 eccrd,u32 ecccl)
+{
+	u16 eccrdo,eccrde,eccclo,ecccle;
+	u16 eccchk=0;
+	u16 errorpos=0;
+	u32 bytepos=0;
+	eccrdo=NAND_ECC_Get_OE(1,eccrd);	<span class="cmt">// 保存值的奇数位</span>
+	eccrde=NAND_ECC_Get_OE(0,eccrd);
+	eccclo=NAND_ECC_Get_OE(1,ecccl);	<span class="cmt">// 重算值的奇数位</span>
+	ecccle=NAND_ECC_Get_OE(0,ecccl);
+	eccchk=eccrdo^eccrde^eccclo^ecccle;
+	if(eccchk==0XFFF)	<span class="cmt">// 全 1 表示只有 1bit 错</span>
+	{
+		errorpos=eccrdo^eccclo;
+		bytepos=errorpos/8;
+		data_buf[bytepos]^=1&lt;&lt;(errorpos%8);  <span class="cmt">// 翻转该位即修复</span>
+	}else
+	{
+		return 1;		<span class="cmt">// 2bit 及以上，报错</span>
+	}
+	return 0;
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（ECC）</div><ol>
+                        <li><strong>参数与返回值：</strong><code>NAND_ECC_Get_OE(oe,eccval)</code> 的 oe 选择奇/偶位，返回 16 位压缩值；<code>NAND_ECC_Correction(data,eccrd,ecccl)</code> 返回 0 表示已修正、1 表示不可恢复。</li>
+                        <li><strong>为什么能定位到 bit：</strong>FMC 硬件 ECC 是 24 位 BCH 码，把奇偶位异或后若为全 1，说明只有一个位出错；<code>eccrdo^eccclo</code> 直接给出位偏移。</li>
+                        <li><strong>校正方式：</strong>位偏移除以 8 得到字节下标，对 8 取余得到位号，异或 <code>1&lt;&lt;位号</code> 即翻转该位。</li>
+                        <li><strong>重读两次的原因：</strong><code>FTL_ReadSectors</code> 遇到 1bit ECC 错误会再读一次确认，避免偶发干扰被误判为坏块而触发搬移。</li>
+                        <li><strong>2bit 错误为何不修：</strong>BCH 只能纠正 1bit，2bit 无法定位，继续使用会返回错误数据；FTL 的做法是标记坏块并重建 LUT。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="串口调试与 USMART">
+                    <h2>12　串口调试与 USMART</h2>
+                    <div class="sec-sub">printf 负责输出，USMART 负责在运行时直接调用驱动函数</div>
+
+                    <pre class="code">int fputc(int ch, FILE *f)
+{
+	while((USART1-&gt;SR&amp;0X40)==0);   <span class="cmt">// 等 TXE</span>
+	USART1-&gt;DR = (u8) ch;          <span class="cmt">// 写入即发送</span>
+	return ch;
+}
+
+void uart_init(u32 bound)
+{
+	UART1_Handler.Instance=USART1;
+	UART1_Handler.Init.BaudRate=bound;
+	UART1_Handler.Init.WordLength=UART_WORDLENGTH_8B;
+	UART1_Handler.Init.StopBits=UART_STOPBITS_1;
+	UART1_Handler.Init.Parity=UART_PARITY_NONE;
+	UART1_Handler.Init.HwFlowCtl=UART_HWCONTROL_NONE;
+	UART1_Handler.Init.Mode=UART_MODE_TX_RX;
+	HAL_UART_Init(&amp;UART1_Handler);   <span class="cmt">// 回调 MspInit 配 PA9/PA10</span>
+}
+
+// USMART 扫描：每 100ms 解析一次串口缓冲
+void usmart_dev_scan_example(void)
+{
+    usmart_dev.scan();               <span class="cmt">// 若收到完整命令则解析并执行</span>
+}
+
+// usmart_config.c 中注册的函数示例（可串口直接调用）
+// FTL_ReadSectors(0X20000000,2,512,1)
+// FTL_WriteSectors(0X20000000,2,512,1)</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明</div><ol>
+                        <li><strong>fputc 的作用：</strong>把标准库 printf 的字符逐个写入 USART1-&gt;DR；返回 <code>ch</code> 表示发送成功。</li>
+                        <li><strong>为什么用轮询发送：</strong>TXE 等待时间短（115200 下一个字节约 87us），轮询实现简单，不会与 NAND 的关中断操作冲突。</li>
+                        <li><strong>USMART 的入口：</strong><code>usmart_dev.init(90)</code> 配置 TIM4；<code>usmart_dev.scan()</code> 由 TIM4 中断每 100ms 调用一次，从 <code>USART_RX_BUF</code> 取命令。</li>
+                        <li><strong>USMART 能做什么：</strong>可在串口直接调用 <code>FTL_ReadSectors</code>、<code>NAND_EraseBlock</code> 等已注册函数，并显示返回值与执行时间（单位 0.1ms）。</li>
+                        <li><strong>调试建议：</strong>先用 KEY 分支验证基本读写，再用 USMART 精确指定扇区与长度，避免反复按键。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘与排查">
+                    <h2>13　关键逻辑复盘与排查</h2>
+                    <div class="sec-sub">NAND 的问题集中在时序、坏块、ECC 三个方向</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>可能原因</th><th>排查方法</th></tr>
+                        <tr><td>一直 “NAND Error!”</td><td>FMC 引脚未复用 AF12；时序参数过小；NAND 供电异常</td><td>读 ID 是否返回 0xDC909556/0x48002689；示波器看 CLE/ALE/RE 波形</td></tr>
+                        <tr><td>ID 读到 0 或 0xFFFFFF</td><td>片选 NCE3 未拉低；R/B 上拉缺失；读 ID 命令时序错误</td><td>查 PG9 电平；确认 PD6 上拉；核对 0x90 + 0x00 地址</td></tr>
+                        <tr><td>首次启动打印 format</td><td>LUT 无效或有效块 <100</td><td>正常现象；看 <code>good_blocknum</code> 与 <code>valid_blocknum</code></td></tr>
+                        <tr><td>写入返回 3</td><td>搬块失败：目标块跨 plane 或本身是坏块</td><td>查 <code>FTL_FindSamePlaneUnusedBlock</code> 的奇偶判断；串口看坏块索引</td></tr>
+                        <tr><td>读回数据偶发 1bit 错</td><td>NAND 位翻转，ECC 已自动修正</td><td>看是否打印 “errorpos”；频繁出现说明块老化，应标记坏块</td></tr>
+                        <tr><td>读回数据 2bit 错</td><td>块已损坏，ECC 无法纠正</td><td>FTL 会把该块搬移并标记坏块，检查搬移是否成功</td></tr>
+                        <tr><td>容量显示 0 或偏小</td><td>型号未识别导致 <code>nand_dev</code> 参数为 0</td><td>检查 <code>NAND_Init</code> 的 ID 分支</td></tr>
+                    </table>
+
+                    <h3>复盘要点</h3>
+                    <ol>
+                        <li>NAND 的“写”不是覆盖，而是“擦除态才可编程”；所有写算法都必须围绕这一点设计。</li>
+                        <li>spare 区前 16 字节是 FTL 的私有元数据，写用户数据时绝不能越过 main 区边界。</li>
+                        <li>ECC 以 512B 为单位，读写长度不是 512 整数倍时不会启用硬件 ECC，驱动只适合整扇区操作。</li>
+                        <li>坏块表是“逻辑块 → 物理块”的唯一映射，任何搬移后都要同步修正 LUT，否则数据会读错块。</li>
+                        <li>FMC 时序以 HCLK 为单位，改主频就要重算 Setup/Wait/Hold/HiZ，这是移植时最容易漏的一步。</li>
+                    </ol>
+                </section>
+
+                <section class="content-card" id="s14" data-title="交互演示">
+                    <h2>14　交互演示</h2>
+                    <div class="sec-sub">点击按钮复现读/写扇区 2 的分支，仅演示逻辑，不接触真实 NAND</div>
+
+                    <div class="sim">
+                        <div class="sim-title">KEY0 / KEY1 扇区分支演示（仅演示逻辑）</div>
+                        <div class="sim-buttons">
+                            <button data-key="key0">KEY0：读扇区 2</button>
+                            <button data-key="key1">KEY1：写扇区 2</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0（PB1）</div>
+                            <div class="led-item"><span class="led-dot" id="dot1"></span>DS1（PB0）</div>
+                        </div>
+                        <div class="sim-log" id="simLog">最后按键：无　　当前状态：DS0 灭　DS1 灭</div>
+                    </div>
+
+                    <div class="note">源码还有 KEY2“恢复扇区 2”分支，本演示面板只放两个按钮对应 KEY0/KEY1；三个分支的返回值都只用于 LCD 文案，不会改变 LED 状态，LED 仅作按键被扫描到的可视化提示。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+
+<script>
+/* sim-wire：把演示按钮接到日志，分支与正文源码说明一致 */
+(function () {
+    var log = document.getElementById('simLog');
+    if (!log) return;
+    var msgs = {"key0": "KEY0 → FTL_ReadSector(2)：从 NAND 第 2 扇区读 512B 到缓冲区", "key1": "KEY1 → FTL_WriteSector(2)：先擦除页再写入，返回 0 表示成功"};
+    Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (b) {
+        b.addEventListener('click', function () {
+            var k = b.getAttribute('data-key') || b.getAttribute('data-act');
+            if (k && msgs[k]) log.textContent = msgs[k];
+        });
+    });
+})();
+</script>
+</body>
+</html>

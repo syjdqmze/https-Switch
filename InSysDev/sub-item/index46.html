@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验32 DS18B20 数字温度传感器实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2f7a52;
+            margin-bottom: 6px;
+        }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验32 DS18B20 数字温度传感器实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">一根 DQ 线，先量复位脉冲，再看时钟与延时。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">用一根 DQ 线完成复位、写命令、读温度，并把 0.1℃ 精度结果显示到 LCD</div>
+
+                    <p>DS18B20 是单总线器件：数据、命令、时序全部挤在一根线上，没有 SCLK。所以本实验没有“配置外设”的环节，真正的内容是<b>用微秒级延时手工拼出时序</b>，再把读回的两个字节换算成温度。工程里没有用到任何定时器或中断来帮忙。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚 / 外设</th><th>在工程中的落点</th></tr>
+                        <tr><td>DS18B20 数据线 DQ</td><td>PB12，上拉，可切换输入/输出</td><td><code>ds18b20.h</code> 的 <code>DS18B20_IO_IN/OUT</code>、<code>PBout(12)</code>、<code>PBin(12)</code></td></tr>
+                        <tr><td>上拉电阻</td><td>板载 4.7kΩ 上拉</td><td>释放总线后靠它把 DQ 拉高</td></tr>
+                        <tr><td>共享引脚</td><td>PB12 同时是 PCF8574 的 INT</td><td><code>pcf8574.h</code> 的 <code>PCF8574_INT PBin(12)</code></td></tr>
+                        <tr><td>状态指示灯</td><td>PB0 / PB1（DS0 / DS1）</td><td><code>LED_Init()</code>，主循环翻转 LED0</td></tr>
+                        <tr><td>按键</td><td>PA0 / PC13 / PH2 / PH3</td><td><code>KEY_Init()</code>，本实验不参与</td></tr>
+                        <tr><td>显示</td><td>LCD（FMC 或 LTDC 屏）</td><td><code>SDRAM_Init()</code> → <code>LCD_Init()</code></td></tr>
+                        <tr><td>串口</td><td>USART1，PA9/PA10，115200</td><td><code>uart_init()</code>，printf 重定向</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">PB12 单总线</span>
+                        <span class="chip">12 位分辨率</span>
+                        <span class="chip">LSB = 0.0625℃</span>
+                        <span class="chip">结果单位 0.1℃</span>
+                    </div>
+
+                    <div class="note blue">DS18B20 的“单总线”并不意味着可以随便拉低：一次完整的温度读取包含复位脉冲、存在脉冲、跳过 ROM、启动转换、再复位、读暂存器等多个阶段，每个阶段的高低电平宽度都有上下限。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">启动代码、SYSTEM 层、HARDWARE 层各管什么，先分清再读源码</div>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>职责</th><th>本实验需要关注的点</th></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>栈堆定义、向量表、Reset_Handler</td><td>栈 0x400、堆 0x200；跳 <code>__main</code></td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>SystemInit：FPU、VTOR</td><td>不改 PLL，时钟留给 <code>Stm32_Clock_Init</code></td></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化顺序与主循环</td><td>比实验31 多一个 <code>PCF8574_Init()</code></td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>内核异常与 SysTick 入口</td><td>本实验没有任何外设中断</td></tr>
+                        <tr><td><code>SYSTEM/sys</code></td><td>位带宏、时钟初始化</td><td><code>PBout(12)</code> / <code>PBin(12)</code> 的位带展开</td></tr>
+                        <tr><td><code>SYSTEM/delay</code></td><td>SysTick 轮询延时</td><td>所有 1-wire 时序都建立在 <code>delay_us</code> 上</td></tr>
+                        <tr><td><code>SYSTEM/usart</code></td><td>USART1 与 printf 重定向</td><td><code>fputc</code> 逐字节发送</td></tr>
+                        <tr><td><code>HARDWARE/DS18B20</code></td><td>单总线驱动</td><td><code>Rst/Check/Read_Bit/Read_Byte/Write_Byte/Get_Temp</code></td></tr>
+                        <tr><td><code>HARDWARE/PCF8574</code></td><td>I2C 扩展 IO</td><td>本工程只用到 <code>PCF8574_Init</code> 与 <code>PCF8574_ReadBit</code>（用于释放 PB12）</td></tr>
+                        <tr><td><code>HARDWARE/LCD、SDRAM、LED、KEY</code></td><td>板级外设</td><td>显示与指示灯，不参与时序</td></tr>
+                    </table>
+
+                    <div class="note">本实验的 DS18B20 驱动不是中断驱动，也没有状态机；<code>DS18B20_Get_Temp()</code> 内部会把总线时序一次性走完，函数返回时温度已经算好。这一点和实验31 的捕获解码完全不同。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从取 MSP 到 while(1)，初始化顺序里多了 PCF8574 这一环</div>
+
+                    <figure class="figure">
+                        <img src="./index46-map/boot-flow.png" alt="实验32 从上电复位到主循环的启动链路">
+                        <figcaption>图 3-1　启动链路：绿色为启动 / C 库，蓝色为 SYSTEM 层，橙色为本实验外设</figcaption>
+                    </figure>
+
+                    <h3>main 的初始化顺序</h3>
+                    <pre class="code">int main(void)
+{
+    u8 t=0;
+    short temperature;
+    HAL_Init();                     <span class="cmt">// 初始化HAL库：优先级分组、SysTick</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// 设置时钟,180Mhz</span>
+    delay_init(180);                <span class="cmt">// 初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">// 初始化USART</span>
+    LED_Init();                     <span class="cmt">// 初始化LED</span>
+    KEY_Init();                     <span class="cmt">// 初始化按键</span>
+    SDRAM_Init();                   <span class="cmt">// 初始化SDRAM</span>
+    LCD_Init();                     <span class="cmt">// 初始化LCD</span>
+    PCF8574_Init();                 <span class="cmt">// 初始化PCF8574</span>
+    POINT_COLOR=RED;
+    LCD_ShowString(30,50,200,16,16,"Apollo STM32F4&amp;F7");
+    LCD_ShowString(30,70,200,16,16,"DS18B20 TEST");
+    LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");
+    LCD_ShowString(30,110,200,16,16,"2016/1/16");
+    PCF8574_ReadBit(BEEP_IO);       <span class="cmt">// 先释放 PB12，再初始化 DS18B20</span>
+    while(DS18B20_Init())           <span class="cmt">// 返回 1 表示没检测到器件</span>
+    {
+        LCD_ShowString(30,130,200,16,16,"DS18B20 Error");
+        delay_ms(200);
+        LCD_Fill(30,130,239,130+16,WHITE);
+        delay_ms(200);
+    }
+    <span class="cmt">// ... 显示 OK 并进入 while(1)，见第 10 节</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><b>HAL_Init 必须第一</b>：它建立 SysTick 并设置 NVIC 优先级分组，后面的 delay 依赖这个时基（本实验不用 HAL_Delay）。</li>
+                            <li><b>时钟紧跟 HAL_Init</b>：<code>delay_init(180)</code> 的 180 必须与真实 SYSCLK 一致，否则 1-wire 的 750us、60us 全部按比例偏差。</li>
+                            <li><b>PCF8574_Init 在 DS18B20 之前</b>：它要先把 I2C 扩展芯片配置好，后面才能通过读 IO 的操作释放被占用的 PB12。</li>
+                            <li><b>释放 PB12 是硬性前置条件</b>：main.c 注释明确写出“否则初始化 DS18B20 会出问题”，因为 PCF8574 的 INT 与 DQ 共用 PB12。</li>
+                            <li><code>while(DS18B20_Init())</code> 是死等重试：只有检测到器件才往下走，否则 LCD 一直闪 “DS18B20 Error”。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">栈堆在哪里、Reset_Handler 做了什么、VTOR 指向哪</div>
+
+                    <pre class="code">Stack_Size      EQU     0x00000400
+
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp
+
+Heap_Size       EQU     0x00000200
+
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit
+
+                PRESERVE8
+                THUMB</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>栈只有 <b>0x400 = 1KB</b>，堆 <b>0x200 = 512B</b>。本实验的局部变量很少，压力比红外解码实验更小。</li>
+                            <li><code>__initial_sp</code> 紧贴栈顶，链接器把它填进向量表第 0 项；复位时 Cortex-M4 硬件自动装入 MSP。</li>
+                            <li><code>PRESERVE8</code> 要求 8 字节栈对齐，调用 <code>__main</code> 前由启动代码保证。</li>
+                        </ol>
+                    </div>
+
+                    <h3>Reset_Handler</h3>
+                    <pre class="code">Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+
+                 LDR     R0, =SystemInit
+                 BLX     R0
+                 LDR     R0, =__main
+                 BX      R0
+                 ENDP</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>顺序固定：<b>SystemInit → __main</b>。前者只做芯片级最小初始化，后者是 ARM C 库入口，负责搬 .data、清 .bss，再调用 <code>main()</code>。</li>
+                            <li>启动文件里没有手写 copy/zero 循环，分散加载由 Keil 的 <code>__main</code> 完成；换 GCC 时对应 <code>LoopCopyDataInit</code>，不要混用。</li>
+                            <li>本实验不使用外设中断，向量表里与本实验相关的项只有 <code>SysTick_Handler</code>；它的实现位于 <code>stm32f4xx_it.c</code>，只调用 <code>HAL_IncTick()</code>。</li>
+                        </ol>
+                    </div>
+
+                    <h3>向量表基址</h3>
+                    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));    <span class="cmt">/* set CP10 and CP11 Full Access */</span>
+  #endif
+
+#ifdef VECT_TAB_SRAM
+  SCB-&gt;VTOR = SRAM_BASE | VECT_TAB_OFFSET;
+#else
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET; <span class="cmt">/* Vector Table Relocation in Internal FLASH */</span>
+#endif
+}</pre>
+
+                    <div class="note blue"><code>FLASH_BASE = 0x08000000</code>，<code>VECT_TAB_OFFSET = 0x00</code>，所以 VTOR 指向 0x08000000。本实验的 <code>DS18B20_Get_Temp</code> 里做了 <code>tem=(double)tem*0.625</code> 的浮点运算，因此 FPU 被打开这件事是实际生效的。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">两个都叫“初始化”，但一个只管内核，一个管 HAL 时基与优先级</div>
+
+                    <p><code class="inline">SystemInit</code> 在 <code>__main</code> 之前执行，此时 .data/.bss 还没准备好，所以它只能碰寄存器和 Flash，不能调用 HAL 或使用全局变量。它把 FPU 打开、VTOR 设到 Flash 首地址。</p>
+
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+  HAL_InitTick(TICK_INT_PRIORITY);          <span class="cmt">// 先用 HSI 装 1ms SysTick</span>
+  HAL_MspInit();                            <span class="cmt">// 板级最低层初始化，本工程为空实现</span>
+  return HAL_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>HAL_Init</code> 内部调用 <code>HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2)</code>：2 位抢占 + 2 位子优先级；本实验没有外设中断，所以这一项不影响功能。</li>
+                            <li><code>HAL_InitTick</code> 此时用的还是 HSI 16MHz，装出来是 1ms；<code>Stm32_Clock_Init</code> 切到 180MHz 后工程<b>没有重装</b> SysTick 的 LOAD，HAL 的 1ms 节拍因此不准。</li>
+                            <li>本实验完全不使用 <code>HAL_Delay()</code>，所有延时都走 <code>delay_ms</code> / <code>delay_us</code>，所以这个缺陷对功能没有影响。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">不要在主循环里混用 <code>HAL_Delay()</code> 和 <code>delay_ms()</code>：前者依赖 SysTick 中断，后者是忙等，两者对当前时钟的假设不同，混用会出现“同一数值、不同时长”。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟、延时与串口">
+                    <h2>06　时钟、延时与串口</h2>
+                    <div class="sec-sub">25MHz 晶振 → 180MHz SYSCLK；delay_us 是本实验唯一的时间基准</div>
+
+                    <figure class="figure">
+                        <img src="./index46-map/clock-tree.png" alt="STM32F429 时钟树与本实验的延时基准">
+                        <figcaption>图 6-1　HSE 25MHz 经 PLL 得到 180MHz，SysTick 以 HCLK 计数</figcaption>
+                    </figure>
+
+                    <h3>PLL 参数</h3>
+                    <pre class="code">RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE;    <span class="cmt">// 时钟源为HSE</span>
+RCC_OscInitStructure.HSEState=RCC_HSE_ON;                      <span class="cmt">// 打开HSE</span>
+RCC_OscInitStructure.PLL.PLLState=RCC_PLL_ON;                  <span class="cmt">// 打开PLL</span>
+RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;          <span class="cmt">// PLL时钟源选择HSE</span>
+RCC_OscInitStructure.PLL.PLLM=pllm;   <span class="cmt">// 25</span>
+RCC_OscInitStructure.PLL.PLLN=plln;   <span class="cmt">// 360</span>
+RCC_OscInitStructure.PLL.PLLP=pllp;   <span class="cmt">// 2</span>
+RCC_OscInitStructure.PLL.PLLQ=pllq;   <span class="cmt">// 8</span>
+ret=HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+...
+ret=HAL_PWREx_EnableOverDrive();      <span class="cmt">// 180MHz 必须开 Over-Drive</span>
+...
+RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;   <span class="cmt">// HCLK = 180MHz</span>
+RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;    <span class="cmt">// PCLK1 = 45MHz</span>
+RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;    <span class="cmt">// PCLK2 = 90MHz</span>
+ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5);</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>算式：<code>25MHz / M(25) = 1MHz</code>，<code>1MHz × N(360) = 360MHz</code>，<code>360MHz / P(2) = 180MHz</code>；Q=8 得到 45MHz 给 USB/SDIO。</li>
+                            <li>180MHz 超过 168MHz 档，必须先 <code>HAL_PWREx_EnableOverDrive()</code>，否则 PLL 切不过去。</li>
+                            <li>Flash 5 个等待周期对应 180MHz、3.3V 的 6 CPU 周期；少设会取指错，多设会白掉性能。</li>
+                        </ol>
+                    </div>
+
+                    <h3>delay_init：只设 fac_us，不改 LOAD</h3>
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">// SysTick频率为HCLK</span>
+    fac_us=SYSCLK;                        <span class="cmt">// 180，1us 的节拍数</span>
+}</pre>
+
+                    <p>非 OS 版本里 <code>delay_us(n)</code> 记录进入时的 <code>SysTick-&gt;VAL</code>，累加 <code>n × fac_us</code> 个节拍，靠 24 位递减计数器的回绕判断是否走完。它不关中断、不依赖 SysTick 中断，所以 1ms 中断准不准都不影响 us 延时。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>fac_us = 180</code> 的含义是“1us 有 180 个 HCLK 节拍”，因为 SYSCLK = HCLK = 180MHz。</li>
+                            <li><code>delay_us(750)</code> 实际累加 <code>750 × 180 = 135000</code> 个计数，24 位计数器会回绕多次，代码用 <code>tcnt</code> 自己累加，不依赖 LOAD。</li>
+                            <li>因为不关中断，SysTick 中断或其它中断可能插进延时中间，把实际时间拉长。本实验没有其它外设中断，影响很小；严格做法是在关键时序段关中断。</li>
+                        </ol>
+                    </div>
+
+                    <h3>printf 重定向</h3>
+                    <pre class="code">int fputc(int ch, FILE *f)
+{
+    while((USART1-&gt;SR&amp;0X40)==0);   <span class="cmt">// 等待发送缓冲空</span>
+    USART1-&gt;DR=(u8)ch;
+    return ch;
+}</pre>
+
+                    <div class="note">使用 printf 需要在 Keil 里勾选 MicroLIB，否则会链接到半主机 <code>_sys_exit</code> 而卡死。本实验的 printf 只用于调试，主循环里没有打印。</div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="DS18B20硬件与PB12方向切换">
+                    <h2>07　DS18B20 硬件与 PB12 方向切换</h2>
+                    <div class="sec-sub">同一根线既要输出又要输入，靠改 MODER 实现“准双向”</div>
+
+                    <p>单总线只有一根 DQ，主机在不同阶段既要驱动它，也要读它。STM32 的做法是<b>动态改引脚方向</b>：需要拉低/释放时配置为推挽输出，需要采样时切成输入。这是本实验最基础的一层。</p>
+
+                    <pre class="code">//IO方向设置
+#define DS18B20_IO_IN()  {GPIOB-&gt;MODER&amp;=~(3&lt;&lt;(12*2));GPIOB-&gt;MODER|=0&lt;&lt;12*2;}  <span class="cmt">// 输入模式(注释仍写PB5，实际位号12)</span>
+#define DS18B20_IO_OUT() {GPIOB-&gt;MODER&amp;=~(3&lt;&lt;(12*2));GPIOB-&gt;MODER|=1&lt;&lt;12*2;}  <span class="cmt">// 输出模式</span>
+
+#define DS18B20_DQ_OUT PBout(12)  <span class="cmt">// 位带写 ODR12</span>
+#define DS18B20_DQ_IN  PBin(12)   <span class="cmt">// 位带读 IDR12</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>MODER 每个引脚占 2 位，位号 12 对应 <code>bit13:12</code>；<code>3&lt;&lt;24</code> 清掉这两位，再写入 <code>0b00</code>（输入）或 <code>0b01</code>（通用输出）。</li>
+                            <li>宏里只改 MODER，<b>不改 OTYPER/PUPDR</b>：推挽与上拉由 <code>DS18B20_Init</code> 一次性配好，后面切换方向不会丢。</li>
+                            <li><code>PBout/PBin</code> 是位带别名，读写在 0x42xxxxxx 的别名区完成，单条指令即可，不会读改写整个 ODR/IDR。</li>
+                            <li>头文件注释写的是 “PB5”，实际位号全部是 12；这是原厂注释遗留，代码本身正确。</li>
+                        </ol>
+                    </div>
+
+                    <h3>初始化：先配输出，再复位探测</h3>
+                    <pre class="code">u8 DS18B20_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_GPIOB_CLK_ENABLE();           <span class="cmt">// 开启GPIOB时钟</span>
+
+    GPIO_Initure.Pin=GPIO_PIN_12;           <span class="cmt">// PB12</span>
+    GPIO_Initure.Mode=GPIO_MODE_OUTPUT_PP;  <span class="cmt">// 推挽输出</span>
+    GPIO_Initure.Pull=GPIO_PULLUP;          <span class="cmt">// 上拉</span>
+    GPIO_Initure.Speed=GPIO_SPEED_HIGH;     <span class="cmt">// 高速</span>
+    HAL_GPIO_Init(GPIOB,&amp;GPIO_Initure);     <span class="cmt">// 初始化</span>
+
+    DS18B20_Rst();
+    return DS18B20_Check();                 <span class="cmt">// 0=存在，1=不存在</span>
+}</pre>
+
+                    <div class="note blue">注意返回值语义：<code>DS18B20_Init</code> 返回 <b>1 表示失败</b>，所以 main 里写的是 <code>while(DS18B20_Init())</code>——只要没检测到就一直在循环里闪错误提示。</div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="复位与存在脉冲">
+                    <h2>08　复位与存在脉冲</h2>
+                    <div class="sec-sub">拉低 750us，释放 15us，然后在 200/240 次轮询里等器件应答</div>
+
+                    <figure class="figure">
+                        <img src="./index46-map/onewire-reset.png" alt="DS18B20 复位脉冲与存在脉冲时序">
+                        <figcaption>图 8-1　主机拉低 750us 后释放，器件在 15~60us 内拉低总线作为存在脉冲</figcaption>
+                    </figure>
+
+                    <pre class="code">void DS18B20_Rst(void)
+{
+    DS18B20_IO_OUT();   <span class="cmt">// 设置为输出</span>
+    DS18B20_DQ_OUT=0;   <span class="cmt">// 拉低DQ</span>
+    delay_us(750);      <span class="cmt">// 拉低750us</span>
+    DS18B20_DQ_OUT=1;   <span class="cmt">// DQ=1，释放总线</span>
+    delay_us(15);       <span class="cmt">// 15US</span>
+}
+
+u8 DS18B20_Check(void)
+{
+    u8 retry=0;
+    DS18B20_IO_IN();    <span class="cmt">// 设置为输入，准备采样</span>
+    while (DS18B20_DQ_IN&amp;&amp;retry&lt;200)   <span class="cmt">// 等器件把总线拉低</span>
+    {
+        retry++;
+        delay_us(1);
+    }
+    if(retry&gt;=200)return 1;            <span class="cmt">// 一直没拉低 → 无器件</span>
+    else retry=0;
+    while (!DS18B20_DQ_IN&amp;&amp;retry&lt;240)  <span class="cmt">// 等器件释放总线</span>
+    {
+        retry++;
+        delay_us(1);
+    }
+    if(retry&gt;=240)return 1;            <span class="cmt">// 低电平过长 → 异常</span>
+    return 0;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>复位脉冲要求主机拉低 <b>480us 以上</b>，工程取 750us，留足余量；释放后由上拉电阻把线拉高。</li>
+                            <li>释放后主机立刻切输入，器件会在 <b>15~60us</b> 内拉低总线表示“我在”，这就是存在脉冲；工程先等 15us 再开始轮询。</li>
+                            <li>第一次轮询等“高→低”，超时 200us 判失败；第二次等“低→高”，超时 240us 判失败。240us 覆盖了存在脉冲 60~240us 的上限。</li>
+                            <li>两个超时值都不是数据手册的硬指标，而是工程经验值；总线电容大、上拉弱时会需要更长。</li>
+                            <li><code>retry</code> 是 u8，最大 255，超过 200/240 都能正常退出，不会溢出。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">如果 <code>DS18B20_Check</code> 一直返回 1，先量 PB12 在释放后是否真的回到 3.3V。上拉丢失、杜邦线过长、器件接反都会表现成“没有存在脉冲”。</div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="读写时隙与字节收发">
+                    <h2>09　读写时隙与字节收发</h2>
+                    <div class="sec-sub">读时隙 2+12+50us，写 1 是 2+60us，写 0 是 60+2us</div>
+
+                    <figure class="figure">
+                        <img src="./index46-map/onewire-slots.png" alt="DS18B20 读时隙与写 0/写 1 时隙对比">
+                        <figcaption>图 9-1　三种时隙都由主机拉低起步，靠保持时间区分写 0 / 写 1，读则在 12us 后采样</figcaption>
+                    </figure>
+
+                    <pre class="code">u8 DS18B20_Read_Bit(void)
+{
+    u8 data;
+    DS18B20_IO_OUT();   <span class="cmt">// 输出，发起读时隙</span>
+    DS18B20_DQ_OUT=0;
+    delay_us(2);        <span class="cmt">// 拉低至少 1us</span>
+    DS18B20_DQ_OUT=1;
+    DS18B20_IO_IN();    <span class="cmt">// 释放并切输入</span>
+    delay_us(12);       <span class="cmt">// 等 12us 后采样</span>
+    if(DS18B20_DQ_IN)data=1;
+    else data=0;
+    delay_us(50);       <span class="cmt">// 补足 60us 时隙</span>
+    return data;
+}
+
+u8 DS18B20_Read_Byte(void)
+{
+    u8 i,j,dat;
+    dat=0;
+    for (i=1;i&lt;=8;i++)
+    {
+        j=DS18B20_Read_Bit();
+        dat=(j&lt;&lt;7)|(dat&gt;&gt;1);   <span class="cmt">// 低位先到，逐位右移</span>
+    }
+    return dat;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>读时隙总长至少 60us：主机拉低 2us 后释放，器件在这段时间把当前位放到总线上；主机在 12us 处采样，此时电平已经稳定。</li>
+                            <li><b>低位先发</b>：DS18B20 是 LSB first，所以每次把新读到的位移到最高位、已有数据右移，8 次后正好还原一个字节。</li>
+                            <li>采样后还要补 50us，保证整个时隙不小于 60us，否则器件可能把下一个时隙误判。</li>
+                            <li><code>dat=(j&lt;&lt;7)|(dat&gt;&gt;1)</code> 里的 <code>j</code> 只取 0/1，左移 7 位即 bit7；<code>dat&gt;&gt;1</code> 把已收位整体右移，实现“新位进高位”。</li>
+                        </ol>
+                    </div>
+
+                    <h3>写字节</h3>
+                    <pre class="code">void DS18B20_Write_Byte(u8 dat)
+{
+    u8 j;
+    u8 testb;
+    DS18B20_IO_OUT();     <span class="cmt">// 设置为输出</span>
+    for (j=1;j&lt;=8;j++)
+    {
+        testb=dat&amp;0x01;
+        dat=dat&gt;&gt;1;
+        if(testb)       <span class="cmt">// 写1</span>
+        {
+            DS18B20_DQ_OUT=0;
+            delay_us(2);
+            DS18B20_DQ_OUT=1;
+            delay_us(60);
+        }
+        else            <span class="cmt">// 写0</span>
+        {
+            DS18B20_DQ_OUT=0;
+            delay_us(60);
+            DS18B20_DQ_OUT=1;
+            delay_us(2);
+        }
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>写 1：拉低 2us 后立刻释放，剩下 60us 由总线保持高；写 0：拉低 60us，只剩 2us 高。器件在拉低后 15~60us 窗口内采样，因此宽度差异足够明显。</li>
+                            <li>先取 <code>dat&amp;0x01</code> 再右移，保证每次处理的是当前最低位，同样是 LSB first。</li>
+                            <li>写时隙之间没有额外间隔，靠函数内的 60us/2us 自然形成节拍；如果中途被中断打断，可能写出错误位。</li>
+                        </ol>
+                    </div>
+
+                    <figure>
+                        <img src="./index46-map/ds18b20-timing.png" alt="DS18B20 单总线复位、存在脉冲及读写时隙的电平时序">
+                        <figcaption>图 9-2　DS18B20 单总线复位、存在脉冲及读写时隙的电平时序</figcaption>
+                    </figure>
+                </section>
+
+                <section class="content-card" id="s10" data-title="温度换算与主循环显示">
+                    <h2>10　温度换算与主循环显示</h2>
+                    <div class="sec-sub">0xCC 跳过 ROM、0x44 启动转换、0xBE 读暂存器，再乘 0.625</div>
+
+                    <figure class="figure">
+                        <img src="./index46-map/main-loop.png" alt="DS18B20 实验主循环分支与 LCD 显示">
+                        <figcaption>图 10-1　每 100ms 读一次温度，负数先显示负号再取反，个位与小数位分开显示</figcaption>
+                    </figure>
+
+                    <h3>DS18B20_Get_Temp：一条完整的读温度流程</h3>
+                    <pre class="code">short DS18B20_Get_Temp(void)
+{
+    u8 temp;
+    u8 TL,TH;
+    short tem;
+    DS18B20_Start();            <span class="cmt">// 复位 + 0xCC + 0x44，启动转换</span>
+    DS18B20_Rst();
+    DS18B20_Check();
+    DS18B20_Write_Byte(0xcc);   <span class="cmt">// skip rom</span>
+    DS18B20_Write_Byte(0xbe);   <span class="cmt">// read scratchpad</span>
+    TL=DS18B20_Read_Byte();     <span class="cmt">// LSB</span>
+    TH=DS18B20_Read_Byte();     <span class="cmt">// MSB</span>
+    if(TH&gt;7)
+    {
+        TH=~TH;
+        TL=~TL;
+        temp=0;                 <span class="cmt">// 温度为负</span>
+    }else temp=1;               <span class="cmt">// 温度为正</span>
+    tem=TH;                     <span class="cmt">// 获得高八位</span>
+    tem&lt;&lt;=8;
+    tem+=TL;                    <span class="cmt">// 获得低八位</span>
+    tem=(double)tem*0.625;      <span class="cmt">// 转换为 0.1℃ 单位</span>
+    if(temp)return tem;
+    else return -tem;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>0xCC</code> 是 SKIP ROM：总线上只有一个器件时不必读 64 位 ROM 地址，直接对唯一器件操作。</li>
+                            <li><code>0x44</code> 启动一次温度转换，12 位分辨率最长需要 750ms；工程没有等 750ms，而是在两次读数之间隔了 100ms，实际读到的是上一次转换结果。</li>
+                            <li><code>0xBE</code> 读暂存器，前两个字节就是温度 LSB/MSB，低位在前。符号位在 MSB 的高 5 位，代码用 <code>TH&gt;7</code> 粗判负数。</li>
+                            <li>负数处理：对 TL/TH 逐位取反（没有再加 1），再乘 0.625 并返回负值。严格按补码应再 +1，因此负温结果存在 <b>1 个 LSB（0.0625℃）</b> 的偏差。</li>
+                            <li><b>单位换算</b>：12 位模式下 1 LSB = 0.0625℃；<code>raw × 0.0625 × 10 = raw × 0.625</code>，所以返回值单位是 <b>0.1℃</b>，25.4℃ 返回 254。</li>
+                            <li>工程未判断 <code>DS18B20_Check()</code> 的返回值，器件掉线时会读到全 1，最终显示 0.0，而不是报错。</li>
+                        </ol>
+                    </div>
+
+                    <h3>主循环：t%10 控制读取节奏</h3>
+                    <pre class="code">PCF8574_ReadBit(BEEP_IO);   <span class="cmt">// 读一次PCF8574，释放PB12</span>
+while(DS18B20_Init())
+{
+    LCD_ShowString(30,130,200,16,16,"DS18B20 Error");
+    delay_ms(200);
+    LCD_Fill(30,130,239,130+16,WHITE);
+    delay_ms(200);
+}
+LCD_ShowString(30,130,200,16,16,"DS18B20 OK");
+POINT_COLOR=BLUE;
+LCD_ShowString(30,150,200,16,16,"Temp:   . C");
+while(1)
+{
+    if(t%10==0)                     <span class="cmt">// 每100ms读取一次</span>
+    {
+        PCF8574_ReadBit(BEEP_IO);   <span class="cmt">// 再次释放PB12</span>
+        temperature=DS18B20_Get_Temp();
+        if(temperature&lt;0)
+        {
+            LCD_ShowChar(30+40,150,'-',16,0);      <span class="cmt">// 显示负号</span>
+            temperature=-temperature;              <span class="cmt">// 转为正数</span>
+        }else LCD_ShowChar(30+40,150,' ',16,0);    <span class="cmt">// 去掉负号</span>
+        LCD_ShowNum(30+40+8,150,temperature/10,2,16);  <span class="cmt">// 整数部分</span>
+        LCD_ShowNum(30+40+32,150,temperature%10,1,16); <span class="cmt">// 小数部分</span>
+    }
+    delay_ms(10);
+    t++;
+    if(t==20)
+    {
+        t=0;
+        LED0=!LED0;
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>t%10==0</code> 配合 <code>delay_ms(10)</code>，实现“每 10 轮读一次”，周期约 100ms（LCD 刷新本身还会额外耗时）。</li>
+                            <li>每次读之前都调用 <code>PCF8574_ReadBit(BEEP_IO)</code>，是为了持续保证 PB12 不被 PCF8574 的 INT 拉住。</li>
+                            <li>负温先显示 '-' 再取反，后续的除 10 / 取余都按正数处理，避免 C 语言负数取余的符号问题。</li>
+                            <li><code>temperature/10</code> 得到整数部分（25.4 → 25），<code>temperature%10</code> 得到小数位（→ 4），中间的小数点由初始化字符串 <code>"Temp:   . C"</code> 预先画好。</li>
+                            <li><code>t</code> 是 u8，到 20 清零并翻转 LED0，约 200ms 一次，用来证明主循环还在跑。</li>
+                        </ol>
+                    </div>
+
+                    <h3>交互演示（仅演示逻辑）</h3>
+                    <div class="sim">
+                        <div class="sim-title">主循环节拍、符号处理与 LCD 数字拆分</div>
+                        <div class="sim-buttons">
+                            <button data-act="tick">走一轮循环（+10ms）</button>
+                            <button data-act="neg">传感器返回 -10.5℃</button>
+                            <button data-act="pos">传感器返回 25.4℃</button>
+                            <button data-act="reset">复位计数器</button>
+                        </div>
+                        <div class="sim-log" id="sim46">t=0　温度=25.4℃　LCD：Temp: 25.4 C　LED0=灭　说明：等待循环</div>
+                    </div>
+                    <div class="note">演示只复现 main.c 的 <code>t%10==0</code>、正负号分支、<code>/10</code> 与 <code>%10</code> 显示以及 <code>t==20</code> 翻转 LED 的逻辑，不模拟真实单总线时序。</div>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>可观察现象</th></tr>
+                        <tr><td>上电</td><td>LCD 显示 4 行固定字符串，随后 “DS18B20 OK”，Temp 行出现小数点</td></tr>
+                        <tr><td>运行约 100ms</td><td>温度数字首次出现，之后每 100ms 刷新一次</td></tr>
+                        <tr><td>用手捏住传感器</td><td>读数缓慢上升，整数与小数位同时变化</td></tr>
+                        <tr><td>拔掉传感器后复位</td><td>LCD 一直闪 “DS18B20 Error”，程序停在初始化循环</td></tr>
+                        <tr><td>运行约 200ms</td><td>DS0 翻转一次，说明 <code>t==20</code> 分支被执行</td></tr>
+                    </table>
+                </section>
+
+                <section class="content-card" id="s11" data-title="中断、临界区与共享引脚">
+                    <h2>11　中断、临界区与共享引脚</h2>
+                    <div class="sec-sub">本实验没有外设中断，但 PB12 与 PCF8574 共用，还有 SysTick 会插进延时</div>
+
+                    <p>和实验31 不同，这里没有任何定时器捕获或外部中断。整个温度读取是<b>纯阻塞轮询</b>：主循环调用 <code>DS18B20_Get_Temp()</code>，函数内部用 <code>delay_us</code> 一个时隙一个时隙地走完，期间 CPU 不能做别的事。</p>
+
+                    <pre class="code">void SysTick_Handler(void)
+{
+  HAL_IncTick();        <span class="cmt">// 本实验唯一会打断 delay_us 的 ISR</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>SysTick 中断优先级由 <code>TICK_INT_PRIORITY</code> 决定（HAL 默认最低），它每 1ms 左右进一次，执行 <code>HAL_IncTick()</code> 只需几条指令。</li>
+                            <li>如果这几十条指令正好落在读时隙的采样点附近，采样会晚几微秒；工程没有关中断，所以理论上存在偶发误码风险，实测通常可用。</li>
+                            <li>严格的写法是在 <code>DS18B20_Rst</code> 和读写字节前后 <code>__disable_irq()</code> / <code>__enable_irq()</code>，代价是每次读温度会推迟 1ms 左右的中断响应。</li>
+                            <li>共享引脚方面：<code>pcf8574.h</code> 把 <code>PCF8574_INT</code> 定义为 <code>PBin(12)</code>，与 DS18B20 的 DQ 是同一个物理引脚，因此任何时刻只能有一个器件“说话”。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">main.c 的注释把释放动作写得很清楚：<code>PCF8574_ReadBit(BEEP_IO)</code> 读一次扩展 IO 后，PCF8574 撤销 INT 低电平，PB12 才能回到上拉高电平，DS18B20 才能正常复位。工程只提供了 <code>pcf8574.h</code>，<code>PCF8574_ReadBit</code> 的具体实现未在本目录中出现。</div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="关键逻辑复盘">
+                    <h2>12　关键逻辑复盘</h2>
+                    <div class="sec-sub">把“为什么这样写”串成一条线</div>
+
+                    <ol>
+                        <li><b>时基先行</b>：HAL_Init 建 SysTick，Stm32_Clock_Init 把时钟拉到 180MHz，delay_init 记录 fac_us=180；三者顺序错了，1-wire 的所有微秒都会失真。</li>
+                        <li><b>先释放共享脚</b>：PCF8574_Init → PCF8574_ReadBit(BEEP_IO) → DS18B20_Init，这个顺序是硬件连线决定的，不能省。</li>
+                        <li><b>方向即电平</b>：输出模式下写 ODR 决定拉低/释放，输入模式下读 IDR 采样；<code>DS18B20_IO_IN/OUT</code> 只改 MODER 两位。</li>
+                        <li><b>复位靠宽度</b>：750us 低电平远大于手册要求的 480us，给总线电容留余量；存在脉冲用 200/240us 双超时判定。</li>
+                        <li><b>时隙靠 60us 节拍</b>：读、写 0、写 1 三种时隙都以 60us 为总长，只是拉低的位置不同；采样点固定在 12us。</li>
+                        <li><b>低位先出</b>：读写都按 LSB first 处理，读用 <code>(j&lt;&lt;7)|(dat&gt;&gt;1)</code>，写用 <code>dat&amp;0x01</code> 后右移。</li>
+                        <li><b>结果是 0.1℃</b>：原始值乘 0.625 后，254 就代表 25.4℃；主循环再用 <code>/10</code> 和 <code>%10</code> 拆成整数与小数。</li>
+                        <li><b>无中断、无校验</b>：驱动不检查 CRC，也不判断 Check 结果，这是教学代码的简化，工程化时需要补上。</li>
+                    </ol>
+
+                    <div class="note blue">如果要把这套代码用到产品里，至少补三件事：读暂存器后校验 CRC8、判断 <code>DS18B20_Check</code> 返回值、在关键时序段关中断或用定时器 + DMA 生成波形。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="常见问题排查">
+                    <h2>13　常见问题排查</h2>
+                    <div class="sec-sub">先分清是“初始化就失败”还是“能读但数值不对”</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>优先怀疑</th><th>定位方法</th></tr>
+                        <tr><td>LCD 一直闪 DS18B20 Error</td><td>PB12 被 PCF8574 INT 拉住 / 没接器件</td><td>先确认 <code>PCF8574_ReadBit(BEEP_IO)</code> 已执行，再量 PB12 静态电平</td></tr>
+                        <tr><td>偶尔能过初始化</td><td>上拉不足或线太长</td><td>示波器看释放后 DQ 上升沿是否缓慢</td></tr>
+                        <tr><td>温度恒为 0.0</td><td>读回全 1，被当成负温取反</td><td>在 <code>Get_Temp</code> 里打印 TL/TH 原始值</td></tr>
+                        <tr><td>温度恒为 85.0</td><td>转换未完成就读取</td><td>DS18B20 上电默认 85℃，确认 0x44 后等待足够时间</td></tr>
+                        <tr><td>数值跳变 ±0.5℃</td><td>时序被中断拉长 / 接触不良</td><td>缩短杜邦线，或在读时隙内关中断</td></tr>
+                        <tr><td>只有小数位在变</td><td>LCD 坐标写错，整数位被覆盖</td><td>核对 <code>30+40+8</code> 与 <code>30+40+32</code> 的列坐标</td></tr>
+                    </table>
+
+                    <div class="note">先用示波器确认“有没有存在脉冲”，再用串口打印 TL/TH，最后才怀疑换算公式。跳过前两步容易把接线问题当成算法 bug。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="总结">
+                    <h2>14　总结</h2>
+                    <div class="sec-sub">一根线、三种时隙、一次乘 0.625，构成完整的温度采集闭环</div>
+
+                    <p>实验32 的核心不是外设配置，而是<b>用软件造时序</b>：把 PB12 在输入与输出之间来回切换，用 <code>delay_us</code> 拼出复位脉冲、存在脉冲、读时隙和写时隙，再按 LSB first 组装字节，最后乘 0.625 得到 0.1℃ 单位的温度。整条链路没有任何中断参与，读一次温度就是一次阻塞的函数调用。</p>
+
+                    <p>从启动角度看，它和前面实验的骨架完全一致：启动文件给栈和向量表，SystemInit 打开 FPU 与 VTOR，HAL_Init 建时基，Stm32_Clock_Init 拉时钟，delay/uart 提供基础设施，然后才是 PCF8574 与 DS18B20 的板级初始化。多出来的只有一步——先把与 DQ 共用的 PB12 从 PCF8574 手里释放出来。</p>
+
+                    <div class="note blue">下一步可以尝试：给读时隙加临界区、补 CRC8 校验、把 <code>DS18B20_Get_Temp</code> 改成状态机 + 定时器触发，避免 750us 的阻塞；也可以把温度值通过串口按固定格式输出，便于上位机记录曲线。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-12 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+<script>
+(function () {
+    var t = 0;
+    var temp = 254;
+    var led = false;
+    var lcd = 'Temp: 25.4 C';
+    var log = document.getElementById('sim46');
+
+    function fmt(v) {
+        var neg = v < 0;
+        var a = Math.abs(v);
+        var intPart = Math.floor(a / 10);
+        var decPart = a % 10;
+        return (neg ? '-' : ' ') + intPart + '.' + decPart;
+    }
+
+    function render(note) {
+        log.textContent = 't=' + t +
+            '　温度=' + fmt(temp) + '℃' +
+            '　LCD：' + lcd +
+            '　LED0=' + (led ? '亮' : '灭') +
+            '　说明：' + note;
+    }
+
+    document.querySelectorAll('.sim-buttons button[data-act]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var act = btn.getAttribute('data-act');
+            if (act === 'tick') {
+                var note;
+                if (t % 10 === 0) {
+                    lcd = 'Temp:' + fmt(temp) + ' C';
+                    note = 't%10==0，调用 DS18B20_Get_Temp，按 /10 与 %10 刷新整数位与小数位';
+                } else {
+                    note = 't%10!=0，跳过读取，直接 delay_ms(10) 后 t++';
+                }
+                t = t + 1;
+                if (t === 20) {
+                    t = 0;
+                    led = !led;
+                    note += '；t==20 → t=0 并翻转 LED0';
+                }
+                render(note);
+            } else if (act === 'neg') {
+                temp = -105;
+                render('传感器下次返回 -10.5℃，主循环先写 -，取反后按 10 与 5 分两段显示');
+            } else if (act === 'pos') {
+                temp = 254;
+                render('传感器下次返回 25.4℃，整数位 25、小数位 4');
+            } else if (act === 'reset') {
+                t = 0; led = false; temp = 254; lcd = 'Temp: 25.4 C';
+                render('计数器与温度恢复初始值，重新从 t=0 开始');
+            }
+        });
+    });
+})();
+</script>
+</body>
+</html>

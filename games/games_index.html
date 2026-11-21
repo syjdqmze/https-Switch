@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <title>三列布局网页</title>
+    <style>
+        :root {
+            --color-border: #333;
+            --color-text: #333;
+            --color-highlight: #FFD700;
+            --color-primary: rgba(33, 150, 243, 0.9);
+            --color-success: rgba(76, 175, 80, 0.9);
+            --color-bg-light: rgba(255, 255, 255, 0.85);
+            --color-bg-dark: rgba(200, 200, 200, 0.85);
+
+            --bg-blue-sky: url('蓝天.png');
+            --bg-bamboo: url('江南烟雨水墨画.jpg');
+            --bg-desert: url('群山.jpeg');
+            --bg-grass: url('grassland.png');
+            --bg-duck: url('水鸭嬉水.png');
+
+            --grid-size: 20px;
+            --btn-size: 48px;
+            --gap: 4px;
+            --radius: 8px;
+            --transition: 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+            touch-callout: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            font-family: Arial, sans-serif;
+            padding: 10px;
+        }
+        
+        .container {
+            position: relative;
+            width: calc(100vw - 20px);
+            height: calc(100vh - 20px);
+        }
+        
+        .column {
+            position: absolute;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            color: white;
+            text-align: center;
+        }
+        
+        .column-left {
+            left: 0;
+            top: 0;
+            width: calc(30% - 7px);
+            height: 100%;
+            background: transparent;
+        }
+        
+        .left-top {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: calc(75% - 5px);
+            padding: 20px;
+            background-image: url('sprint-rain.jpg');
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+        
+        .poem-content {
+            text-align: center;
+        }
+        
+        .poem-content h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .poem-content p {
+            font-size: 16px;
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+        
+        .left-bottom {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: calc(25% - 5px);
+            padding: 20px;
+            border-radius: 0 0 10px 10px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #232526 0%, #414345 100%);
+        }
+        
+        .left-bottom video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+        
+        .left-bottom .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.4);
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            z-index: 2;
+        }
+        
+        .audio-player {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 3;
+        }
+        
+        .audio-player audio {
+            width: 100%;
+            outline: none;
+        }
+        
+        .audio-load-btn {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 8px;
+            background: rgba(52, 152, 219, 0.8);
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .audio-load-btn:hover {
+            background: rgba(52, 152, 219, 1);
+        }
+        
+        .audio-load-btn.active {
+            background: rgba(46, 204, 113, 0.8);
+        }
+        
+        .column-right {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: calc(30% - 7px);
+            height: 100%;
+            background: transparent;
+        }
+        
+        .right-top {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: calc(50% - 5px);
+            padding: 0;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .calendar {
+            background: rgba(255,255,255,0.95);
+            border-radius: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: none;
+            backdrop-filter: blur(5px);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+            flex-wrap: wrap;
+            gap: 2px;
+            padding: 3px 5px;
+            background: #f8f9fa;
+        }
+
+        .header .title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #1a1a2e;
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex-wrap: wrap;
+        }
+
+        .nav button {
+            background: #e8e8e8;
+            border: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 10px;
+            line-height: 20px;
+            text-align: center;
+            transition: all .2s;
+            color: #333;
+        }
+
+        .nav button:hover {
+            background: #d4d4d4;
+            transform: scale(1.05);
+        }
+
+        .nav button:active {
+            transform: scale(0.95);
+        }
+
+        .nav .yrm {
+            font-size: 11px;
+            font-weight: bold;
+            padding: 0 5px;
+            min-width: 80px;
+            text-align: center;
+            color: #1a1a2e;
+        }
+
+        .nav .today-btn {
+            background: #e94560;
+            color: #fff;
+            width: auto;
+            padding: 0 6px;
+            font-size: 8px;
+            font-weight: bold;
+        }
+
+        .nav .today-btn:hover {
+            background: #d63851;
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7,1fr);
+            text-align: center;
+            font-weight: bold;
+            color: #888;
+            margin-bottom: 2px;
+            font-size: 8px;
+            background: #f0f4f8;
+            padding: 2px 0;
+        }
+
+        .weekdays span:first-child, .weekdays span:last-child {
+            color: #e94560;
+        }
+
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7,1fr);
+            gap: 1px;
+            flex: 1;
+        }
+
+        .day {
+            background: #f8f9fa;
+            border-radius: 0;
+            padding: 1px;
+            text-align: center;
+            cursor: pointer;
+            transition: all .2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            min-height: 24px;
+        }
+
+        .day:hover {
+            background: #eef1f5;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+
+        .day .solar {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .day .lunar {
+            font-size: 8px;
+            color: #999;
+            margin-top: 1px;
+        }
+
+        .day .term {
+            font-size: 8px;
+            color: #fff;
+            background: #e94560;
+            border-radius: 2px;
+            padding: 0 2px;
+            position: absolute;
+            bottom: 1px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .day.other-month .solar {
+            color: #ccc;
+        }
+
+        .day.other-month .lunar {
+            color: #ddd;
+        }
+
+        .day.today {
+            background: #e94560;
+        }
+
+        .day.today .solar {
+            color: #fff;
+        }
+
+        .day.today .lunar {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .day.selected {
+            background: #0f3460;
+        }
+
+        .day.selected .solar {
+            color: #fff;
+        }
+
+        .day.selected .lunar {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .day .festival {
+            font-size: 8px;
+            color: #e94560;
+            font-weight: bold;
+        }
+
+        .day.sun .solar {
+            color: #e94560;
+        }
+
+        .day.today.sun .solar {
+            color: #fff;
+        }
+
+        .day.selected .festival {
+            color: #ffb3b3;
+        }
+
+        .day.today .term, .day.selected .term {
+            background: #fff;
+            color: #e94560;
+        }
+
+        .info-panel {
+            margin-top: 2px;
+            padding: 4px 6px;
+            background: #f0f4f8;
+            border-radius: 0;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .info-panel .item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-panel .label {
+            font-size: 7px;
+            color: #888;
+        }
+
+        .info-panel .value {
+            font-size: 9px;
+            font-weight: bold;
+            color: #1a1a2e;
+            margin-top: 1px;
+        }
+
+        .info-panel .value .sub {
+            font-size: 8px;
+            font-weight: normal;
+            color: #666;
+        }
+        
+        .right-bottom {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: calc(50% - 5px);
+            padding: 20px;
+            border-radius: 0 0 10px 10px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #232526 0%, #414345 100%);
+        }
+        
+        .right-bottom video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        .clock-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            z-index: 2;
+        }
+
+        .clock-container canvas {
+            border-radius: 50%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            background: #fff;
+        }
+
+        .clock-status {
+            font-size: 9px;
+            color: rgba(255,255,255,0.7);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .column-center {
+            position: absolute;
+            left: calc(30% + 3px);
+            top: 0;
+            width: calc(40% - 6px);
+            height: 100%;
+            overflow: hidden;
+            background-image: url('blue-sky.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+            transform: translateY(15px);
+        }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        h1 { font-size: 26px; color: var(--color-text); }
+
+        .score-board {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        #gameCanvas {
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius);
+            background-image: var(--bg-grass);
+            background-size: cover;
+        }
+
+        .controls {
+            font-size: 16px;
+            color: #666;
+            text-align: center;
+            padding-left: 150px;
+        }
+
+        .controls p { margin: 5px 0; }
+
+        .game-prompt {
+            font-size: 24px;
+            color: #1976d2;
+            text-align: center;
+            padding: 100px 20px;
+            font-weight: bold;
+        }
+
+        #tetrisContainer, #flappyContainer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .game-selector {
+            position: absolute;
+            bottom: 20px;
+            left: 10px;
+            width: calc(100% / 2.8);
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .game-selector-label {
+            color: white;
+            font-size: 14px;
+        }
+
+        .game-select {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--color-primary);
+            border-radius: var(--radius);
+            font-size: 14px;
+            outline: none;
+            background: white;
+            cursor: pointer;
+        }
+
+        .game-select:focus {
+            border-color: var(--color-highlight);
+            box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="column column-left">
+            <div class="left-top">
+                <div class="poem-content">
+                    <h2>青云志</h2>
+                    <p>身处低谷不自弃，我命由我不由天。</p>
+                    <p>无人扶我青云志，我自踏雪至山巅。</p>
+                    <p>若是命中无此运，亦可孤身登昆仑。</p>
+                    <p>红尘赠我三尺剑，酒换瘦马一世街。</p>
+                    <p>一朝悟道见真我，昔日枷锁皆云烟。</p>
+                    <p>天门将至百运开，拂尘轻笑问仙来。</p>
+                    <p>何须扶我青云志，我自凌云至山巅。</p>
+                </div>
+            </div>
+            <div class="left-bottom">
+                <video autoplay muted loop playsinline>
+                    <source src="skiing.mp4" type="video/mp4">
+                </video>
+                <div class="overlay"></div>
+                <div class="audio-player">
+                    <button class="audio-load-btn" onclick="toggleAudioLoad()">选择音频</button>
+                    <input type="file" id="audioFileInput" accept="audio/mpeg,.mp3" multiple style="display: none;">
+                    <audio id="bgMusic" src="" controls></audio>
+                </div>
+            </div>
+        </div>
+        <div class="column column-center">
+            <div class="game-container">
+                <div class="header-row">
+                    <h1 id="gameTitle">游戏选择</h1>
+                    <div class="score-board">
+                        <span>得分: <span id="score">0</span></span>
+                    </div>
+                </div>
+                <div id="gamePrompt" class="game-prompt" style="display: none;">
+                    <p>请在下方选择游戏</p>
+                </div>
+                <div id="tetrisContainer" style="display: none;"></div>
+                <div id="flappyContainer" style="display: none;"></div>
+                <canvas id="gameCanvas" width="500" height="500"></canvas>
+                <div id="controls" class="controls" style="display: none;">
+                    <p>使用方向键控制蛇的移动</p>
+                    <p>按空格键重新开始游戏</p>
+                    <p>按Esc键退出游戏</p>
+                </div>
+            </div>
+            <div class="game-selector">
+                <label class="game-selector-label">游戏<br>选择</label>
+                <select class="game-select" onchange="switchGame(this.value)">
+                    <option value="">请选择游戏</option>
+                    <option value="snake">贪吃蛇</option>
+                    <option value="flappy">飞翔鸟</option>
+                    <option value="tetris">俄罗斯方块</option>
+                </select>
+            </div>
+        </div>
+        <div class="column column-right">
+            <div class="right-top">
+                <div class="calendar" id="app">
+                    <div class="header">
+                        <div class="title">📅 万年历</div>
+                        <div class="nav">
+                            <button onclick="changeYear(-1)">◀◀</button>
+                            <button onclick="changeMonth(-1)">◀</button>
+                            <span class="yrm" id="yrm"></span>
+                            <button onclick="changeMonth(1)">▶</button>
+                            <button onclick="changeYear(1)">▶▶</button>
+                            <button class="today-btn" onclick="goToday()">今天</button>
+                        </div>
+                    </div>
+
+                    <div class="weekdays">
+                        <span>日</span><span>一</span><span>二</span><span>三</span>
+                        <span>四</span><span>五</span><span>六</span>
+                    </div>
+
+                    <div class="days" id="days"></div>
+
+                    <div class="info-panel" id="info">
+                        <div class="item"><span class="label">公历</span><span class="value" id="infoSolar">--</span></div>
+                        <div class="item"><span class="label">农历</span><span class="value" id="infoLunar">--</span></div>
+                        <div class="item"><span class="label">节气</span><span class="value" id="infoTerm">--</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="right-bottom">
+                <video autoplay muted loop playsinline disablePictureInPicture controlslist="nodownload">
+                    <source src="skiing.mp4" type="video/mp4">
+                </video>
+                <div class="clock-container" id="clockContainer">
+                    <canvas id="clockCanvas" width="200" height="200"></canvas>
+                    <div class="clock-status" id="clockStatus">正在获取时间...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '_')) {
+                    e.preventDefault();
+                }
+                if (e.key === 'F11') {
+                    e.preventDefault();
+                }
+            });
+
+            document.addEventListener('wheel', function(e) {
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            document.addEventListener('touchstart', function(e) {
+                if (e.touches.length > 1) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function(e) {
+                const now = Date.now();
+                if (now - lastTouchEnd <= 300) {
+                    e.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+        });
+
+        let currentGame = null;
+
+        let audioLoaded = false;
+        let audioPlaylist = [];
+        let currentTrackIndex = 0;
+        let musicPlaying = false;
+        const bgMusicEl = document.getElementById('bgMusic');
+        const audioFileInput = document.getElementById('audioFileInput');
+        const STORAGE_KEY = 'audioPlaylistNames';
+
+        function toggleAudioLoad() {
+            const btn = document.querySelector('.audio-load-btn');
+            
+            if (!audioLoaded) {
+                audioFileInput.click();
+            } else {
+                bgMusicEl.pause();
+                bgMusicEl.src = '';
+                audioPlaylist = [];
+                currentTrackIndex = 0;
+                audioLoaded = false;
+                btn.textContent = '选择音频';
+                btn.classList.remove('active');
+                musicPlaying = false;
+                localStorage.removeItem(STORAGE_KEY);
+            }
+        }
+
+        audioFileInput.addEventListener('change', function(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                loadAudioFiles(files);
+            }
+        });
+
+        function loadAudioFiles(files) {
+            audioPlaylist = Array.from(files).filter(f => f.type === 'audio/mpeg' || f.name.endsWith('.mp3'));
+            if (audioPlaylist.length === 0) return;
+            
+            const btn = document.querySelector('.audio-load-btn');
+            btn.textContent = '重新选择';
+            btn.classList.add('active');
+            audioLoaded = true;
+            currentTrackIndex = 0;
+            
+            const file = audioPlaylist[currentTrackIndex];
+            bgMusicEl.src = URL.createObjectURL(file);
+            bgMusicEl.play();
+            musicPlaying = true;
+            
+            const names = audioPlaylist.map(f => f.name);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(names));
+        }
+
+        bgMusicEl.addEventListener('ended', function() {
+            if (audioPlaylist.length > 1) {
+                currentTrackIndex = (currentTrackIndex + 1) % audioPlaylist.length;
+                const file = audioPlaylist[currentTrackIndex];
+                bgMusicEl.src = URL.createObjectURL(file);
+                bgMusicEl.play();
+            }
+        });
+
+        // ====== 钟表 (网络时间同步) ======
+        (function() {
+            var canvas = document.getElementById('clockCanvas');
+            var ctx = canvas.getContext('2d');
+            var statusEl = document.getElementById('clockStatus');
+            var cx = 100, cy = 100, r = 92;
+
+            var timeOffset = 0, hasTime = false, syncing = false;
+
+            var TIME_SOURCES = [
+                {
+                    url: 'https://worldtimeapi.org/api/timezone/Asia/Shanghai',
+                    parse: function(r) { return r.json().then(function(d) { return new Date(d.datetime); }); },
+                    label: 'worldtimeapi'
+                },
+                {
+                    url: 'https://timeapi.io/api/Time/current/zone?timeZone=Asia/Shanghai',
+                    parse: function(r) { return r.json().then(function(d) { return new Date(d.dateTime); }); },
+                    label: 'timeapi.io'
+                },
+                {
+                    url: 'https://www.baidu.com',
+                    parse: function(r) {
+                        var ds = r.headers.get('Date');
+                        if (ds) return new Date(ds);
+                        throw new Error('no Date');
+                    },
+                    label: 'Baidu',
+                    opts: { method: 'HEAD' }
+                }
+            ];
+
+            function trySource(idx, t0) {
+                if (idx >= TIME_SOURCES.length) {
+                    hasTime = true;
+                    syncing = false;
+                    statusEl.textContent = '本地时间 (同步失败)';
+                    return;
+                }
+                var src = TIME_SOURCES[idx];
+                return fetch(src.url, src.opts || {})
+                    .then(src.parse)
+                    .then(function(serverDate) {
+                        var rtt = Date.now() - t0;
+                        var serverMs = serverDate.getTime();
+                        timeOffset = serverMs - (t0 + rtt / 2);
+                        hasTime = true;
+                        syncing = false;
+                        statusEl.textContent = '网络时间 (' + src.label + ')';
+                    })
+                    .catch(function() {
+                        return trySource(idx + 1, t0);
+                    });
+            }
+
+            function syncTime() {
+                if (syncing) return;
+                syncing = true;
+                statusEl.textContent = '正在同步...';
+                trySource(0, Date.now());
+            }
+
+            function getTime() {
+                return hasTime ? new Date(Date.now() + timeOffset) : new Date();
+            }
+
+            function drawHand(angle, length, width, color) {
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + length * Math.cos(angle), cy + length * Math.sin(angle));
+                ctx.strokeStyle = color;
+                ctx.lineWidth = width;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+
+            function drawClock() {
+                var t = getTime();
+                var h = t.getHours(), m = t.getMinutes(), s = t.getSeconds(), ms = t.getMilliseconds();
+                var y = t.getFullYear(), mo = t.getMonth() + 1, d = t.getDate();
+
+                ctx.clearRect(0, 0, 200, 200);
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+                ctx.strokeStyle = '#ddd';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                for (var i = 0; i < 60; i++) {
+                    var a = (i / 60) * Math.PI * 2 - Math.PI / 2;
+                    var isHour = i % 5 === 0;
+                    var inner = r - (isHour ? 14 : 6);
+                    var outer = r - 3;
+                    ctx.beginPath();
+                    ctx.moveTo(cx + inner * Math.cos(a), cy + inner * Math.sin(a));
+                    ctx.lineTo(cx + outer * Math.cos(a), cy + outer * Math.sin(a));
+                    ctx.strokeStyle = isHour ? '#333' : '#bbb';
+                    ctx.lineWidth = isHour ? 1.5 : 0.8;
+                    ctx.stroke();
+                }
+
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                for (var i = 1; i <= 12; i++) {
+                    var a = (i / 12) * Math.PI * 2 - Math.PI / 2;
+                    ctx.fillText(String(i), cx + (r - 24) * Math.cos(a), cy + (r - 24) * Math.sin(a));
+                }
+
+                drawHand((h % 12 + m / 60 + s / 3600) * (Math.PI / 6) - Math.PI / 2, r * 0.45, 2.5, '#333');
+                drawHand((m + s / 60) * (Math.PI / 30) - Math.PI / 2, r * 0.6, 1.5, '#333');
+                drawHand((s + ms / 1000) * (Math.PI / 30) - Math.PI / 2, r * 0.7, 0.8, '#e94560');
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#e94560';
+                ctx.fill();
+
+                ctx.fillStyle = '#999';
+                ctx.font = '9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(
+                    y + '-' + (mo < 10 ? '0' : '') + mo + '-' + (d < 10 ? '0' : '') + d,
+                    cx, cy + 16
+                );
+            }
+
+            syncTime();
+            setInterval(syncTime, 1800000);
+
+            (function tick() {
+                drawClock();
+                requestAnimationFrame(tick);
+            })();
+        })();
+
+        // ====== 万年历代码 ======
+        const lunarInfo = [
+            0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+            0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+            0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
+            0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+            0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
+            0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,
+            0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
+            0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6,
+            0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
+            0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x05ac0,0x0ab60,0x096d5,0x092e0,
+            0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,
+            0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,
+            0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,
+            0x05aa0,0x076a3,0x096d0,0x04afb,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,
+            0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0,
+            0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06aa0,0x1a6c4,0x0aae0,
+            0x092e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x05cd4,
+            0x052d0,0x092e0,0x0c9d7,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,
+            0x052b0,0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,
+            0x0d160,0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a4d0,0x0d150,
+            0x0f252,0x0d520
+        ];
+        const Gan = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
+        const Zhi = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+        const Animals = ["鼠","牛","虎","兔","龙","蛇","马","羊","猴","鸡","狗","猪"];
+        const monthNameTbl = ["正","二","三","四","五","六","七","八","九","十","冬","腊"];
+        const dayNameTbl = ["初一","初二","初三","初四","初五","初六","初七","初八","初九","初十",
+            "十一","十二","十三","十四","十五","十六","十七","十八","十九","二十",
+            "廿一","廿二","廿三","廿四","廿五","廿六","廿七","廿八","廿九","三十"];
+        const termNames = ["立春","雨水","惊蛰","春分","清明","谷雨",
+            "立夏","小满","芒种","夏至","小暑","大暑",
+            "立秋","处暑","白露","秋分","寒露","霜降",
+            "立冬","小雪","大雪","冬至","小寒","大寒"];
+
+        const LUNAR_YEARS = [];
+        (function precomputeLunar() {
+            const BASE_JD = (function(y,m,d){
+                if (m<=2){y--;m+=12}
+                const A=Math.floor(y/100),B=2-A+Math.floor(A/4);
+                return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+B-1524.5
+            })(1900,1,31);
+            let cumOff = 0;
+            for (let y = 1900; y <= 2100; y++) {
+                const code = lunarInfo[y - 1900];
+                const months = [];
+                for (let i = 0; i < 12; i++) months.push((code & (1 << (i + 4))) ? 30 : 29);
+                const leap = code & 0xF;
+                const leapDays = (code >> 16) & 0x1 ? 30 : 29;
+                const total = months.reduce((a,b)=>a+b,0) + (leap > 0 ? leapDays : 0);
+                LUNAR_YEARS.push({ year: y, months, leap, leapDays, total, startOffset: cumOff });
+                cumOff += total;
+            }
+            LUNAR_YEARS.findYear = function(offset) {
+                let lo = 0, hi = this.length - 1;
+                while (lo < hi) {
+                    const mid = (lo + hi) >>> 1;
+                    if (this[mid].startOffset <= offset) lo = mid + 1;
+                    else hi = mid;
+                }
+                return this[lo - 1];
+            };
+        })();
+
+        const termCache = {};
+        const lunarCache = {};
+
+        function julianDay(y, m, d) {
+            if (m <= 2) { y--; m += 12; }
+            const A = Math.floor(y / 100), B = 2 - A + Math.floor(A / 4);
+            return Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + d + B - 1524.5;
+        }
+        function fromJD(jd) {
+            const Z = Math.floor(jd + 0.5), F = jd + 0.5 - Z;
+            let A = Z;
+            if (Z >= 2299161) { const a = Math.floor((Z - 1867216.25) / 36524.25); A = Z + 1 + a - Math.floor(a / 4); }
+            const B = A + 1524, C = Math.floor((B - 122.1) / 365.25), D = Math.floor(365.25 * C);
+            const E = Math.floor((B - D) / 30.6001);
+            const dd = B - D - Math.floor(30.6001 * E) + F;
+            const mm = E < 14 ? E - 1 : E - 13, yy = mm > 2 ? C - 4716 : C - 4715;
+            return { y: yy, m: mm, d: Math.floor(dd) };
+        }
+        function termLon(k) { return ((k * 15 + 315) % 360); }
+
+        function calcSunLon(jd) {
+            const T = (jd - 2451545.0) / 36525, T2 = T * T;
+            const M = (357.5291 + 35999.0503 * T - 0.0001559 * T2 - 0.00000048 * T2 * T) * Math.PI / 180;
+            const L0 = 280.46646 + 36000.76983 * T + 0.0003032 * T2;
+            const sM = Math.sin(M), s2M = Math.sin(2 * M), s3M = Math.sin(3 * M);
+            const C = (1.914602 - 0.004817 * T - 0.000014 * T2) * sM
+                    + (0.019993 - 0.000101 * T) * s2M + 0.000289 * s3M
+                    + 0.000005 * Math.sin(4 * M) + 0.000004 * Math.sin(5 * M);
+            const omega = (125.04 - 1934.136 * T) * Math.PI / 180;
+            const dPsi = (-0.00478 * Math.sin(omega) - 0.00039 * Math.sin(2 * omega)) / 3600;
+            let lon = (L0 + C + dPsi) % 360;
+            return lon < 0 ? lon + 360 : lon;
+        }
+
+        function findTerm(year, idx) {
+            const key = year + '-' + idx;
+            if (termCache[key]) return termCache[key];
+            const target = termLon(idx);
+            let doy = (target - 280.0) / 0.986;
+            if (doy < 0) doy += 365.25;
+            let est = julianDay(year, 1, 1) + doy;
+            for (let i = 0; i < 10; i++) {
+                const lon = calcSunLon(est);
+                let d = lon - target;
+                if (d > 180) d -= 360;
+                if (d < -180) d += 360;
+                if (Math.abs(d) < 0.0000001) break;
+                const step = d * 365.25 / 360;
+                if (Math.abs(step) < 0.0001) break;
+                est -= step;
+            }
+            const res = { jd: est, date: fromJD(est) };
+            termCache[key] = res;
+            return res;
+        }
+
+        function toLunar(y, m, d) {
+            const ck = y + '-' + m + '-' + d;
+            if (lunarCache[ck] !== undefined) return lunarCache[ck];
+            const baseJD = 2415050.5;
+            const targetJD = julianDay(y, m, d);
+            let offset = Math.floor(targetJD - baseJD);
+            if (offset < 0) { lunarCache[ck] = null; return null; }
+
+            const lyInfo = LUNAR_YEARS.findYear(offset);
+            if (!lyInfo || lyInfo.year > 2100) { lunarCache[ck] = null; return null; }
+            offset -= lyInfo.startOffset;
+
+            const months = lyInfo.months;
+            let isLeap = false, lm;
+            for (lm = 1; lm <= 12; lm++) {
+                const days = months[lm - 1];
+                if (offset < days) break;
+                offset -= days;
+                if (lyInfo.leap > 0 && lm === lyInfo.leap) {
+                    if (offset < lyInfo.leapDays) { isLeap = true; break; }
+                    offset -= lyInfo.leapDays;
+                }
+            }
+            if (lm > 12) { lm = 12; offset = 0; }
+
+            const ly = lyInfo.year;
+            const res = {
+                year: ly, month: lm, day: offset + 1, isLeap, daysInMonth: isLeap ? lyInfo.leapDays : months[lm - 1],
+                ganZhiYear: Gan[(ly - 4) % 10] + Zhi[(ly - 4) % 12],
+                animal: Animals[(ly - 4) % 12],
+                monthName: (isLeap ? "闰" : "") + monthNameTbl[lm - 1] + "月",
+                dayName: dayNameTbl[offset]
+            };
+            lunarCache[ck] = res;
+            return res;
+        }
+
+        function getTermMap(years) {
+            const map = {};
+            for (const y of years) {
+                for (let i = 0; i < 24; i++) {
+                    const t = findTerm(y, i);
+                    const k = t.date.y + '-' + t.date.m + '-' + t.date.d;
+                    if (!map[k]) map[k] = [];
+                    map[k].push(termNames[i]);
+                }
+            }
+            return map;
+        }
+
+        function getFestival(m, d, lunar) {
+            if (m === 1 && d === 1) return "元旦";
+            if (m === 2 && d === 14) return "情人节";
+            if (m === 3 && d === 8) return "妇女节";
+            if (m === 3 && d === 12) return "植树节";
+            if (m === 5 && d === 1) return "劳动节";
+            if (m === 5 && d === 4) return "青年节";
+            if (m === 6 && d === 1) return "儿童节";
+            if (m === 7 && d === 1) return "建党节";
+            if (m === 8 && d === 1) return "建军节";
+            if (m === 9 && d === 10) return "教师节";
+            if (m === 10 && d === 1) return "国庆节";
+            if (m === 12 && d === 25) return "圣诞节";
+            if (lunar.month === 1 && lunar.day === 1) return "春节";
+            if (lunar.month === 1 && lunar.day === 15) return "元宵节";
+            if (lunar.month === 2 && lunar.day === 2) return "龙抬头";
+            if (lunar.month === 3 && lunar.day === 3) return "上巳节";
+            if (lunar.month === 5 && lunar.day === 5) return "端午节";
+            if (lunar.month === 7 && lunar.day === 7) return "七夕";
+            if (lunar.month === 7 && lunar.day === 15) return "中元节";
+            if (lunar.month === 8 && lunar.day === 15) return "中秋节";
+            if (lunar.month === 9 && lunar.day === 9) return "重阳节";
+            if (lunar.month === 10 && lunar.day === 1) return "寒衣节";
+            if (lunar.month === 12 && lunar.day === 8) return "腊八节";
+            if (lunar.month === 12 && lunar.day === 23) return "小年";
+            if (lunar.month === 12 && lunar.day === lunar.daysInMonth) return "除夕";
+            return "";
+        }
+
+        let viewYear, viewMonth;
+
+        function render(year, month) {
+            viewYear = year; viewMonth = month;
+            document.getElementById('yrm').textContent = year + '年 ' + month + '月';
+
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            const dim = new Date(year, month, 0).getDate();
+            const dimPrev = new Date(year, month - 1, 0).getDate();
+            const today = new Date();
+
+            const termMap = getTermMap([year - 1, year, year + 1]);
+
+            const container = document.getElementById('days');
+            container.innerHTML = '';
+
+            for (let i = 0; i < 42; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'day';
+
+                let sd, sm, sy, isOther;
+                if (i < firstDay) {
+                    sy = month === 1 ? year - 1 : year;
+                    sm = month === 1 ? 12 : month - 1;
+                    sd = dimPrev - firstDay + i + 1;
+                    isOther = true;
+                } else if (i >= firstDay + dim) {
+                    sy = month === 12 ? year + 1 : year;
+                    sm = month === 12 ? 1 : month + 1;
+                    sd = i - firstDay - dim + 1;
+                    isOther = true;
+                } else {
+                    sy = year; sm = month;
+                    sd = i - firstDay + 1;
+                    isOther = false;
+                }
+
+                const isToday = (sy === today.getFullYear() && sm === today.getMonth() + 1 && sd === today.getDate());
+                if (isOther) cell.classList.add('other-month');
+                if (isToday) cell.classList.add('today');
+                if (i % 7 === 0 || i % 7 === 6) cell.classList.add('sun');
+
+                const lunar = (sy >= 1900 && sy <= 2100) ? toLunar(sy, sm, sd) : null;
+
+                const termKey = sy + '-' + sm + '-' + sd;
+                const term = termMap[termKey] ? termMap[termKey][0] : null;
+
+                const solarSpan = document.createElement('div');
+                solarSpan.className = 'solar';
+                solarSpan.textContent = sd;
+                cell.appendChild(solarSpan);
+
+                if (lunar) {
+                    const ls = document.createElement('div');
+                    ls.className = 'lunar';
+                    ls.textContent = lunar.day === 1 ? lunar.monthName : lunar.dayName;
+                    cell.appendChild(ls);
+                    const fest = getFestival(sm, sd, lunar);
+                    if (fest && !isOther) {
+                        const fs = document.createElement('div');
+                        fs.className = 'festival';
+                        fs.textContent = fest;
+                        cell.appendChild(fs);
+                    }
+                }
+
+                if (term) {
+                    const ts = document.createElement('div');
+                    ts.className = 'term';
+                    ts.textContent = term;
+                    cell.appendChild(ts);
+                }
+
+                cell.dataset.year = sy;
+                cell.dataset.month = sm;
+                cell.dataset.day = sd;
+                if (lunar) cell.dataset.lunar = JSON.stringify(lunar);
+                if (term) cell.dataset.term = term;
+
+                cell.addEventListener('click', (function(d) {
+                    return function() {
+                        document.querySelectorAll('.day.selected').forEach(e => e.classList.remove('selected'));
+                        d.classList.add('selected');
+                        updateInfo(d.dataset);
+                    };
+                })(cell));
+
+                if (isToday && !isOther) {
+                    setTimeout(() => {
+                        cell.classList.add('selected');
+                        updateInfo(cell.dataset);
+                        cell.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }, 10);
+                }
+
+                container.appendChild(cell);
+            }
+        }
+
+        function updateInfo(data) {
+            document.getElementById('infoSolar').textContent = data.year + '年' + data.month + '月' + data.day + '日';
+            if (data.lunar) {
+                const l = JSON.parse(data.lunar);
+                document.getElementById('infoLunar').textContent = l.ganZhiYear + '年 [' + l.animal + '年] ' + l.monthName + l.dayName;
+            } else {
+                document.getElementById('infoLunar').textContent = '--';
+            }
+            document.getElementById('infoTerm').textContent = data.term || '--';
+        }
+
+        function changeMonth(delta) {
+            let m = viewMonth + delta, y = viewYear;
+            if (m < 1) { m = 12; y--; }
+            if (m > 12) { m = 1; y++; }
+            render(y, m);
+        }
+        function changeYear(delta) { render(viewYear + delta, viewMonth); }
+        function goToday() { const n = new Date(); render(n.getFullYear(), n.getMonth() + 1); }
+
+        const n = new Date();
+        render(n.getFullYear(), n.getMonth() + 1);
+    </script>
+    <script>
+        function drawGrid() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const rows = 25;
+            const cols = 25;
+            const cellWidth = width / cols;
+            const cellHeight = height / rows;
+            
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            
+            for (let i = 1; i < cols; i++) {
+                const x = i * cellWidth;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+            
+            for (let i = 1; i < rows; i++) {
+                const y = i * cellHeight;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+            
+            ctx.setLineDash([]);
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM加载完成');
+        });
+    </script>
+    <script src="snake.js"></script>
+    <script src="tetris.js"></script>
+    <script src="flappybird.js"></script>
+</body>
+</html>

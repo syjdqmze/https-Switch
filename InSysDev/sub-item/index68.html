@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验54 USB声卡(Slave)实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验54 USB声卡(Slave)实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">USB 收包靠 OTG 中断，播放靠 SAI 双缓冲 DMA</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+<section class="content-card" id="s01" data-title="实验目标与系统角色">
+                    <h2>01　实验目标与系统角色</h2>
+                    <div class="sec-sub">板子变成一块 48 kHz / 16 bit / 立体声的 USB 声卡，电脑放什么它就播什么</div>
+
+                    <p>实验54 把 STM32F429 配置成 USB Audio Class 1.0 的扬声器设备。插上 USB 线后，Windows 或 Linux 的音频设备列表里会出现 <code>ALIENTEK STM32F4/F7 USB AUDIO</code>；把系统输出切到它，电脑播放的 PCM 数据就以每 1 ms 一包、每包 192 字节的等时（Isochronous）传输送到板子。</p>
+
+                    <p>板子这一侧不是“收到数据就丢给 Codec”这么简单：USB 主机送数据的速度与 SAI 实际播放的速度存在微小偏差（48 kHz 标称下 SAI 实际约 47.991 kHz），所以源码用了一个 100 帧的环形缓冲来吸收累积误差。真正让声音连续的是 <code>Audio_MAL_Play</code> 的写指针与 <code>audio_sai_dma_callback</code> 的读指针。</p>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>参数</th><th>来源</th></tr>
+                        <tr><td>设备类</td><td>Audio Class 1.0，扬声器</td><td>配置描述符 109 字节</td></tr>
+                        <tr><td>采样率</td><td>48 000 Hz，单频</td><td><code>USBD_AUDIO_FREQ</code></td></tr>
+                        <tr><td>格式</td><td>PCM，16 bit，2 声道</td><td><code>AUDIO_FORMAT_TYPE_III</code></td></tr>
+                        <tr><td>端点</td><td><code>0x01</code> ISO OUT，192 B/包，bInterval=1</td><td><code>AUDIO_OUT_EP</code></td></tr>
+                        <tr><td>默认音量</td><td>65%（0~100）</td><td><code>DEFAULT_VOLUME</code></td></tr>
+                        <tr><td>主控时钟</td><td>192 MHz，USB 48 MHz</td><td><code>Stm32_Clock_Init(384,25,2,8)</code></td></tr>
+                        <tr><td>音频接口</td><td>SAI1 Block A，主发送，DMA2_Stream3</td><td><code>sai.c</code></td></tr>
+                        <tr><td>Codec</td><td>WM8978，I2C 控制</td><td><code>wm8978.c</code></td></tr>
+                    </table>
+
+                    <pre class="code">int main(void)
+{
+    u8 key;
+    u8 t=0;
+    u8 Divece_STA=0XFF;
+
+    Stm32_Clock_Init(384,25,2,8);   <span class="cmt">// 192 MHz，PLLQ=8 → 48 MHz</span>
+    delay_init(192);                <span class="cmt">// fac_us=192，SysTick 时钟源 HCLK</span>
+    uart_init(115200);
+    LED_Init();
+    KEY_Init();
+    SDRAM_Init();
+    LCD_Init();
+    W25QXX_Init();
+    PCF8574_Init();
+    WM8978_Init();                  <span class="cmt">// I2C 配置 Codec</span>
+    WM8978_ADDA_Cfg(1,0);           <span class="cmt">// 开 DAC，关 ADC</span>
+    WM8978_Input_Cfg(0,0,0);        <span class="cmt">// 关输入通道</span>
+    WM8978_Output_Cfg(1,0);         <span class="cmt">// 开输出</span>
+    my_mem_init(SRAMIN);
+    my_mem_init(SRAMEX);
+    my_mem_init(SRAMCCM);
+
+    USBD_Init(&amp;USB_OTG_dev,USB_OTG_FS_CORE_ID,&amp;USR_desc,&amp;AUDIO_cb,&amp;USR_cb);
+    while(1) { /* 按键调音量 + 状态显示 */ }
+}</pre>
+
+                    <div class="note">本实验的 <code>main.c</code> 没有调用 <code>HAL_Init()</code>：<code>Stm32_Clock_Init</code> 直接操作 RCC，<code>delay_init</code> 自己设置 SysTick 时钟源。这一点与实验53 不同，读代码时不要想当然。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">USB 类核心、板级音频接口、SAI 驱动、Codec 驱动四层清晰分开</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>层次</th><th>关键符号</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>应用</td><td><code>KEY_Scan</code>、<code>volume</code>、<code>bDeviceState</code></td></tr>
+                        <tr><td><code>USB/USB_APP/usbd_desc.c</code></td><td>设备描述符</td><td>VID <code>0x0483</code>、PID <code>0x5730</code>、产品字符串</td></tr>
+                        <tr><td><code>USB/USB_APP/usbd_conf.h</code></td><td>编译期配置</td><td><code>USBD_AUDIO_FREQ 48000</code>、<code>AUDIO_OUT_EP 0x01</code></td></tr>
+                        <tr><td><code>USB/USB_APP/usb_bsp.c</code></td><td>板级</td><td><code>USB_OTG_BSP_Init</code>、<code>EnableInterrupt</code></td></tr>
+                        <tr><td><code>USB/USB_APP/usbd_usr.c</code></td><td>用户回调</td><td><code>OTG_FS_IRQHandler</code>、<code>USR_cb</code></td></tr>
+                        <tr><td><code>Class/audio/usbd_audio_core.c</code></td><td>类核心</td><td>配置描述符、<code>usbd_audio_Setup</code>、<code>DataOut</code>、<code>SOF</code></td></tr>
+                        <tr><td><code>Class/audio/usbd_audio_out_if.c</code></td><td>板级音频接口</td><td><code>AUDIO_OUT_fops</code>、<code>AudioCmd</code></td></tr>
+                        <tr><td><code>USB/USB_APP/stm324x9i_usb_audio_codec.c</code></td><td>Codec 适配</td><td><code>EVAL_AUDIO_Init</code>、<code>Audio_MAL_Play</code>、<code>audio_sai_dma_callback</code></td></tr>
+                        <tr><td><code>HARDWARE/SAI/sai.c</code></td><td>SAI 驱动</td><td><code>SAIA_Init</code>、<code>SAIA_SampleRate_Set</code>、<code>SAIA_TX_DMA_Init</code></td></tr>
+                        <tr><td><code>HARDWARE/WM8978/wm8978.c</code></td><td>Codec 寄存器</td><td><code>WM8978_Init</code>、<code>WM8978_HPvol_Set</code></td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>启动</td><td><code>OTG_FS_IRQHandler</code>、<code>DMA2_Stream3_IRQHandler</code> 向量</td></tr>
+                    </table>
+
+                    <p>阅读顺序建议：先看 <code>usbd_audio_core.c</code> 里的 109 字节配置描述符，搞清楚主机看到的是什么设备；再看 <code>usbd_audio_Init</code> 与 <code>usbd_audio_DataOut</code>，理解端点与缓冲；最后看 <code>stm324x9i_usb_audio_codec.c</code>，把 USB 数据流与 SAI 播放连起来。</p>
+
+                    <p>工程里还带着 MSC、HID、CDC 的源码，但都没有参与编译。判断依据同样是 Keil 工程的文件列表，而不是磁盘上有哪些文件。</p>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">先让 Codec 和 SAI 准备好，再让 USB 设备库接管枚举</div>
+
+                    <figure class="figure">
+                        <img src="./index68-map/boot-flow.png" alt="USB 声卡从上电到主循环的启动流程图">
+                        <figcaption>图 3-1　USB 声卡启动链路总览</figcaption>
+                    </figure>
+
+                    <p>启动顺序的关键点是“音频硬件先于 USB”。<code>WM8978_Init</code> 通过 I2C 配置 Codec 的时钟、DAC 与输出；<code>USBD_Init</code> 之后主机才可能发 <code>SET_CONFIGURATION</code>，而直到 <code>usbd_audio_Init</code> 被调用时，SAI 与 DMA 才会真正启动。这样第一包音频到达时，DAC 已经在工作，不会出现开头的“咔哒”声。</p>
+
+                    <pre class="code">Stm32_Clock_Init(384,25,2,8);     <span class="cmt">// 192 MHz / USB 48 MHz</span>
+delay_init(192);                  <span class="cmt">// fac_us=192；未开 SysTick 中断</span>
+uart_init(115200);
+
+WM8978_Init();                    <span class="cmt">// I2C 写 Codec 寄存器</span>
+WM8978_ADDA_Cfg(1,0);             <span class="cmt">// DAC 开，ADC 关</span>
+WM8978_Input_Cfg(0,0,0);          <span class="cmt">// 输入通道全关</span>
+WM8978_Output_Cfg(1,0);           <span class="cmt">// 耳机/喇叭输出开</span>
+
+USBD_Init(&amp;USB_OTG_dev,USB_OTG_FS_CORE_ID,&amp;USR_desc,&amp;AUDIO_cb,&amp;USR_cb);
+
+while(1)
+{
+    key=KEY_Scan(1);              <span class="cmt">// 支持连按</span>
+    if(key) { /* 调音量 */ }
+    delay_ms(20);
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么没有 HAL_Init：</strong>这份 main 直接调用 <code>Stm32_Clock_Init</code> 和 <code>delay_init</code>。少了 HAL_Init 就不会配置 NVIC 优先级分组，但 USB BSP 的 <code>HAL_NVIC_SetPriority</code> 仍能工作，因为分组默认值可用。</li>
+                            <li><strong>WM8978 必须在 USB 之前：</strong>主机一旦把接口切到 alt=1，音频包就会连续到来；Codec 没配好就会丢前几包甚至全程无声。</li>
+                            <li><strong>delay_init 只设时钟源：</strong><code>SYSTEM_SUPPORT_OS</code> 为 0 时它不打开 SysTick 中断，<code>delay_us</code> 靠读 <code>SysTick-&gt;VAL</code> 轮询，所以 <code>HAL_Delay</code> 在本工程不可用。</li>
+                            <li><strong>USBD_Init 内部就开中断：</strong>与实验53 相同，这一版设备库在 <code>USBD_Init</code> 末尾调用 <code>USB_OTG_BSP_EnableInterrupt</code>，没有单独的 <code>USBD_Start</code>。</li>
+                            <li><strong>主循环只做三件事：</strong>扫描按键、改音量、刷新连接状态；音频播放完全由 USB 中断与 DMA 中断驱动。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">OTG_FS 与 DMA2_Stream3 两个中断都必须有向量，否则声音只出一声就停</div>
+
+                    <p>启动文件仍是 <code>CORE/startup_stm32f429xx.s</code>。本实验用到两个中断：<code>OTG_FS_IRQHandler</code>（中断号 67）负责 USB 枚举、控制传输与等时收包；<code>DMA2_Stream3_IRQHandler</code>（中断号 59）负责 SAI 发送缓冲换页。两者都在向量表里有固定槽位，函数名必须与启动文件一致。</p>
+
+                    <pre class="code">Stack_Size      EQU     0x00000400      <span class="cmt">// 主栈 1 KB</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+__initial_sp
+
+                AREA    RESET, DATA, READONLY
+                EXPORT  __Vectors
+__Vectors       DCD     __initial_sp    <span class="cmt">// 0x08000000：初始 MSP</span>
+                DCD     Reset_Handler   <span class="cmt">// 0x08000004：复位入口</span>
+                <span class="cmt">// …</span>
+                DCD     DMA2_Stream3_IRQHandler   <span class="cmt">// 中断号 59</span>
+                <span class="cmt">// …</span>
+                DCD     OTG_FS_IRQHandler          <span class="cmt">// 中断号 67</span>
+
+                AREA    |.text|, CODE, READONLY
+Reset_Handler   PROC
+                LDR     R0, =SystemInit
+                BLX     R0
+                LDR     R0, =__main
+                BX      R0
+                ENDP</pre>
+
+                    <p>向量表没有偏移：<code>SystemInit</code> 里 <code>VECT_TAB_OFFSET</code> 为 0，<code>SCB-&gt;VTOR = FLASH_BASE</code>。本实验不涉及 Bootloader 跳转，所以不需要像实验52 那样在 APP 里重设 VTOR。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>两个中断缺一不可：</strong>只有 OTG 中断时能枚举但没声音；只有 DMA 中断时连设备都认不出来。</li>
+                            <li><strong>DMA2_Stream3 不是随便选的：</strong>SAI1_A 的 TX 请求在 F429 上固定映射到 DMA2 Stream3 的通道 0，换流会传不出数据。</li>
+                            <li><strong>中断函数不能在多处定义：</strong><code>OTG_FS_IRQHandler</code> 在 <code>usbd_usr.c</code>，<code>DMA2_Stream3_IRQHandler</code> 在 <code>sai.c</code>，<code>stm32f4xx_it.c</code> 里不能再写同名函数。</li>
+                            <li><strong>栈 1 KB 足够：</strong>音频数据都在静态数组与内存池里，中断里没有大局部变量；真正占内存的是 100 × 192 B 的 <code>saibuf</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">SystemInit 只做复位状态，HAL_Init 在本工程被跳过</div>
+
+                    <p><code>Reset_Handler</code> 先调 <code>SystemInit</code>，再进 <code>__main</code>，最后到 <code>main</code>。<code>SystemInit</code> 打开 FPU、把 RCC 恢复到复位默认值、设置向量表，不配置 PLL；因此从它返回时系统还跑在 HSI 16 MHz。</p>
+
+                    <pre class="code">void SystemInit(void)
+{
+#if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">// CP10/CP11 全访问</span>
+#endif
+    RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="cmt">// 打开 HSION</span>
+    RCC-&gt;CFGR = 0x00000000;               <span class="cmt">// 清时钟配置</span>
+    RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="cmt">// 关 HSEON/CSSON/PLLON</span>
+    RCC-&gt;PLLCFGR = 0x24003010;
+    RCC-&gt;CIR = 0x00000000;
+
+    SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;   <span class="cmt">// 0x08000000</span>
+}</pre>
+
+                    <p>本实验的 <code>main</code> 没有调用 <code>HAL_Init</code>，因此 Flash 预取与 Cache 的配置、NVIC 优先级分组都保持复位值。实际能跑起来，是因为 <code>Stm32_Clock_Init</code> 自己会打开预取并设置等待周期，而 <code>HAL_NVIC_SetPriority</code> 在默认分组下仍可写入优先级寄存器。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>没有 HAL_Init 的副作用：</strong><code>HAL_GetTick</code> 不会递增（SysTick 中断未开），所以任何依赖 <code>HAL_Delay</code> 或超时的 HAL 函数都可能卡死；本工程只用自定义 <code>delay_*</code>。</li>
+                            <li><strong>Cache 状态不确定：</strong>没有 <code>HAL_Init</code> 就不会主动开 I/D Cache。USB 与 SAI 都用外设 FIFO/DMA，功能不受影响，但 CPU 取指性能不是最优。</li>
+                            <li><strong>优先级分组为默认值 0：</strong>此时 4 位全为抢占优先级，<code>HAL_NVIC_SetPriority(OTG_FS_IRQn,0,3)</code> 的子优先级参数被忽略，实际抢占优先级仍是 0。</li>
+                            <li><strong>OverDrive 仍要开：</strong>192 MHz 必须开 OverDrive，<code>Stm32_Clock_Init</code> 内部已经处理，与 HAL_Init 无关。</li>
+                            <li><strong>与实验53 的差异：</strong>读卡器工程调用了 <code>HAL_Init</code>，本工程没有；这是两个 main 的实质区别，不是笔误。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="192 MHz 与 48 kHz 音频时钟">
+                    <h2>06　192 MHz 与 48 kHz 音频时钟</h2>
+                    <div class="sec-sub">系统时钟走 PLL，音频时钟走 PLLI2S，两者必须分别算对</div>
+
+                    <p>系统时钟仍由 <code>Stm32_Clock_Init(384,25,2,8)</code> 产生：HSE 25 MHz / PLLM 25 = 1 MHz，× PLLN 384 = 384 MHz VCO，/ PLLP 2 = 192 MHz，/ PLLQ 8 = 48 MHz 给 USB。音频采样率则来自 PLLI2S，与主 PLL 相互独立。</p>
+
+                    <table class="data">
+                        <tr><th>时钟</th><th>计算</th><th>结果</th><th>用途</th></tr>
+                        <tr><td>SYSCLK</td><td>25/25 × 384 / 2</td><td>192 MHz</td><td>内核、AHB</td></tr>
+                        <tr><td>USB</td><td>384 / 8</td><td>48 MHz</td><td>OTG FS</td></tr>
+                        <tr><td>PLLI2S VCO</td><td>1 MHz × 344</td><td>344 MHz</td><td>SAI 时钟源</td></tr>
+                        <tr><td>PLLI2SQ</td><td>344 / 7</td><td>49.142857 MHz</td><td>SAI_CK</td></tr>
+                        <tr><td>MCKDIV</td><td>49.142857 / (512 × 2)</td><td>47.991 kHz</td><td>实际采样率</td></tr>
+                        <tr><td>标称</td><td><code>USBD_AUDIO_FREQ</code></td><td>48 kHz</td><td>USB 包长基准</td></tr>
+                    </table>
+
+                    <pre class="code">const u16 SAI_PSC_TBL[][5]=
+{
+    {4800,344,7,0,2},   <span class="cmt">// 48 kHz：PLLI2SN=344, Q=7, DIVQ=0, MCKDIV=2</span>
+    {4410,429,2,18,0},  <span class="cmt">// 44.1 kHz</span>
+    {9600,344,7,0,1},   <span class="cmt">// 96 kHz</span>
+    <span class="cmt">// …</span>
+};
+
+u8 SAIA_SampleRate_Set(u32 samplerate)
+{
+    for(i=0;i&lt;(sizeof(SAI_PSC_TBL)/10);i++)
+        if((samplerate/10)==SAI_PSC_TBL[i][0])break;
+    if(i==(sizeof(SAI_PSC_TBL)/10))return 1;   <span class="cmt">// 不支持的采样率</span>
+
+    RCCSAI1_Sture.PLLI2S.PLLI2SN=SAI_PSC_TBL[i][1];
+    RCCSAI1_Sture.PLLI2S.PLLI2SQ=SAI_PSC_TBL[i][2];
+    RCCSAI1_Sture.PLLI2SDivQ=SAI_PSC_TBL[i][3]+1;   <span class="cmt">// HAL 会减 1</span>
+    HAL_RCCEx_PeriphCLKConfig(&amp;RCCSAI1_Sture);
+
+    __HAL_SAI_DISABLE(&amp;SAI1A_Handler);
+    SAI1A_Handler.Init.AudioFrequency=samplerate;
+    HAL_SAI_Init(&amp;SAI1A_Handler);
+    SAIA_DMA_Enable();
+    __HAL_SAI_ENABLE(&amp;SAI1A_Handler);
+    return 0;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>USB 48 MHz 与音频 47.991 kHz 不是同一个数：</strong>USB 用 PLLQ，音频用 PLLI2S。两者独立配置，互不推导。</li>
+                            <li><strong>为什么 SAI 实际慢一点：</strong>344/7 无法整除，49.142857 MHz 再除 1024 得 47.991 kHz，比标称 48 kHz 低约 0.019%。</li>
+                            <li><strong>误差靠缓冲吸收：</strong>电脑按 48 kHz 送、板子按 47.991 kHz 播，写指针会慢慢追上读指针；100 帧（约 2 ms）缓冲就是为此准备的。</li>
+                            <li><strong>PLLI2SDivQ 加 1 的原因：</strong>HAL 库写寄存器时会自动减 1，表里存的是“寄存器值 + 1”，直接看表容易误以为分频比是 0。</li>
+                            <li><strong>不支持任意采样率：</strong>表里只有 8k、11.025k、16k、22.05k、32k、44.1k、48k、88.2k、96k、176.4k、192k；传其它值返回 1，但本工程固定 48k，不会触发。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="USB 音频描述符与初始化">
+                    <h2>07　USB 音频描述符与初始化</h2>
+                    <div class="sec-sub">109 字节配置描述符里，AC 接口负责控制，AS 接口负责传音频</div>
+
+                    <figure class="figure">
+                        <img src="./index68-map/usb-audio-init-flow.png" alt="USB 声卡初始化链路图">
+                        <figcaption>图 7-1　从 WM8978 到等时端点就绪</figcaption>
+                    </figure>
+
+                    <p>Audio Class 1.0 的配置描述符比 MSC 复杂得多：它包含 2 个接口。接口 0 是 AudioControl（AC），没有端点，只有输入终端、Feature Unit、输出终端等类特定描述符；接口 1 是 AudioStreaming（AS），有 alt 0 与 alt 1 两个设置，只有 alt 1 才带 1 个等时 OUT 端点。</p>
+
+                    <table class="data">
+                        <tr><th>描述符</th><th>长度</th><th>关键内容</th></tr>
+                        <tr><td>配置描述符</td><td>9 B</td><td>总长 109、2 个接口、自供电 100 mA</td></tr>
+                        <tr><td>AC 标准接口</td><td>9 B</td><td>接口 0、alt 0、0 端点、类 0x01</td></tr>
+                        <tr><td>AC 类特定头</td><td>9 B</td><td>bcdADC 1.00、wTotalLength 39、1 个流接口</td></tr>
+                        <tr><td>输入终端</td><td>12 B</td><td>ID 1、类型 0x0101（USB Streaming）</td></tr>
+                        <tr><td>Feature Unit</td><td>9 B</td><td>ID 2、源 ID 1、只支持 Mute</td></tr>
+                        <tr><td>输出终端</td><td>9 B</td><td>ID 3、类型 0x0301（Speaker）</td></tr>
+                        <tr><td>AS 接口 alt 0</td><td>9 B</td><td>0 端点，零带宽</td></tr>
+                        <tr><td>AS 接口 alt 1</td><td>9 B</td><td>1 端点，开始传输</td></tr>
+                        <tr><td>AS 通用 / 格式</td><td>7 + 11 B</td><td>PCM、2 声道、16 bit、48 kHz</td></tr>
+                        <tr><td>端点 + CS 端点</td><td>9 + 7 B</td><td><code>0x01</code> ISO、192 B、bInterval 1</td></tr>
+                    </table>
+
+                    <pre class="code">static uint8_t usbd_audio_CfgDesc[AUDIO_CONFIG_DESC_SIZE] =
+{
+  0x09, USB_CONFIGURATION_DESCRIPTOR_TYPE,
+  LOBYTE(AUDIO_CONFIG_DESC_SIZE), HIBYTE(AUDIO_CONFIG_DESC_SIZE),  <span class="cmt">// 109</span>
+  0x02, 0x01, 0x00, 0xC0, 0x32,        <span class="cmt">// 2 接口，自供电 100 mA</span>
+
+  <span class="cmt">// 接口 0：AudioControl，0 端点</span>
+  0x09, USB_INTERFACE_DESCRIPTOR_TYPE, 0x00, 0x00, 0x00,
+  USB_DEVICE_CLASS_AUDIO, AUDIO_SUBCLASS_AUDIOCONTROL, 0x00, 0x00,
+
+  <span class="cmt">// AC 类特定头：后面还有 39 字节</span>
+  0x09, AUDIO_INTERFACE_DESCRIPTOR_TYPE, AUDIO_CONTROL_HEADER,
+  0x00, 0x01, 0x27, 0x00, 0x01, 0x01,
+
+  <span class="cmt">// 输入终端 → Feature Unit → 输出终端</span>
+  0x0C, 0x24, 0x02, 0x01, 0x01, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+  0x09, 0x24, 0x06, 0x02, 0x01, 0x01, 0x01, 0x00, 0x00,
+  0x09, 0x24, 0x03, 0x03, 0x01, 0x03, 0x00, 0x02, 0x00,
+
+  <span class="cmt">// 接口 1：AudioStreaming，alt 0 零带宽</span>
+  0x09, 0x04, 0x01, 0x00, 0x00, 0x01, 0x02, 0x00, 0x00,
+  <span class="cmt">// alt 1：1 个端点，开始传输</span>
+  0x09, 0x04, 0x01, 0x01, 0x01, 0x01, 0x02, 0x00, 0x00,
+  0x07, 0x24, 0x01, 0x01, 0x01, 0x01, 0x00,
+  0x0B, 0x24, 0x02, 0x03, 0x02, 0x02, 16, 0x01,
+  SAMPLE_FREQ(USBD_AUDIO_FREQ),
+  0x09, 0x05, AUDIO_OUT_EP, 0x01,
+  LOBYTE(AUDIO_OUT_PACKET), HIBYTE(AUDIO_OUT_PACKET), 0x01, 0x00, 0x00,
+  0x07, 0x25, 0x01, 0x00, 0x00, 0x00, 0x00
+};</pre>
+
+                    <pre class="code">static uint8_t usbd_audio_Init(void *pdev, uint8_t cfgidx)
+{
+  DCD_EP_Open(pdev, AUDIO_OUT_EP, AUDIO_OUT_PACKET, USB_OTG_EP_ISOC);
+
+  if (AUDIO_OUT_fops.Init(USBD_AUDIO_FREQ, DEFAULT_VOLUME, 0) != USBD_OK)
+    return USBD_FAIL;                 <span class="cmt">// 内存申请或 SAI 初始化失败</span>
+
+  DCD_EP_PrepareRx(pdev, AUDIO_OUT_EP, (uint8_t*)IsocOutBuff, AUDIO_OUT_PACKET);
+  return USBD_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>alt 0 与 alt 1 的区别：</strong>主机在空闲时停在 alt 0（零带宽），开始播放时发 <code>SET_INTERFACE(1, alt=1)</code>，此时端点才真正占用 192 B/ms 的带宽。</li>
+                            <li><strong>AC 头里的 39：</strong><code>wTotalLength=0x27</code> 只统计 AC 类特定描述符（头 9 + 输入终端 12 + Feature 9 + 输出终端 9 = 39），不是整个配置。</li>
+                            <li><strong>Feature Unit 只有 Mute：</strong><code>bmaControls(0)=0x01</code> 表示主通道支持静音控制；没有 Volume 控制位，所以主机侧音量滑块不会直接改 Codec 音量。</li>
+                            <li><strong>192 字节的来历：</strong>48 000 样本/秒 × 2 声道 × 2 字节 ÷ 1000 帧/秒 = 192 B/帧；<code>AUDIO_PACKET_SZE</code> 宏就是按这个式子算的。</li>
+                            <li><strong>端点属性 0x01：</strong>bit1~0 为 01 表示等时传输；没有握手包，也没有重传，丢一包就是一小段静音。</li>
+                            <li><strong>PID 0x5730：</strong>与实验53 读卡器的 0x5720 不同，主机据此加载音频驱动而不是 USB 存储驱动。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="枚举与等时传输时序">
+                    <h2>08　枚举与等时传输时序</h2>
+                    <div class="sec-sub">每 1 ms 一个 SOF，主机发一包 192 B，设备必须在那之前把上一包取走</div>
+
+                    <figure class="figure">
+                        <img src="./index68-map/usb-audio-flow.png" alt="USB 声卡枚举与音频接口切换流程图">
+                        <figcaption>图 8-1　枚举、接口切换与音频流启动流程</figcaption>
+                    </figure>
+
+                    <figure class="figure">
+                        <img src="./index68-map/usb-audio-timing.png" alt="USB 等时传输与 SOF 时序图">
+                        <figcaption>图 8-2　SOF、等时 OUT 包与 SAI 播放的时序关系</figcaption>
+                    </figure>
+
+                    <p>全速 USB 每 1 ms 有一个 SOF（Start of Frame）。主机在每一帧里安排一次等时 OUT 事务，把 192 字节 PCM 写进端点 <code>0x01</code>。设备端由 <code>usbd_audio_DataOut</code> 把数据放进 4 帧的 <code>IsocOutBuff</code>，再由 <code>usbd_audio_SOF</code> 每次取一帧交给 SAI 播放。</p>
+
+                    <pre class="code">uint8_t IsocOutBuff[TOTAL_OUT_BUF_SIZE * 2];   <span class="cmt">// 4 × 192 × 2 = 1536 B</span>
+uint8_t *IsocOutWrPtr = IsocOutBuff;
+uint8_t *IsocOutRdPtr = IsocOutBuff;
+static uint32_t PlayFlag = 0;
+
+static uint8_t usbd_audio_DataOut(void *pdev, uint8_t epnum)
+{
+  DataOutCounter++;
+  if (epnum == AUDIO_OUT_EP)
+  {
+    if (IsocOutWrPtr &gt;= (IsocOutBuff + (AUDIO_OUT_PACKET * OUT_PACKET_NUM)))
+      IsocOutWrPtr = IsocOutBuff;             <span class="cmt">// 4 帧满，回卷</span>
+    else
+      IsocOutWrPtr += AUDIO_OUT_PACKET;       <span class="cmt">// 前进 192 B</span>
+
+    ((USB_OTG_CORE_HANDLE*)pdev)-&gt;dev.out_ep[epnum].even_odd_frame ^= 1;
+
+    DCD_EP_PrepareRx(pdev, AUDIO_OUT_EP, (uint8_t*)IsocOutWrPtr, AUDIO_OUT_PACKET);
+
+    if ((PlayFlag == 0) &amp;&amp;
+        (IsocOutWrPtr &gt;= (IsocOutBuff + ((AUDIO_OUT_PACKET * OUT_PACKET_NUM) / 2))))
+      PlayFlag = 1;                           <span class="cmt">// 写到一半才开始播</span>
+  }
+  return USBD_OK;
+}</pre>
+
+                    <pre class="code">static uint8_t usbd_audio_SOF(void *pdev)
+{
+  if (PlayFlag)
+  {
+    AUDIO_OUT_fops.AudioCmd((uint8_t*)IsocOutRdPtr, AUDIO_OUT_PACKET, AUDIO_CMD_PLAY);
+
+    if (IsocOutRdPtr &gt;= (IsocOutBuff + (AUDIO_OUT_PACKET * OUT_PACKET_NUM)))
+      IsocOutRdPtr = IsocOutBuff;
+    else
+      IsocOutRdPtr += AUDIO_OUT_PACKET;
+
+    if (IsocOutRdPtr == IsocOutWrPtr)         <span class="cmt">// 写指针追上读指针</span>
+    {
+      AUDIO_OUT_fops.AudioCmd((uint8_t*)IsocOutBuff, AUDIO_OUT_PACKET, AUDIO_CMD_PAUSE);
+      PlayFlag = 0;
+      IsocOutRdPtr = IsocOutBuff;
+      IsocOutWrPtr = IsocOutBuff;
+    }
+  }
+  return USBD_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么用 4 帧缓冲：</strong>主机送包与 SOF 取包不完全同步，双缓冲容易在抖动时冲突；4 帧给出一帧左右的余量。</li>
+                            <li><strong>PlayFlag 半满才置位：</strong>先攒 2 帧再开始播，避免第一帧还没到就启动 DMA 造成开头下溢。</li>
+                            <li><strong>读写指针相等就暂停：</strong>说明主机暂时没送新数据（例如系统卡顿），继续播会重复旧数据，所以暂停并复位指针。</li>
+                            <li><strong>等时传输没有重传：</strong>主机不会因为设备没取走而重发；丢包表现为“咔”一声，而不是像 Bulk 那样自动重试。</li>
+                            <li><strong>SOF 回调频率固定 1 kHz：</strong>它不依赖 USB 中断是否繁忙，只要主机在发 SOF，设备库就会回调。</li>
+                            <li><strong>4 帧与 100 帧是两级缓冲：</strong>4 帧解决 USB 侧抖动，100 帧解决 USB 与 SAI 的长期速率差，作用不同。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="中断链路">
+                    <h2>09　中断链路</h2>
+                    <div class="sec-sub">USB 收包与 SAI 换页是两条独立中断，最终在同一个环形缓冲上会合</div>
+
+                    <figure class="figure">
+                        <img src="./index68-map/usb-audio-irq-chain.png" alt="USB 声卡中断链路图">
+                        <figcaption>图 9-1　USB 收包与 SAI DMA 播放的中断链</figcaption>
+                    </figure>
+
+                    <p>USB 侧：<code>OTG_FS_IRQHandler</code> → <code>USBD_OTG_ISR_Handler</code> → <code>DCD_HandleOutEP_ISR</code> → <code>USBD_DataOutStage</code> → <code>usbd_audio_DataOut</code>，把 192 B 写入 <code>IsocOutBuff</code> 并重新挂接收。播放侧：<code>DMA2_Stream3_IRQHandler</code> 在传输完成时调用 <code>sai_tx_callback</code>，也就是 <code>audio_sai_dma_callback</code>，切换下一个播放帧。</p>
+
+                    <pre class="code">void OTG_FS_IRQHandler(void)
+{
+    USBD_OTG_ISR_Handler(&amp;USB_OTG_dev);   <span class="cmt">// 设备模式总入口</span>
+}
+
+void DMA2_Stream3_IRQHandler(void)
+{
+    if(__HAL_DMA_GET_FLAG(&amp;SAI1_TXDMA_Handler, DMA_FLAG_TCIF3_7) != RESET)
+    {
+        __HAL_DMA_CLEAR_FLAG(&amp;SAI1_TXDMA_Handler, DMA_FLAG_TCIF3_7);
+        sai_tx_callback();                 <span class="cmt">// = audio_sai_dma_callback</span>
+    }
+}
+
+void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)
+{
+    HAL_NVIC_SetPriority(OTG_FS_IRQn,0,3); <span class="cmt">// 抢占 0，子 3</span>
+    HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+}
+
+HAL_NVIC_SetPriority(DMA2_Stream3_IRQn,0,0);   <span class="cmt">// 抢占 0，子 0</span>
+HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>两个中断都是抢占 0：</strong>在默认分组（4 位全抢占）下，OTG 与 DMA 的优先级都为 0，彼此不能打断，只能按子优先级排队；配置子优先级 3/0 实际不生效。</li>
+                            <li><strong>DMA 换页必须及时：</strong>SAI 的 FIFO 很浅，TC 中断晚几微秒就会下溢，听感是持续的“沙沙”声。</li>
+                            <li><strong>USB 中断里不做重活：</strong><code>usbd_audio_DataOut</code> 只改指针与挂接收，不拷贝 192 B 到播放缓冲；拷贝推迟到 SOF 回调里做。</li>
+                            <li><strong>SOF 也在 OTG 中断里：</strong><code>usbd_audio_SOF</code> 由设备库在 SOF 事件中调用，仍属于 USB 中断上下文；它只做一次 192 B 的 <code>memcpy</code> 等价操作。</li>
+                            <li><strong>关中断会怎样：</strong>若在其它地方长时间关中断，USB 与 DMA 两个中断都会延迟，表现为爆音或设备掉线。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="主循环、按键与音量">
+                    <h2>10　主循环、按键与音量</h2>
+                    <div class="sec-sub">主循环不碰音频数据，只处理按键与 LCD 状态</div>
+
+                    <p><code>volume</code> 定义在 <code>stm324x9i_usb_audio_codec.c</code> 里，初值 0；<code>EVAL_AUDIO_Init</code> 收到 <code>DEFAULT_VOLUME=65</code> 后调用 <code>EVAL_AUDIO_VolumeCtl(65)</code>，把它改成 65。之后 KEY0 加、KEY2 减，范围 0~100，每次改完立即写 WM8978 并刷新 LCD。</p>
+
+                    <pre class="code">while(1)
+{
+    key=KEY_Scan(1);                 <span class="cmt">// 1：支持连按</span>
+    if(key)
+    {
+        if(key==KEY0_PRES)           <span class="cmt">// KEY0：音量 +</span>
+        {
+            volume++;
+            if(volume&gt;100)volume=100;
+        }
+        else if(key==KEY2_PRES)      <span class="cmt">// KEY2：音量 -</span>
+        {
+            if(volume)volume--;
+            else volume=0;
+        }
+        EVAL_AUDIO_VolumeCtl(volume);   <span class="cmt">// 写 WM8978 耳机/喇叭音量</span>
+        LCD_ShowxNum(30+56,160,volume,3,16,0X80);
+        delay_ms(20);                <span class="cmt">// 简单消抖</span>
+    }
+
+    if(Divece_STA!=bDeviceState)     <span class="cmt">// 连接状态变化</span>
+    {
+        if(bDeviceState==1)
+        {
+            LED1=0;
+            LCD_ShowString(30,180,200,16,16,"USB Connected    ");
+        }
+        else
+        {
+            LED1=1;
+            LCD_ShowString(30,180,200,16,16,"USB DisConnected ");
+        }
+        Divece_STA=bDeviceState;
+    }
+
+    delay_ms(20);
+    t++;
+    if(t&gt;10) { t=0; LED0=!LED0; }    <span class="cmt">// 约 220 ms 翻转一次</span>
+}</pre>
+
+                    <pre class="code">uint32_t EVAL_AUDIO_VolumeCtl(uint8_t Volume)
+{
+    volume=Volume;
+    WM8978_HPvol_Set(volume*0.63, volume*0.63);   <span class="cmt">// 耳机左右声道</span>
+    WM8978_SPKvol_Set(volume*0.63);               <span class="cmt">// 喇叭</span>
+    return 0;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>0~100 映射到 0~63：</strong>WM8978 的音量寄存器是 6 位，<code>volume*0.63</code> 把百分比线性压到 0~63；不是对数音量，所以低音量段变化较快。</li>
+                            <li><strong>按键消抖靠 delay_ms(20)：</strong>没有状态机，按住会因 <code>KEY_Scan(1)</code> 连按而快速变化，这是刻意支持的“长按连调”。</li>
+                            <li><strong>音量改了但主机滑块不动：</strong>本工程没有实现 Volume 类请求，主机不知道板子侧音量；两边是独立的。</li>
+                            <li><strong>连接状态来自 usr_cb：</strong><code>bDeviceState</code> 在 <code>USBD_USR_DeviceConfigured</code> 里置 1，在 Suspended/Disconnected 里清 0。</li>
+                            <li><strong>LED1 是连接指示：</strong>连接后拉低点亮，断开后熄灭；LED0 是纯心跳。</li>
+                            <li><strong>主循环 DELAY 不影响音频：</strong>音频靠中断与 DMA，主循环卡 20 ms 只会让按键响应变慢。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="Audio 类请求与静音控制">
+                    <h2>11　Audio 类请求与静音控制</h2>
+                    <div class="sec-sub">这一版类核心只实现 GET_CUR / SET_CUR，而且只把 Mute 落到 Codec</div>
+
+                    <p>音频类请求分标准请求与类请求。标准请求里 <code>GET_DESCRIPTOR</code>（0x24 类型）、<code>GET_INTERFACE</code>、<code>SET_INTERFACE</code> 由 <code>usbd_audio_Setup</code> 处理；类请求只处理 <code>AUDIO_REQ_GET_CUR</code> 与 <code>AUDIO_REQ_SET_CUR</code>，其它一律 <code>USBD_CtlError</code>。</p>
+
+                    <pre class="code">static uint8_t usbd_audio_Setup(void *pdev, USB_SETUP_REQ *req)
+{
+  uint16_t len = USB_AUDIO_DESC_SIZ;          <span class="cmt">// 9</span>
+  uint8_t *pbuf = usbd_audio_CfgDesc + 18;    <span class="cmt">// 指向 AC 类特定头</span>
+
+  switch (req-&gt;bmRequest &amp; USB_REQ_TYPE_MASK)
+  {
+  case USB_REQ_TYPE_CLASS:
+    switch (req-&gt;bRequest)
+    {
+    case AUDIO_REQ_GET_CUR:
+      AUDIO_Req_GetCurrent(pdev, req);        <span class="cmt">// 返回 AudioCtl[64]</span>
+      break;
+    case AUDIO_REQ_SET_CUR:
+      AUDIO_Req_SetCurrent(pdev, req);        <span class="cmt">// 挂 EP0 接收</span>
+      break;
+    default:
+      USBD_CtlError(pdev, req);
+      return USBD_FAIL;
+    }
+    break;
+
+  case USB_REQ_TYPE_STANDARD:
+    switch (req-&gt;bRequest)
+    {
+    case USB_REQ_GET_DESCRIPTOR:
+      if ((req-&gt;wValue &gt;&gt; 8) == AUDIO_DESCRIPTOR_TYPE)
+      {
+        pbuf = usbd_audio_CfgDesc + 18;
+        len = MIN(USB_AUDIO_DESC_SIZ, req-&gt;wLength);
+      }
+      USBD_CtlSendData(pdev, pbuf, len);
+      break;
+
+    case USB_REQ_GET_INTERFACE:
+      USBD_CtlSendData(pdev, (uint8_t *)&amp;usbd_audio_AltSet, 1);
+      break;
+
+    case USB_REQ_SET_INTERFACE:
+      if ((uint8_t)(req-&gt;wValue) &lt; AUDIO_TOTAL_IF_NUM)
+        usbd_audio_AltSet = (uint8_t)(req-&gt;wValue);
+      else
+        USBD_CtlError(pdev, req);
+      break;
+    }
+  }
+  return USBD_OK;
+}</pre>
+
+                    <pre class="code">static uint8_t usbd_audio_EP0_RxReady(void *pdev)
+{
+  if (AudioCtlCmd == AUDIO_REQ_SET_CUR)
+  {
+    if (AudioCtlUnit == AUDIO_OUT_STREAMING_CTRL)   <span class="cmt">// Feature Unit ID 2</span>
+    {
+      AUDIO_OUT_fops.MuteCtl(AudioCtl[0]);          <span class="cmt">// 1=静音，0=恢复</span>
+      AudioCtlCmd = 0;
+      AudioCtlLen = 0;
+    }
+  }
+  return USBD_OK;
+}</pre>
+
+                    <table class="data">
+                        <tr><th>请求</th><th>方向</th><th>本工程处理</th></tr>
+                        <tr><td><code>GET_DESCRIPTOR</code>（0x24）</td><td>IN</td><td>返回 AC 类特定头 9 字节</td></tr>
+                        <tr><td><code>GET_INTERFACE</code></td><td>IN</td><td>返回 <code>usbd_audio_AltSet</code></td></tr>
+                        <tr><td><code>SET_INTERFACE</code></td><td>OUT</td><td>切换 alt 0 / alt 1</td></tr>
+                        <tr><td><code>AUDIO_REQ_GET_CUR</code></td><td>IN</td><td>返回 <code>AudioCtl</code> 当前值</td></tr>
+                        <tr><td><code>AUDIO_REQ_SET_CUR</code></td><td>OUT</td><td>EP0 收完后按 Unit 处理 Mute</td></tr>
+                        <tr><td><code>GET_MIN / GET_MAX / GET_RES</code></td><td>—</td><td>未实现，返回 STALL</td></tr>
+                        <tr><td>采样率控制</td><td>—</td><td>未实现，固定 48 kHz</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>SET_CUR 分两段完成：</strong>Setup 阶段只挂 EP0 接收并记录 <code>AudioCtlCmd/Unit</code>，真正的数据在 <code>EP0_RxReady</code> 里才生效，因为主机数据阶段晚于 Setup。</li>
+                            <li><strong>只认 Feature Unit 2：</strong><code>AudioCtlUnit</code> 取自 <code>wIndex</code> 高字节，只有等于 <code>AUDIO_OUT_STREAMING_CTRL</code> 才处理；其它 Unit 的请求被忽略。</li>
+                            <li><strong>Mute 落到 Codec：</strong><code>MuteCtl(1)</code> 把耳机与喇叭音量写 0；<code>MuteCtl(0)</code> 恢复 <code>volume*0.63</code>。</li>
+                            <li><strong>没有 Volume 类请求：</strong>因此主机音量滑块只影响电脑侧数字音量，不会改 WM8978；板子音量只能按 KEY0/KEY2。</li>
+                            <li><strong>没有采样率协商：</strong>描述符只声明 48 kHz 一个频点，主机不会发 <code>SET_CUR(SAMPLING_FREQ)</code>；即使发了也会被 STALL。</li>
+                            <li><strong>GET_CUR 返回 64 字节缓冲：</strong><code>AudioCtl</code> 初始全 0，等于“未静音”；主机读多长由 <code>wLength</code> 决定。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="数据通路：USB 环形缓冲到 SAI">
+                    <h2>12　数据通路：USB 环形缓冲到 SAI</h2>
+                    <div class="sec-sub">192 B 一包进 4 帧小环，再进 100 帧大环，最后由双缓冲 DMA 喂给 SAI</div>
+
+                    <p>音频数据在工程里经过三级缓冲：<code>IsocOutBuff</code>（4 × 192 B）承接 USB 等时包；<code>saibuf[100]</code>（100 × 192 B）吸收 USB 与 SAI 的速率差；SAI DMA 的 M0AR/M1AR 双缓冲（各 96 个半字 = 192 B）负责最后的定时发送。理解这三级的职责，才能定位爆音与断音。</p>
+
+                    <table class="data">
+                        <tr><th>缓冲</th><th>大小</th><th>写入者</th><th>读取者</th></tr>
+                        <tr><td><code>IsocOutBuff</code></td><td>1536 B（4 帧）</td><td><code>usbd_audio_DataOut</code></td><td><code>usbd_audio_SOF</code></td></tr>
+                        <tr><td><code>saibuf[100]</code></td><td>19200 B（100 帧）</td><td><code>Audio_MAL_Play</code></td><td><code>audio_sai_dma_callback</code></td></tr>
+                        <tr><td>DMA M0AR/M1AR</td><td>各 192 B</td><td>DMA 控制器</td><td>SAI1 Block A</td></tr>
+                        <tr><td>WM8978 FIFO</td><td>Codec 内部</td><td>SAI 位流</td><td>DAC</td></tr>
+                    </table>
+
+                    <pre class="code">void Audio_MAL_Play(uint32_t Addr, uint32_t Size)   <span class="cmt">// Size 单位：半字</span>
+{
+    u8 t = saisavebuf;
+    u8 *p = (u8*)Addr;
+    u8 curplay = saiplaybuf;
+    if(curplay) curplay--;
+    else curplay = AUDIO_BUF_NUM-1;      <span class="cmt">// 当前正在播的帧</span>
+
+    audiostatus = 1;
+    t++;
+    if(t &gt; (AUDIO_BUF_NUM-1)) t = 0;
+
+    if(t == curplay)                     <span class="cmt">// 写指针撞上播放指针</span>
+    {
+        t++;
+        if(t &gt; (AUDIO_BUF_NUM-1)) t = 0;
+        printf("bad position:%d\r\n", t); <span class="cmt">// 跳一帧，避免覆盖</span>
+    }
+    saisavebuf = t;
+
+    for(i=0;i&lt;Size*2;i++) saibuf[saisavebuf][i] = p[i];   <span class="cmt">// 192 B</span>
+
+    SAI_Play_Start();                    <span class="cmt">// 重新开 DMA</span>
+}</pre>
+
+                    <pre class="code">void audio_sai_dma_callback(void)
+{
+    if((saiplaybuf==saisavebuf) &amp;&amp; audiostatus==0)
+    {
+        SAI_Play_Stop();                 <span class="cmt">// 没数据了，停</span>
+    }
+    else
+    {
+        saiplaybuf++;
+        if(saiplaybuf&gt;(AUDIO_BUF_NUM-1)) saiplaybuf=0;
+
+        if(DMA2_Stream3-&gt;CR &amp; (1&lt;&lt;19))    <span class="cmt">// CT：当前用 M1AR</span>
+            DMA2_Stream3-&gt;M0AR = (u32)saibuf[saiplaybuf];
+        else
+            DMA2_Stream3-&gt;M1AR = (u32)saibuf[saiplaybuf];
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么需要 100 帧：</strong>USB 按标称 48 kHz 送，SAI 实际 47.991 kHz 播，长时间运行写指针必然追上读指针；100 帧约 2 ms，能显著降低追上的频率。</li>
+                            <li><strong>“bad position”不是错误：</strong>它表示写入位置撞上正在播放的帧，代码跳过一帧继续写，听感上是一次极短的重复或断裂。</li>
+                            <li><strong>Size/2 的含义：</strong><code>AudioCmd</code> 传给 <code>Audio_MAL_Play</code> 的是字节数的一半（半字数），函数内部再 <code>Size*2</code> 还原为字节拷贝。</li>
+                            <li><strong>DMA 双缓冲靠 CT 位判断：</strong><code>DMA2_Stream3-&gt;CR</code> 的 bit19 为 1 表示当前传输目标是 M1AR，下次就填 M0AR，反之亦然。</li>
+                            <li><strong>audiostatus 控制暂停：</strong>暂停时置 0，回调发现读写指针相等就停 DMA；恢复时 <code>EVAL_AUDIO_PauseResume</code> 置 1 并重新开 DMA。</li>
+                            <li><strong>每帧拷贝在中断里完成：</strong>192 B 的循环拷贝很短，但仍属于中断上下文；如果编译器把它优化得很慢，会影响 USB 中断响应。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘与排查">
+                    <h2>13　关键逻辑复盘与排查</h2>
+                    <div class="sec-sub">声卡问题集中在“枚举、时钟、缓冲、Codec”四类</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>可能原因</th><th>排查方向</th></tr>
+                        <tr><td>电脑完全认不到设备</td><td>PA11/PA12 未复用为 AF10，或 OTG FS 时钟没开</td><td>查 <code>USB_OTG_BSP_Init</code></td></tr>
+                        <tr><td>识别为未知设备</td><td>配置描述符长度或字段错误</td><td>抓包核对 109 字节与 AC 头 39</td></tr>
+                        <tr><td>设备出现但无声</td><td><code>EVAL_AUDIO_Init</code> 返回 1（内存不足）</td><td>看串口是否打印 <code>Malloc Error!</code></td></tr>
+                        <tr><td>只有一边声道</td><td>WM8978 输出配置或 SAI slot 未使能</td><td>查 <code>WM8978_Output_Cfg</code> 与 <code>SlotActive</code></td></tr>
+                        <tr><td>持续沙沙声</td><td>SAI DMA 换页不及时，FIFO 下溢</td><td>提高 DMA2_Stream3 优先级，缩短中断</td></tr>
+                        <tr><td>播放越来越卡</td><td>USB 与 SAI 速率差累积，写指针追上读指针</td><td>观察 <code>bad position</code> 打印频率</td></tr>
+                        <tr><td>按键调音量无效</td><td><code>volume</code> 被其它文件重复定义，或 I2C 写失败</td><td>查 <code>WM8978_HPvol_Set</code> 返回值</td></tr>
+                        <tr><td>主机静音键无效</td><td>只实现 Mute，未实现 Volume</td><td>这是本版本的预期行为</td></tr>
+                        <tr><td>拔插后必须复位</td><td>DeInit 未完全关闭 SAI/DMA</td><td>查 <code>usbd_audio_DeInit</code> 与 <code>AUDIO_OUT_fops.DeInit</code></td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>先确认枚举，再查声音：</strong>设备管理器能出现“扬声器”说明描述符与 EP0 正常；此时无声应重点查 SAI、WM8978 与缓冲。</li>
+                            <li><strong>串口日志很有用：</strong><code>EVAL_AUDIO_Init</code> 会打印音量与采样率，<code>Audio_MAL_Play</code> 撞帧会打印 <code>bad position</code>，<code>usbd_usr.c</code> 会打印连接状态。</li>
+                            <li><strong>串口里的“MSC Interface started.”是源码遗留：</strong>音频工程沿用了读卡器的 usr_cb 打印，看到它不要以为枚举成了 U 盘。</li>
+                            <li><strong>时钟错会全程跑调：</strong>如果 SAI 时钟不是 48 kHz，声音会变调而不是断断续续；这与缓冲不足的“卡顿”听感不同。</li>
+                            <li><strong>不要用 HAL_Delay 排查：</strong>本工程没有 HAL_Init，SysTick 中断未开，<code>HAL_Delay</code> 会永久卡住；用 <code>delay_ms</code>。</li>
+                            <li><strong>USB 与 SAI 的中断优先级相同：</strong>默认分组下两者都是抢占 0，谁也不能打断谁；如果发现 DMA 延迟，应调整分组或提高 DMA 抢占优先级。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="交互演示">
+                    <h2>14　交互演示</h2>
+                    <div class="sec-sub">用四个动作模拟主机与板子侧事件，观察缓冲指针与状态变化</div>
+
+                    <div class="sim">
+                        <div class="sim-title">USB 声卡状态演示（仅演示逻辑）</div>
+                        <div class="sim-buttons">
+                            <button data-act="enum">主机枚举并切到 alt=1</button>
+                            <button data-act="play">主机送入 192 B 音频包</button>
+                            <button data-act="vol">按下 KEY0 增加音量</button>
+                            <button data-act="unplug">拔出 USB</button>
+                        </div>
+                        <div class="sim-log" id="simLog">状态：等待主机　PlayFlag=0　volume=65　IsocOutWrPtr=0</div>
+                    </div>
+
+                    <p>四个动作对应源码里的四条路径：枚举走 <code>usbd_audio_Init</code> 与 <code>SET_INTERFACE</code>，打开 <code>0x01</code> 端点并启动 SAI DMA；送包走 <code>usbd_audio_DataOut</code>，写指针前进 192 B，攒到半满后 <code>PlayFlag=1</code>；调音量走 <code>KEY_Scan</code> → <code>EVAL_AUDIO_VolumeCtl</code> → WM8978；拔出后 <code>USBD_USR_DeviceDisconnected</code> 把 <code>bDeviceState</code> 清 0，LCD 显示 DisConnected。</p>
+
+                    <div class="note">演示面板不连接真实 USB 主机，也不驱动 SAI 与 WM8978；它只表达“哪个事件改哪个变量、LCD 会显示哪一行”。真实时序以第 8、9、12 节的源码为准。</div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+
+<script>
+/* sim-wire：把演示按钮接到日志，分支与正文源码说明一致 */
+(function () {
+    var log = document.getElementById('simLog');
+    if (!log) return;
+    var msgs = {"enum": "主机枚举并 SET_INTERFACE alt=1：打开 0x01 等时端点，启动 SAI DMA", "play": "主机送入 192B 音频包：写指针前进，攒满半缓冲后 PlayFlag=1", "vol": "KEY0 → EVAL_AUDIO_VolumeCtl → WM8978 音量寄存器 +1", "unplug": "拔出 USB → bDeviceState=0，播放停止，LCD 显示 DisConnected"};
+    Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (b) {
+        b.addEventListener('click', function () {
+            var k = b.getAttribute('data-key') || b.getAttribute('data-act');
+            if (k && msgs[k]) log.textContent = msgs[k];
+        });
+    });
+})();
+</script>
+</body>
+</html>

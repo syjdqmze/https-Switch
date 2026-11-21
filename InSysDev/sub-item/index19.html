@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验5 独立看门狗实验</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .led-dot.red.on {
+            background: #f08a86;
+            border-color: #d9534f;
+            box-shadow: 0 0 10px rgba(217, 83, 79, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验5 · 独立看门狗实验</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">按编号顺序阅读：每一节对应启动链路上的一步，配图与源码执行顺序一致。</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="工程概述与硬件资源">
+                    <h2>01　工程概述与硬件资源</h2>
+                    <div class="sec-sub">本实验用「按键喂狗 / 不喂就复位」把 IWDG 的独立性与不可关闭性演示出来</div>
+
+                    <p>工程是正点原子阿波罗 STM32F429 开发板的 HAL 库标准例程第 5 个：独立看门狗（IWDG）。程序启动后点亮 DS0，主循环不停扫描 WK_UP 按键；一旦超过 1s 没有按下按键喂狗，IWDG 就复位芯片，DS0 熄灭约 100ms 后重新点亮，形成肉眼可见的“闪烁一次”。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>连接</th><th>在启动流程中的作用</th></tr>
+                        <tr><td>DS0</td><td><code>PB1</code>，低电平点亮</td><td>用“亮 → 灭一下 → 再亮”显示是否发生过看门狗复位</td></tr>
+                        <tr><td>DS1</td><td><code>PB0</code>，低电平点亮</td><td>LED_Init 一起初始化，本实验不使用</td></tr>
+                        <tr><td>WK_UP</td><td><code>PA0</code>，内部下拉，按下为高</td><td>唯一的喂狗入口，KEY_Scan 返回 4</td></tr>
+                        <tr><td>KEY0 / KEY1 / KEY2</td><td><code>PH3 / PH2 / PC13</code>，上拉</td><td>本实验不参与逻辑，但按键扫描优先级更高</td></tr>
+                        <tr><td>USART1</td><td><code>PA9 / PA10</code>，115200-8-N-1</td><td>printf 重定向，可用于打印调试信息</td></tr>
+                        <tr><td>IWDG</td><td>片内，LSI 32kHz</td><td>被配置为 1s 溢出，启动后软件无法关闭</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">PB1 → DS0（低亮）</span>
+                        <span class="chip">PA0 → WK_UP（高有效）</span>
+                        <span class="chip">IWDG → LSI 32kHz</span>
+                        <span class="chip">Tout = 1s</span>
+                    </div>
+
+                    <div class="note blue">本页只讲“启动流程”这一条主线：从上电取向量表开始，到 <code>while(1)</code> 里喂狗为止；HAL 库内部实现只保留与启动有关的调用。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="工程目录与文件分工">
+                    <h2>02　工程目录与文件分工</h2>
+                    <div class="sec-sub">先认清“谁在启动阶段被调用”，再看 Keil 工程里实际参与编译的分组</div>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>负责什么</th><th>本页关注点</th></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>堆栈定义、向量表、Reset_Handler</td><td>启动的第一步：取 MSP 与 PC</td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>SystemInit：FPU、VTOR、RCC 复位</td><td>Reset_Handler 调用的第一个 C 函数</td></tr>
+                        <tr><td><code>USER/main.c</code></td><td>整条初始化链与主循环</td><td>启动顺序的唯一“剧本”</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>异常与 SysTick 中断</td><td>SysTick_Handler → HAL_IncTick</td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td>Stm32_Clock_Init、位带宏</td><td>把 SYSCLK 拉到 180MHz</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>delay_init / delay_us / delay_ms</td><td>用 SysTick 做前后台延时</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>uart_init、MSP、fputc 重定向</td><td>串口引脚与中断优先级</td></tr>
+                        <tr><td><code>HARDWARE/LED/led.c</code></td><td>PB0/PB1 推挽输出</td><td>DS0 默认熄灭，LED0=0 才亮</td></tr>
+                        <tr><td><code>HARDWARE/KEY/key.c</code></td><td>四个按键初始化与扫描</td><td>WK_UP 的读取与消抖</td></tr>
+                        <tr><td><code>HARDWARE/IWDG/iwdg.c</code></td><td>IWDG_Init / IWDG_Feed</td><td>本实验的主角</td></tr>
+                        <tr><td><code>HARDWARE/EXTI/exti.c</code></td><td>外部中断例程</td><td>参编但 main 未调用，属于遗留文件</td></tr>
+                        <tr><td><code>HALLIB/</code></td><td>ST 官方 HAL 驱动</td><td>只跟 HAL_Init、RCC、UART、IWDG 打交道</td></tr>
+                    </table>
+
+                    <p>Keil 工程 <code>USER/IWDG.uvprojx</code> 的器件是 <strong>STM32F429IGTx</strong>，IROM 起始 <code>0x08000000</code>、大小 <code>0x100000</code>（1MB），IRAM1 为 <code>0x20000000</code> / <code>0x30000</code>（192KB），另有一块 <code>0x10000000</code> 的 CCM 区。</p>
+
+                    <div class="note">编译分组里包含 <code>exti.c</code>，但 <code>main.c</code> 从未调用 <code>EXTI_Init()</code>；读启动流程时不要把它算进主链路。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电到 while(1) 一共 12 步，顺序不能随意交换</div>
+
+                    <figure class="figure">
+                        <img src="./index19-map/boot-flow.png" alt="从上电复位到主循环的启动链路图">
+                        <figcaption>图 3-1　启动链路总览（①~⑫ 与下文逐节对应）</figcaption>
+                    </figure>
+
+                    <h3>main.c 全文（37 行）</h3>
+                    <pre class="code">int main(void)
+{
+    HAL_Init();                    	 	<span class="cmt">//初始化HAL库</span>
+    Stm32_Clock_Init(360,25,2,8);   	<span class="cmt">//设置时钟,180Mhz</span>
+    delay_init(180);                	<span class="cmt">//初始化延时函数</span>
+    uart_init(115200);              	<span class="cmt">//初始化USART</span>
+    LED_Init();                     	<span class="cmt">//初始化LED</span>
+    KEY_Init();                     	<span class="cmt">//初始化按键</span>
+    delay_ms(100);                  	<span class="cmt">//延时100ms再初始化看门狗,LED0的变化"可见"</span>
+    IWDG_Init(IWDG_PRESCALER_64,500);  	<span class="cmt">//分频数为64,重载值为500,溢出时间为1s</span>
+    LED0=0;
+    while(1)
+    {
+        if(KEY_Scan(0)==WKUP_PRES)  <span class="cmt">//如果WK_UP按下，喂狗</span>
+        {
+            IWDG_Feed();    <span class="cmt">//喂狗</span>
+        }
+        delay_ms(10);
+    }
+}</pre>
+
+                    <h3>为什么是这个顺序</h3>
+                    <ul>
+                        <li><strong>HAL_Init 必须最先</strong>：它建立 1ms 时基，后面的 <code>delay_ms</code> 与 HAL 内部超时都依赖它。</li>
+                        <li><strong>时钟必须早于所有外设</strong>：串口波特率、SysTick 计数值都由 HCLK 推导，先配时钟再算分频。</li>
+                        <li><strong>delay_init 早于 UART</strong>：串口初始化内部要用延时等待稳定。</li>
+                        <li><strong>看门狗最后开</strong>：IWDG 一旦启动就不能关，所以要等 GPIO、串口都初始化完，再把“1s 倒计时”交给它。</li>
+                    </ul>
+
+                    <div class="note blue">注意 <code>delay_ms(100)</code> 在 <code>LED0=0</code> 之前执行：此时 DS0 还是灭的，等看门狗开完才点亮，因此复位瞬间的“熄灭”才看得见。</div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">复位后的第一条指令不在 main.c，而在 startup_stm32f429xx.s</div>
+
+                    <h3>栈、堆与向量表</h3>
+                    <pre class="code">Stack_Size      EQU     0x400;          <span class="cmt">; 栈 1KB</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp
+
+Heap_Size       EQU     0x200;          <span class="cmt">; 堆 512B</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit
+
+                AREA    RESET, DATA, READONLY
+__Vectors       DCD     __initial_sp               <span class="cmt">; 第 1 项：栈顶地址 → MSP</span>
+                DCD     Reset_Handler              <span class="cmt">; 第 2 项：复位入口 → PC</span>
+                DCD     NMI_Handler
+                DCD     HardFault_Handler
+                DCD     MemManage_Handler
+                DCD     BusFault_Handler
+                DCD     UsageFault_Handler
+                DCD     0
+                DCD     0
+                DCD     0
+                DCD     0
+                DCD     SVC_Handler
+                DCD     DebugMon_Handler
+                DCD     0
+                DCD     PendSV_Handler
+                DCD     SysTick_Handler
+                <span class="cmt">; 之后是 82 个外设中断入口，全部为 [WEAK]</span></pre>
+
+                    <h3>Reset_Handler 只做两件事</h3>
+                    <pre class="code">Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+
+                 LDR     R0, =SystemInit
+                 BLX     R0          <span class="cmt">; ① 先跑 SystemInit</span>
+                 LDR     R0, =__main
+                 BX      R0          <span class="cmt">; ② 再跳 C 库启动代码</span>
+                 ENDP</pre>
+
+                    <p><code>__main</code> 是 ARM 编译器提供的 C 库入口，它负责把 <code>.data</code> 初值从 Flash 搬到 RAM、把 <code>.bss</code> 清零、初始化堆栈，最后才调用用户的 <code>main()</code>。所以 <code>main</code> 里可以直接使用已初始化的全局变量。</p>
+
+                    <table class="data">
+                        <tr><th>向量表项</th><th>本工程实现者</th><th>说明</th></tr>
+                        <tr><td>Reset</td><td>启动文件</td><td>上电 / 复位后唯一必然执行的分支</td></tr>
+                        <tr><td>SysTick</td><td><code>stm32f4xx_it.c</code></td><td>强符号覆盖启动文件里的 <code>[WEAK]</code> 死循环</td></tr>
+                        <tr><td>HardFault 等</td><td><code>stm32f4xx_it.c</code></td><td>全部是 <code>while(1)</code>，出异常会停在这里</td></tr>
+                        <tr><td>USART1</td><td><code>usart.c</code></td><td>本工程使能了接收中断</td></tr>
+                    </table>
+
+                    <div class="note">启动文件里所有中断入口都带 <code>[WEAK]</code> 且默认是 <code>B .</code> 死循环；只要你在 C 文件里写同名函数，链接器就会用你的版本。这也是不写 <code>USART1_IRQHandler</code> 程序不会报错、但中断来了会卡死的原因。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">两个“名字很像”的初始化：前者由启动文件调用，后者由 main 主动调用</div>
+
+                    <h3>SystemInit：复位后的裸机现场清理</h3>
+                    <pre class="code">void SystemInit(void)
+{
+  <span class="cmt">/* FPU settings */</span>
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">/* CP10/CP11 全访问 */</span>
+  #endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="cmt">/* 打开 HSION */</span>
+  RCC-&gt;CFGR = 0x00000000;               <span class="cmt">/* 清空时钟配置 */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="cmt">/* 关 HSEON/CSSON/PLLON */</span>
+  RCC-&gt;PLLCFGR = 0x24003010;
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;      <span class="cmt">/* 清 HSEBYP */</span>
+  RCC-&gt;CIR = 0x00000000;                <span class="cmt">/* 关所有中断 */</span>
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;  <span class="cmt">/* 向量表放 0x08000000 */</span>
+}</pre>
+
+                    <p>此时系统跑在内部 <strong>HSI 16MHz</strong>，<code>SystemCoreClock</code> 变量初值也是 16000000。真正把主频拉到 180MHz 的是后面 main 里的 <code>Stm32_Clock_Init</code>。</p>
+
+                    <h3>HAL_Init：给 HAL 库铺好时基</h3>
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+  #if (INSTRUCTION_CACHE_ENABLE != 0)
+   __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
+  #endif
+  #if (DATA_CACHE_ENABLE != 0)
+   __HAL_FLASH_DATA_CACHE_ENABLE();
+  #endif
+  #if (PREFETCH_ENABLE != 0)
+   __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
+  #endif
+
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);  <span class="cmt">//中断优先级分组2</span>
+  HAL_InitTick(TICK_INT_PRIORITY);                     <span class="cmt">//SysTick 1ms</span>
+  HAL_MspInit();
+
+  return HAL_OK;
+}</pre>
+
+                    <table class="data">
+                        <tr><th>动作</th><th>本工程取值</th><th>影响</th></tr>
+                        <tr><td>指令 / 数据 Cache、Prefetch</td><td>三项均使能</td><td>Flash 取指加速，180MHz 下必须有</td></tr>
+                        <tr><td>优先级分组</td><td><code>NVIC_PRIORITYGROUP_2</code></td><td>2 位抢占（0~3）+ 2 位子优先级（0~3）</td></tr>
+                        <tr><td>SysTick 时基</td><td><code>TICK_INT_PRIORITY = 0x0F</code>，1ms</td><td>SysTick 优先级最低，HAL_Delay 依赖它</td></tr>
+                        <tr><td>HAL_MspInit</td><td>工程未重写，走 <code>__weak</code> 空函数</td><td>所以这里不会额外开任何外设时钟</td></tr>
+                    </table>
+
+                    <div class="note">轻量级：<code>SYSTEM_SUPPORT_OS</code> 在 <code>sys.h</code> 里定义为 0，因此 <code>delay.c</code> 走的是“无 OS”分支，SysTick 只负责 <code>HAL_IncTick</code>，不做任务调度。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="系统时钟配置 180MHz">
+                    <h2>06　系统时钟配置 180MHz</h2>
+                    <div class="sec-sub">Stm32_Clock_Init(360,25,2,8) 把 HSE 25MHz 变成 SYSCLK 180MHz</div>
+
+                    <figure class="figure">
+                        <img src="./index19-map/clock-tree.png" alt="HSE 经 PLL 到 180MHz 的时钟树">
+                        <figcaption>图 6-1　时钟树：PLLM=25、PLLN=360、PLLP=2、PLLQ=8</figcaption>
+                    </figure>
+
+                    <pre class="code">__HAL_RCC_PWR_CLK_ENABLE();                            <span class="cmt">//使能PWR时钟</span>
+__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+RCC_OscInitStructure.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+RCC_OscInitStructure.HSEState = RCC_HSE_ON;
+RCC_OscInitStructure.PLL.PLLState = RCC_PLL_ON;
+RCC_OscInitStructure.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+RCC_OscInitStructure.PLL.PLLM = pllm;   <span class="cmt">//25</span>
+RCC_OscInitStructure.PLL.PLLN = plln;   <span class="cmt">//360</span>
+RCC_OscInitStructure.PLL.PLLP = pllp;   <span class="cmt">//2</span>
+RCC_OscInitStructure.PLL.PLLQ = pllq;   <span class="cmt">//8</span>
+ret = HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+if(ret != HAL_OK) while(1);
+
+ret = HAL_PWREx_EnableOverDrive();      <span class="cmt">//开启 Over-Driver</span>
+if(ret != HAL_OK) while(1);
+
+RCC_ClkInitStructure.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+RCC_ClkInitStructure.AHBCLKDivider  = RCC_SYSCLK_DIV1;
+RCC_ClkInitStructure.APB1CLKDivider = RCC_HCLK_DIV4;
+RCC_ClkInitStructure.APB2CLKDivider = RCC_HCLK_DIV2;
+ret = HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure, FLASH_LATENCY_5);</pre>
+
+                    <table class="data">
+                        <tr><th>节点</th><th>算式</th><th>结果</th></tr>
+                        <tr><td>PLL 输入</td><td>HSE 25MHz ÷ PLLM(25)</td><td>1MHz</td></tr>
+                        <tr><td>VCO</td><td>1MHz × PLLN(360)</td><td>360MHz</td></tr>
+                        <tr><td>SYSCLK</td><td>360MHz ÷ PLLP(2)</td><td><strong>180MHz</strong></td></tr>
+                        <tr><td>USB / SDIO / RNG</td><td>360MHz ÷ PLLQ(8)</td><td>45MHz</td></tr>
+                        <tr><td>HCLK</td><td>SYSCLK ÷ 1</td><td>180MHz</td></tr>
+                        <tr><td>PCLK1（APB1）</td><td>180MHz ÷ 4</td><td>45MHz</td></tr>
+                        <tr><td>PCLK2（APB2）</td><td>180MHz ÷ 2</td><td>90MHz</td></tr>
+                        <tr><td>Flash 等待周期</td><td>FLASH_LATENCY_5</td><td>5WS（6 个 CPU 周期）</td></tr>
+                    </table>
+
+                    <p>HSE 的值来自 <code>stm32f4xx_hal_conf.h</code>：<code>#define HSE_VALUE ((uint32_t)25000000)</code>；内部 RC 为 <code>HSI_VALUE 16000000</code>。三个 <code>while(1)</code> 是“配置失败就停住”的兜底，实际调试时如果晶振不起振，程序会安静地卡在这里。</p>
+
+                    <div class="note"><code>HAL_RCC_ClockConfig()</code> 末尾会再次调用 <code>HAL_InitTick()</code>，按新的 HCLK 重新计算 SysTick 重装值，所以 1ms 时基在改频后依然准确。</div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="延时与时基">
+                    <h2>07　延时与时基</h2>
+                    <div class="sec-sub">delay_init(180) 只做两件事，delay_us 靠轮询 SysTick 计数</div>
+
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);  <span class="cmt">//SysTick频率为HCLK</span>
+    fac_us = SYSCLK;                                      <span class="cmt">//180 → 1us 需要 180 个计数</span>
+    <span class="cmt">// SYSTEM_SUPPORT_OS = 0，下面这段不编译</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks, told, tnow, tcnt = 0;
+    u32 reload = SysTick-&gt;LOAD;
+    ticks = nus * fac_us;        <span class="cmt">//需要的节拍数</span>
+    told = SysTick-&gt;VAL;
+    while(1)
+    {
+        tnow = SysTick-&gt;VAL;
+        if(tnow != told)
+        {
+            if(tnow &lt; told) tcnt += told - tnow;      <span class="cmt">//递减计数器</span>
+            else            tcnt += reload - tnow + told;
+            told = tnow;
+            if(tcnt &gt;= ticks) break;
+        }
+    }
+}
+
+void delay_ms(u16 nms)
+{
+    u32 i;
+    for(i = 0; i &lt; nms; i++) delay_us(1000);
+}</pre>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>取值 / 行为</th></tr>
+                        <tr><td>SysTick 时钟源</td><td>HCLK（180MHz）</td></tr>
+                        <tr><td>SysTick 重装值</td><td>HAL_InitTick 设置：180000/1000 − 1 = 179999</td></tr>
+                        <tr><td><code>fac_us</code></td><td>180，即 1μs = 180 个 SysTick 计数</td></tr>
+                        <tr><td>delay_ms(100) 实际耗时</td><td>100 × 1000μs，约 100ms（阻塞，不进入低功耗）</td></tr>
+                        <tr><td>中断里的 tick</td><td><code>SysTick_Handler</code> → <code>HAL_IncTick()</code></td></tr>
+                    </table>
+
+                    <div class="note">这里读的是 <code>SysTick-&gt;VAL</code>，不是 HAL 的毫秒计数。所以 <code>delay_us</code> 即使在中断里调用也不会因为 HAL 节拍没进而不准；缺点是完全阻塞 CPU。</div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="串口初始化">
+                    <h2>08　串口初始化</h2>
+                    <div class="sec-sub">uart_init(115200) 只填参数，GPIO 与 NVIC 都在 MSP 回调里完成</div>
+
+                    <pre class="code">void uart_init(u32 bound)
+{
+    UART1_Handler.Instance = USART1;
+    UART1_Handler.Init.BaudRate = bound;
+    UART1_Handler.Init.WordLength = UART_WORDLENGTH_8B;
+    UART1_Handler.Init.StopBits = UART_STOPBITS_1;
+    UART1_Handler.Init.Parity = UART_PARITY_NONE;
+    UART1_Handler.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    UART1_Handler.Init.Mode = UART_MODE_TX_RX;
+    HAL_UART_Init(&amp;UART1_Handler);          <span class="cmt">//内部会回调 HAL_UART_MspInit</span>
+
+    HAL_UART_Receive_IT(&amp;UART1_Handler, (u8 *)aRxBuffer, RXBUFFERSIZE);
+}
+
+void HAL_UART_MspInit(UART_HandleTypeDef *huart)
+{
+    if(huart-&gt;Instance == USART1)
+    {
+        __HAL_RCC_GPIOA_CLK_ENABLE();
+        __HAL_RCC_USART1_CLK_ENABLE();
+
+        GPIO_Initure.Pin = GPIO_PIN_9;                 <span class="cmt">//PA9  TX</span>
+        GPIO_Initure.Mode = GPIO_MODE_AF_PP;
+        GPIO_Initure.Alternate = GPIO_AF7_USART1;
+        HAL_GPIO_Init(GPIOA, &amp;GPIO_Initure);
+
+        GPIO_Initure.Pin = GPIO_PIN_10;                <span class="cmt">//PA10 RX</span>
+        HAL_GPIO_Init(GPIOA, &amp;GPIO_Initure);
+
+        HAL_NVIC_EnableIRQ(USART1_IRQn);
+        HAL_NVIC_SetPriority(USART1_IRQn, 3, 3);       <span class="cmt">//抢占3，子优先级3</span>
+    }
+}</pre>
+
+                    <p>波特率之所以准，是因为前面已经把 PCLK2 配成 90MHz，<code>HAL_UART_Init</code> 用它反算 <code>USARTDIV</code>。<code>fputc</code> 被重定向到 <code>USART1-&gt;DR</code>，所以可以直接 <code>printf</code>：</p>
+
+                    <pre class="code">int fputc(int ch, FILE *f)
+{
+    while((USART1-&gt;SR &amp; 0X40) == 0);   <span class="cmt">//等 TXE 置位</span>
+    USART1-&gt;DR = (u8) ch;
+    return ch;
+}</pre>
+
+                    <div class="note">优先级分组是 2（2 位抢占 + 2 位子优先级），所以 (3,3) 是合法最大值。若把分组改回默认的 4，抢占位只剩 0~15、子优先级恒为 0，这两个参数的含义就会变。</div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="LED 与按键初始化">
+                    <h2>09　LED 与按键初始化</h2>
+                    <div class="sec-sub">LED_Init 先把灯写灭，KEY_Init 把 WK_UP 配成下拉输入</div>
+
+                    <pre class="code">void LED_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+
+    GPIO_Initure.Pin = GPIO_PIN_0 | GPIO_PIN_1;   <span class="cmt">//PB0/PB1</span>
+    GPIO_Initure.Mode = GPIO_MODE_OUTPUT_PP;      <span class="cmt">//推挽输出</span>
+    GPIO_Initure.Pull = GPIO_PULLUP;
+    GPIO_Initure.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOB, &amp;GPIO_Initure);
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);   <span class="cmt">//DS1 灭</span>
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);   <span class="cmt">//DS0 灭</span>
+}
+
+void KEY_Init(void)
+{
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOH_CLK_ENABLE();
+
+    GPIO_Initure.Pin = GPIO_PIN_0;                <span class="cmt">//WK_UP → PA0</span>
+    GPIO_Initure.Mode = GPIO_MODE_INPUT;
+    GPIO_Initure.Pull = GPIO_PULLDOWN;            <span class="cmt">//下拉：按下为高</span>
+    HAL_GPIO_Init(GPIOA, &amp;GPIO_Initure);
+
+    GPIO_Initure.Pin = GPIO_PIN_13;               <span class="cmt">//KEY2 → PC13</span>
+    GPIO_Initure.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(GPIOC, &amp;GPIO_Initure);
+
+    GPIO_Initure.Pin = GPIO_PIN_2 | GPIO_PIN_3;   <span class="cmt">//KEY1/KEY0 → PH2/PH3，沿用上拉</span>
+    HAL_GPIO_Init(GPIOH, &amp;GPIO_Initure);
+}</pre>
+
+                    <p>点灯用的是位带宏而不是 HAL 函数：<code>#define LED0 PBout(1)</code>，<code>PBout(n)</code> 通过 <code>BITBAND</code> 把 <code>GPIOB_ODR</code> 的第 1 位映射成独立地址，所以 <code>LED0=0</code> 等价于“只把 PB1 拉低”，不影响 PB0。</p>
+
+                    <pre class="code">#define BITBAND(addr, bitnum) ((addr &amp; 0xF0000000)+0x2000000+((addr &amp;0xFFFFF)&lt;&lt;5)+(bitnum&lt;&lt;2))
+#define MEM_ADDR(addr)        *((volatile unsigned long *)(addr))
+#define BIT_ADDR(addr, bitnum)  MEM_ADDR(BITBAND(addr, bitnum))
+#define PBout(n)  BIT_ADDR(GPIOB_ODR_Addr, n)</pre>
+
+                    <table class="data">
+                        <tr><th>按键</th><th>引脚</th><th>有效电平</th><th>返回值</th></tr>
+                        <tr><td>KEY0</td><td>PH3</td><td>低</td><td>1</td></tr>
+                        <tr><td>KEY1</td><td>PH2</td><td>低</td><td>2</td></tr>
+                        <tr><td>KEY2</td><td>PC13</td><td>低</td><td>3</td></tr>
+                        <tr><td>WK_UP</td><td>PA0</td><td>高</td><td>4（<code>WKUP_PRES</code>）</td></tr>
+                    </table>
+
+                    <div class="note">KEY_Scan 的扫描顺序是 KEY0→KEY1→KEY2→WK_UP，并且 <code>mode=0</code> 时靠 <code>static u8 key_up</code> 做“松手才响应”；按下后固定 <code>delay_ms(10)</code> 消抖。</div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="独立看门狗初始化">
+                    <h2>10　独立看门狗初始化</h2>
+                    <div class="sec-sub">两次调用的本质：先解锁写 PR/RLR，再用 0xCCCC 启动、0xAAAA 重装</div>
+
+                    <figure class="figure">
+                        <img src="./index19-map/iwdg-chain.png" alt="IWDG_Init 调用链与寄存器动作">
+                        <figcaption>图 10-1　IWDG_Init / IWDG_Feed 的调用链与 KR 键值</figcaption>
+                    </figure>
+
+                    <pre class="code">IWDG_HandleTypeDef IWDG_Handler;    <span class="cmt">//独立看门狗句柄</span>
+
+<span class="cmt">//prer:分频数 IWDG_PRESCALER_4~256；rlr:自动重装载值 0~0xFFF</span>
+void IWDG_Init(u8 prer, u16 rlr)
+{
+    IWDG_Handler.Instance = IWDG;
+    IWDG_Handler.Init.Prescaler = prer;   <span class="cmt">//IWDG_PRESCALER_64 = 0x4</span>
+    IWDG_Handler.Init.Reload = rlr;       <span class="cmt">//500</span>
+    HAL_IWDG_Init(&amp;IWDG_Handler);
+    HAL_IWDG_Start(&amp;IWDG_Handler);
+}
+
+void IWDG_Feed(void)
+{
+    HAL_IWDG_Refresh(&amp;IWDG_Handler);      <span class="cmt">//喂狗</span>
+}</pre>
+
+                    <h3>HAL 内部实际写了哪些寄存器</h3>
+                    <pre class="code"><span class="cmt">// HAL_IWDG_Init 中</span>
+IWDG_ENABLE_WRITE_ACCESS(hiwdg);          <span class="cmt">//KR = 0x5555，允许改 PR/RLR</span>
+MODIFY_REG(hiwdg-&gt;Instance-&gt;PR,  IWDG_PR_PR,  hiwdg-&gt;Init.Prescaler);  <span class="cmt">//PR = 4</span>
+MODIFY_REG(hiwdg-&gt;Instance-&gt;RLR, IWDG_RLR_RL, hiwdg-&gt;Init.Reload);     <span class="cmt">//RLR = 500</span>
+
+<span class="cmt">// HAL_IWDG_Start 中</span>
+__HAL_IWDG_START(hiwdg);            <span class="cmt">//KR = 0xCCCC，启动</span>
+__HAL_IWDG_RELOAD_COUNTER(hiwdg);   <span class="cmt">//KR = 0xAAAA，重装</span>
+
+<span class="cmt">// HAL_IWDG_Refresh 中</span>
+while(__HAL_IWDG_GET_FLAG(hiwdg, IWDG_FLAG_RVU) != RESET);  <span class="cmt">//等重装完成</span>
+__HAL_IWDG_RELOAD_COUNTER(hiwdg);   <span class="cmt">//KR = 0xAAAA，喂狗</span></pre>
+
+                    <table class="data">
+                        <tr><th>参数</th><th>本工程值</th><th>含义</th></tr>
+                        <tr><td>PR</td><td><code>IWDG_PRESCALER_64</code>（0x4）</td><td>LSI 32kHz ÷ 64 = 500Hz</td></tr>
+                        <tr><td>RLR</td><td>500</td><td>500 个计数 = 1s</td></tr>
+                        <tr><td>计数节拍</td><td>2ms / 计数</td><td>溢出时间 = 2ms × 500 = <strong>1s</strong></td></tr>
+                        <tr><td>时钟源</td><td>LSI 32kHz</td><td>独立 RC，不受 PLL / HSE 影响</td></tr>
+                        <tr><td>MSP 回调</td><td><code>HAL_IWDG_MspInit</code> 为弱空函数</td><td>IWDG 无需 RCC 时钟使能</td></tr>
+                    </table>
+
+                    <div class="note"><code>Tout = (4 × 2^PR) × RLR ÷ 32 (ms)</code> 就是文件头注释里的公式：PR=4 → 4×16=64 分频，2ms×500=1000ms。LSI 本身有 ± 误差，实测溢出时间会略偏离 1s，属正常现象。</div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="主循环与喂狗时序">
+                    <h2>11　主循环与喂狗时序</h2>
+                    <div class="sec-sub">1s 内喂一次狗就永远不复位，停了就复位——时序是理解本实验的关键</div>
+
+                    <figure class="figure">
+                        <img src="./index19-map/iwdg-timing.png" alt="按键喂狗与看门狗溢出的时序图">
+                        <figcaption>图 11-1　两次及时喂狗后停止按键，计数器在 2.6s 处减到 0 触发复位</figcaption>
+                    </figure>
+
+                    <pre class="code">LED0 = 0;                       <span class="cmt">//DS0 点亮，作为“程序还活着”的指示</span>
+while(1)
+{
+    if(KEY_Scan(0) == WKUP_PRES)  <span class="cmt">//WK_UP 按下并返回 4</span>
+    {
+        IWDG_Feed();                <span class="cmt">//喂狗：KR = 0xAAAA</span>
+    }
+    delay_ms(10);                 <span class="cmt">//每圈 10ms，主循环不是忙等</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>时间点</th><th>软件动作</th><th>硬件反应</th></tr>
+                        <tr><td>t = 0</td><td><code>IWDG_Init</code> 后计数器 = 500</td><td>开始以 2ms/计数递减</td></tr>
+                        <tr><td>按下 WK_UP</td><td><code>KEY_Scan(0)</code> 返回 4 → <code>IWDG_Feed()</code></td><td>计数器回到 500，重新计时</td></tr>
+                        <tr><td>超过 1s 未喂</td><td>无软件动作</td><td>计数器减到 0 → 产生 IWDG 复位</td></tr>
+                        <tr><td>复位后</td><td>从 Reset_Handler 重新执行</td><td>DS0 熄灭约 100ms 后重新点亮</td></tr>
+                    </table>
+
+                    <p><code>delay_ms(10)</code> 决定按键的最短响应间隔：一圈 10ms，所以从按下到喂狗最多延迟 10ms，相对 1s 的窗口非常安全。</p>
+
+                    <div class="note blue">判断本次启动是否为看门狗复位，可以读 <code>RCC-&gt;CSR</code> 的 <code>IWDGRSTF</code> 位（复位后需写 <code>RMVF</code> 清除）。本工程没有读取，所以只能从“DS0 灭了一下”间接看出来。</div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="实验现象与验证">
+                    <h2>12　实验现象与验证</h2>
+                    <div class="sec-sub">现象只有两种，正好对应“喂了 / 没喂”两条分支</div>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>DS0（PB1）</th><th>说明</th></tr>
+                        <tr><td>上电，一直按住 WK_UP 并反复按</td><td>常亮</td><td>每 1s 内至少喂一次狗，永不溢出</td></tr>
+                        <tr><td>上电后不按键</td><td>亮 → 灭约 100ms → 亮，循环</td><td>每 1s 溢出复位一次，形成间歇熄灭</td></tr>
+                        <tr><td>快速连按后松手</td><td>保持亮，松手 1s 后开始闪</td><td>最后一次喂狗时刻决定复位起点</td></tr>
+                    </table>
+
+                    <p>现象的可观察性来自 <code>main</code> 里这三句的先后关系：<code>delay_ms(100)</code> → <code>IWDG_Init(...)</code> → <code>LED0=0</code>。复位后程序重新执行这段，DS0 会先保持熄灭 100ms，再被拉低点亮，于是肉眼看到“灭一下”。</p>
+
+                    <div class="note">若把 <code>LED0=0</code> 挪到 <code>IWDG_Init</code> 之前，复位瞬间灯只是重新点亮，几乎没有可见变化，实验现象会变得不明显。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="喂狗状态交互演示">
+                    <h2>13　喂狗状态交互演示</h2>
+                    <div class="sec-sub">点击按钮复现 main 里的两条分支，仅演示逻辑，不涉及真实硬件</div>
+
+                    <div class="sim">
+                        <div class="sim-title">KEY_Scan → IWDG_Feed / 1s 溢出复位</div>
+                        <div class="sim-buttons">
+                            <button data-action="feed">按下 WK_UP（喂狗）</button>
+                            <button data-action="reset">模拟 1s 溢出</button>
+                            <button data-action="stop">停止喂狗</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0（PB1）</div>
+                            <div class="led-item"><span class="led-dot red" id="dot1"></span>IWDG 溢出脉冲</div>
+                        </div>
+                        <div class="sim-log" id="simLog">等待操作：点击「按下 WK_UP」开始喂狗。</div>
+                    </div>
+
+                    <p>演示规则与源码一致：喂狗后 1s 内必须再喂一次；停止喂狗满 1s，计数器减到 0，DS0 先熄灭再重新点亮，等价于一次复位。</p>
+
+                    <div class="note">演示中的 1s 用浏览器定时器近似，只表示“是否在窗口内喂狗”的逻辑，不代表真实 LSI 计时精度。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="总结与常见问题">
+                    <h2>14　总结与常见问题</h2>
+                    <div class="sec-sub">把 12 步收成一条线，再给出排错对照表</div>
+
+                    <p><strong>一条线：</strong>上电取向量表（MSP + Reset_Handler）→ SystemInit（FPU、VTOR、RCC 复位）→ __main（RW/ZI、堆栈）→ main → HAL_Init（Cache、分组 2、1ms 时基）→ Stm32_Clock_Init（180MHz、OverDrive、5WS）→ delay_init（fac_us=180）→ uart_init（PA9/PA10、115200）→ LED_Init / KEY_Init → delay_ms(100) → IWDG_Init(64,500) → LED0=0 → while(1) 按键喂狗。</p>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>可能原因</th><th>排查点</th></tr>
+                        <tr><td>DS0 始终不亮</td><td>没执行到 <code>LED0=0</code></td><td>看是否卡在时钟配置的 <code>while(1)</code>；测 PB1 电平</td></tr>
+                        <tr><td>程序反复重启</td><td>1s 内未喂狗，属正常现象</td><td>确认 <code>KEY_Scan(0)</code> 返回 4、PA0 按下为高</td></tr>
+                        <tr><td>按键无反应</td><td>PA0 未下拉或按键接触不良</td><td>万用表测 PA0：松手 0V、按下约 3.3V</td></tr>
+                        <tr><td>串口无输出</td><td>fputc 未重定向 / 引脚没复用</td><td>确认 PA9 为 AF7、波特率 115200</td></tr>
+                        <tr><td>串口乱码</td><td>HSE 未起振导致 PLL 失败</td><td>检查 25MHz 晶振与 <code>HSE_VALUE</code> 定义</td></tr>
+                        <tr><td>一进断点就复位</td><td>IWDG 已启动，暂停超过 1s</td><td>调试时先注释 <code>HAL_IWDG_Start</code>，或缩短停顿时长</td></tr>
+                        <tr><td>实测不是正好 1s</td><td>LSI 32kHz 有偏差</td><td>按公式核算后属正常，需要精确就用窗口看门狗 + LSE</td></tr>
+                    </table>
+
+                    <div class="note blue">IWDG 只能复位、不能关闭、也不会被关中断影响——这正是它作为“最后一道保险”的价值，也是调试时最容易踩坑的地方。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有 · 2026-2036</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 喂狗状态演示（仅逻辑） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var ds0On = true;
+        var timer = null;
+        var feeding = false;
+
+        function render(msg) {
+            dot0.classList.toggle('on', ds0On);
+            if (msg) simLog.textContent = msg;
+        }
+
+        function clearTimer() {
+            if (timer) { clearTimeout(timer); timer = null; }
+        }
+
+        function armWatchdog() {
+            clearTimer();
+            timer = setTimeout(function () { doReset('1s 内没有喂狗：计数器减到 0 → IWDG 复位'); }, 1000);
+        }
+
+        function doReset(msg) {
+            clearTimer();
+            ds0On = false;
+            dot1.classList.add('on');
+            render(msg + '　DS0 熄灭，程序回到 Reset_Handler');
+            setTimeout(function () {
+                ds0On = true;
+                dot1.classList.remove('on');
+                render('复位完成：重新初始化后 LED0=0，DS0 点亮，等待下一次喂狗');
+                if (feeding) armWatchdog();
+            }, 700);
+        }
+
+        var actions = {
+            feed: function () {
+                feeding = true;
+                ds0On = true;
+                armWatchdog();
+                render('KEY_Scan(0) == WKUP_PRES（4）→ IWDG_Feed()：计数器重装 500，DS0 保持常亮');
+            },
+            reset: function () {
+                doReset('模拟计数器溢出');
+            },
+            stop: function () {
+                feeding = false;
+                clearTimer();
+                render('已停止喂狗：主循环仍在跑，但没有 IWDG_Feed()，DS0 会在溢出后熄灭一次');
+            }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var action = btn.getAttribute('data-action');
+                if (actions[action]) actions[action]();
+            });
+        });
+
+        render('等待操作：点击「按下 WK_UP」开始喂狗。');
+    }
+</script>
+</body>
+</html>

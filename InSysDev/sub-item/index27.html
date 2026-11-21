@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验13 SDRAM 实验</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验13 · SDRAM</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">共 14 节，按启动顺序排列；点击标题跳转，滚动自动高亮。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+<section class="content-card" id="s01" data-title="工程概述与硬件资源">
+    <h2>01　工程概述与硬件资源</h2>
+    <div class="sec-sub">本实验用 FMC 外扩 32MB SDRAM，验证“能写进去、能读回来、能算出容量”</div>
+
+    <p>实验13 与相邻实验的最大差别在存储器：实验12 用 FMC 的 NE1 挂 MCU 屏，本实验用 <strong>FMC Bank5</strong> 挂一片 32MB SDRAM（W9825G6KH），并把一个 500KB 的数组直接定位到 SDRAM 起始地址 <code class="inline">0xC0000000</code>，按 KEY0 验证容量、按 KEY1 回读预存数据。</p>
+
+    <table class="data">
+        <tr><th>资源</th><th>引脚 / 接口</th><th>在本实验中的作用</th></tr>
+        <tr><td>DS0（红灯）</td><td>PB1</td><td>主循环每 20 圈翻转一次，指示程序没卡死</td></tr>
+        <tr><td>KEY0</td><td>PH3</td><td>触发容量测试 <code>fsmc_sdram_test()</code></td></tr>
+        <tr><td>KEY1</td><td>PH2</td><td>回读并打印 <code>testsram[0..249999]</code></td></tr>
+        <tr><td>串口 1</td><td>PA9 / PA10，115200 8N1</td><td>打印容量与回读数据；同时给 <code>printf</code> 提供出口</td></tr>
+        <tr><td>MCU 屏</td><td>FMC NE1，16 位 8080 并口</td><td>显示提示信息与容量结果</td></tr>
+        <tr><td>外部 SDRAM</td><td>FMC Bank5，0xC0000000</td><td>32MB，13 行 × 9 列 × 4 Bank × 16 位</td></tr>
+    </table>
+
+    <div class="chips">
+        <span class="chip">FMC Bank5 → 0xC0000000</span>
+        <span class="chip">SDCLK = 90MHz</span>
+        <span class="chip">CAS = 3</span>
+        <span class="chip">刷新计数 683</span>
+    </div>
+
+    <div class="note">工程 readme 特别提示两点：本实验只支持 MCU 屏；<code>LCD_Init()</code> 内部调用了 <code>printf</code>，若没有先初始化串口 1，会导致液晶不显示。这条提示直接决定了 main 里的初始化顺序。</div>
+</section>
+
+<section class="content-card" id="s02" data-title="目录与文件分工">
+    <h2>02　目录与文件分工</h2>
+    <div class="sec-sub">先认清“谁负责启动、谁负责外设”，后面读代码就不会乱</div>
+
+    <table class="data">
+        <tr><th>文件</th><th>负责什么</th><th>本页关注点</th></tr>
+        <tr><td>CORE/startup_stm32f429xx.s</td><td>栈堆定义、向量表、Reset_Handler</td><td>初始 MSP、复位后第一条指令</td></tr>
+        <tr><td>USER/system_stm32f4xx.c</td><td><code>SystemInit()</code>：FPU、RCC 复位、VTOR</td><td>时钟切换前的现场</td></tr>
+        <tr><td>USER/main.c</td><td>初始化调用顺序、容量测试、主循环</td><td>整条启动链的主线</td></tr>
+        <tr><td>SYSTEM/sys/sys.c</td><td><code>Stm32_Clock_Init()</code></td><td>25MHz → 180MHz 的 PLL 参数</td></tr>
+        <tr><td>SYSTEM/delay/delay.c</td><td><code>delay_init/us/ms</code></td><td>SysTick 计数方式</td></tr>
+        <tr><td>SYSTEM/usart/usart.c</td><td><code>uart_init()</code> 与 <code>fputc</code> 重定向</td><td><code>printf</code> 的落地路径</td></tr>
+        <tr><td>HARDWARE/SDRAM/sdram.c</td><td>FMC 配置、上电命令序列、读写缓冲</td><td>本实验的核心</td></tr>
+        <tr><td>HARDWARE/LCD/lcd.c</td><td>MCU 屏初始化（FMC NE1）</td><td>与 SDRAM 共用 FMC</td></tr>
+        <tr><td>HARDWARE/KEY、LED</td><td>按键与指示灯驱动</td><td>主循环的输入输出</td></tr>
+        <tr><td>HALLIB/...</td><td>HAL 驱动库</td><td>只看被调用到的 HAL 函数</td></tr>
+    </table>
+
+    <div class="note blue">编译宏为 <code>USE_HAL_DRIVER, STM32F429xx</code>，器件 STM32F429IGTx（1MB Flash / 192KB SRAM / 64KB CCM），所以外扩 SDRAM 才有实际意义。</div>
+</section>
+
+<section class="content-card" id="s03" data-title="启动流程总览">
+    <h2>03　启动流程总览</h2>
+    <div class="sec-sub">从上电复位到 while(1)，八步初始化每一步都在为后面铺路</div>
+
+    <figure class="figure">
+        <img src="./index27-map/boot-flow.png" alt="从上电复位到主循环的启动流程图">
+        <figcaption>图 3-1　启动链路与 main 中的八步初始化</figcaption>
+    </figure>
+    <figure class="figure"><img src="./index27-map/sdram-seq-timing.png" alt="SDRAM 上电初始化命令与等待窗口时序图"><figcaption>图 3-2　SDRAM 上电初始化命令与等待窗口</figcaption></figure>
+    <p>上电顺序不能省：先给 CLK 与 CKE，等待 ≥100µs，再发 Precharge All、至少两次 AUTO REFRESH（间隔 tRFC），最后 Load Mode Register 写入突发长度与 CAS 延迟。少任何一步，后续读写都会读到随机值。</p>
+
+    <h3>main 函数（源码原文）</h3>
+    <pre class="code">int main(void)
+{
+    u8 key; u8 i=0; u32 ts=0;
+    HAL_Init();                     <span class="cmt">//初始化HAL库</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">//设置时钟,180Mhz</span>
+    delay_init(180);                <span class="cmt">//初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">//初始化USART</span>
+    LED_Init();                     <span class="cmt">//初始化LED</span>
+    KEY_Init();                     <span class="cmt">//初始化按键</span>
+    SDRAM_Init();                   <span class="cmt">//初始化SDRAM</span>
+    LCD_Init();                     <span class="cmt">//初始化LCD</span>
+    POINT_COLOR=RED;                <span class="cmt">//设置字体为红色</span>
+    ...                             <span class="cmt">//LCD 显示 5 行提示信息，省略</span>
+    for(ts=0;ts&lt;250000;ts++) testsram[ts]=ts;   <span class="cmt">//预存测试数据</span>
+    while(1) { ... }
+}</pre>
+
+    <p>顺序不是随手排的：<code>HAL_Init</code> 建立时基与中断分组 → 时钟不起来，串口和 FMC 的分频都无从计算 → <code>delay_init</code> 让后面的 500µs 等待可用 → 串口先于 LCD（LCD 内部用 printf）→ SDRAM 先于任何 <code>0xC0000000</code> 访问 → 最后才初始化 LCD。</p>
+</section>
+
+<section class="content-card" id="s04" data-title="启动文件与向量表">
+    <h2>04　启动文件与向量表</h2>
+    <div class="sec-sub">CPU 复位后不看 C 代码，只看向量表的头两个字</div>
+
+    <h3>栈与堆</h3>
+    <pre class="code">Stack_Size      EQU     0x400;      <span class="cmt">; 1KB 栈</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp
+
+Heap_Size       EQU     0x200;      <span class="cmt">; 512B 堆</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit</pre>
+
+    <p><code>__Vectors[0]</code> 存的就是 <code>__initial_sp</code>（栈顶，由链接器放在 RAM 顶端，按 192KB SRAM 推算约 <code>0x20030000</code>），<code>__Vectors[1]</code> 存 <code>Reset_Handler</code>。复位时内核自动把这两个值装入 MSP 与 PC，此时还没有任何 C 环境。</p>
+
+    <h3>复位入口</h3>
+    <pre class="code">Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0
+                 LDR     R0, =__main
+                 BX      R0
+                 ENDP</pre>
+
+    <p>顺序固定为 <strong>SystemInit → __main</strong>。启动文件本身没有自定义汇编：<code>.data</code> 的复制与 <code>.bss</code> 的清零都在 <code>__main</code>（ARM C 库）里完成，完成后才跳进 <code>main()</code>。</p>
+
+    <div class="note">启动文件里所有异常入口都是 <code>[WEAK]</code> + <code>B .</code>（死循环）。工程在 <a href="#s05">USER/stm32f4xx_it.c</a> 里重新实现了 <code>NMI_Handler</code>、<code>HardFault_Handler</code>、<code>SysTick_Handler</code> 等，链接时用强符号覆盖弱符号——这就是“同名函数能接管中断”的机制。</div>
+</section>
+
+<section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+    <h2>05　SystemInit 与 HAL_Init</h2>
+    <div class="sec-sub">一个在 C 库之前跑，一个在 main 第一行跑，职责完全不同</div>
+
+    <h3>SystemInit：复位现场 + FPU + 向量表位置</h3>
+    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">/* CP10/CP11 全访问，开 FPU */</span>
+  #endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="cmt">/* 开 HSI，先把时钟拉回默认 */</span>
+  RCC-&gt;CFGR = 0x00000000;
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="cmt">/* 关 HSEON/CSSON/PLLON */</span>
+  RCC-&gt;PLLCFGR = 0x24003010;
+  RCC-&gt;CIR = 0x00000000;
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;   <span class="cmt">/* 0x08000000 */</span>
+}</pre>
+
+    <p>复位后芯片跑的是内部 HSI 16MHz。SystemInit 把 RCC 全部还原成复位值，只保证“能跑”，真正的 180MHz 要等 main 里的 <code>Stm32_Clock_Init</code>。<code>VTOR</code> 被显式写成 Flash 基址，说明本工程没有做 Bootloader 重定位。</p>
+
+    <h3>HAL_Init：三件事</h3>
+    <table class="data">
+        <tr><th>动作</th><th>源码</th><th>影响</th></tr>
+        <tr><td>Flash 加速</td><td><code>__HAL_FLASH_INSTRUCTION_CACHE_ENABLE()</code> 等三个宏</td><td>I/D Cache + 预取，180MHz 下取指不拖后腿</td></tr>
+        <tr><td>中断分组</td><td><code>HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2)</code></td><td>2 位抢占 + 2 位子优先级，后面 <code>HAL_NVIC_SetPriority</code> 都按这个解释</td></tr>
+        <tr><td>HAL 时基</td><td><code>HAL_InitTick(TICK_INT_PRIORITY)</code></td><td>SysTick 1ms，优先级 <code>0x0F</code></td></tr>
+    </table>
+
+    <div class="note">HAL_Init 执行时 SystemCoreClock 还是 <code>16000000</code>，所以 <code>HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000)</code> 算出的重装值是 <strong>16000</strong>。这个数字在时钟切到 180MHz 后没有重算，是第 06 节要讲的伏笔。</div>
+</section>
+
+<section class="content-card" id="s06" data-title="时钟树与 Flash 等待">
+    <h2>06　时钟树与 Flash 等待</h2>
+    <div class="sec-sub">HSE 25MHz 经 PLL 得到 180MHz，SDRAM 的 SDCLK 是它的二分频</div>
+
+    <figure class="figure">
+        <img src="./index27-map/clock-tree.png" alt="从 25MHz 晶振到 180MHz 及各外设时钟的推算图">
+        <figcaption>图 6-1　时钟树与分频结果</figcaption>
+    </figure>
+
+    <h3>关键参数（源码取值）</h3>
+    <pre class="code">RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;  <span class="cmt">//HSE 作为 PLL 源</span>
+RCC_OscInitStructure.PLL.PLLM=pllm;   <span class="cmt">//25</span>
+RCC_OscInitStructure.PLL.PLLN=plln;   <span class="cmt">//360</span>
+RCC_OscInitStructure.PLL.PLLP=pllp;   <span class="cmt">//2</span>
+RCC_OscInitStructure.PLL.PLLQ=pllq;   <span class="cmt">//8</span>
+ret=HAL_PWREx_EnableOverDrive();      <span class="cmt">//开启 Over-Driver</span>
+RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;
+RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;
+ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5);</pre>
+
+    <table class="data">
+        <tr><th>量</th><th>算式</th><th>结果</th></tr>
+        <tr><td>VCO 频率</td><td>25MHz ÷ PLLM(25) × PLLN(360)</td><td>360MHz</td></tr>
+        <tr><td>SYSCLK</td><td>360 ÷ PLLP(2)</td><td><strong>180MHz</strong></td></tr>
+        <tr><td>USB / SDIO / RNG</td><td>360 ÷ PLLQ(8)</td><td>45MHz</td></tr>
+        <tr><td>HCLK</td><td>180 ÷ AHB 分频 1</td><td>180MHz</td></tr>
+        <tr><td>PCLK1（APB1）</td><td>180 ÷ 4</td><td>45MHz</td></tr>
+        <tr><td>PCLK2（APB2）</td><td>180 ÷ 2</td><td>90MHz</td></tr>
+        <tr><td>FMC SDCLK</td><td>HCLK ÷ 2（<code>FMC_SDRAM_CLOCK_PERIOD_2</code>）</td><td>90MHz</td></tr>
+    </table>
+
+    <p>180MHz 不是写个参数就能跑：电压等级要先设 <code>PWR_REGULATOR_VOLTAGE_SCALE1</code>，再开 Over-Drive，最后 <code>HAL_RCC_ClockConfig</code> 必须带 <code>FLASH_LATENCY_5</code>（6 个 CPU 周期）。三者缺一，CPU 取指跟不上 180MHz，表现为随机死机或进 HardFault。</p>
+
+    <div class="note">SysTick 的重装值是“历史遗留”：HAL_Init 里按 16MHz 算成 16000，<code>delay_init()</code> 只把时钟源切成 HCLK，并没有重写 <code>SysTick-&gt;LOAD</code>。结果 HAL 的 1ms 中断实际只有约 88.9µs（16000 ÷ 180MHz），<code>HAL_Delay()</code> 会偏快约 11 倍。本实验全程用自己写的 <code>delay_ms/delay_us</code>，所以看不到这个问题。</div>
+</section>
+
+<section class="content-card" id="s07" data-title="delay 延时与串口 printf">
+    <h2>07　delay 延时与串口 printf</h2>
+    <div class="sec-sub">延时靠轮询 SysTick 计数器，printf 靠 fputc 重定向</div>
+
+    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">//SysTick 时钟 = HCLK</span>
+    fac_us=SYSCLK;   <span class="cmt">//fac_us = 180</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks; u32 told,tnow,tcnt=0;
+    u32 reload=SysTick-&gt;LOAD;
+    ticks=nus*fac_us;            <span class="cmt">//需要的计数值</span>
+    told=SysTick-&gt;VAL;
+    while(1)
+    {
+        tnow=SysTick-&gt;VAL;
+        if(tnow!=told)
+        {
+            if(tnow&lt;told) tcnt+=told-tnow;   <span class="cmt">//递减计数器</span>
+            else tcnt+=reload-tnow+told;    <span class="cmt">//跨过重装点</span>
+            told=tnow;
+            if(tcnt&gt;=ticks) break;
+        }
+    }
+}
+void delay_ms(u16 nms) { u32 i; for(i=0;i&lt;nms;i++) delay_us(1000); }</pre>
+
+    <p><code>delay_us</code> 是纯轮询：不使能中断、不依赖 <code>uwTick</code>，所以可以在中断里安全调用；<code>delay_ms</code> 只是把 us 延时循环 n 次，精度取决于 <code>fac_us</code> 与主频是否一致。</p>
+
+    <h3>串口 1 参数</h3>
+    <table class="data">
+        <tr><th>项</th><th>取值</th><th>说明</th></tr>
+        <tr><td>实例</td><td>USART1</td><td>挂在 APB2（90MHz）</td></tr>
+        <tr><td>引脚</td><td>PA9 / PA10，<code>GPIO_AF7_USART1</code></td><td>复用推挽 + 上拉，接板载 CH340</td></tr>
+        <tr><td>帧格式</td><td>8 数据位 / 1 停止位 / 无校验 / 无流控</td><td>对应 <code>UART_WORDLENGTH_8B</code> 等</td></tr>
+        <tr><td>波特率</td><td>115200</td><td>由 <code>uart_init(115200)</code> 传入</td></tr>
+        <tr><td>接收中断</td><td>使能 RXNE，优先级 3,3</td><td><code>HAL_UART_Receive_IT</code> 那行被注释掉了</td></tr>
+    </table>
+
+    <pre class="code">int fputc(int ch, FILE *f)
+{
+    while((USART1-&gt;SR&amp;0X40)==0);   <span class="cmt">//等 TXE</span>
+    USART1-&gt;DR = (u8) ch;
+    return ch;
+}</pre>
+
+    <div class="note">这一行注释很关键：<code>#pragma import(__use_no_semihosting)</code> + 自定义 <code>fputc</code> 让 <code>printf</code> 直接走 USART1，不需要勾选 MicroLIB。也正因为 <code>LCD_Init()</code> 内部用了 <code>printf</code>，串口必须在 LCD 之前初始化，否则程序会卡在 <code>while((USART1-&gt;SR&amp;0X40)==0)</code>。</div>
+</section>
+
+<section class="content-card" id="s08" data-title="GPIO：LED 与按键">
+    <h2>08　GPIO：LED 与按键</h2>
+    <div class="sec-sub">两灯两键，配置简单，但消抖方式决定了主循环的节奏</div>
+
+    <pre class="code">void LED_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_GPIOB_CLK_ENABLE();           <span class="cmt">//开启GPIOB时钟</span>
+    GPIO_Initure.Pin=GPIO_PIN_0|GPIO_PIN_1;
+    GPIO_Initure.Mode=GPIO_MODE_OUTPUT_PP;  <span class="cmt">//推挽输出</span>
+    GPIO_Initure.Pull=GPIO_PULLUP;
+    GPIO_Initure.Speed=GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOB,&amp;GPIO_Initure);
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_0,GPIO_PIN_SET);  <span class="cmt">//默认熄灭</span>
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,GPIO_PIN_SET);
+}</pre>
+
+    <table class="data">
+        <tr><th>引脚</th><th>模式</th><th>上下拉</th><th>对应</th></tr>
+        <tr><td>PB1 / PB0</td><td>推挽输出</td><td>上拉</td><td>DS0 / DS1，输出高 = 灭</td></tr>
+        <tr><td>PA0</td><td>输入</td><td>下拉</td><td>WK_UP，按下为高</td></tr>
+        <tr><td>PC13</td><td>输入</td><td>上拉</td><td>KEY2，按下为低</td></tr>
+        <tr><td>PH2 / PH3</td><td>输入</td><td>上拉（沿用上一条的 Pull）</td><td>KEY1 / KEY0，按下为低</td></tr>
+    </table>
+
+    <pre class="code">u8 KEY_Scan(u8 mode)
+{
+    static u8 key_up=1;     <span class="cmt">//按键松开标志</span>
+    if(mode==1)key_up=1;    <span class="cmt">//支持连按</span>
+    if(key_up&amp;&amp;(KEY0==0||KEY1==0||KEY2==0||WK_UP==1))
+    {
+        delay_ms(10);       <span class="cmt">//10ms 消抖</span>
+        key_up=0;
+        if(KEY0==0)       return KEY0_PRES;
+        else if(KEY1==0)  return KEY1_PRES;
+        else if(KEY2==0)  return KEY2_PRES;
+        else if(WK_UP==1) return WKUP_PRES;
+    }else if(KEY0==1&amp;&amp;KEY1==1&amp;&amp;KEY2==1&amp;&amp;WK_UP==0)key_up=1;
+    return 0;
+}</pre>
+
+    <p><code>main</code> 调用 <code>KEY_Scan(0)</code>，即不支持连按：一次按下只返回一次键值，必须松开才能再触发。<code>key.h</code> 里同时给了位带写法（<code>PHin(3)</code>）和 HAL 写法（<code>HAL_GPIO_ReadPin</code>），本工程用的是后者。</p>
+
+    <div class="note">消抖用的是阻塞式 <code>delay_ms(10)</code>，这 10ms 里主循环停在原地。按键本身没问题，但配合第 13 节的 KEY1 大循环，会让“按下到响应”的观感变慢。</div>
+</section>
+
+<section class="content-card" id="s09" data-title="FMC 与 SDRAM 控制器配置">
+    <h2>09　FMC 与 SDRAM 控制器配置</h2>
+    <div class="sec-sub">先填句柄与时序，再由 HAL 写进 SDCR / SDTR</div>
+
+    <pre class="code">void SDRAM_Init(void)
+{
+    FMC_SDRAM_TimingTypeDef SDRAM_Timing;
+    SDRAM_Handler.Instance=FMC_SDRAM_DEVICE;                     <span class="cmt">//BANK5,6</span>
+    SDRAM_Handler.Init.SDBank=FMC_SDRAM_BANK1;                   <span class="cmt">//第一个 BANK</span>
+    SDRAM_Handler.Init.ColumnBitsNumber=FMC_SDRAM_COLUMN_BITS_NUM_9;
+    SDRAM_Handler.Init.RowBitsNumber=FMC_SDRAM_ROW_BITS_NUM_13;
+    SDRAM_Handler.Init.MemoryDataWidth=FMC_SDRAM_MEM_BUS_WIDTH_16;
+    SDRAM_Handler.Init.InternalBankNumber=FMC_SDRAM_INTERN_BANKS_NUM_4;
+    SDRAM_Handler.Init.CASLatency=FMC_SDRAM_CAS_LATENCY_3;
+    SDRAM_Handler.Init.WriteProtection=FMC_SDRAM_WRITE_PROTECTION_DISABLE;
+    SDRAM_Handler.Init.SDClockPeriod=FMC_SDRAM_CLOCK_PERIOD_2;   <span class="cmt">//HCLK/2=90M</span>
+    SDRAM_Handler.Init.ReadBurst=FMC_SDRAM_RBURST_ENABLE;
+    SDRAM_Handler.Init.ReadPipeDelay=FMC_SDRAM_RPIPE_DELAY_1;
+
+    SDRAM_Timing.LoadToActiveDelay=2;
+    SDRAM_Timing.ExitSelfRefreshDelay=8;
+    SDRAM_Timing.SelfRefreshTime=6;
+    SDRAM_Timing.RowCycleDelay=6;
+    SDRAM_Timing.WriteRecoveryTime=2;
+    SDRAM_Timing.RPDelay=2;
+    SDRAM_Timing.RCDDelay=2;
+    HAL_SDRAM_Init(&amp;SDRAM_Handler,&amp;SDRAM_Timing);
+    SDRAM_Initialization_Sequence(&amp;SDRAM_Handler);
+    HAL_SDRAM_ProgramRefreshRate(&amp;SDRAM_Handler,683);
+}</pre>
+
+    <table class="data">
+        <tr><th>参数</th><th>取值</th><th>含义</th></tr>
+        <tr><td>Bank</td><td>Bank1（Bank5 存储区）</td><td>基址 0xC0000000，由硬件固定</td></tr>
+        <tr><td>行列</td><td>13 行 × 9 列</td><td>8192 × 512 个单元</td></tr>
+        <tr><td>数据宽度</td><td>16 位</td><td>每个单元 2 字节</td></tr>
+        <tr><td>内部 Bank</td><td>4</td><td>由 BA0/BA1 选择</td></tr>
+        <tr><td>CAS</td><td>3</td><td>90MHz 下的读延迟</td></tr>
+        <tr><td>SDCLK</td><td>HCLK / 2 = 90MHz</td><td>周期 11.1ns</td></tr>
+        <tr><td>时序</td><td>2-8-6-6-2-2-2</td><td>依次为 TMRD/ TXSR / TRAS / TRC / TWR / TRP / TRCD</td></tr>
+    </table>
+
+    <p><code>HAL_SDRAM_Init()</code> 内部会调用 <code>HAL_SDRAM_MspInit()</code>：先开 FMC 与 GPIOC/D/E/F/G 时钟，再把 39 个引脚统一配成 <code>GPIO_AF12_FMC</code>、推挽复用、上拉、高速。FMC 的时钟与引脚都只在这里配置一次，后面的 LCD 只是复用同一套 AF 设置。</p>
+
+    <div class="note">容量对不上时先查这里：13 行 + 9 列 + 4 Bank + 16 位 = 8192 × 512 × 4 × 2B = 32MB。任一参数与实物不符，读写就会“看起来正常、算出来不对”。</div>
+</section>
+
+<section class="content-card" id="s10" data-title="SDRAM 上电命令序列">
+    <h2>10　SDRAM 上电命令序列</h2>
+    <div class="sec-sub">控制器配好只是第一步，SDRAM 颗粒本身还要按手册走完六步</div>
+
+    <figure class="figure">
+        <img src="./index27-map/sdram-init.png" alt="SDRAM 六步上电命令序列与模式寄存器说明">
+        <figcaption>图 10-1　SDRAM_Initialization_Sequence 的六个命令</figcaption>
+    </figure>
+
+    <pre class="code">void SDRAM_Initialization_Sequence(SDRAM_HandleTypeDef *hsdram)
+{
+    u32 temp=0;
+    SDRAM_Send_Cmd(0,FMC_SDRAM_CMD_CLK_ENABLE,1,0);   <span class="cmt">//时钟配置使能</span>
+    delay_us(500);                                    <span class="cmt">//至少延时200us</span>
+    SDRAM_Send_Cmd(0,FMC_SDRAM_CMD_PALL,1,0);         <span class="cmt">//所有存储区预充电</span>
+    SDRAM_Send_Cmd(0,FMC_SDRAM_CMD_AUTOREFRESH_MODE,8,0); <span class="cmt">//自刷新8次</span>
+    temp=(u32)SDRAM_MODEREG_BURST_LENGTH_1          |
+         SDRAM_MODEREG_BURST_TYPE_SEQUENTIAL        |
+         SDRAM_MODEREG_CAS_LATENCY_3                |
+         SDRAM_MODEREG_OPERATING_MODE_STANDARD      |
+         SDRAM_MODEREG_WRITEBURST_MODE_SINGLE;      <span class="cmt">//= 0x0230</span>
+    SDRAM_Send_Cmd(0,FMC_SDRAM_CMD_LOAD_MODE,1,temp); <span class="cmt">//写模式寄存器</span>
+}</pre>
+
+    <table class="data">
+        <tr><th>命令</th><th>宏</th><th>refresh / regval</th><th>作用</th></tr>
+        <tr><td>时钟使能</td><td><code>FMC_SDRAM_CMD_CLK_ENABLE</code></td><td>1 / 0</td><td>SDCLK 开始输出，颗粒上电</td></tr>
+        <tr><td>预充电</td><td><code>FMC_SDRAM_CMD_PALL</code></td><td>1 / 0</td><td>关闭 4 个内部 Bank 的打开行</td></tr>
+        <tr><td>自动刷新</td><td><code>FMC_SDRAM_CMD_AUTOREFRESH_MODE</code></td><td>8 / 0</td><td>连刷 8 次，完成颗粒初始化</td></tr>
+        <tr><td>加载模式</td><td><code>FMC_SDRAM_CMD_LOAD_MODE</code></td><td>1 / 0x0230</td><td>写入突发长度、CAS、写模式</td></tr>
+        <tr><td>刷新率</td><td><code>HAL_SDRAM_ProgramRefreshRate</code></td><td>683</td><td>写 FMC_SDRAM_TR 的 COUNT</td></tr>
+    </table>
+
+    <h3>刷新计数怎么来的</h3>
+    <p>SDRAM 要求 64ms 内把 8192 行全部刷新一遍，SDCLK = 90MHz：</p>
+    <p><code class="inline">COUNT = 64 × 1000 × 90 ÷ 8192 − 20 = 703.1 − 20 ≈ 683</code></p>
+    <p>减 20 是预留的命令开销，源码注释与实参都是 683。</p>
+
+    <div class="note">六步命令全部通过 <code>HAL_SDRAM_SendCommand(&amp;SDRAM_Handler,&amp;Command,0X1000)</code> 阻塞发出，超时参数是 0x1000 个计数。如果 SDRAM 焊接不良或时钟未开，程序会在这里长时间等待，表现为“卡在 SDRAM_Init 里”。</div>
+</section>
+
+<section class="content-card" id="s11" data-title="地址空间与 FMC 引脚">
+    <h2>11　地址空间与 FMC 引脚</h2>
+    <div class="sec-sub">0xC0000000 不是随便选的，它由 FMC Bank5 的硬件译码决定</div>
+
+    <figure class="figure">
+        <img src="./index27-map/addr-map.png" alt="地址空间划分与 FMC 引脚分组">
+        <figcaption>图 11-1　存储器映射与 SDRAM 引脚分配</figcaption>
+    </figure>
+
+    <table class="data">
+        <tr><th>区域</th><th>起始地址</th><th>本工程用途</th></tr>
+        <tr><td>Flash</td><td>0x08000000</td><td>代码 + 向量表（VTOR 指向这里）</td></tr>
+        <tr><td>SRAM</td><td>0x20000000</td><td>栈 1KB、堆 512B、普通全局变量</td></tr>
+        <tr><td>CCM</td><td>0x10000000</td><td>64KB 内核紧耦合 RAM，本实验未使用</td></tr>
+        <tr><td>FMC NE1</td><td>0x60000000</td><td>MCU 屏命令 / 数据，A18 区分</td></tr>
+        <tr><td>FMC Bank5</td><td>0xC0000000</td><td>外部 SDRAM，32MB</td></tr>
+    </table>
+
+    <pre class="code">u16 testsram[250000] __attribute__((at(0XC0000000)));  <span class="cmt">//测试用数组</span>
+<span class="cmt">//250000 × 2B = 500KB，全部落在 SDRAM 里</span></pre>
+
+    <p>用 <code>__attribute__((at()))</code> 把这个数组钉死在 SDRAM 起始处，编译器就不会把它放进内部 SRAM。数组声明在文件作用域，初始化（<code>testsram[ts]=ts</code>）发生在 <code>SDRAM_Init()</code> 之后的主函数里——若放到 SDRAM 初始化之前，写入会直接丢进“没有颗粒的地址”。</p>
+
+    <div class="note">引脚分组的完整清单见 <a href="#s09">第 09 节</a>：PC0/PC2/PC3 是控制线，PD/PE 是 16 位数据线，PF/PG 是地址线与 Bank 选择。全部 <code>GPIO_AF12_FMC</code>，与 LCD 复用的引脚写入的是同一套配置。</div>
+</section>
+
+<section class="content-card" id="s12" data-title="容量测试与数据回读">
+    <h2>12　容量测试与数据回读</h2>
+    <div class="sec-sub">每 16KB 打一个“路标”，读完看路标走到哪，就知道装了多少内存</div>
+
+    <pre class="code">void fsmc_sdram_test(u16 x,u16 y)
+{
+    u32 i=0; u32 temp=0; u32 sval=0;   <span class="cmt">//在地址0读到的数据</span>
+    LCD_ShowString(x,y,180,y+16,16,"Ex Memory Test:    0KB ");
+    <span class="cmt">//每隔16K字节,写入一个数据,总共写入2048个数据,刚好是32M字节</span>
+    for(i=0;i&lt;32*1024*1024;i+=16*1024)
+    {
+        *(vu32*)(Bank5_SDRAM_ADDR+i)=temp;
+        temp++;
+    }
+    <span class="cmt">//依次读出之前写入的数据,进行校验</span>
+    for(i=0;i&lt;32*1024*1024;i+=16*1024)
+    {
+        temp=*(vu32*)(Bank5_SDRAM_ADDR+i);
+        if(i==0)sval=temp;
+        else if(temp&lt;=sval)break;   <span class="cmt">//后读的值必须比第一次大</span>
+        LCD_ShowxNum(x+15*8,y,(u16)(temp-sval+1)*16,5,16,0);
+        printf("SDRAM Capacity:%dKB\r\n",(u16)(temp-sval+1)*16);
+    }
+}</pre>
+
+    <table class="data">
+        <tr><th>量</th><th>推算</th></tr>
+        <tr><td>写入点个数</td><td>32MB ÷ 16KB = 2048 个</td></tr>
+        <tr><td>写入内容</td><td>0, 1, 2, … 2047（递增 u32）</td></tr>
+        <tr><td>地址跨度</td><td>0x000000 → 0x1FF000（相对 0xC0000000）</td></tr>
+        <tr><td>满配结果</td><td>(2047 − 0 + 1) × 16KB = 32768KB = 32MB</td></tr>
+    </table>
+
+    <p>判定条件写成 <code>temp&lt;=sval</code> 是有讲究的：真 SDRAM 会按顺序回读 0、1、2…；如果读回全 0（没有颗粒）或读回上电随机值，都会在第 1、2 个点就 <code>break</code>，容量显示为 0KB 或 16KB，一眼就能看出问题。</p>
+
+    <div class="note">KEY1 的回读是另一条路：<code>for(ts=0;ts&lt;250000;ts++)</code> 把 <code>testsram</code> 里的 25 万个值逐条打印。它能验证“跨 500KB 连续读写”，代价是要串口吐 25 万行，主循环会被长时间占住。</div>
+</section>
+
+<section class="content-card" id="s13" data-title="主循环与可观察现象">
+    <h2>13　主循环与可观察现象</h2>
+    <div class="sec-sub">按键 → 分支 → 屏幕/串口输出，最后用 DS0 证明程序还活着</div>
+
+    <figure class="figure">
+        <img src="./index27-map/main-loop.png" alt="主循环按键分支与现象">
+        <figcaption>图 13-1　主循环的三种走向</figcaption>
+    </figure>
+
+    <table class="data">
+        <tr><th>操作</th><th>源码分支</th><th>可观察现象</th></tr>
+        <tr><td>上电</td><td>LCD 显示 5 行提示 + 预存 25 万数据</td><td>屏幕显示 APOLLO / SDRAM TEST，DS0 常亮</td></tr>
+        <tr><td>按 KEY0</td><td><code>fsmc_sdram_test(30,170)</code></td><td>屏幕显示 <code>Ex Memory Test: 32768KB</code>，串口反复打印容量</td></tr>
+        <tr><td>按 KEY1</td><td>25 万次 <code>LCD_ShowxNum</code> + <code>printf</code></td><td>串口刷出 <code>testsram[0]:0</code> … 数据，期间 DS0 停止闪烁</td></tr>
+        <tr><td>无按键</td><td><code>delay_ms(10)</code>，<code>i++</code></td><td>DS0 每 20 圈翻转一次，约 200ms 一个亮灭周期</td></tr>
+    </table>
+
+    <div class="sim">
+        <div class="sim-title">主循环分支演示（仅演示逻辑，不涉及真实硬件）</div>
+        <div class="sim-buttons">
+            <button data-key="key0">KEY0 容量测试</button>
+            <button data-key="key1">KEY1 回读数据</button>
+            <button data-key="idle">空转 20 轮</button>
+        </div>
+        <div class="led-row">
+            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0（PB1）</div>
+        </div>
+        <div class="sim-log" id="simLog">已初始化 SDRAM（0xC0000000 起 32MB），testsram 预存 0~249999。</div>
+    </div>
+
+    <div class="note">演示里的分支与 <code>main.c</code> 一一对应：KEY0 走 2048 个 16KB 步进的写读校验，KEY1 只显示前 5 条（真实工程会打印 25 万行），空转按钮执行 20 次“无键”分支以复现 DS0 翻转。</div>
+</section>
+
+<section class="content-card" id="s14" data-title="总结与常见问题排查">
+    <h2>14　总结与常见问题排查</h2>
+    <div class="sec-sub">把启动链浓缩成六步，再给一张“现象 → 原因”对照表</div>
+
+    <table class="data">
+        <tr><th>阶段</th><th>关键动作</th><th>失败时的典型现象</th></tr>
+        <tr><td>① 复位</td><td>MSP/PC 取自向量表，跳 Reset_Handler</td><td>上电无任何反应，需查 BOOT0 与下载</td></tr>
+        <tr><td>② SystemInit</td><td>开 FPU、RCC 复位、VTOR=0x08000000</td><td>中断跑飞、进 HardFault</td></tr>
+        <tr><td>③ __main</td><td>复制 .data、清零 .bss</td><td>全局变量初值异常</td></tr>
+        <tr><td>④ 时钟/时基</td><td>VOS1 + OverDrive + 5WS → 180MHz</td><td>随机死机、串口乱码</td></tr>
+        <tr><td>⑤ 外设</td><td>串口 → LED/KEY → SDRAM → LCD</td><td>白屏、SDRAM 容量 0KB</td></tr>
+        <tr><td>⑥ 主循环</td><td>按键分支 + DS0 翻转</td><td>按键无响应、DS0 不闪</td></tr>
+    </table>
+
+    <h3>现象 → 原因 → 排查</h3>
+    <table class="data">
+        <tr><th>现象</th><th>可能原因</th><th>排查动作</th></tr>
+        <tr><td>液晶白屏 / 无显示</td><td>串口没初始化就调 LCD_Init，卡在 fputc 的等待循环</td><td>把 <code>uart_init</code> 挪到 <code>LCD_Init</code> 之前，或用调试器看 PC 是否停在 <code>fputc</code></td></tr>
+        <tr><td>容量显示 0KB</td><td>SDRAM 未初始化就被访问；Bank/行列参数与实物不符</td><td>确认 <code>SDRAM_Init</code> 在 <code>testsram</code> 写入之前，核对 13 行 / 9 列 / 16 位</td></tr>
+        <tr><td>容量偏小（如 8192KB）</td><td>地址线或 Bank 线虚焊，高位地址读回不递增</td><td>用万用表查 PF/PG 地址线，或把步进改小观察断点地址</td></tr>
+        <tr><td>卡在 SDRAM_Init 里</td><td>FMC 时钟未开、命令超时、颗粒供电异常</td><td>检查 <code>HAL_SDRAM_SendCommand</code> 返回值，量 SDCLK 是否有波形</td></tr>
+        <tr><td>KEY1 后“卡住”</td><td>正常现象：25 万行打印占用主循环</td><td>等待打印结束，或改为只打印前若干条</td></tr>
+        <tr><td>HAL_Delay 明显偏快</td><td>SysTick 重装值仍是 16MHz 下的 16000</td><td>切时钟后重调 <code>HAL_InitTick</code>，或统一使用 <code>delay_ms</code></td></tr>
+    </table>
+
+    <div class="note blue">一句话串起来：向量表给起点，SystemInit 给现场，PLL 给速度，FMC 给通道，六步命令让颗粒活过来，最后才轮到按键与屏幕去证明这块 32MB 真的能读能写。</div>
+</section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-10 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    (function () {
+        var dot0 = document.getElementById('dot0');
+        var simLog = document.getElementById('simLog');
+        if (!dot0 || !simLog) return;
+
+        var i = 0, led0On = false, lines = [], MAXLN = 7;
+        var testsram = new Uint32Array(250000);
+        for (var n = 0; n < 250000; n++) testsram[n] = n;
+
+        function hex8(v) {
+            var s = v.toString(16).toUpperCase();
+            while (s.length < 8) s = '0' + s;
+            return '0x' + s;
+        }
+        function push(t) { lines.push(t); }
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            simLog.innerHTML = lines.slice(-MAXLN).join('<br>');
+        }
+        function loopTick() { i++; if (i === 20) { i = 0; led0On = !led0On; } }
+
+        function key0() {
+            var BASE = 0xC0000000, STEP = 16 * 1024, sval = 0, last = 0, temp = 0;
+            for (var a = 0; a < 32 * 1024 * 1024; a += STEP) {
+                temp = a / STEP;
+                if (a === 0) { sval = temp; last = temp; }
+                else if (temp <= sval) { break; }
+                else { last = temp; }
+            }
+            var kb = (last - sval + 1) * 16;
+            push('KEY0 → fsmc_sdram_test(30,170)');
+            push('写 ' + hex8(BASE) + ' = 0 … 写 ' + hex8(BASE + 0x1FF000) + ' = 2047');
+            push('回读 2048 个点，全部递增，未触发 break');
+            push('SDRAM Capacity:' + kb + 'KB');
+            loopTick(); render();
+        }
+
+        function key1() {
+            push('KEY1 → 回读 testsram[0..249999]');
+            for (var n = 0; n < 5; n++) push('testsram[' + n + ']:' + testsram[n]);
+            push('… 真实工程继续打印到 249999 行');
+            loopTick(); render();
+        }
+
+        function idle() {
+            for (var n = 0; n < 20; n++) loopTick();
+            push('无键 ×20：delay_ms(10) ×20，i 归零并翻转 DS0');
+            render();
+        }
+
+        var btns = document.querySelectorAll('.sim-buttons button');
+        for (var b = 0; b < btns.length; b++) {
+            (function (btn) {
+                btn.addEventListener('click', function () {
+                    var k = btn.getAttribute('data-key');
+                    if (k === 'key0') key0();
+                    else if (k === 'key1') key1();
+                    else idle();
+                });
+            })(btns[b]);
+        }
+    })();
+</script>
+</body>
+</html>

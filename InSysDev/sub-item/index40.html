@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验26 光照与接近传感器实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2f7a52;
+            margin-bottom: 6px;
+        }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验26 光照与接近传感器实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">先复位再开模式，读数只是位拼接。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">一颗 AP3216C，同时读出红外、接近与环境光三个量</div>
+
+                    <p>实验26 依旧复用软件 IIC，从机换成 AP3216C 三合一传感器。它把红外 LED、光电二极管和环境光传感器封在一起，主机只要按寄存器读 6 个字节，就能拼出 IR、PS、ALS 三个 16 位以内的数值，并实时刷到 LCD 上。</p>
+
+                    <table class="data">
+                        <tr><th>功能</th><th>引脚 / 器件</th><th>工程中的初始化</th></tr>
+                        <tr><td>IIC 时钟线</td><td>PH4，推挽输出 + 上拉</td><td><code>IIC_Init()</code></td></tr>
+                        <tr><td>IIC 数据线</td><td>PH5，推挽输出 + 上拉</td><td><code>IIC_Init()</code></td></tr>
+                        <tr><td>传感器</td><td>AP3216C，地址 0x3C</td><td><code>AP3216C_Init()</code></td></tr>
+                        <tr><td>环境光 ALS</td><td>寄存器 0x0C / 0x0D</td><td><code>AP3216C_ReadData()</code></td></tr>
+                        <tr><td>接近 PS</td><td>寄存器 0x0E / 0x0F</td><td><code>AP3216C_ReadData()</code></td></tr>
+                        <tr><td>红外 IR</td><td>寄存器 0x0A / 0x0B</td><td><code>AP3216C_ReadData()</code></td></tr>
+                        <tr><td>LED0</td><td>PB1，推挽输出</td><td>每 120ms 翻转一次</td></tr>
+                        <tr><td>显示</td><td>LCD（LTDC + 外部 SDRAM）</td><td><code>SDRAM_Init()</code> + <code>LCD_Init()</code></td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">AP3216C · 0x3C</span>
+                        <span class="chip">0x00 模式寄存器</span>
+                        <span class="chip">6 字节数据</span>
+                        <span class="chip">delay_ms(120)</span>
+                        <span class="chip">PH4 / PH5 软件 IIC</span>
+                    </div>
+
+                    <div class="note">AP3216C 的写地址是 <code>0x3C</code>、读地址是 <code>0x3D</code>；源码在 <code>ap3216c.c</code> 里用 <code>AP3216C_ADDR|0x00</code> 与 <code>AP3216C_ADDR|0x01</code> 得到，和 24C02 的写法完全一致。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">IIC 时序继续复用，新增的是“寄存器读写 + 位拼接”这一层</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本实验关注点</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化顺序与主循环</td><td>每 120ms 读一次并刷新 LCD</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>异常与中断入口</td><td><code>SysTick_Handler()</code>、<code>HardFault_Handler()</code></td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>复位后的最小配置</td><td>FPU、RCC 复位、VTOR 重定位</td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>向量表、栈堆、复位入口</td><td>Stack 0x400、Heap 0x200、<code>Reset_Handler</code></td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td>时钟初始化</td><td><code>Stm32_Clock_Init()</code> 的 PLL 与 Flash 等待</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>微秒/毫秒延时</td><td>IIC 位时序与 50ms 复位等待</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>串口与 printf</td><td><code>fputc()</code> 重定向、PA9/PA10 配置</td></tr>
+                        <tr><td><code>HARDWARE/IIC/myiic.c</code></td><td>软件模拟 IIC 时序</td><td>与前两个实验完全一致</td></tr>
+                        <tr><td><code>HARDWARE/AP3216C/ap3216c.c</code></td><td>本实验核心</td><td>模式配置、6 字节连读、位拼接</td></tr>
+                        <tr><td><code>HARDWARE/led|key|sdram|lcd</code></td><td>板级外设</td><td>现象呈现：屏幕数值与 DS0 心跳</td></tr>
+                    </table>
+
+                    <p>到这里，“<code class="inline">myiic.c</code> 负责电平、器件文件负责协议、<code class="inline">main.c</code> 负责业务”的三层结构已经完全稳定。三个实验共用同一份 IIC，只是换了两层之上的协议实现。</p>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">第 10、11 步换成 AP3216C 的复位与模式校验</div>
+
+                    <figure class="figure">
+                        <img src="./index40-map/boot-flow.png" alt="实验26 光照与接近传感器 从上电复位到主循环的启动流程图">
+                        <figcaption>图 3-1　启动链路与初始化顺序</figcaption>
+                    </figure>
+
+                    <p>初始化顺序与前面两个实验一致，区别在第 10、11 步：<code class="inline">AP3216C_Init()</code> 不只是探测地址，还要写两次模式寄存器、延时 50ms、再读回校验。<code class="inline">main()</code> 把它放在 <code class="inline">while()</code> 条件里，校验不通过就闪 DS0 反复重试。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>第 10 步内部顺序固定：<code>IIC_Init()</code> → 写 0x00=0x04 → 延时 → 写 0x00=0x03 → 读回 0x00。</li>
+                            <li>第 11 步的判据是“读回值等于 0x03”，而不是“有应答”，因为地址能应答不代表模式写成功。</li>
+                            <li>只有校验通过才打印 <code>AP3216C Ready!</code>，LCD 才会显示 IR / PS / ALS 三个标签。</li>
+                            <li>进入主循环后不再做任何配置，只是按固定节拍读 6 个寄存器。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">栈 1KB、堆 512B，向量表第 0 字就是栈顶地址</div>
+
+                    <pre class="code">Stack_Size      EQU     0x400;                          <span class="cmt">// 栈 1KB，主栈 MSP 从这里向下生长</span>
+Heap_Size       EQU     0x200;                          <span class="cmt">// 堆 512B，本工程几乎不用 malloc</span>
+
+__Vectors       DCD     __initial_sp               ; Top of Stack
+                DCD     Reset_Handler              ; Reset Handler
+                DCD     NMI_Handler                ; NMI Handler
+                DCD     HardFault_Handler          ; Hard Fault Handler
+                ...
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0                              <span class="cmt">// 先跑 SystemInit</span>
+                 LDR     R0, =__main
+                 BX      R0                              <span class="cmt">// 再进 C 库，最终调用 main</span>
+                 ENDP</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>复位时内核从地址 0 取两个字：第 0 个字装入 MSP，第 1 个字装入 PC。</li>
+                            <li>F429 的 Flash 起始地址是 0x08000000，上电时 0x00000000 别名到 Flash，读到就是本工程的向量表。</li>
+                            <li>本实验只有 <code>ir</code>、<code>ps</code>、<code>als</code> 三个 u16 全局变量与少量局部变量，1KB 栈足够。</li>
+                            <li>工程没有启用 IIC 中断，所有收发都在主循环里轮询完成，因此向量表里没有额外的外设中断被用到。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">先把时钟打回默认值、建好 1ms 时基，再谈外设</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  /* set CP10 and CP11 Full Access */
+  #endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;          <span class="cmt">// 先开内部 HSI，保证有饭吃</span>
+  RCC-&gt;CFGR = 0x00000000;                   <span class="cmt">// 清空分频配置</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;          <span class="cmt">// 关 HSEON / CSSON / PLLON</span>
+  RCC-&gt;PLLCFGR = 0x24003010;                <span class="cmt">// PLL 参数恢复复位值</span>
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET; <span class="cmt">// 向量表定位到 Flash 起始</span>
+}</pre>
+
+                    <p><code class="inline">SystemInit()</code> 结束时主频仍是 HSI，真正切到 180MHz 由 <code class="inline">Stm32_Clock_Init()</code> 完成。<code class="inline">HAL_Init()</code> 建立 1ms SysTick 时基，<code class="inline">delay_ms(120)</code> 的节拍就来自这里。</p>
+
+                    <div class="note">AP3216C 上电后需要约 50ms 稳定时间，源码在写复位命令之后用 <code>delay_ms(50)</code> 等待。这个延时同样依赖 <code>delay_init()</code> 的正确参数，否则 50ms 可能变成 5ms，读回校验就会失败。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟、延时与串口">
+                    <h2>06　时钟、延时与串口</h2>
+                    <div class="sec-sub">180MHz 主频、45MHz/90MHz 总线，以及 1µs 级的 IIC 定时</div>
+
+                    <figure class="figure">
+                        <img src="./index40-map/clock-tree.png" alt="Stm32_Clock_Init 的时钟树与各总线分频结果">
+                        <figcaption>图 6-1　PLL 参数与总线分频</figcaption>
+                    </figure>
+
+                    <pre class="code">// SYSTEM/sys/sys.c
+RCC_OscInitStructure.PLL.PLLM = pllm;   <span class="cmt">// 25，HSE 先分频</span>
+RCC_OscInitStructure.PLL.PLLN = plln;   <span class="cmt">// 360，VCO = 25 / 25 × 360 = 360MHz</span>
+RCC_OscInitStructure.PLL.PLLP = pllp;   <span class="cmt">// 2，SYSCLK = 360 / 2 = 180MHz</span>
+RCC_OscInitStructure.PLL.PLLQ = pllq;   <span class="cmt">// 8，Fusb = 360 / 8 = 45MHz</span>
+RCC_ClkInitStructure.AHBCLKDivider  = RCC_SYSCLK_DIV1;  <span class="cmt">// HCLK = 180MHz</span>
+RCC_ClkInitStructure.APB1CLKDivider = RCC_HCLK_DIV4;    <span class="cmt">// PCLK1 = 45MHz</span>
+RCC_ClkInitStructure.APB2CLKDivider = RCC_HCLK_DIV2;    <span class="cmt">// PCLK2 = 90MHz</span>
+HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure, FLASH_LATENCY_5);</pre>
+
+                    <pre class="code">// SYSTEM/delay/delay.c
+void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">// SysTick 跟随 HCLK</span>
+    fac_us = SYSCLK;                                     <span class="cmt">// 180MHz → 每微秒 180 个节拍</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks = nus * fac_us;                            <span class="cmt">// 需要等的节拍数</span>
+    u32 told = SysTick-&gt;VAL;                             <span class="cmt">// SysTick 是递减计数器</span>
+    while (1) { ... if (tcnt &gt;= ticks) break; }          <span class="cmt">// 差值累加到 ticks 就退出</span>
+}
+
+void delay_ms(u16 nms)
+{
+    u32 i;
+    for (i = 0; i &lt; nms; i++) delay_us(1000);            <span class="cmt">// 毫秒靠微秒循环拼</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>fac_us</code> 必须与 HCLK 一致，IIC 的 <code>delay_us(2)</code>、<code>delay_us(4)</code> 才准确。</li>
+                            <li><code>delay_ms(50)</code> 是 AP3216C 的复位等待，<code>delay_ms(120)</code> 是采样节拍，两者都靠 <code>delay_us</code> 拼出来。</li>
+                            <li>SysTick 由 <code>HAL_Init()</code> 配成 1ms 中断，但 <code>delay_us</code> 不依赖该中断，是纯轮询。</li>
+                            <li>GPIOH 挂在 AHB1，读写 PH4 / PH5 没有额外分频开销，端口翻转速度远高于 IIC 需要的速率。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="AP3216C 与寄存器地图">
+                    <h2>07　AP3216C 与寄存器地图</h2>
+                    <div class="sec-sub">一个模式寄存器管开关，六个数据寄存器管读数</div>
+
+                    <figure class="figure">
+                        <img src="./index40-map/ap3216c-chain.png" alt="STM32F429 通过 IIC 连接 AP3216C 并读出三路传感器的示意图">
+                        <figcaption>图 7-1　IIC 总线与三路测量量的来源</figcaption>
+                    </figure>
+
+                    <pre class="code">// HARDWARE/AP3216C/ap3216c.h
+#define AP3216C_ADDR    0X3C    <span class="cmt">// 7 位地址 0x1E 左移一位</span>
+
+// HARDWARE/AP3216C/ap3216c.c
+void AP3216C_WriteOneByte(u8 reg, u8 data)
+{
+    IIC_Start();
+    IIC_Send_Byte(AP3216C_ADDR|0X00);  <span class="cmt">// 0x3C，写方向</span>
+    IIC_Wait_Ack();
+    IIC_Send_Byte(reg);                <span class="cmt">// 寄存器地址</span>
+    IIC_Wait_Ack();
+    IIC_Send_Byte(data);               <span class="cmt">// 写入的值</span>
+    IIC_Wait_Ack();
+    IIC_Stop();
+}
+
+u8 AP3216C_ReadOneByte(u8 reg)
+{
+    u8 temp = 0;
+    IIC_Start();
+    IIC_Send_Byte(AP3216C_ADDR|0X00);
+    IIC_Wait_Ack();
+    IIC_Send_Byte(reg);                <span class="cmt">// 先写要读哪个寄存器</span>
+    IIC_Wait_Ack();
+    IIC_Start();                       <span class="cmt">// 重新起始，切读方向</span>
+    IIC_Send_Byte(AP3216C_ADDR|0X01);  <span class="cmt">// 0x3D</span>
+    IIC_Wait_Ack();
+    temp = IIC_Read_Byte(0);
+    IIC_Stop();
+    return temp;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>AP3216C 是“寄存器型”器件：写操作要发 地址 + 寄存器 + 数据，读操作要发 地址 + 寄存器 + 重起始 + 读地址。</li>
+                            <li>寄存器地址是单字节，读写指针不会自动回卷，所以连读 6 个字节时必须逐个指定地址。</li>
+                            <li>0x00 是系统模式寄存器：写 0x04 触发软件复位，写 0x03 同时开启 ALS 与 PS+IR。</li>
+                            <li>0x0A～0x0F 是数据寄存器，顺序固定为 IR 低/高、ALS 低/高、PS 低/高。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="初始化：复位与模式">
+                    <h2>08　初始化：复位与模式</h2>
+                    <div class="sec-sub">写 0x04 复位、等 50ms、写 0x03 开三路，再读回校验</div>
+
+                    <pre class="code">u8 AP3216C_Init(void)
+{
+    u8 temp = 0;
+    IIC_Init();                          <span class="cmt">// PH4 / PH5 就绪</span>
+
+    AP3216C_WriteOneByte(0X00, 0X04);    <span class="cmt">// 软件复位</span>
+    delay_ms(50);                        <span class="cmt">// 等内部电路稳定</span>
+    AP3216C_WriteOneByte(0X00, 0X03);    <span class="cmt">// 开启 ALS + PS + IR</span>
+
+    temp = AP3216C_ReadOneByte(0X00);    <span class="cmt">// 读回模式寄存器</span>
+    if (temp == 0X03) return 0;          <span class="cmt">// 0 = 成功</span>
+    else return 1;                       <span class="cmt">// 1 = 失败，main 里重试</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>复位后必须等 50ms，芯片内部 ADC 与红外驱动需要建立时间，等太短会读回 0x00 或 0xFF。</li>
+                            <li>0x03 的含义是 bit0 开 ALS、bit1 开 PS+IR，两路同时工作，所以后面对时间隔必须大于 112.5ms。</li>
+                            <li>校验读的是同一个寄存器，能同时验证“写通路”和“读通路”，比只探测地址严格得多。</li>
+                            <li>返回值语义与 <code>PCF8574_Init()</code> 一致：0 成功、1 失败，方便 <code>while()</code> 直接使用。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="6 字节数据与拼接公式">
+                    <h2>09　6 字节数据与拼接公式</h2>
+                    <div class="sec-sub">IR 10 位、ALS 16 位、PS 10 位，各有自己的溢出标志</div>
+
+                    <figure class="figure">
+                        <img src="./index40-map/data-frame.png" alt="AP3216C 六个数据寄存器与 IR/ALS/PS 拼接公式">
+                        <figcaption>图 9-1　寄存器与三路数值的对应关系</figcaption>
+                    </figure>
+
+                    <pre class="code">void AP3216C_ReadData(u16 *ir, u16 *ps, u16 *als)
+{
+    u8 buf[6];
+    u8 i;
+
+    for (i = 0; i &lt; 6; i++)
+        buf[i] = AP3216C_ReadOneByte(0X0A + i);  <span class="cmt">// 逐个读 0x0A~0x0F</span>
+
+    if (buf[0] &amp; 0X80) *ir = 0;                  <span class="cmt">// bit7 = IR_OF，溢出记 0</span>
+    else *ir = ((u16)buf[1] &lt;&lt; 2) | (buf[0] &amp; 0X03);
+
+    *als = ((u16)buf[3] &lt;&lt; 8) | buf[2];          <span class="cmt">// ALS 直接高低字节拼</span>
+
+    if (buf[4] &amp; 0X40) *ps = 0;                  <span class="cmt">// bit6 = PS_OF</span>
+    else *ps = (((u16)buf[5] &amp; 0X3F) &lt;&lt; 4) | (buf[4] &amp; 0X0F);
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>IR 只有 10 位：低 2 位在 0x0A 的 bit0~1，高 8 位在 0x0B，所以要 <code>(buf[1]&lt;&lt;2) | (buf[0]&amp;0x03)</code>。</li>
+                            <li><code>buf[0]</code> 的 bit7 是 IR 溢出标志，<code>buf[4]</code> 的 bit6 是 PS 溢出标志，溢出时源码直接把结果记 0。</li>
+                            <li>ALS 是 16 位，<code>0x0C</code> 低字节、<code>0x0D</code> 高字节，直接移位拼接。</li>
+                            <li>PS 只有 10 位：<code>0x0E</code> 的低 4 位是低位，<code>0x0F</code> 的低 6 位是高位，掩码写错就会读出一个巨大的假值。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">源码里 6 次读操作是分开的，每次都有完整的 Start/Stop 时序，并不是一次突发读。这样虽然慢一点，但每个寄存器的地址都明确，调试时更容易定位问题。</div>
+
+                    <p>把采样周期与这 6 次读放在同一条时间轴上，能看清两件事：读 6 个字节只占 <code class="inline">delay_ms(120)</code> 开头极小的一段，其余时间都在等下一次转换完成。</p>
+
+                    <figure class="figure">
+                        <img src="./index40-map/ap3216c-timing.png" alt="AP3216C 的 120ms 采样周期与 0x0A 至 0x0F 六个寄存器的读地址顺序时序图">
+                        <figcaption>图 9-2　采样周期（120 ms 对 112.5 ms 下限）与 0x0A~0x0F 的读地址顺序</figcaption>
+                    </figure>
+
+                    <p>112.5 ms 是源码注释给出的下限，<code class="inline">delay_ms(120)</code> 比它多出 7.5 ms 余量；6 次读按 <code class="inline">0x0A → 0x0F</code> 的顺序落进 <code class="inline">buf[0]~buf[5]</code>，上面的拼接公式才有固定的字节对应关系。</p>
+                </section>
+
+                <section class="content-card" id="s10" data-title="主循环与刷新逻辑">
+                    <h2>10　主循环与刷新逻辑</h2>
+                    <div class="sec-sub">读一次、刷三行、翻一次灯，周期 120ms</div>
+
+                    <pre class="code">// USER/main.c
+while (AP3216C_Init())                   <span class="cmt">// 校验失败就闪 DS0 重试</span>
+{
+    LCD_ShowString(30,160,200,16,16,"AP3216C Check Failed!");
+    delay_ms(500);
+    LCD_ShowString(30,160,200,16,16,"Please Check!         ");
+    delay_ms(500);
+    LED0 = !LED0;
+}
+
+LCD_ShowString(30, 160, 200, 16, 16, "IR:");
+LCD_ShowString(30, 180, 200, 16, 16, "PS:");
+LCD_ShowString(30, 200, 200, 16, 16, "ALS:");
+
+while (1)
+{
+    AP3216C_ReadData(&amp;ir, &amp;ps, &amp;als);   <span class="cmt">// 一次读 6 个寄存器</span>
+    LCD_ShowNum(30+32, 160, ir, 5, 16);  <span class="cmt">// 5 位宽，右对齐显示</span>
+    LCD_ShowNum(30+32, 180, ps, 5, 16);
+    LCD_ShowNum(30+32, 200, als, 5, 16);
+    LED0 = !LED0;                        <span class="cmt">// 每次采样翻转一次</span>
+    delay_ms(120);                       <span class="cmt">// 大于 112.5ms 的下限</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>LCD_ShowNum()</code> 会先擦掉对应区域再写数字，所以数值从 3 位变 5 位不会留下残影。</li>
+                            <li>三个标签只写一次，主循环只刷新数值，减少 LCD 刷新开销。</li>
+                            <li><code>LED0</code> 每 120ms 翻转，用肉眼就能判断程序有没有卡在 IIC 里。</li>
+                            <li><code>delay_ms(120)</code> 不只是“慢一点”，而是 AP3216C 在 ALS 与 PS 同时开启时的最小采样间隔要求。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="交互演示：三路数值变化">
+                    <h2>11　交互演示：三路数值变化</h2>
+                    <div class="sec-sub">拖动滑块模拟光照、遮挡与反射，观察 LCD 上的三个数</div>
+
+                    <div class="sim">
+                        <div class="sim-title">AP3216C 采样：ALS / PS / IR 的联动</div>
+                        <div class="sim-buttons">
+                            <button data-act="bright">遮挡光照（ALS 变小）</button>
+                            <button data-act="near">手掌靠近（PS 变大）</button>
+                            <button data-act="far">手掌移开（PS 归零）</button>
+                            <button data-act="reset">复位</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="d40a"></span>DS0 心跳</div>
+                            <div class="led-item"><span class="led-dot" id="d40b"></span>IR_OF 溢出</div>
+                        </div>
+                        <div class="sim-log" id="log40">IR：12　　PS：8　　ALS：520</div>
+                    </div>
+
+                    <div class="note">演示只表达源码里的三条分支：<code>AP3216C_ReadData()</code> 拼出三个值、<code>buf[0]&amp;0x80</code> 触发 IR_OF 记 0、主循环每 120ms 翻转 DS0。以上仅演示逻辑。</div>
+
+                    <script>
+                    (function () {
+                        var als = 520, ps = 8, ir = 12, of = false, beat = false;
+                        var log = document.getElementById('log40');
+                        var dotA = document.getElementById('d40a');
+                        var dotB = document.getElementById('d40b');
+
+                        function show(msg) {
+                            dotA.classList.toggle('on', beat);
+                            dotB.classList.toggle('on', of);
+                            if (msg) {
+                                log.textContent = 'IR：' + ir + '　　PS：' + ps + '　　ALS：' + als + '　｜　' + msg;
+                            } else {
+                                log.textContent = 'IR：' + ir + '　　PS：' + ps + '　　ALS：' + als;
+                            }
+                        }
+
+                        document.querySelectorAll('.sim-buttons button').forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                var act = btn.getAttribute('data-act');
+                                if (act === 'reset') {
+                                    als = 520; ps = 8; ir = 12; of = false; beat = false;
+                                    show('已复位：模式寄存器 0x03，三路同时开启。');
+                                    return;
+                                }
+                                if (act === 'bright') {
+                                    als = Math.max(0, als - 380);
+                                    show('ALS 变小：0x0C / 0x0D 拼接后的 16 位数值下降。');
+                                    return;
+                                }
+                                if (act === 'near') {
+                                    ps = 980; ir = 640;
+                                    show('PS 变大、IR 同步升高：反射红外被接收管收到。');
+                                    return;
+                                }
+                                if (act === 'far') {
+                                    ps = 0; ir = 12; of = false;
+                                    show('PS 归零：接近值回到下限，IR 也回落到环境水平。');
+                                    return;
+                                }
+                            });
+                        });
+                    })();
+                    </script>
+                </section>
+
+                <section class="content-card" id="s12" data-title="操作与现象对照">
+                    <h2>12　操作与现象对照</h2>
+                    <div class="sec-sub">屏幕上的三个数字，对应三种物理量</div>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>代码路径</th><th>现象</th></tr>
+                        <tr><td>上电 / 复位</td><td><code>AP3216C_Init()</code></td><td>屏幕显示 AP3216C TEST，校验通过后出现 <code>AP3216C Ready!</code></td></tr>
+                        <tr><td>传感器未接</td><td><code>while(AP3216C_Init())</code></td><td>DS0 约 1 秒闪一次，屏幕交替显示 Check Failed 与 Please Check</td></tr>
+                        <tr><td>遮住传感器</td><td>ALS 数值变化</td><td>ALS 明显下降，IR 也随之变化</td></tr>
+                        <tr><td>手掌靠近</td><td>PS 数值变化</td><td>PS 快速上升，靠近越近数值越大</td></tr>
+                        <tr><td>手掌移开</td><td>PS 回落</td><td>PS 回到接近 0 的底噪水平</td></tr>
+                        <tr><td>正常采样</td><td><code>LED0 = !LED0</code></td><td>DS0 约每 120ms 翻转一次，频率肉眼可见闪烁</td></tr>
+                    </table>
+                </section>
+
+                <section class="content-card" id="s13" data-title="时序约束与采样间隔">
+                    <h2>13　时序约束与采样间隔</h2>
+                    <div class="sec-sub">112.5ms 是数据手册的硬指标，不是随便写的经验值</div>
+
+                    <p>AP3216C 在 ALS 与 PS+IR 同时工作时，一次完整的转换周期是 112.5ms。如果主循环读得太快，读到的可能是上一轮的旧值，甚至出现相邻字节来自不同采样周期的错位。<strong>源码用 <code class="inline">delay_ms(120)</code> 刚好越过这个下限</strong>，属于留了 7.5ms 余量的做法。</p>
+
+                    <pre class="code">while (1)
+{
+    AP3216C_ReadData(&amp;ir, &amp;ps, &amp;als);
+    ...
+    delay_ms(120);          <span class="cmt">// 必须大于 112.5ms 的转换周期</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>只开 ALS 时转换更快，但本工程 0x03 同时开启两路，必须按最长周期算。</li>
+                            <li>如果把 <code>delay_ms(120)</code> 改成 10ms，数值不会立刻出错，但刷新会出现重复值与跳变。</li>
+                            <li>6 个寄存器是分 6 次读的，读取本身耗时约几百微秒，相对于 112.5ms 可以忽略。</li>
+                            <li>DS0 的翻转频率与采样周期绑定，看到灯闪得明显变快，就说明延时被改小了。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="常见问题排查">
+                    <h2>14　常见问题排查</h2>
+                    <div class="sec-sub">数值全 0、数值乱跳、校验不过，分别查不同的地方</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>可能原因</th><th>排查方法</th></tr>
+                        <tr><td>一直显示 AP3216C Check Failed</td><td>复位后等待不足，或地址写成 0x1E</td><td>确认 <code>delay_ms(50)</code>，宏值应为 <code>0x3C</code></td></tr>
+                        <tr><td>三路数值恒为 0</td><td>模式寄存器没写成 0x03</td><td>读回 0x00 确认是否为 0x03</td></tr>
+                        <tr><td>ALS 正常但 PS 一直是 0</td><td>PS 拼接掩码写错</td><td>检查 <code>buf[4]&amp;0x0F</code> 与 <code>buf[5]&amp;0x3F</code></td></tr>
+                        <tr><td>数值乱跳</td><td>采样间隔小于 112.5ms</td><td>把延时改回 <code>delay_ms(120)</code></td></tr>
+                        <tr><td>偶尔读到 65535</td><td>溢出标志未处理</td><td>确认 <code>buf[0]&amp;0x80</code>、<code>buf[4]&amp;0x40</code> 判断存在</td></tr>
+                    </table>
+
+                    <div class="note">如果 IIC 完全不通，先回到实验24 的排查思路：<code>delay_init()</code> 参数、PH4/PH5 是否配成输出、读字节前是否切了 <code>SDA_IN()</code>。总线层通了，再查传感器层的寄存器配置。</div>
+                </section>
+
+                <section class="content-card" id="s15" data-title="总结">
+                    <h2>15　总结</h2>
+                    <div class="sec-sub">同一套 IIC，三种从机：EEPROM、IO 扩展、传感器</div>
+
+                    <p>实验26 仍然没有改一行 IIC 时序，新增的只是寄存器读写与位拼接。<code class="inline">AP3216C_Init()</code> 负责“让它工作”，<code class="inline">AP3216C_ReadData()</code> 负责“把 6 个字节翻译成三个物理量”，<code class="inline">main()</code> 负责“按 112.5ms 以上的节拍刷新”。<strong>协议、驱动、业务三层各管一段，是这三个实验共同的骨架</strong>。</p>
+
+                    <p>和前面相比，本实验多了一个容易忽略的约束：采样周期。理解了“数据手册的硬指标要落到 <code class="inline">delay_ms()</code> 上”，才算真正把传感器用对。</p>
+
+                    <div class="chips">
+                        <span class="chip">AP3216C · 0x3C</span>
+                        <span class="chip">0x00 模式 = 0x03</span>
+                        <span class="chip">6 字节 → 3 个量</span>
+                        <span class="chip">掩码与溢出标志</span>
+                        <span class="chip">112.5ms 采样周期</span>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-12 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

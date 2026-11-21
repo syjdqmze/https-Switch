@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验7 定时器中断实验</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验7 · 定时器中断实验</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">点击目录跳转；代码均摘自本工程源码，未做改写</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验概述与硬件资源">
+                    <h2>01　实验概述与硬件资源</h2>
+                    <div class="sec-sub">目标：让 TIM3 每 500 ms 产生一次更新中断，在中断里翻转 DS1，同时观察它与主循环延时驱动的 DS0 有何不同</div>
+
+                    <p>实验6 用窗口看门狗保证程序不跑飞，实验7 换一个方向：用<strong>硬件定时器</strong>产生严格等间隔的事件。同样是“隔一段时间翻转一次 LED”，主循环里的 <code class="inline">delay_ms</code> 靠 CPU 空转计时，而定时器靠硬件计数，CPU 完全不用等。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚 / 外设</th><th>在本实验中的作用</th></tr>
+                        <tr><td>DS0</td><td>PB1（<code>LED0</code>）</td><td>主循环每 200 ms 翻转，周期 400 ms</td></tr>
+                        <tr><td>DS1</td><td>PB0（<code>LED1</code>）</td><td>TIM3 中断每 500 ms 翻转，周期 1000 ms</td></tr>
+                        <tr><td>TIM3</td><td>APB1 上的通用定时器</td><td>溢出周期 500 ms，产生更新中断</td></tr>
+                        <tr><td>USART1</td><td>PA9 / PA10</td><td>115200 波特率，串口打印调试信息</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">TIM3_IRQn = 29</span>
+                        <span class="chip">NVIC 抢占 1 / 子优先级 3</span>
+                        <span class="chip">PSC = 9000-1</span>
+                        <span class="chip">ARR = 5000-1</span>
+                        <span class="chip">HCLK = 180 MHz</span>
+                    </div>
+
+                    <div class="note">现象是“一块快闪、一块慢闪”。看到两块 LED 频率不同，就说明主循环和定时器中断确实是两条独立的时间线——这是本实验最重要的直观结论。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="工程目录与文件分工">
+                    <h2>02　工程目录与文件分工</h2>
+                    <div class="sec-sub">读启动流程前先认清“哪段代码归谁管”，避免把库函数和自己写的函数混在一起看</div>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>归属</th><th>关键内容</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>用户</td><td>main 函数：六步初始化 + while(1)</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>用户</td><td>中断入口，本工程只实现了 <code>SysTick_Handler</code></td></tr>
+                        <tr><td><code>USER/TIMER.uvprojx</code></td><td>工程</td><td>器件 STM32F429IGTx，宏 <code>USE_HAL_DRIVER, STM32F429xx</code></td></tr>
+                        <tr><td><code>HARDWARE/TIMER/timer.c</code></td><td>用户</td><td>TIM3 初始化、MSP、中断入口、更新回调</td></tr>
+                        <tr><td><code>HARDWARE/LED/led.c</code></td><td>用户</td><td>PB0 / PB1 推挽输出，初始置高（熄灭）</td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td>用户</td><td><code>Stm32_Clock_Init</code>：HSE → PLL → 180 MHz</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>用户</td><td>USART1 初始化，PA9 / PA10 复用</td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>启动</td><td>向量表、<code>Reset_Handler</code>、各中断的弱定义</td></tr>
+                        <tr><td><code>HALLIB/</code></td><td>ST 官方</td><td>HAL 库 V1.3.2，只读不改</td></tr>
+                    </table>
+
+                    <div class="note blue">凡是文件名带 <code>stm32f4xx_hal_</code> 前缀的，都属于 ST 的库；带 <code>MspInit</code> 后缀的，是本工程自己写的底层初始化（时钟、GPIO、NVIC），由库在初始化流程里回调。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电复位到 while(1)，中间只有两条主线：一条是 C 运行环境，一条是外设初始化顺序</div>
+
+                    <figure class="figure">
+                        <img src="./index21-map/boot-flow.png" alt="定时器中断实验从上电到主循环的启动流程图">
+                        <figcaption>图 3-1　启动链路总览：一次性的配置 + 两条并行的运行时间线</figcaption>
+                    </figure>
+
+                    <h3>main 函数全文</h3>
+                    <pre class="code">int main(void)
+{
+    HAL_Init();                     <span class="cmt">// 初始化HAL库</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// 设置时钟,180Mhz</span>
+    delay_init(180);                <span class="cmt">// 初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">// 初始化USART</span>
+    LED_Init();                     <span class="cmt">// 初始化LED</span>
+    KEY_Init();                     <span class="cmt">// 初始化按键</span>
+    TIM3_Init(5000-1,9000-1);       <span class="cmt">// 定时器时钟为90M，分频 9000 → 10K，重装 5000-1 → 500ms</span>
+
+    while(1)
+    {
+        LED0=!LED0;                 <span class="cmt">// LED0翻转</span>
+        delay_ms(200);              <span class="cmt">// 延时200ms</span>
+    }
+}</pre>
+
+                    <p>这七行代码的顺序不能随便换，原因都在“依赖”二字：</p>
+                    <ul>
+                        <li><code>HAL_Init</code> 必须最先，它建立 1 ms 时基，后面的 <code>delay_ms</code> 才有依据；</li>
+                        <li><code>Stm32_Clock_Init</code> 必须早于所有外设初始化，因为外设的时钟都来自它；</li>
+                        <li><code>TIM3_Init</code> 放在最后，是因为它依赖已经配好的 APB1 时钟和已使能的 GPIO。</li>
+                    </ul>
+
+                    <div class="note">注意 <code>TIM3_Init(5000-1, 9000-1)</code> 的实参顺序是“先 ARR、后 PSC”，和很多人凭直觉写的顺序正好相反。参数传反了，500 ms 会变成完全不同的时间。</div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">复位后 CPU 不是先跑 main，而是先读向量表；中断能不能进对函数，全看这张表</div>
+
+                    <p>STM32F429 复位时把 Flash 起始地址 <code>0x08000000</code> 映射到地址 0，所以向量表第一项（栈顶）和第二项（复位入口）就位于 Flash 最前面：</p>
+
+                    <table class="data">
+                        <tr><th>表项序号</th><th>地址</th><th>内容</th></tr>
+                        <tr><td>0</td><td><code>0x08000000</code></td><td><code>__initial_sp</code>（栈顶，供 MSP 装载）</td></tr>
+                        <tr><td>1</td><td><code>0x08000004</code></td><td><code>Reset_Handler</code></td></tr>
+                        <tr><td>16 + 29</td><td><code>0x080000B4</code></td><td><code>TIM3_IRQHandler</code>（TIM3_IRQn = 29）</td></tr>
+                        <tr><td>16 + 37</td><td><code>0x080000D4</code></td><td><code>USART1_IRQHandler</code>（USART1_IRQn = 37）</td></tr>
+                    </table>
+
+                    <p>地址算法只有一条：<strong>0x08000000 + 4 × (16 + IRQn)</strong>。16 是内核异常占掉的表项，IRQn 是芯片手册里给的中断号。</p>
+
+                    <pre class="code"><span class="cmt">; CORE/startup_stm32f429xx.s 片段</span>
+                DCD     TIM3_IRQHandler            <span class="cmt">; TIM3，第 29 号外部中断，地址 0x080000B4</span>
+                DCD     TIM4_IRQHandler            <span class="cmt">; TIM4</span></pre>
+
+                    <h3>弱符号：为什么 timer.c 里能“重复定义”中断函数</h3>
+                    <p>启动文件里每个中断入口都写成 <code>EXPORT ... [WEAK]</code>，意思是“如果别处有同名强符号，就用别处的”。timer.c 里的 <code>TIM3_IRQHandler</code> 是强符号，链接时自动覆盖启动文件里的空壳。这就是为什么在 <code>stm32f4xx_it.c</code> 里找不到 TIM3 的中断函数，程序却仍能进中断。</p>
+
+                    <div class="note">检查中断有没有配对，最快的办法是看向量表地址有没有写错、函数名有没有拼错（大小写敏感）。名字写错时链接不会报错，只会悄悄掉进启动文件的死循环。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 __main">
+                    <h2>05　SystemInit 与 __main</h2>
+                    <div class="sec-sub">Reset_Handler 只做两件事：调 SystemInit 把内核环境准备好，再跳 __main 把 C 运行环境搭起来</div>
+
+                    <pre class="code">Reset_Handler   PROC
+                EXPORT  Reset_Handler             [WEAK]
+                IMPORT  SystemInit
+                IMPORT  __main
+                LDR     R0, =SystemInit
+                BLX     R0                        <span class="cmt">; 1. 内核与外设的基础环境</span>
+                LDR     R0, =__main
+                BX      R0                        <span class="cmt">; 2. C 库的初始化入口</span>
+                ENDP</pre>
+
+                    <h3>SystemInit 做了什么</h3>
+                    <ul>
+                        <li>使能 FPU：写 <code>CPACR</code> 的 CP10 / CP11 位，否则浮点指令会触发硬件异常；</li>
+                        <li>设置向量表偏移：<code>SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET</code>，本工程偏移为 0，即向量表仍在 <code>0x08000000</code>。</li>
+                    </ul>
+                    <p>注意它<strong>不改系统时钟</strong>。此时芯片还跑在内部 HSI 16 MHz 上，真正升到 180 MHz 是后面 <code>Stm32_Clock_Init</code> 的事。</p>
+
+                    <h3>__main 做了什么</h3>
+                    <ul>
+                        <li>把已初始化的全局变量从 Flash 里的初值副本搬到 RAM 的 <code>.data</code> 段；</li>
+                        <li>把 <code>.bss</code> 段（未初始化或初值为 0 的全局变量）整体清零；</li>
+                        <li>配置堆栈，最后才调用用户的 <code>main()</code>。</li>
+                    </ul>
+
+                    <div class="note blue">如果跳过 <code>__main</code> 直接跳 main，全局变量会是随机值——<code>TIM3_Handler</code> 这种全局句柄里的 <code>State</code> 字段就会是垃圾，<code>HAL_TIM_Base_Init</code> 的行为随之不可预测。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="HAL_Init：时基与优先级分组">
+                    <h2>06　HAL_Init：时基与优先级分组</h2>
+                    <div class="sec-sub">HAL 库所有超时判断都依赖 1 ms 时基，所有中断优先级都受分组方式约束</div>
+
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+    HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);
+    HAL_InitTick(TICK_INT_PRIORITY);      <span class="cmt">// TICK_INT_PRIORITY = 0x0F</span>
+    HAL_MspInit();
+    return HAL_OK;
+}</pre>
+
+                    <table class="data">
+                        <tr><th>动作</th><th>取值</th><th>含义</th></tr>
+                        <tr><td>优先级分组</td><td><code>NVIC_PRIORITYGROUP_2</code></td><td>4 位优先级里高 2 位作抢占、低 2 位作子优先级，两者取值都是 0~3</td></tr>
+                        <tr><td>SysTick 优先级</td><td><code>0x0F</code></td><td>抢占 3、子 3，是最低等级</td></tr>
+                        <tr><td>TIM3 优先级</td><td><code>HAL_NVIC_SetPriority(TIM3_IRQn,1,3)</code></td><td>抢占 1 &gt; 3，因此 TIM3 可以打断 SysTick</td></tr>
+                    </table>
+
+                    <p>这个分组结果是后面所有 <code>SetPriority</code> 调用合法性的前提。分组 2 下抢占值只能填 0~3，填 4 就会被截断，实际生效的值和你写的不是一回事。</p>
+
+                    <div class="note">为什么 TIM3 要设成抢占 1 而不是最低？因为 <code>delay_us</code> 是在主循环里忙等的；如果定时器中断优先级比 SysTick 还低，理论上也不会出问题，但把定时器放高一级能保证 500 ms 的节拍不被 SysTick 的时基更新推迟。</div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="系统时钟与 SysTick 延时">
+                    <h2>07　系统时钟与 SysTick 延时</h2>
+                    <div class="sec-sub">25 MHz 晶振经 PLL 变成 180 MHz，再经 APB1 分频拐一道弯，变成 TIM3 的 90 MHz</div>
+
+                    <figure class="figure">
+                        <img src="./index21-map/clock-tree.png" alt="从 HSE 25 MHz 到 TIM3 90 MHz 的时钟树">
+                        <figcaption>图 7-1　时钟树：PLL、AHB、APB1 三级分频与定时器时钟的 ×2 规则</figcaption>
+                    </figure>
+
+                    <pre class="code">void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq)
+{
+    __HAL_RCC_PWR_CLK_ENABLE();
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+    RCC_OscInitStructure.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+    RCC_OscInitStructure.HSEState       = RCC_HSE_ON;
+    RCC_OscInitStructure.PLL.PLLM       = pllm;    <span class="cmt">// 25</span>
+    RCC_OscInitStructure.PLL.PLLN       = plln;    <span class="cmt">// 360</span>
+    RCC_OscInitStructure.PLL.PLLP       = pllp;    <span class="cmt">// 2</span>
+    RCC_OscInitStructure.PLL.PLLQ       = pllq;    <span class="cmt">// 8</span>
+    HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+    HAL_PWREx_EnableOverDrive();                   <span class="cmt">// 180 MHz 必须开过驱动</span>
+
+    RCC_ClkInitStructure.AHBCLKDivider  = RCC_SYSCLK_DIV1;
+    RCC_ClkInitStructure.APB1CLKDivider = RCC_HCLK_DIV4;
+    RCC_ClkInitStructure.APB2CLKDivider = RCC_HCLK_DIV2;
+    HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure, FLASH_LATENCY_5);
+}</pre>
+
+                    <table class="data">
+                        <tr><th>节点</th><th>计算</th><th>结果</th></tr>
+                        <tr><td>PLL 输入</td><td>HSE 25 MHz ÷ PLLM</td><td>1 MHz</td></tr>
+                        <tr><td>VCO</td><td>1 MHz × PLLN</td><td>360 MHz</td></tr>
+                        <tr><td>SYSCLK</td><td>360 MHz ÷ PLLP</td><td>180 MHz</td></tr>
+                        <tr><td>HCLK</td><td>SYSCLK ÷ 1</td><td>180 MHz</td></tr>
+                        <tr><td>PCLK1</td><td>HCLK ÷ 4</td><td>45 MHz</td></tr>
+                        <tr><td>PCLK2</td><td>HCLK ÷ 2</td><td>90 MHz</td></tr>
+                        <tr><td>TIM3CLK</td><td>PCLK1 × 2（分频系数≠1）</td><td>90 MHz</td></tr>
+                    </table>
+
+                    <h3>delay_init 与 SysTick 的关系</h3>
+                    <p><code>HAL_Init</code> 里已经把 SysTick 配成 1 ms 一次（重装值 180000），<code>HAL_RCC_ClockConfig</code> 之后 HAL 又会按新频率<strong>重新调用一次</strong> <code>HAL_InitTick</code>。而 <code>delay_init(180)</code> 并不重配 SysTick，只是记下“1 微秒对应 180 个 HCLK 周期”，供 <code>delay_us</code> 读 <code>SysTick-&gt;VAL</code> 做忙等计时。</p>
+
+                    <div class="note">如果把 <code>delay_init</code> 的参数写成 168 或 72，延时就会整体偏长或偏短，但定时器中断周期完全不受影响——这两套计时机制互相独立，正好可以拿来互相验证。</div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="串口与 printf 重定向">
+                    <h2>08　串口与 printf 重定向</h2>
+                    <div class="sec-sub">本实验的串口只承担“看得到”的职责，但它的初始化顺序同样受时钟影响</div>
+
+                    <pre class="code">uart_init(115200);      <span class="cmt">// main.c 中调用，波特率 115200</span></pre>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>配置</th><th>说明</th></tr>
+                        <tr><td>外设</td><td>USART1</td><td>挂在 APB2 上，时钟 90 MHz</td></tr>
+                        <tr><td>引脚</td><td>PA9（TX）/ PA10（RX）</td><td><code>GPIO_AF7_USART1</code> 复用</td></tr>
+                        <tr><td>GPIO 时钟</td><td><code>__HAL_RCC_GPIOA_CLK_ENABLE()</code></td><td>在 <code>HAL_UART_MspInit</code> 中使能</td></tr>
+                        <tr><td>中断优先级</td><td><code>HAL_NVIC_SetPriority(USART1_IRQn,3,3)</code></td><td>低于 TIM3（1,3），不会抢定时器的节拍</td></tr>
+                    </table>
+
+                    <p>重定向的常规做法是重写 <code>fputc</code>，把字符逐个写进 <code>USART1-&gt;DR</code>，并等待 <code>USART1-&gt;SR</code> 的 TXE 标志。这样 <code>printf</code> 才能从串口输出。</p>
+
+                    <div class="note blue">串口打印本身也有代价：一次 <code>printf</code> 可能阻塞几百微秒到几毫秒。所以判断“定时器有没有准时”，不能用打印的时间戳，要看 LED 或示波器。</div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="LED 与按键初始化">
+                    <h2>09　LED 与按键初始化</h2>
+                    <div class="sec-sub">两块 LED 都接在 GPIOB 上，低电平点亮，这一节只做一件小事：把 PB0 / PB1 配成推挽输出并置高</div>
+
+                    <pre class="code">void LED_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+
+    __HAL_RCC_GPIOB_CLK_ENABLE();                   <span class="cmt">// 使能GPIOB时钟</span>
+
+    GPIO_Initure.Pin   = GPIO_PIN_0 | GPIO_PIN_1;   <span class="cmt">// PB0 / PB1</span>
+    GPIO_Initure.Mode  = GPIO_MODE_OUTPUT_PP;       <span class="cmt">// 推挽输出</span>
+    GPIO_Initure.Pull  = GPIO_PULLUP;               <span class="cmt">// 上拉</span>
+    GPIO_Initure.Speed = GPIO_SPEED_HIGH;           <span class="cmt">// 高速</span>
+    HAL_GPIO_Init(GPIOB, &amp;GPIO_Initure);
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0 | GPIO_PIN_1, GPIO_PIN_SET);   <span class="cmt">// 都置高，默认熄灭</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>宏</th><th>展开</th><th>物理引脚</th></tr>
+                        <tr><td><code>LED0</code></td><td><code>PBout(1)</code></td><td>PB1 → DS0</td></tr>
+                        <tr><td><code>LED1</code></td><td><code>PBout(0)</code></td><td>PB0 → DS1</td></tr>
+                    </table>
+
+                    <p>所以 <code>LED1 = !LED1</code> 实际上就是“翻转 PB0 的输出电平”。<code>PBout</code> 是位带操作的宏，最终落到 <code>GPIOB-&gt;ODR</code> 的某一位，一条指令就能完成，非常适合放在中断里。</p>
+
+                    <div class="note">注意 LED0 对应 PB1、LED1 对应 PB0——编号和引脚是交叉的。写代码时如果按“LED0 就是 PB0”去推，会调错灯。</div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="TIM3 初始化拆解">
+                    <h2>10　TIM3 初始化拆解</h2>
+                    <div class="sec-sub">TIM3_Init 只有六行有效代码，但跨越了三层：句柄赋值、库初始化、启动计数</div>
+
+                    <pre class="code">TIM_HandleTypeDef TIM3_Handler;
+
+void TIM3_Init(u16 arr,u16 psc)
+{
+    TIM3_Handler.Instance           = TIM3;
+    TIM3_Handler.Init.Prescaler     = psc;          <span class="cmt">// 9000-1</span>
+    TIM3_Handler.Init.CounterMode   = TIM_COUNTERMODE_UP;
+    TIM3_Handler.Init.Period        = arr;          <span class="cmt">// 5000-1</span>
+    TIM3_Handler.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+
+    HAL_TIM_Base_Init(&amp;TIM3_Handler);
+    HAL_TIM_Base_Start_IT(&amp;TIM3_Handler);   <span class="cmt">// 使能定时器3和更新中断</span>
+}</pre>
+
+                    <h3>三层各自的职责</h3>
+                    <table class="data">
+                        <tr><th>层</th><th>做什么</th><th>容易被忽略的点</th></tr>
+                        <tr><td>句柄赋值</td><td>把 Instance、PSC、ARR、计数方向填进 <code>TIM3_Handler</code></td><td>句柄是全局变量，生命周期与程序相同</td></tr>
+                        <tr><td><code>HAL_TIM_Base_Init</code></td><td>写 PSC / ARR / CR1，并在 <code>State == HAL_TIM_STATE_RESET</code> 时回调 <code>HAL_TIM_Base_MspInit</code></td><td>已经初始化过就不会再调 MspInit</td></tr>
+                        <tr><td><code>HAL_TIM_Base_Start_IT</code></td><td>先 <code>__HAL_TIM_ENABLE_IT(htim, TIM_IT_UPDATE)</code>，再置 CEN 启动计数</td><td>顺序很关键：先开中断源，再启动计数</td></tr>
+                    </table>
+
+                    <h3>MspInit 里配的时基“地基”</h3>
+                    <pre class="code">void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim)
+{
+    if(htim-&gt;Instance == TIM3)
+    {
+        __HAL_RCC_TIM3_CLK_ENABLE();            <span class="cmt">// 开TIM3时钟，否则寄存器写了也不生效</span>
+        HAL_NVIC_SetPriority(TIM3_IRQn,1,3);    <span class="cmt">// 抢占1，子优先级3</span>
+        HAL_NVIC_EnableIRQ(TIM3_IRQn);          <span class="cmt">// 允许NVIC把这个中断送给CPU</span>
+    }
+}</pre>
+
+                    <div class="note">三件事缺一不可：不开外设时钟，寄存器写进去是无效的；不设优先级，中断会落在默认的 0 级；不开 NVIC，中断标志会一直挂着但 CPU 永远不响应。</div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="定时器时钟与计数原理">
+                    <h2>11　定时器时钟与计数原理</h2>
+                    <div class="sec-sub">90 MHz 除以 9000 得到 10 kHz 的计数节拍，数满 5000 个数正好 500 ms</div>
+
+                    <figure class="figure">
+                        <img src="./index21-map/tim-timing.png" alt="TIM3 计数器从 0 计到 4999 后溢出并置位 UIF 的示意">
+                        <figcaption>图 11-1　计数过程：每 500 ms 计满归零，同时置位 UIF 并请求中断</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>环节</th><th>公式</th><th>数值</th></tr>
+                        <tr><td>定时器时钟</td><td>PCLK1 × 2（APB1 分频 = 4 ≠ 1）</td><td>90 MHz</td></tr>
+                        <tr><td>计数频率</td><td>TIM3CLK ÷ (PSC + 1) = 90 MHz ÷ 9000</td><td>10 kHz（0.1 ms 一次）</td></tr>
+                        <tr><td>溢出周期</td><td>(ARR + 1) × (PSC + 1) ÷ TIM3CLK = 5000 × 9000 ÷ 90 MHz</td><td>0.5 s</td></tr>
+                        <tr><td>LED 闪烁周期</td><td>每溢出一次翻转一次 → 亮 500 ms + 灭 500 ms</td><td>1 s</td></tr>
+                    </table>
+
+                    <pre class="code"><span class="cmt">// timer.c 头部注释给出的通式</span>
+Tout = ((arr+1)*(psc+1))/Ft  us</pre>
+
+                    <h3>注释里的“HCLK/2”和“90M”矛盾吗</h3>
+                    <p>不矛盾。timer.c 写的是“定时器 3 挂在 APB1 上，时钟为 HCLK/2”，指的是<strong>定时器专用时钟</strong>（180 ÷ 2 = 90 MHz）；main.c 写的是“定时器时钟为 90M”，是同一个东西的另一种说法。真正要记住的是那条规则：APB1 分频系数不等于 1 时，定时器时钟自动 ×2。</p>
+
+                    <div class="note">这就是为什么 PCLK1 是 45 MHz，而 TIM3 的计数时钟是 90 MHz。按 45 MHz 去算，得到的周期会是 1 s 而不是 500 ms——这是本实验最容易算错的一步。</div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="中断服务与回调">
+                    <h2>12　中断服务与回调</h2>
+                    <div class="sec-sub">从硬件置位 UIF 到用户代码翻转 LED1，中间经过三级函数，每一级只做一件事</div>
+
+                    <figure class="figure">
+                        <img src="./index21-map/tim-chain.png" alt="TIM3 从初始化到中断回调的调用链">
+                        <figcaption>图 12-1　上半排是配置（只执行一次），下半排是运行（每 500 ms 一次）</figcaption>
+                    </figure>
+
+                    <pre class="code"><span class="cmt">// 1. 中断入口：覆盖启动文件里的弱符号</span>
+void TIM3_IRQHandler(void)
+{
+    HAL_TIM_IRQHandler(&amp;TIM3_Handler);
+}
+
+<span class="cmt">// 2. 用户回调：真正写业务的地方</span>
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if(htim == (&amp;TIM3_Handler))
+    {
+        LED1 = !LED1;
+    }
+}</pre>
+
+                    <p>中间那一级 <code>HAL_TIM_IRQHandler</code> 的判断顺序值得记住：</p>
+                    <ol>
+                        <li>先查 <code>TIM_FLAG_UPDATE</code>（UIF）是否置位——确认真的是更新事件；</li>
+                        <li>再查 <code>TIM_IT_UPDATE</code> 使能位——确认这个事件是被允许产生中断的；</li>
+                        <li>清 UIF 标志，然后调用 <code>HAL_TIM_PeriodElapsedCallback</code>。</li>
+                    </ol>
+
+                    <p>回调里为什么要写 <code>if(htim == (&amp;TIM3_Handler))</code>？因为这个回调是所有定时器共用的。本工程只用了 TIM3，判断可以省，但一旦以后加了 TIM4、TIM5，没有这句判断就会一起翻转。</p>
+
+                    <div class="note">回调函数里不要放 <code>delay_ms</code>、<code>printf</code> 这类会阻塞或依赖中断的代码。中断里忙等会拖住整个系统，甚至让 SysTick 时基失真。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="主循环与实验现象">
+                    <h2>13　主循环与实验现象</h2>
+                    <div class="sec-sub">DS0 由主循环延时驱动，DS1 由定时器中断驱动，两条时间线互不阻塞</div>
+
+                    <figure class="figure">
+                        <img src="./index21-map/led-waveform.png" alt="DS0 快闪与 DS1 慢闪的波形对比">
+                        <figcaption>图 13-1　2000 ms 内两路 LED 的实际波形</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>LED</th><th>驱动方式</th><th>翻转间隔</th><th>周期</th><th>肉眼观感</th></tr>
+                        <tr><td>DS0（PB1）</td><td><code>while(1)</code> 里的 <code>delay_ms(200)</code></td><td>200 ms</td><td>400 ms</td><td>快闪</td></tr>
+                        <tr><td>DS1（PB0）</td><td>TIM3 更新中断回调</td><td>500 ms</td><td>1000 ms</td><td>慢闪</td></tr>
+                    </table>
+
+                    <div class="sim">
+                        <div class="sim-title">两条时间线演示（点击按钮模拟一次“到点”，仅示意逻辑）</div>
+                        <div class="sim-buttons">
+                            <button data-key="loop">主循环 delay_ms(200) 到点</button>
+                            <button data-key="irq">TIM3 更新中断触发</button>
+                            <button data-key="reset">复位到初始状态</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0（PB1）</div>
+                            <div class="led-item"><span class="led-dot" id="dot1"></span>DS1（PB0）</div>
+                        </div>
+                        <div class="sim-log" id="simLog">等待操作：DS0 灭　DS1 灭</div>
+                    </div>
+
+                    <p>实际运行时，两者是同时进行的：主循环翻完 DS0 就进 <code>delay_ms(200)</code> 空转，此时 TIM3 仍在自己计数；一旦计满 5000 个数，硬件发出中断，CPU 暂停主循环、进回调翻 DS1，然后返回继续空转。所以 DS0 的 200 ms 和 DS1 的 500 ms 谁也不会等谁。</p>
+
+                    <div class="note">如果发现 DS1 完全不闪，先查三处：<code>__HAL_RCC_TIM3_CLK_ENABLE()</code> 有没有调用、<code>HAL_NVIC_EnableIRQ(TIM3_IRQn)</code> 有没有调用、<code>TIM3_IRQHandler</code> 的拼写是否与启动文件一致。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="总结与常见问题">
+                    <h2>14　总结与常见问题</h2>
+                    <div class="sec-sub">把整条链路收成一张表，再列出调试时最容易踩的坑</div>
+
+                    <h3>启动过程一句话版</h3>
+                    <p>上电 → 读向量表拿栈顶和 <code>Reset_Handler</code> → <code>SystemInit</code> 开 FPU、设 VTOR → <code>__main</code> 搬 <code>.data</code>、清 <code>.bss</code> → <code>main</code> 里依次 <code>HAL_Init</code>、<code>Stm32_Clock_Init</code>、<code>delay_init</code>、<code>uart_init</code>、<code>LED_Init</code>、<code>KEY_Init</code>、<code>TIM3_Init</code> → 进 <code>while(1)</code>，此后主循环与定时器中断并行运行。</p>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>可能原因</th><th>排查方法</th></tr>
+                        <tr><td>DS1 完全不闪</td><td>外设时钟未开、NVIC 未使能、中断函数名拼错</td><td>查 MspInit 三件事是否齐全；在 <code>TIM3_IRQHandler</code> 里打断点</td></tr>
+                        <tr><td>DS1 闪得太快或太慢</td><td>把 90 MHz 当成 45 MHz 计算，或 ARR / PSC 传反</td><td>回到 <code>Tout = (ARR+1)(PSC+1)/TIM3CLK</code> 重算</td></tr>
+                        <tr><td>两块 LED 一起闪、频率相同</td><td>回调里漏了 <code>if(htim == &amp;TIM3_Handler)</code>，或 <code>LED0 / LED1</code> 宏写反</td><td>对照 led.h 的宏定义：LED0 = PB1、LED1 = PB0</td></tr>
+                        <tr><td>程序一进中断就卡死</td><td>中断里放了 <code>delay_ms</code> 或 <code>printf</code></td><td>回调只保留电平翻转，把耗时操作搬到主循环</td></tr>
+                        <tr><td>延时整体偏长 / 偏短</td><td><code>delay_init</code> 的参数与实际 HCLK 不一致</td><td>确认 <code>delay_init(180)</code> 与 SYSCLK 180 MHz 对应</td></tr>
+                    </table>
+
+                    <h3>三个必须记住的数字</h3>
+                    <div class="chips">
+                        <span class="chip">TIM3CLK = 90 MHz</span>
+                        <span class="chip">计数节拍 0.1 ms</span>
+                        <span class="chip">溢出周期 500 ms</span>
+                    </div>
+
+                    <div class="note">与实验6 对比：WWDG 是“必须按窗口喂狗，否则复位”，属于安全机制；TIM3 是“定时产生事件”，属于常规外设。两者都用中断，但一个是被动防守，一个是主动节拍。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">阿波罗 STM32F429 · 实验7 定时器中断实验 · 启动与运行过程讲解</span>
+    </footer>
+</div>
+
+<script>
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var cnt0 = 0;
+        var cnt1 = 0;
+        var action = '等待操作';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '上一动作：' + action +
+                '　　DS0 ' + (led0On ? '亮' : '灭') + '（翻转 ' + cnt0 + ' 次）' +
+                '　　DS1 ' + (led1On ? '亮' : '灭') + '（翻转 ' + cnt1 + ' 次）';
+        }
+
+        var handlers = {
+            loop: function () { led0On = !led0On; cnt0++; action = 'LED0 = !LED0（delay_ms 到点）'; },
+            irq: function () { led1On = !led1On; cnt1++; action = '回调中 LED1 = !LED1（TIM3 溢出）'; },
+            reset: function () { led0On = false; led1On = false; cnt0 = 0; cnt1 = 0; action = '复位到初始状态'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

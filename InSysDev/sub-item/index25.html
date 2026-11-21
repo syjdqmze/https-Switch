@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验11 OLED 显示实验</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验11 · OLED 显示实验</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">按 01→16 顺序阅读；带“图”的小节可先看配图再读源码，效果更好。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">在最小系统框架上加一块 SSD1306 OLED，先看清“用了哪些引脚、跑在多高主频”</div>
+
+                    <p>本实验在“时钟 + 延时 + 串口 + LED”这套最小框架上增加一片 0.96 寸 128×64 的 OLED 屏。页面按“上电 → 时钟 → 时基 → 外设 → 主循环”的顺序展开，所有数值都取自 <code class="inline">实验11 OLED显示实验</code> 目录下的源码。</p>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>配置</th><th>出处</th></tr>
+                        <tr><td>主控</td><td>STM32F429IGT6，180MHz，1MB Flash / 192KB RAM</td><td>OLED.uvprojx 的 Device、Cpu 行</td></tr>
+                        <tr><td>显示屏</td><td>0.96 寸 OLED，128×64，SSD1306 控制器</td><td>oled.c 显存与命令表</td></tr>
+                        <tr><td>接口方式</td><td>8080 并口（<code>OLED_MODE = 1</code>）</td><td>oled.h</td></tr>
+                        <tr><td>数据线</td><td>D0~D3 = PC6~PC9，D4 = PC11，D5 = PD3，D6 = PB8，D7 = PB9</td><td>oled.c 的 OLED_Data_Out</td></tr>
+                        <tr><td>控制线</td><td>CS = PB7，RST = PA15，RS = PB4，WR = PH8，RD = PB3</td><td>oled.h 端口宏</td></tr>
+                        <tr><td>LED</td><td>LED0 = PB1，LED1 = PB0（位带宏操作）</td><td>led.h</td></tr>
+                        <tr><td>串口</td><td>USART1，PA9 / PA10，115200-8-N-1</td><td>usart.c 的 HAL_UART_MspInit</td></tr>
+                        <tr><td>SysTick</td><td>时钟源 HCLK，delay_init(180)</td><td>delay.c</td></tr>
+                    </table>
+
+                    <h3>与实验10 的差异</h3>
+                    <table class="data">
+                        <tr><th>对比项</th><th>实验10 电容触摸按键</th><th>实验11 OLED 显示</th></tr>
+                        <tr><td>核心外设</td><td>TIM5 输入捕获 + TPAD 充放电计数</td><td>GPIO 输出 + 1KB 显存 + SSD1306 命令序列</td></tr>
+                        <tr><td>数据方向</td><td>读引脚（输入）</td><td>写引脚（输出，13 根 IO）</td></tr>
+                        <tr><td>共性部分</td><td colspan="2">HAL_Init、Stm32_Clock_Init、delay_init、uart_init、LED_Init 完全一致</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">128 × 64 像素</span>
+                        <span class="chip">8 页 × 128 列</span>
+                        <span class="chip">1024 字节显存</span>
+                        <span class="chip">12 / 16 / 24 号字库</span>
+                        <span class="chip">13 根 GPIO</span>
+                    </div>
+
+                    <div class="note">调试注意：PA15、PB3、PB4 默认是 JTAG 的 JTDI、JTDO、NJTRST。OLED 把这三根脚改成普通推挽输出后 JTAG 不可用，Keil 里必须选 SWD 模式（SWD 只用 PA13 / PA14）。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="工程目录与文件分工">
+                    <h2>02　工程目录与文件分工</h2>
+                    <div class="sec-sub">先知道改哪个文件，再看启动顺序</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本页关注点</th></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>栈堆定义、向量表、Reset_Handler</td><td>复位入栈与跳转顺序</td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>SystemInit：FPU、RCC 复位、VTOR</td><td>为什么上电先跑 16MHz</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>异常处理与 SysTick_Handler</td><td>HAL_IncTick 时基</td></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化顺序与主循环</td><td>整条启动链<br>唯一入口</td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td>Stm32_Clock_Init 时钟配置、位带宏</td><td>180MHz 的来源</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>SysTick 计数式 delay_us / delay_ms</td><td>OLED 复位延时的基础</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>USART1 初始化、printf 重定向、接收中断</td><td>USART1_IRQHandler 的实际定义处</td></tr>
+                        <tr><td><code>HARDWARE/LED/led.c</code></td><td>PB0 / PB1 推挽输出</td><td>主循环里的心跳灯</td></tr>
+                        <tr><td><code>HARDWARE/OLED/oled.c</code></td><td>端口映射、写时序、显存、字符显示</td><td>本实验的核心</td></tr>
+                        <tr><td><code>HARDWARE/OLED/oledfont.h</code></td><td>asc2_1206 / asc2_1608 / asc2_2412 字库</td><td>字号与取模字节数</td></tr>
+                    </table>
+
+                    <p>HALLIB 目录是 ST 官方库，本页不逐行展开，只在解释 <code class="inline">HAL_Init</code> 与 <code class="inline">HAL_InitTick</code> 时引用其中的实现。</p>
+
+                    <div class="note blue">工程宏定义只有两个：<code>USE_HAL_DRIVER</code> 与 <code>STM32F429xx</code>；器件型号 STM32F429IGTx，IROM 从 0x08000000 起 1MB，IRAM 从 0x20000000 起 192KB。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电取栈顶到 while(1)，六步走完整个启动链</div>
+
+                    <figure class="figure">
+                        <img src="./index25-map/boot-flow.png" alt="从上电复位到主循环的启动链路图">
+                        <figcaption>图 3-1　复位 → SystemInit → __main → main() 的启动链路</figcaption>
+                    </figure>
+
+                    <h3>main 函数全文（USER/main.c）</h3>
+                    <pre class="code">int main(void)
+{
+    u8 t=0; 
+    HAL_Init();                     <span class="cmt">//初始化HAL库</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">//设置时钟,180Mhz</span>
+    delay_init(180);                <span class="cmt">//初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">//初始化USART</span>
+    LED_Init();                     <span class="cmt">//初始化LED</span>
+    OLED_Init();                    <span class="cmt">//初始化OLED</span>
+    OLED_ShowString(0,0,"ALIENTEK",24);  
+    OLED_ShowString(0,24, "0.96' OLED TEST",16);  
+    OLED_ShowString(0,40,"ATOM 2014/5/4",12);  
+    OLED_ShowString(0,52,"ASCII:",12);  
+    OLED_ShowString(64,52,"CODE:",12);  
+    OLED_Refresh_Gram();            <span class="cmt">//更新显示到OLED</span>
+    t=' ';  
+    while(1)
+    {
+        OLED_ShowChar(36,52,t,12,1);   <span class="cmt">//显示ASCII字符</span>
+        OLED_ShowNum(94,52,t,3,12);    <span class="cmt">//显示ASCII字符的码值</span>
+        OLED_Refresh_Gram();           <span class="cmt">//更新显示到OLED</span>
+        t++;
+        if(t&gt;'~')t=' ';  
+        delay_ms(500);
+        LED0=!LED0;
+    } 
+}</pre>
+
+                    <div class="note">初始化顺序不能随意交换：<code>HAL_Init</code> 只建立时基与优先级分组；<code>Stm32_Clock_Init</code> 决定 delay 的倍乘数；<code>delay_init(180)</code> 必须在时钟切换之后；OLED 复位要等 100ms，因此 <code>OLED_Init</code> 排在最后。</div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">Cortex-M4 复位时只认两样东西：栈顶地址和复位入口</div>
+
+                    <p>启动文件开头用 <code class="inline">Stack_Size EQU 0x400</code> 与 <code class="inline">Heap_Size EQU 0x200</code> 定义栈和堆，随后把 <code class="inline">__initial_sp</code> 放在向量表第 0 项、<code class="inline">Reset_Handler</code> 放在第 1 项。硬件复位时自动把这两个值装入 MSP 和 PC。</p>
+
+                    <table class="data">
+                        <tr><th>区域</th><th>大小 / 地址</th><th>说明</th></tr>
+                        <tr><td>Stack</td><td>0x400（1KB）</td><td>启动文件中 Stack_Size</td></tr>
+                        <tr><td>Heap</td><td>0x200（512B）</td><td>启动文件中 Heap_Size，本工程未用 malloc</td></tr>
+                        <tr><td>IROM</td><td>0x08000000，1MB</td><td>OLED.uvprojx 的 Cpu 行</td></tr>
+                        <tr><td>IRAM</td><td>0x20000000，192KB</td><td>OLED_GRAM 占 1KB</td></tr>
+                        <tr><td>IRAM2</td><td>0x10000000，64KB</td><td>CCM 内存</td></tr>
+                    </table>
+
+                    <h3>Reset_Handler（startup_stm32f429xx.s 第 193 行）</h3>
+                    <pre class="code">Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+
+                 LDR     R0, =SystemInit
+                 BLX     R0
+                 LDR     R0, =__main
+                 BX      R0
+                 ENDP</pre>
+
+                    <h3>向量表前几项与弱符号</h3>
+                    <table class="data">
+                        <tr><th>偏移</th><th>向量</th><th>本工程实现位置</th></tr>
+                        <tr><td>0x00</td><td>__initial_sp</td><td>启动文件栈顶</td></tr>
+                        <tr><td>0x04</td><td>Reset_Handler</td><td>启动文件，跳 SystemInit → __main</td></tr>
+                        <tr><td>0x08</td><td>NMI_Handler</td><td>stm32f4xx_it.c（空函数）</td></tr>
+                        <tr><td>0x0C</td><td>HardFault_Handler</td><td>stm32f4xx_it.c（while(1)）</td></tr>
+                        <tr><td>0x3C</td><td>SysTick_Handler</td><td>stm32f4xx_it.c（HAL_IncTick）</td></tr>
+                        <tr><td>0x40 起</td><td>IRQ0 ~ IRQn</td><td>USART1_IRQHandler 在 usart.c</td></tr>
+                    </table>
+
+                    <p>启动文件里的异常处理函数都带 <code class="inline">[WEAK]</code>，默认实现是 <code class="inline">B .</code> 原地死循环。只要工程里出现同名 C 函数，链接器就用强符号覆盖它。</p>
+
+                    <div class="note">容易看漏的一点：<code>USART1_IRQHandler</code> 并不在 <code>stm32f4xx_it.c</code>，而是写在 <code>SYSTEM/usart/usart.c</code> 里；它覆盖的正是启动文件中那个弱符号。找中断函数时别只翻 it.c。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">一个负责“回到出厂状态”，一个负责“建立 HAL 的运行前提”</div>
+
+                    <h3>SystemInit：把 RCC 复位成 HSI 16MHz</h3>
+                    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));   <span class="cmt">/* CP10/CP11 全访问 */</span>
+  #endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="cmt">/* 打开 HSI */</span>
+  RCC-&gt;CFGR = 0x00000000;               <span class="cmt">/* 时钟源回到 HSI */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="cmt">/* 关 HSEON / CSSON / PLLON */</span>
+  RCC-&gt;PLLCFGR = 0x24003010;
+  RCC-&gt;CIR = 0x00000000;                <span class="cmt">/* 关所有中断 */</span>
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;
+}</pre>
+
+                    <h3>HAL_Init：四个动作</h3>
+                    <table class="data">
+                        <tr><th>顺序</th><th>代码</th><th>结果</th></tr>
+                        <tr><td>1</td><td>__HAL_FLASH_INSTRUCTION_CACHE_ENABLE 等</td><td>指令缓存、数据缓存、预取全部打开（宏都为 1）</td></tr>
+                        <tr><td>2</td><td>HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2)</td><td>2 位抢占 + 2 位子优先级，抢占与子优先级均 0~3</td></tr>
+                        <tr><td>3</td><td>HAL_InitTick(0x0F)</td><td>配置 SysTick 为 1ms 时基，优先级 15</td></tr>
+                        <tr><td>4</td><td>HAL_MspInit()</td><td>弱空函数，本工程未重写，只保留库里默认实现</td></tr>
+                    </table>
+
+                    <div class="note">关键细节：<code>HAL_Init</code> 在 <code>Stm32_Clock_Init</code> 之前执行，此刻 HCLK 还是 HSI 16MHz，所以 <code>HAL_SYSTICK_Config(16000000/1000)</code> 得到 LOAD = 16000。切到 180MHz 后这个值没有重算，1ms 中断实际变成约 88.9µs。因此本工程从不使用 <code>HAL_Delay</code> / <code>HAL_GetTick</code>，全部延时走 <code>delay_us</code> / <code>delay_ms</code>。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="系统时钟：25MHz → 180MHz">
+                    <h2>06　系统时钟：25MHz → 180MHz</h2>
+                    <div class="sec-sub">PLL 的四个参数决定主频、USB 时钟与两条外设总线</div>
+
+                    <figure class="figure">
+                        <img src="./index25-map/clock-tree.png" alt="25MHz 外部晶振经 PLL 倍频到 180MHz 的时钟树">
+                        <figcaption>图 6-1　HSE → PLL → SYSCLK / HCLK / PCLK1 / PCLK2 的时钟树</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>环节</th><th>参数</th><th>计算结果</th></tr>
+                        <tr><td>外部晶振</td><td>HSE，hal_conf 中 HSE_VALUE = 25000000</td><td>25 MHz</td></tr>
+                        <tr><td>PLL 输入分频</td><td>PLLM = 25</td><td>25 / 25 = 1 MHz</td></tr>
+                        <tr><td>VCO 倍频</td><td>PLLN = 360</td><td>1 × 360 = 360 MHz</td></tr>
+                        <tr><td>系统时钟分频</td><td>PLLP = 2</td><td>360 / 2 = 180 MHz</td></tr>
+                        <tr><td>USB / SDIO / RNG</td><td>PLLQ = 8</td><td>360 / 8 = 45 MHz</td></tr>
+                        <tr><td>AHB 分频</td><td>RCC_SYSCLK_DIV1</td><td>HCLK = 180 MHz</td></tr>
+                        <tr><td>APB1 分频</td><td>RCC_HCLK_DIV4</td><td>PCLK1 = 45 MHz</td></tr>
+                        <tr><td>APB2 分频</td><td>RCC_HCLK_DIV2</td><td>PCLK2 = 90 MHz</td></tr>
+                        <tr><td>Flash 等待</td><td>FLASH_LATENCY_5</td><td>5 个等待周期</td></tr>
+                    </table>
+
+                    <h3>调用点与关键代码</h3>
+                    <pre class="code">Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// main.c：plln, pllm, pllp, pllq</span>
+
+__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);  <span class="cmt">// 调压器 Scale1</span>
+RCC_OscInitStructure.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+RCC_OscInitStructure.PLL.PLLM = pllm;    <span class="cmt">// 25</span>
+RCC_OscInitStructure.PLL.PLLN = plln;    <span class="cmt">// 360</span>
+RCC_OscInitStructure.PLL.PLLP = pllp;    <span class="cmt">// 2</span>
+RCC_OscInitStructure.PLL.PLLQ = pllq;    <span class="cmt">// 8</span>
+ret = HAL_PWREx_EnableOverDrive();       <span class="cmt">// 开启 Over-Drive</span>
+RCC_ClkInitStructure.AHBCLKDivider  = RCC_SYSCLK_DIV1;
+RCC_ClkInitStructure.APB1CLKDivider = RCC_HCLK_DIV4;
+RCC_ClkInitStructure.APB2CLKDivider = RCC_HCLK_DIV2;
+HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure, FLASH_LATENCY_5);
+if(ret != HAL_OK) while(1);</pre>
+
+                    <div class="note">180MHz 的三个前提缺一不可：调压器 Scale 1、Over-Drive 使能、Flash 5 个等待周期。任一 <code>HAL_RCC_OscConfig</code> / <code>HAL_RCC_ClockConfig</code> 返回非 <code>HAL_OK</code>，工程直接 <code>while(1)</code> 停住，用“死在原地”暴露时钟失败。</div>
+                </section>
+
+
+                <section class="content-card" id="s07" data-title="延时与 SysTick">
+                    <h2>07　延时与 SysTick</h2>
+                    <div class="sec-sub">两行配置就能把 180MHz 换算成微秒，靠的是“数 VAL 递减了多少”</div>
+
+                    <pre class="code">void delay_init(u32 SYSCLK)
+{
+    SysTick_CLKSourceConfig(SysTick_CLKSource_HCLK);   <span class="cmt">// 计数时钟 = HCLK</span>
+    fac_us = SYSCLK;                                    <span class="cmt">// 180</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks;
+    u32 told, tnow, tcnt = 0;
+    u32 reload = SysTick-&gt;LOAD;
+    ticks = nus * fac_us;          <span class="cmt">// 1us 需要 180 个计数</span>
+    told = SysTick-&gt;VAL;
+    while (1)
+    {
+        tnow = SysTick-&gt;VAL;
+        if (tnow != told)
+        {
+            if (tnow &lt; told) tcnt += told - tnow;
+            else tcnt += reload - tnow + told;   <span class="cmt">// 处理回绕</span>
+            told = tnow;
+            if (tcnt &gt;= ticks) break;
+        }
+    }
+}</pre>
+
+                    <table class="data">
+                        <tr><th>参数</th><th>值</th><th>说明</th></tr>
+                        <tr><td>fac_us</td><td>180</td><td>由 delay_init(180) 传入，等于 HCLK 的 MHz 数</td></tr>
+                        <tr><td>SysTick 时钟源</td><td>HCLK（180MHz）</td><td>SysTick_CLKSource_HCLK</td></tr>
+                        <tr><td>SysTick-&gt;LOAD</td><td>16000</td><td>HAL_Init 在 16MHz 时写入，之后未重算</td></tr>
+                        <tr><td>1 个计数</td><td>1 / 180MHz ≈ 5.56ns</td><td>倒数计数</td></tr>
+                        <tr><td>delay_ms(500)</td><td>500 × 1000 × 180 = 90 000 000</td><td>约 0.5 秒</td></tr>
+                    </table>
+
+                    <div class="note">为什么 LOAD = 16000 不影响延时精度：<code>delay_us</code> 只统计“VAL 走过多少个计数”，用 <code>nus × 180</code> 换算，与 LOAD 大小无关；<code>reload</code> 变量只用于补偿回绕。真正受影响的是依赖 1ms 中断的 <code>HAL_Delay</code>。</div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="串口初始化与 printf 重定向">
+                    <h2>08　串口初始化与 printf 重定向</h2>
+                    <div class="sec-sub">PA9 / PA10 复用为 AF7，115200 波特率依赖 PCLK2 = 90MHz</div>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>配置</th><th>出处</th></tr>
+                        <tr><td>外设</td><td>USART1</td><td>uart_init</td></tr>
+                        <tr><td>发送引脚</td><td>PA9，AF7，复用推挽</td><td>HAL_UART_MspInit</td></tr>
+                        <tr><td>接收引脚</td><td>PA10，AF7，上拉输入</td><td>HAL_UART_MspInit</td></tr>
+                        <tr><td>波特率</td><td>115200，8 数据位，1 停止位，无校验，无流控</td><td>UART1_Handler.Init</td></tr>
+                        <tr><td>中断优先级</td><td>抢占 3，子优先级 3</td><td>HAL_NVIC_SetPriority</td></tr>
+                        <tr><td>接收缓冲</td><td>USART_REC_LEN = 200 字节，RXBUFFERSIZE = 1</td><td>usart.h / usart.c</td></tr>
+                    </table>
+
+                    <h3>printf 重定向与初始化</h3>
+                    <pre class="code"><span class="cmt">// 把 printf 的输出重定向到 USART1</span>
+int fputc(int ch, FILE *f)
+{
+    while((USART1-&gt;SR &amp; 0X40) == 0);   <span class="cmt">// 等待发送完成</span>
+    USART1-&gt;DR = (u8) ch;
+    return ch;
+}
+
+void uart_init(u32 bound)
+{
+    UART1_Handler.Instance = USART1;
+    UART1_Handler.Init.BaudRate = bound;
+    UART1_Handler.Init.WordLength = UART_WORDLENGTH_8B;
+    UART1_Handler.Init.StopBits = UART_STOPBITS_1;
+    UART1_Handler.Init.Parity = UART_PARITY_NONE;
+    UART1_Handler.Init.Mode = UART_MODE_TX_RX;
+    UART1_Handler.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+    UART1_Handler.Init.OverSampling = UART_OVERSAMPLING_16;
+    HAL_UART_Init(&amp;UART1_Handler);
+    HAL_UART_Receive_IT(&amp;UART1_Handler, (u8 *)aRxBuffer, RXBUFFERSIZE);
+}</pre>
+
+                    <h3>接收状态机的标志位</h3>
+                    <table class="data">
+                        <tr><th>位</th><th>含义</th></tr>
+                        <tr><td>bit15</td><td>一帧接收完成</td></tr>
+                        <tr><td>bit14</td><td>已收到回车 0x0D，等待 0x0A</td></tr>
+                        <tr><td>bit13~0</td><td>本次已接收的有效字节数</td></tr>
+                    </table>
+
+                    <div class="note"><code>USART1_IRQHandler</code> 定义在 <code>usart.c</code> 末尾，中断里先调用 <code>HAL_UART_IRQHandler</code>，再重新挂上 <code>HAL_UART_Receive_IT</code> 以继续接收下一字节。主循环里没有 printf，所以本实验串口只初始化、不输出。</div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="LED 与位带操作">
+                    <h2>09　LED 与位带操作</h2>
+                    <div class="sec-sub">PB1 的 ODR 位被映射成一个 32 位地址，赋值即改引脚</div>
+
+                    <pre class="code"><span class="cmt">// SYSTEM/sys/sys.h 中的位带宏</span>
+#define BITBAND(addr, bitnum) ((addr &amp; 0xF0000000)+0x2000000+((addr &amp;0xFFFFF)&lt;&lt;5)+(bitnum&lt;&lt;2))
+#define MEM_ADDR(addr)  *((volatile unsigned long  *)(addr))
+#define BIT_ADDR(addr, bitnum)   MEM_ADDR(BITBAND(addr, bitnum))
+#define PBout(n)   BIT_ADDR(GPIOB_ODR_Addr,n)   <span class="cmt">// 输出</span>
+#define PHout(n)   BIT_ADDR(GPIOH_ODR_Addr,n)   <span class="cmt">// 输出</span>
+
+<span class="cmt">// HARDWARE/LED/led.h</span>
+#define LED0 PBout(1)   <span class="cmt">// LED0 接 PB1</span>
+#define LED1 PBout(0)   <span class="cmt">// LED1 接 PB0</span></pre>
+
+                    <table class="data">
+                        <tr><th>宏</th><th>等价操作</th><th>本工程用途</th></tr>
+                        <tr><td>PBout(1)</td><td>写 GPIOB-&gt;ODR 的 bit1</td><td>LED0，主循环每 500ms 翻转</td></tr>
+                        <tr><td>PBout(0)</td><td>写 GPIOB-&gt;ODR 的 bit0</td><td>LED1，本实验未使用</td></tr>
+                        <tr><td>PAout(15)</td><td>写 GPIOA-&gt;ODR 的 bit15</td><td>OLED_RST</td></tr>
+                        <tr><td>PHout(8)</td><td>写 GPIOH-&gt;ODR 的 bit8</td><td>OLED_WR</td></tr>
+                    </table>
+
+                    <div class="note">位带只适用于单根引脚的置位/清位，读改写是原子操作；<code>LED_Init</code> 把 PB0、PB1 都初始化为推挽输出并置 1（灯灭），所以主循环第一次 <code>LED0=!LED0</code> 后灯才亮。</div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="OLED 数据线与端口映射">
+                    <h2>10　OLED 数据线与端口映射</h2>
+                    <div class="sec-sub">8 根数据线被拆到 4 个端口，写一个字节要改 5 处 ODR</div>
+
+                    <figure class="figure">
+                        <img src="./index25-map/oled-databus.png" alt="u8 数据位到 PB9/PB8/PD3/PC11/PC9~PC6 的映射图">
+                        <figcaption>图 10-1　OLED_Data_Out 中的数据位拼接关系</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>LCD 信号</th><th>STM32 引脚</th><th>片内外设</th><th>代码写法</th></tr>
+                        <tr><td>D0</td><td>PC6</td><td>GPIOC ODR bit6</td><td>dat &lt;&lt; 6 的 bit0</td></tr>
+                        <tr><td>D1</td><td>PC7</td><td>GPIOC ODR bit7</td><td>dat &lt;&lt; 6 的 bit1</td></tr>
+                        <tr><td>D2</td><td>PC8</td><td>GPIOC ODR bit8</td><td>dat &lt;&lt; 6 的 bit2</td></tr>
+                        <tr><td>D3</td><td>PC9</td><td>GPIOC ODR bit9</td><td>dat &lt;&lt; 6 的 bit3</td></tr>
+                        <tr><td>D4</td><td>PC11</td><td>GPIOC ODR bit11</td><td>(data&gt;&gt;4)&amp;1</td></tr>
+                        <tr><td>D5</td><td>PD3</td><td>GPIOD ODR bit3</td><td>(data&gt;&gt;5)&amp;1</td></tr>
+                        <tr><td>D6</td><td>PB8</td><td>GPIOB ODR bit8</td><td>(data&gt;&gt;6)&amp;1</td></tr>
+                        <tr><td>D7</td><td>PB9</td><td>GPIOB ODR bit9</td><td>(data&gt;&gt;7)&amp;1</td></tr>
+                        <tr><td>CS</td><td>PB7</td><td>GPIOB 位带</td><td>OLED_CS</td></tr>
+                        <tr><td>RST</td><td>PA15</td><td>GPIOA 位带</td><td>OLED_RST</td></tr>
+                        <tr><td>RS（D/C）</td><td>PB4</td><td>GPIOB 位带</td><td>OLED_RS</td></tr>
+                        <tr><td>WR</td><td>PH8</td><td>GPIOH 位带</td><td>OLED_WR</td></tr>
+                        <tr><td>RD</td><td>PB3</td><td>GPIOB 位带</td><td>OLED_RD</td></tr>
+                    </table>
+
+                    <div class="note"><code>OLED_MODE = 1</code> 时走 8080 并口；若改成 0，则同一份代码切换到 4 线 SPI（PC6 = SCLK、PC7 = SDIN），<code>OLED_WR_Byte</code> 内部由 <code>#if OLED_MODE</code> 选择实现。</div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="8080 写时序">
+                    <h2>11　8080 写时序</h2>
+                    <div class="sec-sub">7 条语句完成一次写，SSD1306 在 WR 上升沿采样数据</div>
+
+                    <figure class="figure">
+                        <img src="./index25-map/oled-write-timing.png" alt="CS、WR、RS 与 D[7:0] 的 8080 写时序波形">
+                        <figcaption>图 11-1　OLED_WR_Byte 的片选、写脉冲与数据建立关系</figcaption>
+                    </figure>
+
+                    <pre class="code">void OLED_WR_Byte(u8 dat, u8 cmd)
+{
+    OLED_Data_Out(dat);   <span class="cmt">// 1. 数据先上线</span>
+    OLED_RS = cmd;        <span class="cmt">// 2. 0=命令，1=数据</span>
+    OLED_CS = 0;          <span class="cmt">// 3. 选中 OLED</span>
+    OLED_WR = 0;          <span class="cmt">// 4. 写脉冲开始</span>
+    OLED_WR = 1;          <span class="cmt">// 5. 上升沿，SSD1306 采样</span>
+    OLED_CS = 1;          <span class="cmt">// 6. 释放片选</span>
+    OLED_RS = 1;          <span class="cmt">// 7. RS 回默认高</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>步骤</th><th>动作</th><th>为什么这个顺序</th></tr>
+                        <tr><td>1</td><td>数据写入 ODR</td><td>数据必须在 WR 上升沿之前稳定</td></tr>
+                        <tr><td>2</td><td>设置 RS</td><td>区分本次是命令（0）还是显存数据（1）</td></tr>
+                        <tr><td>3</td><td>CS 拉低</td><td>选中器件，避免误接收</td></tr>
+                        <tr><td>4~5</td><td>WR 低 → 高</td><td>上升沿锁存，脉冲宽度由指令周期决定</td></tr>
+                        <tr><td>6~7</td><td>CS / RS 释放</td><td>回到空闲电平，准备下一次写</td></tr>
+                    </table>
+
+                    <div class="note">代码里没有任何 <code>delay</code> 或 <code>NOP</code>，脉宽由 180MHz 下几条 STR 指令决定（几十 ns 量级），满足 SSD1306 的写周期要求；如果把主频降到很低，需要重新评估这个时序。</div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="OLED_Init 初始化序列">
+                    <h2>12　OLED_Init 初始化序列</h2>
+                    <div class="sec-sub">先硬件复位，再按固定顺序写 16 条命令，最后清屏</div>
+
+                    <pre class="code">OLED_RST = 0;
+delay_ms(100);          <span class="cmt">// 复位至少保持 100ms</span>
+OLED_RST = 1;
+
+OLED_WR_Byte(0xAE, OLED_CMD);   <span class="cmt">// 关闭显示</span>
+OLED_WR_Byte(0xD5, OLED_CMD);   <span class="cmt">// 设置时钟分频因子 / 振荡频率</span>
+OLED_WR_Byte(80,   OLED_CMD);   <span class="cmt">// [3:0] 分频，[7:4] 频率</span>
+OLED_WR_Byte(0xA8, OLED_CMD);   <span class="cmt">// 设置驱动路数</span>
+OLED_WR_Byte(0x3F, OLED_CMD);   <span class="cmt">// 1/64 duty</span>
+OLED_WR_Byte(0xD3, OLED_CMD);   <span class="cmt">// 设置显示偏移</span>
+OLED_WR_Byte(0x00, OLED_CMD);   <span class="cmt">// 偏移 0</span>
+OLED_WR_Byte(0x40, OLED_CMD);   <span class="cmt">// 显示开始行 = 0</span>
+OLED_WR_Byte(0x8D, OLED_CMD);   <span class="cmt">// 电荷泵设置</span>
+OLED_WR_Byte(0x14, OLED_CMD);   <span class="cmt">// bit2 = 1，开启电荷泵</span>
+OLED_WR_Byte(0x20, OLED_CMD);   <span class="cmt">// 设置内存寻址模式</span>
+OLED_WR_Byte(0x02, OLED_CMD);   <span class="cmt">// 页地址模式</span>
+OLED_WR_Byte(0xA1, OLED_CMD);   <span class="cmt">// 段重映射，左右方向</span>
+OLED_WR_Byte(0xC0, OLED_CMD);   <span class="cmt">// COM 扫描方向，上下方向</span>
+OLED_WR_Byte(0xDA, OLED_CMD);   <span class="cmt">// COM 硬件引脚配置</span>
+OLED_WR_Byte(0x12, OLED_CMD);
+OLED_WR_Byte(0x81, OLED_CMD);   <span class="cmt">// 对比度</span>
+OLED_WR_Byte(0xEF, OLED_CMD);
+OLED_WR_Byte(0xD9, OLED_CMD);   <span class="cmt">// 预充电周期</span>
+OLED_WR_Byte(0xF1, OLED_CMD);
+OLED_WR_Byte(0xDB, OLED_CMD);   <span class="cmt">// VCOMH 电压倍率</span>
+OLED_WR_Byte(0x30, OLED_CMD);
+OLED_WR_Byte(0xA4, OLED_CMD);   <span class="cmt">// 全局显示开启</span>
+OLED_WR_Byte(0xA6, OLED_CMD);   <span class="cmt">// 正常显示（非反色）</span>
+OLED_WR_Byte(0xAF, OLED_CMD);   <span class="cmt">// 开启显示</span>
+OLED_Clear();
+OLED_Refresh_Gram();</pre>
+
+                    <table class="data">
+                        <tr><th>命令</th><th>参数</th><th>作用</th></tr>
+                        <tr><td>0xAE / 0xAF</td><td>—</td><td>关显示 / 开显示</td></tr>
+                        <tr><td>0xD5</td><td>0x50（即 80）</td><td>时钟分频与振荡频率</td></tr>
+                        <tr><td>0xA8 / 0x3F</td><td>0x3F</td><td>驱动路数 1/64</td></tr>
+                        <tr><td>0xD3 / 0x00</td><td>0x00</td><td>显示垂直偏移 0</td></tr>
+                        <tr><td>0x8D / 0x14</td><td>0x14</td><td>开启电荷泵（不开则屏不亮）</td></tr>
+                        <tr><td>0x20 / 0x02</td><td>0x02</td><td>页地址模式，配合 0xB0~0xB7 使用</td></tr>
+                        <tr><td>0xA1 / 0xC0</td><td>—</td><td>段重映射 / COM 扫描方向，决定画面朝向</td></tr>
+                        <tr><td>0x81 / 0xEF</td><td>0xEF</td><td>对比度</td></tr>
+                        <tr><td>0xD9 / 0xF1</td><td>0xF1</td><td>预充电周期</td></tr>
+                        <tr><td>0xDB / 0x30</td><td>0x30</td><td>VCOMH 电压</td></tr>
+                    </table>
+
+                    <div class="note">顺序要点：<code>OLED_RST</code> 必须先拉低再延时 100ms 拉高；电荷泵（0x8D / 0x14）必须在开显示之前；0x20 / 0x02 决定后续刷新能否只用 <code>0xB0+i</code> 切页。</div>
+                    <div class="note blue">oled.c 里还多开了一个 GPIOF 时钟（<code>__HAL_RCC_GPIOF_CLK_ENABLE()</code>），但 GPIOF 并未被使用，属于冗余代码，不影响功能。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="显存结构与整屏刷新">
+                    <h2>13　显存结构与整屏刷新</h2>
+                    <div class="sec-sub">1KB 数组就是整块屏幕，画点改内存，刷新才走硬件</div>
+
+                    <figure class="figure">
+                        <img src="./index25-map/gram-map.png" alt="OLED_GRAM 的页与列映射示意图">
+                        <figcaption>图 13-1　OLED_GRAM[128][8] 与屏幕页、y 坐标的对应关系</figcaption>
+                    </figure>
+
+                    <pre class="code">u8 OLED_GRAM[128][8];   <span class="cmt">// 128 列 × 8 页 = 1024 字节</span>
+
+void OLED_DrawPoint(u8 x, u8 y, u8 t)
+{
+    u8 pos, bx, temp = 0;
+    if (x &gt; 127 || y &gt; 63) return;
+    pos = 7 - y / 8;     <span class="cmt">// 页号：屏幕上方对应 GRAM 的高索引</span>
+    bx = y % 8;          <span class="cmt">// 页内第几行</span>
+    temp = 1 &lt;&lt; (7 - bx);<span class="cmt">// 页内 bit 位置</span>
+    if (t) OLED_GRAM[x][pos] |= temp;
+    else   OLED_GRAM[x][pos] &amp;= ~temp;
+}
+
+void OLED_Refresh_Gram(void)
+{
+    u8 i, n;
+    for (i = 0; i &lt; 8; i++)
+    {
+        OLED_WR_Byte(0xb0 + i, OLED_CMD);   <span class="cmt">// 页地址 0xB0~0xB7</span>
+        OLED_WR_Byte(0x00, OLED_CMD);       <span class="cmt">// 列地址低 4 位</span>
+        OLED_WR_Byte(0x10, OLED_CMD);       <span class="cmt">// 列地址高 4 位</span>
+        for (n = 0; n &lt; 128; n++)
+            OLED_WR_Byte(OLED_GRAM[n][i], OLED_DATA);
+    }
+}</pre>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>值</th><th>说明</th></tr>
+                        <tr><td>显存数组</td><td>u8 OLED_GRAM[128][8]</td><td>1KB，位于 IRAM</td></tr>
+                        <tr><td>页数</td><td>8</td><td>每页 8 行像素</td></tr>
+                        <tr><td>每页字节数</td><td>128</td><td>对应 128 列</td></tr>
+                        <tr><td>一次刷新</td><td>8 × (3 条命令 + 128 字节)</td><td>约 1048 次写操作</td></tr>
+                        <tr><td>字节内位序</td><td>y 越小 bit 越高</td><td>1 &lt;&lt; (7 - y%8)</td></tr>
+                    </table>
+
+                    <div class="note"><code>pos = 7 - y/8</code> 决定页序，<code>1 &lt;&lt; (7 - y%8)</code> 决定字节内位序，这两处只要有一处写反，屏幕就会上下颠倒或整行错位。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="字符、字符串与数字显示">
+                    <h2>14　字符、字符串与数字显示</h2>
+                    <div class="sec-sub">字号决定字库、字符宽度和每个字符占用的字节数</div>
+
+                    <table class="data">
+                        <tr><th>size</th><th>csize 计算</th><th>字库</th><th>字符宽 × 高</th></tr>
+                        <tr><td>12</td><td>(12/8 + 1) × (12/2) = 12</td><td>asc2_1206[95][12]</td><td>6 × 12</td></tr>
+                        <tr><td>16</td><td>(16/8 + 0) × (16/2) = 16</td><td>asc2_1608[95][16]</td><td>8 × 16</td></tr>
+                        <tr><td>24</td><td>(24/8 + 0) × (24/2) = 36</td><td>asc2_2412[95][36]</td><td>12 × 24</td></tr>
+                    </table>
+
+                    <pre class="code">void OLED_ShowChar(u8 x, u8 y, u8 chr, u8 size, u8 mode)
+{
+    u8 temp, t, csize;
+    u8 y0 = y;
+    csize = (size / 8 + ((size % 8) ? 1 : 0)) * (size / 2);
+    chr = chr - ' ';                  <span class="cmt">// 字库从空格开始</span>
+    for (t = 0; t &lt; csize; t++)
+    {
+        if (size == 12)      temp = asc2_1206[chr][t];
+        else if (size == 16) temp = asc2_1608[chr][t];
+        else if (size == 24) temp = asc2_2412[chr][t];
+        else return;                  <span class="cmt">// 其它字号不支持</span>
+        ...
+    }
+}
+
+<span class="cmt">// OLED_ShowNum 中的前导零处理</span>
+if (enshow == 0 &amp;&amp; t &lt; (len - 1))
+{
+    if (temp == 0) { OLED_ShowChar(x + (size/2)*t, y, ' ', size, 0); continue; }
+    else enshow = 1;
+}</pre>
+
+                    <h3>本实验用到的 7 处显示调用</h3>
+                    <table class="data">
+                        <tr><th>坐标 (x, y)</th><th>内容</th><th>字号</th></tr>
+                        <tr><td>(0, 0)</td><td>"ALIENTEK"</td><td>24</td></tr>
+                        <tr><td>(0, 24)</td><td>"0.96' OLED TEST"</td><td>16</td></tr>
+                        <tr><td>(0, 40)</td><td>"ATOM 2014/5/4"</td><td>12</td></tr>
+                        <tr><td>(0, 52)</td><td>"ASCII:"</td><td>12</td></tr>
+                        <tr><td>(64, 52)</td><td>"CODE:"</td><td>12</td></tr>
+                        <tr><td>(36, 52)</td><td>当前 ASCII 字符</td><td>12</td></tr>
+                        <tr><td>(94, 52)</td><td>3 位码值</td><td>12</td></tr>
+                    </table>
+
+                    <div class="note"><code>OLED_ShowNum</code> 用 <code>len = 3</code> 且开启 <code>enshow</code> 消零逻辑，前导 0 会被空格替代，所以码值 65 显示为“ 65”而不是“065”。</div>
+                </section>
+
+                <section class="content-card" id="s15" data-title="主循环与实验现象">
+                    <h2>15　主循环与实验现象</h2>
+                    <div class="sec-sub">每 500ms 换一个字符、翻转一次 LED0，一轮 95 步约 47.5 秒</div>
+
+                    <pre class="code">while(1)
+{
+    OLED_ShowChar(36,52,t,12,1);   <span class="cmt">// 在 "ASCII:" 右侧显示字符</span>
+    OLED_ShowNum(94,52,t,3,12);    <span class="cmt">// 在 "CODE:" 右侧显示码值</span>
+    OLED_Refresh_Gram();           <span class="cmt">// 整屏 1024 字节刷新</span>
+    t++;
+    if(t &gt; '~') t = ' ';           <span class="cmt">// 0x7E 之后回到 0x20</span>
+    delay_ms(500);
+    LED0 = !LED0;
+}</pre>
+
+                    <table class="data">
+                        <tr><th>观察到的现象</th><th>对应源码</th><th>推算</th></tr>
+                        <tr><td>屏幕上字符每 500ms 变一次</td><td>t++ 与 delay_ms(500)</td><td>字符从空格 0x20 到 ~ 0x7E</td></tr>
+                        <tr><td>右侧码值同步变化</td><td>OLED_ShowNum(94,52,t,3,12)</td><td>3 位十进制，最大 126</td></tr>
+                        <tr><td>一轮约 47.5 秒</td><td>t &lt;= '~' 时回卷</td><td>95 × 500ms = 47.5s</td></tr>
+                        <tr><td>LED0 以约 1Hz 闪烁</td><td>LED0 = !LED0</td><td>500ms 亮、500ms 灭</td></tr>
+                        <tr><td>串口无输出</td><td>主循环未调用 printf</td><td>uart_init 只做初始化</td></tr>
+                    </table>
+
+                    <div class="sim">
+                        <div class="sim-title">主循环演示：每点一次 = 执行一次 while(1) 循环</div>
+                        <div class="sim-buttons">
+                            <button data-key="step">执行一轮循环</button>
+                            <button data-key="reset">复位到空格</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>LED0（PB1）</div>
+                        </div>
+                        <div class="sim-log" id="simLog">本轮显示：“ ”　码值： 32　LED0：灭　已完成 0 轮</div>
+                    </div>
+
+                    <div class="note">演示只维护变量 <code>t</code>、<code>LED0</code> 与循环次数，显示位置、字号、回卷条件都与源码一致；真实硬件上每轮还要额外执行一次 1024 字节的整屏刷新。</div>
+                </section>
+
+                <section class="content-card" id="s16" data-title="常见问题排查与总结">
+                    <h2>16　常见问题排查与总结</h2>
+                    <div class="sec-sub">现象 → 原因 → 排查位置，按这条链走能省很多时间</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>可能原因</th><th>排查位置</th></tr>
+                        <tr><td>整屏不亮</td><td>电荷泵未开 / RST 时序不对</td><td>0x8D 0x14、RST 低电平 100ms</td></tr>
+                        <tr><td>全屏点亮或花屏</td><td>ODR 未先清位 / 数据线顺序错</td><td>OLED_Data_Out 的掩码与 D0~D7 映射</td></tr>
+                        <tr><td>字符上下颠倒</td><td>段重映射 / COM 扫描方向错</td><td>0xA1、0xC0 两个参数</td></tr>
+                        <tr><td>改字号后显示乱码</td><td>字库与 size 不匹配</td><td>size 只能 12/16/24，csize 与数组维度对应</td></tr>
+                        <tr><td>下载后无法调试</td><td>PA15 / PB3 / PB4 被 OLED 占用</td><td>Keil 调试口改为 SWD</td></tr>
+                        <tr><td>换 SPI 屏不显示</td><td>OLED_MODE 未改 / BS1、BS2 接法</td><td>模块 BS1、BS2 接地，改 OLED_MODE = 0</td></tr>
+                        <tr><td>编译报半主机错误</td><td>未做 printf 重定向</td><td>保留 __use_no_semihosting 与 fputc</td></tr>
+                        <tr><td>只有半屏有内容</td><td>刷新循环页数不足</td><td>for(i = 0; i &lt; 8; i++)</td></tr>
+                    </table>
+
+                    <h3>全链路回顾</h3>
+                    <p>复位取栈顶 → SystemInit 复位 RCC、开 FPU、设 VTOR → __main 建立段 → HAL_Init 建时基与优先级分组 → Stm32_Clock_Init 把 25MHz HSE 变 180MHz → delay_init 用 HCLK 校准 delay_us → uart_init 配 PA9 / PA10 → LED_Init 配 PB0 / PB1 → OLED_Init 配 13 根 IO 并写命令序列 → 主循环改显存、整屏刷新、500ms 翻转 LED0。</p>
+
+                    <div class="note blue">排查时沿着“时钟 → 时基 → 引脚 → 控制器 → 主循环”这条链逐环确认：主频对不对、delay 准不准、13 根 IO 是否都配成推挽输出、初始化命令有没有漏、刷新循环是否写满 8 页。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">ALIENTEK STM32F429 开发板 · 实验11 OLED 显示实验 · 代码启动过程总结</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示：每点一次执行一轮 while(1)，逻辑与 main.c 一致 =====
+    var dot0 = document.getElementById('dot0');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && simLog) {
+        var t = 32;         // 待显示字符，源码初值 ' '（0x20）
+        var shown = 32;     // 本轮实际显示的字符
+        var led0 = false;   // LED_Init 置 1（灭），首次翻转后点亮
+        var loops = 0;
+
+        function pad3(v) {
+            var s = '' + v;
+            while (s.length < 3) s = ' ' + s;
+            return s;
+        }
+
+        function render() {
+            dot0.classList.toggle('on', led0);
+            simLog.textContent =
+                '本轮显示：“' + String.fromCharCode(shown) + '”' +
+                '　码值：' + pad3(shown) +
+                '　LED0：' + (led0 ? '亮' : '灭') +
+                '　已完成 ' + loops + ' 轮';
+        }
+
+        var handlers = {
+            step: function () {
+                shown = t;
+                t++;
+                if (t > 126) t = 32;   // 对应源码 if(t>'~') t=' ';
+                led0 = !led0;
+                loops++;
+            },
+            reset: function () {
+                t = 32; shown = 32; led0 = false; loops = 0;
+            }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验49 DSP测试实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验49 DSP测试实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">STM32F429IGT6 · CMSIS-DSP · 1024 点基 4 FFT</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+<section class="content-card" id="s01" data-title="工程概述与硬件资源">
+                    <h2>01　工程概述与硬件资源</h2>
+                    <div class="sec-sub">同一块板子，用 CMSIS-DSP 做 1024 点基 4 FFT，并与普通 C 数学库对照</div>
+
+                    <p>实验49 有两个子工程：49_1 用 20 万次 sin/cos 计算比较 <code class="inline">sinf/cosf</code> 与 <code class="inline">arm_sin_f32/arm_cos_f32</code> 的耗时；49_2 生成一段“直流 + 三个单音”的信号，做 1024 点基 4 FFT，再求复数模并逐点打印。两者都不接外部模块，只依赖 LCD、按键、串口和 TIM3。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>配置</th><th>用途</th></tr>
+                        <tr><td>STM32F429IGT6</td><td>180MHz，单精度 FPU</td><td>执行 DSP 库的 SIMD 乘加</td></tr>
+                        <tr><td>CMSIS-DSP</td><td>arm_cortexM4lf_math.lib</td><td>FFT、三角函数、求模</td></tr>
+                        <tr><td>LCD</td><td>RGB565，800×480</td><td>显示标题与运行时间</td></tr>
+                        <tr><td>KEY0</td><td>PE4</td><td>触发一次 FFT</td></tr>
+                        <tr><td>TIM3</td><td>1MHz 计数（49_2）</td><td>测 FFT 耗时</td></tr>
+                        <tr><td>USART1</td><td>115200-8-N-1</td><td>打印 1024 个幅值</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">FFT_LENGTH = 1024</span>
+                        <span class="chip">输入 2048 float</span>
+                        <span class="chip">输出 1024 float</span>
+                        <span class="chip">基 4 蝶形</span>
+                        <span class="chip">TIM3 1MHz</span>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">两个子工程的分工</div>
+                        <ol>
+                            <li>49_1 只看“函数级”差异：同一个角度，两条实现路径的耗时。</li>
+                            <li>49_2 看“算法级”差异：FFT 把 1024 点 DFT 的 O(N²) 降到 O(N log N)。</li>
+                            <li>两者都用 FPU；若关闭 FPU，arm_math 的浮点版本会退化成软件库，优势消失。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">本页以 49_2（FFT）为主线，49_1 的 BasicMath 对照放在第 11 节说明。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="启动流程总览">
+                    <h2>02　启动流程总览</h2>
+                    <div class="sec-sub">初始化顺序与实验48 相同，多了一步“初始化 FFT 结构体”</div>
+
+                    <pre class="code">int main(void)
+{
+    arm_cfft_radix4_instance_f32 scfft;
+    u8 key,t=0;
+    float time;
+    u8 buf[50];
+    u16 i;
+
+    HAL_Init();                     <span class="cmt">// 1ms 时基</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// 180MHz</span>
+    delay_init(180);
+    uart_init(115200);
+    LED_Init();
+    KEY_Init();
+    SDRAM_Init();                   <span class="cmt">// LCD 显存</span>
+    LCD_Init();
+    TIM3_Init(65535,90-1);          <span class="cmt">// 1MHz，65.536ms 溢出</span>
+
+    POINT_COLOR=RED;
+    LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7");
+    LCD_ShowString(30,70,200,16,16,"DSP FFT TEST");
+    LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");
+    LCD_ShowString(30,110,200,16,16,"2016/1/17");
+    LCD_ShowString(30,130,200,16,16,"KEY0:Run FFT");
+    LCD_ShowString(30,160,200,16,16,"FFT runtime:");
+    POINT_COLOR=BLUE;
+
+    arm_cfft_radix4_init_f32(&amp;scfft,FFT_LENGTH,0,1); <span class="cmt">// 1024 点，正变换，位反转</span>
+
+    while(1)
+    {
+        key=KEY_Scan(0);
+        if(key==KEY0_PRES)
+        {
+            /* 生成信号 + 执行 FFT + 求模 + 打印 */
+        }
+        else delay_ms(10);
+        t++;
+        if((t%10)==0)LED0=!LED0;    <span class="cmt">// 100ms 翻转一次</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">为什么 FFT 结构体要在 while 外初始化</div>
+                        <ol>
+                            <li><code class="inline">arm_cfft_radix4_init_f32</code> 只计算旋转因子表与配置，与输入数据无关。</li>
+                            <li>放在循环内会重复初始化，白白增加每次按键的耗时。</li>
+                            <li><code class="inline">fft_inputbuf</code> 是原地运算，初始化只需一次。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">TIM3 在 49_2 里是 <code class="inline">90-1</code> 分频，即 1MHz；49_1 里是 <code class="inline">9000-1</code>，即 10kHz。两页的 <code class="inline">time/1000</code> 与 <code class="inline">time/10</code> 不能混用。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="状态交互演示">
+                    <h2>03　状态交互演示</h2>
+                    <div class="sec-sub">先看启动链路，再点按钮观察“单音频率”与 FFT 谱线位置的对应</div>
+
+                    <figure class="figure">
+                        <img src="./index63-map/boot-flow.png" alt="DSP FFT 实验从上电到主循环的启动流程图">
+                        <figcaption>图 3-1　DSP FFT 实验启动链路总览</figcaption>
+                    </figure>
+
+                    <div class="sim">
+                        <div class="sim-title">信号合成与谱线演示（对应 KEY0 触发）</div>
+                        <div class="sim-buttons">
+                            <button data-act="run">KEY0 执行一次 FFT</button>
+                            <button data-act="next">切换观察的谱线</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="ind0"></span>FFT 完成</div>
+                            <div class="led-item"><span class="led-dot" id="ind1"></span>DSP 库使能</div>
+                        </div>
+                        <div class="sim-log" id="simLog">尚未执行　输入：DC 100 + 10·sin(1) + 30·sin(4) + 50·cos(8)</div>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">演示与源码的对应关系</div>
+                        <ol>
+                            <li>输入实部由四项叠加：直流 100、1 倍频 10、4 倍频 30、8 倍频 50。</li>
+                            <li>虚部全部为 0，所以是实信号；实信号的幅值谱关于 N/2 对称。</li>
+                            <li>谱线索引 k 表示“每个记录周期内 k 个完整周期”，不是赫兹。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">演示只说明谱线位置，不伪造具体幅值；真实幅值由串口打印的 <code>fft_outputbuf[]</code> 给出。</div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与复位入口">
+                    <h2>04　启动文件与复位入口</h2>
+                    <div class="sec-sub">DSP 库同样是普通 C 函数，复位入口与其它工程完全一致</div>
+
+                    <p><code class="inline">startup_stm32f429xx.s</code> 负责向量表、栈和复位入口。DSP 库不改变启动流程，它只是被链接进来的静态库；真正影响 DSP 性能的是 FPU 选项与库版本。</p>
+
+                    <pre class="code">Stack_Size      EQU     0x800;          <span class="cmt">// 2KB 栈，FFT 函数局部变量不多</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp
+
+Reset_Handler   PROC
+                EXPORT  Reset_Handler             [WEAK]
+                IMPORT  SystemInit
+                IMPORT  __main
+                LDR     R0, =SystemInit
+                BLX     R0                      <span class="cmt">// FPU/时钟复位</span>
+                LDR     R0, =__main
+                BX      R0                      <span class="cmt">// C 库入口 → main</span>
+                ENDP
+
+                ALIGN
+                IF      :DEF:__MICROLIB
+                EXPORT  __initial_sp
+                EXPORT  __heap_base
+                EXPORT  __heap_limit
+                ELSE
+                IMPORT  __use_two_region_memory
+                EXPORT  __user_initial_stackheap
+__user_initial_stackheap
+                LDR     R0, =  Heap_Mem
+                LDR     R1, =(Stack_Mem + Stack_Size)
+                LDR     R2, = (Heap_Mem +  Heap_Size)
+                LDR     R3, = Stack_Mem
+                BX      LR
+                ENDIF</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">DSP 工程的启动差异</div>
+                        <ol>
+                            <li>启动文件不变，但工程必须把 <code class="inline">arm_cortexM4lf_math.lib</code> 加入链接。</li>
+                            <li>若库选成 <code class="inline">arm_cortexM4l_math.lib</code>（非 f 版本），浮点 FFT 会走软件实现。</li>
+                            <li><code class="inline">__FPU_USED</code> 仍由编译器选项决定，与库文件名无关。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">库名里的 <code class="inline">lf</code> 表示 little-endian + FPU；选错库通常不会报错，但运行时间会明显变长。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="系统时钟与 HAL 初始化">
+                    <h2>05　系统时钟与 HAL 初始化</h2>
+                    <div class="sec-sub">180MHz + 单精度 FPU 是 DSP 库发挥性能的两个前提</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+#if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+  SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2)); <span class="cmt">// CP10/CP11 全访问</span>
+#endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;   <span class="cmt">// HSI 打开</span>
+  RCC-&gt;CFGR = 0x00000000;            <span class="cmt">// 时钟源切回 HSI</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;   <span class="cmt">// 关闭 PLL/HSE/CSS</span>
+  RCC-&gt;PLLCFGR = 0x24003010;
+  RCC-&gt;CFGR &amp;= ~RCC_CFGR_SW;
+  RCC-&gt;CIR = 0x00000000;
+}
+
+HAL_StatusTypeDef HAL_Init(void)
+{
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
+  __HAL_FLASH_DATA_CACHE_ENABLE();
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);
+  HAL_InitTick(TICK_INT_PRIORITY);   <span class="cmt">// SysTick 1ms</span>
+  HAL_MspInit();
+  return HAL_OK;
+}</pre>
+
+                    <p>系统时钟仍由 <code class="inline">Stm32_Clock_Init(360,25,2,8)</code> 配置：25MHz 晶振 ÷ 25 × 360 ÷ 2 = 180MHz，APB1 = 45MHz，APB2 = 90MHz。TIM3 挂在 APB1，定时器时钟为 90MHz。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">时钟对 FFT 的影响</div>
+                        <ol>
+                            <li>FFT 是纯计算，耗时基本与主频成反比。</li>
+                            <li>Flash 等待周期设为 5WS，取指与数据访问才能跟上 180MHz。</li>
+                            <li>Over-Drive 必须打开，否则 180MHz 下芯片工作不稳定。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">不要为了“更准”把 SysTick 改成微秒中断；FFT 计时用的是 TIM3 硬件计数器，与 SysTick 无关。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="延时、串口与基础驱动">
+                    <h2>06　延时、串口与基础驱动</h2>
+                    <div class="sec-sub">1024 行打印会占不少时间，按下 KEY0 后串口会持续输出一段时间</div>
+
+                    <pre class="code">int fputc(int ch, FILE *f)
+{
+    while((USART1-&gt;SR&amp;0X40)==0);   <span class="cmt">// 等发送寄存器空</span>
+    USART1-&gt;DR=(u8)ch;
+    return ch;
+}
+
+for(i=0;i&lt;FFT_LENGTH;i++)
+{
+    printf("fft_outputbuf[%d]:%f\r\n",i,fft_outputbuf[i]); <span class="cmt">// 1024 行</span>
+}</pre>
+
+                    <p>按 115200bps、每行约 25 字节估算，1024 行大约需要 2 秒以上。串口打印在 FFT 计算之后执行，不影响 <code class="inline">time</code> 的测量结果，但会推迟下一次按键响应。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">打印与测量的先后关系</div>
+                        <ol>
+                            <li>先读 <code class="inline">TIM3-&gt;CNT</code> 得到耗时，再调用 <code class="inline">arm_cmplx_mag_f32</code>。</li>
+                            <li>求模不在计时窗口内，所以日志里的时间只包含 FFT 蝶形运算。</li>
+                            <li>printf 是阻塞的，但发生在计时结束之后。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">若只想看耗时，可以把 1024 行打印注释掉；否则串口会成为整个循环的瓶颈。</div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="核心外设初始化">
+                    <h2>07　核心外设初始化：DSP 库与 TIM3</h2>
+                    <div class="sec-sub">工程宏、库文件、FPU、定时器，四者缺一不可</div>
+
+                    <figure class="figure">
+                        <img src="./index63-map/dsp-init-flow.png" alt="DSP 库工程配置与 FFT 初始化流程图">
+                        <figcaption>图 7-1　DSP 库工程配置与 FFT 初始化流程</figcaption>
+                    </figure>
+
+                    <pre class="code">// uvprojx 的 C/C++ Define 中必须包含：
+ARM_MATH_CM4, __CC_ARM, ARM_MATH_MATRIX_CHECK, ARM_MATH_ROUNDING
+
+// 链接的库：
+DSP_LIB\arm_cortexM4lf_math.lib   <span class="cmt">// l = little-endian，f = FPU</span>
+
+// 代码中的 FFT 初始化：
+arm_cfft_radix4_instance_f32 scfft;
+arm_cfft_radix4_init_f32(&amp;scfft,FFT_LENGTH,0,1);
+<span class="cmt">// 参数 2：FFT 长度 1024</span>
+<span class="cmt">// 参数 3：ifftFlag=0，正变换</span>
+<span class="cmt">// 参数 4：bitReverseFlag=1，输出按自然顺序排列</span>
+
+void TIM3_Init(u16 arr,u16 psc)
+{
+    TIM3_Handler.Instance=TIM3;
+    TIM3_Handler.Init.Prescaler=psc;                     <span class="cmt">// 89</span>
+    TIM3_Handler.Init.CounterMode=TIM_COUNTERMODE_UP;
+    TIM3_Handler.Init.Period=arr;                        <span class="cmt">// 65535</span>
+    TIM3_Handler.Init.ClockDivision=TIM_CLOCKDIVISION_DIV1;
+    HAL_TIM_Base_Init(&amp;TIM3_Handler);
+    HAL_TIM_Base_Start_IT(&amp;TIM3_Handler);
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">三个宏的作用</div>
+                        <ol>
+                            <li><code class="inline">ARM_MATH_CM4</code>：选择 Cortex-M4 的 DSP 实现与 SIMD 指令。</li>
+                            <li><code class="inline">ARM_MATH_MATRIX_CHECK</code>：矩阵运算时检查维度，本实验未用到但保留。</li>
+                            <li><code class="inline">ARM_MATH_ROUNDING</code>：定点转浮点时使用舍入而不是截断。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">TIM3 的 1MHz 来自 90MHz / (89 + 1)。如果误写成 <code class="inline">9000-1</code>，计时会慢 100 倍，日志里的毫秒数会被放大。</div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="时序与数据流">
+                    <h2>08　时序与数据流</h2>
+                    <div class="sec-sub">按键 → 生成 2048 个 float → 基 4 FFT → 求模 → 打印，计时只包住蝶形运算</div>
+
+                    <figure class="figure">
+                        <img src="./index63-map/dsp-fft-timing.png" alt="FFT 数据生成、蝶形运算与计时时序图">
+                        <figcaption>图 8-1　FFT 数据生成、运算与计时时序</figcaption>
+                    </figure>
+
+                    <pre class="code">if(key==KEY0_PRES)
+{
+    for(i=0;i&lt;FFT_LENGTH;i++)              <span class="cmt">// 生成 1024 个复数</span>
+    {
+        fft_inputbuf[2*i]=100+
+            10*arm_sin_f32(2*PI*i/FFT_LENGTH)+
+            30*arm_sin_f32(2*PI*i*4/FFT_LENGTH)+
+            50*arm_cos_f32(2*PI*i*8/FFT_LENGTH); <span class="cmt">// 实部</span>
+        fft_inputbuf[2*i+1]=0;                   <span class="cmt">// 虚部为 0</span>
+    }
+    __HAL_TIM_SET_COUNTER(&amp;TIM3_Handler,0);      <span class="cmt">// 计时开始</span>
+    timeout=0;
+    arm_cfft_radix4_f32(&amp;scfft,fft_inputbuf);   <span class="cmt">// 原地基 4 FFT</span>
+    time=__HAL_TIM_GET_COUNTER(&amp;TIM3_Handler)
+         +(u32)timeout*65536;                    <span class="cmt">// 1MHz 计数</span>
+    sprintf((char*)buf,"%0.3fms\r\n",time/1000); <span class="cmt">// 计数/1000 = ms</span>
+    arm_cmplx_mag_f32(fft_inputbuf,fft_outputbuf,FFT_LENGTH); <span class="cmt">// 求模</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">数组布局</div>
+                        <ol>
+                            <li><code class="inline">fft_inputbuf[2*i]</code> 是第 i 点实部，<code class="inline">[2*i+1]</code> 是虚部，共 2048 个 float。</li>
+                            <li><code class="inline">arm_cfft_radix4_f32</code> 是原地运算，结果仍写回 <code class="inline">fft_inputbuf</code>。</li>
+                            <li><code class="inline">arm_cmplx_mag_f32</code> 逐点计算 √(re²+im²)，输出到 1024 个 float 的数组。</li>
+                            <li>TIM3 1MHz 下 1 个计数 = 1us，所以 <code class="inline">time/1000</code> 是毫秒。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">生成信号用的 <code class="inline">arm_sin_f32</code> 也属于 DSP 库；它不影响 FFT 计时，因为计时从生成之后才开始。</div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="中断链路">
+                    <h2>09　中断链路</h2>
+                    <div class="sec-sub">FFT 全程在主循环里同步执行，中断只负责计时溢出与串口</div>
+
+                    <figure class="figure">
+                        <img src="./index63-map/dsp-irq-chain.png" alt="FFT 计时与串口输出的中断链路图">
+                        <figcaption>图 9-1　FFT 计时与串口输出的中断链路</figcaption>
+                    </figure>
+
+                    <pre class="code">void TIM3_IRQHandler(void)
+{
+    HAL_TIM_IRQHandler(&amp;TIM3_Handler);   <span class="cmt">// HAL 分发更新事件</span>
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if(htim==(&amp;TIM3_Handler))
+    {
+        timeout++;                        <span class="cmt">// 65.536ms 溢出一次</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">为什么还需要 timeout</div>
+                        <ol>
+                            <li>TIM3 是 16 位计数器，1MHz 下最多计 65.536ms。</li>
+                            <li>1024 点 FFT 通常远小于这个值，但保留溢出计数可以防止异常情况下读数回绕。</li>
+                            <li>中断优先级为抢占 1、子优先级 3，高于串口（3,3）。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">如果 FFT 执行期间被更高优先级中断打断，计时会把中断时间也算进去；本实验中没有这样的中断源。</div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="主循环与现象">
+                    <h2>10　主循环与现象</h2>
+                    <div class="sec-sub">按一次 KEY0，LCD 显示耗时，串口输出 1024 行幅值</div>
+
+                    <pre class="code">while(1)
+{
+    key=KEY_Scan(0);
+    if(key==KEY0_PRES)
+    {
+        for(i=0;i&lt;FFT_LENGTH;i++)        <span class="cmt">// 合成信号</span>
+        {
+            fft_inputbuf[2*i]=100+
+                10*arm_sin_f32(2*PI*i/FFT_LENGTH)+
+                30*arm_sin_f32(2*PI*i*4/FFT_LENGTH)+
+                50*arm_cos_f32(2*PI*i*8/FFT_LENGTH);
+            fft_inputbuf[2*i+1]=0;
+        }
+        __HAL_TIM_SET_COUNTER(&amp;TIM3_Handler,0);
+        timeout=0;
+        arm_cfft_radix4_f32(&amp;scfft,fft_inputbuf);
+        time=__HAL_TIM_GET_COUNTER(&amp;TIM3_Handler)
+             +(u32)timeout*65536;
+        sprintf((char*)buf,"%0.3fms\r\n",time/1000);
+        LCD_ShowString(30+12*8,160,100,16,16,buf); <span class="cmt">// 屏幕显示耗时</span>
+        arm_cmplx_mag_f32(fft_inputbuf,fft_outputbuf,FFT_LENGTH);
+        printf("\r\n%d point FFT runtime:%0.3fms\r\n",
+               FFT_LENGTH,time/1000);
+        printf("FFT Result:\r\n");
+        for(i=0;i&lt;FFT_LENGTH;i++)
+        {
+            printf("fft_outputbuf[%d]:%f\r\n",i,fft_outputbuf[i]);
+        }
+    }
+    else delay_ms(10);                   <span class="cmt">// 没按键时让出 CPU</span>
+    t++;
+    if((t%10)==0)LED0=!LED0;             <span class="cmt">// 100ms 心跳</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">现象解读</div>
+                        <ol>
+                            <li>LCD 第二行右侧显示类似 <code class="inline">0.4xx ms</code> 的 FFT 耗时。</li>
+                            <li>串口先打印 “1024 point FFT runtime”，随后是 1024 行幅值。</li>
+                            <li>幅值谱在 k=1、4、8 处出现尖峰，k=0 是直流分量。</li>
+                            <li>LED0 每 100ms 翻转一次，表示主循环还活着。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">按下 KEY0 后要等 1024 行打印完才能再次响应；这不是死机，而是串口阻塞。</div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="核心数据结构与算法">
+                    <h2>11　核心数据结构与算法</h2>
+                    <div class="sec-sub">FFT 参数算式：k 表示每个记录内的周期数，幅值要乘 2/N 才能还原单音幅度</div>
+
+                    <pre class="code">#define FFT_LENGTH      1024
+float fft_inputbuf[FFT_LENGTH*2];   <span class="cmt">// 实部/虚部交错</span>
+float fft_outputbuf[FFT_LENGTH];    <span class="cmt">// 幅值</span>
+
+arm_cfft_radix4_instance_f32 scfft;
+arm_cfft_radix4_init_f32(&amp;scfft,FFT_LENGTH,0,1);
+
+<span class="cmt">// 输入：x[i] = 100 + 10·sin(2π·1·i/N) + 30·sin(2π·4·i/N) + 50·cos(2π·8·i/N)</span>
+<span class="cmt">// 输出：|X[k]|，k = 0..N-1</span>
+<span class="cmt">// 单音幅度 A 对应 |X[k]| ≈ A·N/2（k≠0），直流对应 |X[0]| = A·N</span></pre>
+
+                    <table class="data">
+                        <tr><th>谱线</th><th>来源</th><th>理论幅值</th><th>说明</th></tr>
+                        <tr><td>k = 0</td><td>直流 100</td><td>100 × 1024 = 102400</td><td>不乘 2/N</td></tr>
+                        <tr><td>k = 1</td><td>10·sin(1 周期)</td><td>10 × 512 = 5120</td><td>正频率单边谱</td></tr>
+                        <tr><td>k = 4</td><td>30·sin(4 周期)</td><td>30 × 512 = 15360</td><td>同上</td></tr>
+                        <tr><td>k = 8</td><td>50·cos(8 周期)</td><td>50 × 512 = 25600</td><td>cos 也是单根谱线</td></tr>
+                        <tr><td>k = N−1 等</td><td>负频率镜像</td><td>与正频率对称</td><td>实信号频谱共轭对称</td></tr>
+                    </table>
+
+                    <pre class="code">u8 sin_cos_test(float angle,u32 times,u8 mode)
+{
+    float sinx,cosx,result;
+    u32 i=0;
+    if(mode==0)                         <span class="cmt">// 普通 C 库</span>
+    {
+        for(i=0;i&lt;times;i++)
+        {
+            cosx=cosf(angle);
+            sinx=sinf(angle);
+            result=sinx*sinx+cosx*cosx;
+            result=fabsf(result-1.0f);
+            if(result&gt;DELTA)return 0XFF; <span class="cmt">// 误差超限</span>
+            angle+=0.001f;
+        }
+    }
+    else                                <span class="cmt">// DSP 库</span>
+    {
+        for(i=0;i&lt;times;i++)
+        {
+            cosx=arm_cos_f32(angle);
+            sinx=arm_sin_f32(angle);
+            result=sinx*sinx+cosx*cosx;
+            result=fabsf(result-1.0f);
+            if(result&gt;DELTA)return 0XFF;
+            angle+=0.001f;
+        }
+    }
+    return 0;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">三个必须记住的算式</div>
+                        <ol>
+                            <li>频率分辨率 Δf = fs / N；没有给定 fs 时，k 只能表示归一化频率 k/N。</li>
+                            <li>单音幅值 A 的谱峰约为 A·N/2；要还原 A，需乘 2/N。</li>
+                            <li>直流分量不乘 2，直接除以 N。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">49_1 的 <code class="inline">sin_cos_test</code> 用 sin²+cos²=1 做正确性判据，误差门限 <code class="inline">DELTA=0.00005f</code>；两种实现的耗时差就是 DSP 库带来的收益。</div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="串口调试与日志">
+                    <h2>12　串口调试与日志</h2>
+                    <div class="sec-sub">先看耗时行，再看谱线数组；不要被 1024 行淹没</div>
+
+                    <pre class="code">printf("\r\n%d point FFT runtime:%0.3fms\r\n",
+       FFT_LENGTH,time/1000);
+printf("FFT Result:\r\n");
+for(i=0;i&lt;FFT_LENGTH;i++)
+{
+    printf("fft_outputbuf[%d]:%f\r\n",i,fft_outputbuf[i]);
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">日志阅读顺序</div>
+                        <ol>
+                            <li>先找 <code class="inline">runtime</code>，确认 FFT 在毫秒级完成。</li>
+                            <li>再看 <code class="inline">fft_outputbuf[0]</code>，应接近 102400。</li>
+                            <li>再看 1、4、8 三点，应明显高于邻近点。</li>
+                            <li>其余点的值接近 0，说明信号干净、没有频谱泄漏之外的干扰。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">串口助手建议关闭“自动换行”或使用十六进制显示外的文本模式，否则 1024 行会很难翻。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="常见问题与排查">
+                    <h2>13　常见问题与排查</h2>
+                    <div class="sec-sub">FFT 结果不对，先查库、宏、数组长度，再查信号公式</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>最可能原因</th><th>排查动作</th></tr>
+                        <tr><td>全是 0</td><td>输入数组未填充或 FFT 未执行</td><td>确认 KEY0 分支与 <code>arm_cfft_radix4_f32</code></td></tr>
+                        <tr><td>谱线位置不对</td><td>信号公式的倍频写错</td><td>核对 2π·k·i/N 中的 k</td></tr>
+                        <tr><td>幅值差 2 倍</td><td>忘了单边谱要乘 2/N</td><td>用 A·N/2 对照</td></tr>
+                        <tr><td>耗时异常大</td><td>链接了非 FPU 库</td><td>确认 <code>arm_cortexM4lf_math.lib</code></td></tr>
+                        <tr><td>编译报未定义</td><td>没有定义 <code>ARM_MATH_CM4</code></td><td>在 C/C++ Define 中补上</td></tr>
+                        <tr><td>打印到一半卡住</td><td>串口阻塞或缓冲区满</td><td>降低打印量或提高波特率</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">排查优先级</div>
+                        <ol>
+                            <li>先确认能编译、能链接，再看运行结果。</li>
+                            <li>先看 k=0 直流，再看单音谱线。</li>
+                            <li>最后才怀疑 FFT 算法本身；绝大多数问题在输入数组布局。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">输入必须是“实部、虚部”交替，且长度是 2N；只填 N 个 float 会读越界。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="小结">
+                    <h2>14　小结</h2>
+                    <div class="sec-sub">DSP 库把“数学公式”变成“可在 MCU 上跑的计算流水线”</div>
+
+                    <p>实验49 的关键不是记住某个函数名，而是理解三件事：输入数组的复数布局、FFT 参数的物理含义、幅值与单音幅度之间的换算。49_1 则用 sin²+cos²=1 这个恒等式，把“库函数是否可信”变成可重复的数值测试。</p>
+
+                    <table class="data">
+                        <tr><th>层次</th><th>关键函数 / 宏</th><th>职责</th></tr>
+                        <tr><td>工程</td><td><code>ARM_MATH_CM4 / arm_cortexM4lf_math.lib</code></td><td>选择 DSP 实现与 FPU 版本</td></tr>
+                        <tr><td>初始化</td><td><code>arm_cfft_radix4_init_f32</code></td><td>设置长度、正反变换、位反转</td></tr>
+                        <tr><td>运算</td><td><code>arm_cfft_radix4_f32</code></td><td>原地基 4 FFT</td></tr>
+                        <tr><td>后处理</td><td><code>arm_cmplx_mag_f32</code></td><td>复数求模</td></tr>
+                        <tr><td>计时</td><td><code>TIM3_Init / timeout</code></td><td>1MHz 硬件秒表</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">三个结论</div>
+                        <ol>
+                            <li>N 点 FFT 需要 2N 个 float 的输入数组，实虚交错。</li>
+                            <li>k 是归一化频率索引，真实频率 = k·fs/N。</li>
+                            <li>单音幅值要乘 2/N 还原，直流要除以 N。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">下一页实验50 换一个方向：不拼算力，而是把触摸轨迹变成可识别的字符。</div>
+                </section>
+
+                <script>
+                    (function () {
+                        var peaks = [1, 4, 8];
+                        var p = 0, ran = false;
+                        var log = document.getElementById('simLog');
+                        var i0 = document.getElementById('ind0');
+                        var i1 = document.getElementById('ind1');
+                        function render() {
+                            if (!ran) {
+                                log.textContent = '尚未执行　输入：DC 100 + 10·sin(1) + 30·sin(4) + 50·cos(8)';
+                            } else {
+                                log.textContent = '第 ' + (p + 1) + '/3 条谱线：k = ' + peaks[p] +
+                                    '　理论幅值 ' + (p === 0 ? 5120 : p === 1 ? 15360 : 25600) +
+                                    '　FFT 已完成';
+                            }
+                            i0.classList.toggle('on', ran);
+                            i1.classList.toggle('on', true);
+                        }
+                        var acts = {
+                            run: function () { ran = true; p = 0; },
+                            next: function () { if (ran) p = (p + 1) % peaks.length; }
+                        };
+                        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+                            btn.addEventListener('click', function () {
+                                var a = acts[btn.getAttribute('data-act')];
+                                if (a) a();
+                                render();
+                            });
+                        });
+                        render();
+                    })();
+                </script>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

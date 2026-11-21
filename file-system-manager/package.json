@@ -1,0 +1,22 @@
+{
+  "name": "file-system-manager",
+  "version": "1.0.0",
+  "description": "文件管理系统 - 轻量级文件浏览和下载服务",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "file-manager",
+    "file-browser",
+    "download"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {},
+  "engines": {
+    "node": ">=8.0.0"
+  }
+}

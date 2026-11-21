@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验18 待机唤醒实验 · 代码启动过程</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2f7a52;
+            margin-bottom: 6px;
+        }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验18 待机唤醒实验 · 启动过程</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">按 main 的执行顺序读：复位 → SystemInit → 时钟 → 外设 → WKUP 判定 → while(1) → 长按待机 → 唤醒复位。源码为 GBK，正文均取自工程原文。</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">把“开关机”做进 MCU：长按 WK_UP 3 秒开机，再长按 3 秒进入待机，DS0 的闪烁是唯一的运行指示</div>
+
+                    <p>本实验的工程名是 <code class="inline">WKUP.uvprojx</code>，源码目录 <code class="inline">实验18 待机唤醒实验</code>。目标不是新外设，而是把 <strong>PWR 的 Standby 模式</strong> 用起来：芯片进入待机后 1.2V 域断电、程序停摆，只有 WKUP 引脚等少数唤醒源能把它“叫醒”，而叫醒的实质是一次复位。</p>
+
+                    <p>与相邻实验最大的差异：普通实验上电即运行；本实验<strong>默认是待机状态</strong>，上电后必须长按 WK_UP 才算开机。这条规则不是硬件做的，而是 <code class="inline">WKUP_Init()</code> 里调用 <code class="inline">Check_WKUP()</code> 判 3 秒长按、失败就调用 <code class="inline">Sys_Enter_Standby()</code> 实现的。</p>
+
+                    <h3>硬件资源（取自 readme.txt 与源码）</h3>
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚</th><th>在源码中的位置</th><th>本实验作用</th></tr>
+                        <tr><td>WK_UP 按键</td><td>PA0</td><td><code>key.h</code> 中 <code>WK_UP</code>；<code>wkup.h</code> 中 <code>WKUP_KD</code></td><td>开机判定、运行期长按进入待机、待机时作为唤醒源</td></tr>
+                        <tr><td>DS0</td><td>PB1</td><td><code>led.h</code>：<code>#define LED0 PBout(1)</code></td><td>主循环每 250ms 翻转；Check_WKUP 期间点亮</td></tr>
+                        <tr><td>DS1</td><td>PB0</td><td><code>led.h</code>：<code>#define LED1 PBout(0)</code></td><td>仅被 <code>LED_Init()</code> 置高（熄灭），本实验不用</td></tr>
+                        <tr><td>串口 1</td><td>PA9 / PA10</td><td><code>usart.c</code>：<code>HAL_UART_MspInit</code></td><td>115200-8-N-1；<code>printf</code> 重定向（LCD_Init 内部会用到）</td></tr>
+                        <tr><td>LCD</td><td>FMC / LTDC</td><td><code>lcd.c</code>、<code>ltdc.c</code>、<code>sdram.c</code></td><td>显示五行固定字符，非本实验重点</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">PA0 → WK_UP / EXTI0 / PWR_WAKEUP_PIN1</span>
+                        <span class="chip">PB1 → DS0</span>
+                        <span class="chip">PB0 → DS1</span>
+                        <span class="chip">PA9/PA10 → USART1</span>
+                    </div>
+
+                    <div class="note">PA0 同时被 <code>KEY_Init()</code>（普通下拉输入）和 <code>WKUP_Init()</code>（EXTI 上升沿 + 下拉）配置，后执行的 <code>WKUP_Init()</code> 覆盖前者。所以 <code>KEY_Scan()</code> 里的 <code>WK_UP</code> 在本工程中实际不再是普通输入语义。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">六个目录各管一段：CORE 管复位入口，SYSTEM 管时钟与延时，HARDWARE/WKUP 才是本实验的主角</div>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>负责什么</th><th>本页看哪几处</th></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>栈堆定义、向量表、<code>Reset_Handler</code></td><td>04 节：<code>Stack_Size 0x400</code>、<code>__Vectors</code>、<code>BLX SystemInit</code>、<code>BX __main</code></td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td><code>SystemInit()</code>：FPU、RCC 复位到默认态、<code>SCB-&gt;VTOR</code></td><td>05 节</td></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化顺序与 <code>while(1)</code></td><td>03 节全文、12 节主循环</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td><code>SysTick_Handler</code> → <code>HAL_IncTick()</code>（HAL 时基 1ms）</td><td>05 节</td></tr>
+                        <tr><td><code>HALLIB/.../stm32f4xx_hal.c</code></td><td><code>HAL_Init()</code>、弱函数 <code>HAL_InitTick</code>、<code>HAL_MspInit</code></td><td>05 节</td></tr>
+                        <tr><td><code>HALLIB/.../stm32f4xx_hal_pwr.c</code></td><td><code>HAL_PWR_EnterSTANDBYMode</code>、<code>EnableWakeUpPin</code>、<code>EnableBkUpAccess</code></td><td>09、10 节</td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td><code>Stm32_Clock_Init</code>；位带宏；<code>WFI_SET</code>（本工程未调用）</td><td>06 节</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td><code>delay_init(180)</code>、<code>delay_ms</code>（SysTick 轮询，非中断）</td><td>06 节</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td><code>uart_init(115200)</code>、<code>fputc</code> 重定向</td><td>06 节</td></tr>
+                        <tr><td><code>HARDWARE/WKUP/wkup.c / wkup.h</code></td><td><code>WKUP_Init</code>、<code>Check_WKUP</code>、<code>Sys_Enter_Standby</code>、<code>EXTI0_IRQHandler</code>、<code>HAL_GPIO_EXTI_Callback</code></td><td>08、09、11 节（核心）</td></tr>
+                        <tr><td><code>HARDWARE/KEY/key.c / led.c</code></td><td>按键与 LED 的 GPIO 初始化</td><td>08 节（PA0 冲突）、12 节</td></tr>
+                        <tr><td><code>HARDWARE/RTC/rtc.c</code></td><td>定义 <code>RTC_HandleTypeDef RTC_Handler</code> 及 RTC 初始化</td><td>09 节：只用到句柄，<strong>main 未调用 <code>RTC_Init()</code></strong></td></tr>
+                        <tr><td><code>HARDWARE/LCD</code>、<code>HARDWARE/SDRAM</code></td><td>显示与外部内存，与本实验逻辑无关</td><td>仅占启动时间</td></tr>
+                    </table>
+
+                    <p>Keil 工程 <code class="inline">WKUP.uvprojx</code> 的 HARDWARE 组里同时包含了 <code class="inline">led.c</code>、<code class="inline">key.c</code>、<code class="inline">lcd.c</code>、<code class="inline">sdram.c</code>、<code class="inline">ltdc.c</code>、<code class="inline">rtc.c</code>、<code class="inline">wkup.c</code>；HALLIB 组包含 <code class="inline">stm32f4xx_hal_pwr.c</code>、<code class="inline">stm32f4xx_hal_pwr_ex.c</code>、<code class="inline">stm32f4xx_hal_rtc.c</code>、<code class="inline">stm32f4xx_hal_rtc_ex.c</code>，所以 <code class="inline">wkup.c</code> 里对 RTC 句柄与 PWR 的调用都能链接通过。</p>
+
+                    <div class="note blue">HALLIB 只读被调用到的函数正文：本页引用 <code class="inline">HAL_Init</code>、<code class="inline">HAL_InitTick</code>、<code class="inline">HAL_RCC_ClockConfig</code>、<code class="inline">HAL_PWR_EnterSTANDBYMode</code>、<code class="inline">HAL_GPIO_EXTI_IRQHandler</code> 五处。RTC 的 HAL 函数只讲“被调用了什么”，不展开其实现。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电复位到 while(1) 共 7 个环节，第 8 个环节是“待机”，而它的出口又回到第 1 个环节</div>
+
+                    <figure class="figure">
+                        <img src="./index32-map/boot-flow.png" alt="实验18 从上电复位到待机、再被 WKUP 唤醒复位的启动流程图">
+                        <figcaption>图 3-1　复位 → 初始化 → WKUP 判定 → 主循环 → 待机 → 唤醒复位</figcaption>
+                    </figure>
+                    <figure class="figure"><img src="./index32-map/standby-timing.png" alt="待机与唤醒时序图"><figcaption>图 3-2　待机与唤醒：从长按 WKUP 到系统复位</figcaption></figure>
+                    <p>进入待机后内核与大部分外设断电，只剩 WKUP 引脚、RTC 等唤醒源在工作；WKUP 上升沿唤醒芯片时不会接着原处执行，而是产生一次系统复位，程序从 main 重新跑。这正是要用 BKP 标记区分冷启动与唤醒的原因。</p>
+
+                    <p>读这张图要注意一点：<strong>右侧 05~08 与左侧 01~04 不是并列的两条路，而是首尾相接的环形</strong>。上电走 01→04，<code class="inline">main</code> 里调 <code class="inline">WKUP_Init</code> 进入 05，判定通过才继续到 06 的 <code class="inline">while(1)</code>；运行期长按触发 07，<code class="inline">Sys_Enter_Standby</code> 走到 08 停在 <code class="inline">WFI</code>；WKUP 唤醒后芯片复位，回到 01。</p>
+
+                    <h3>main 函数全文（USER/main.c，未删改）</h3>
+                    <pre class="code">int main(void)                                    <span class="cmt">// 程序入口：复位后经 __main 调用</span>
+{
+    HAL_Init();                     <span class="cmt">// 初始化HAL库：优先级分组2 + 1ms 时基（此时还是 HSI 16MHz）</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// 设置时钟,180Mhz：HSE 25M × 360/25 = 360M VCO，/2 = 180M</span>
+    delay_init(180);                <span class="cmt">// 初始化延时函数：fac_us = 180</span>
+    uart_init(115200);              <span class="cmt">// 初始化USART：PA9/PA10，115200-8-N-1</span>
+    LED_Init();                     <span class="cmt">// 初始化LED：PB0/PB1 推挽输出并置高（全灭）</span>
+    KEY_Init();                     <span class="cmt">// 初始化按键：PA0 下拉输入、PC13 上拉、PH2/PH3 上拉</span>
+    WKUP_Init();	                <span class="cmt">// 待机唤醒初始化：PA0 改 EXTI 上升沿，并做“是否开机”判定</span>
+    SDRAM_Init();                   <span class="cmt">// 初始化SDRAM：LCD 显存用</span>
+    LCD_Init();                     <span class="cmt">// 初始化LCD：内部会 printf，所以必须放在 uart_init 之后</span>
+
+	POINT_COLOR=RED;                <span class="cmt">// 以下为 LCD 五行固定字符串，与本实验逻辑无关</span>
+	LCD_ShowString(30,50,200,16,16,"Apollos STM32F4/F7");	<span class="cmt">// LCD 第 1 行：开发板型号</span>	
+	LCD_ShowString(30,70,200,16,16,"WKUP TEST");	<span class="cmt">// LCD 第 2 行：实验名称</span>	
+	LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");       <span class="cmt">// LCD 第 3 行：作者标识</span>
+	LCD_ShowString(30,110,200,16,16,"2016/1/27");	<span class="cmt">// LCD 第 4 行：日期</span>	
+	LCD_ShowString(30,130,200,16,16,"WK_UP:Stanby/WK_UP");	  <span class="cmt">// LCD 第 5 行：按键功能提示</span>
+	while(1)                                        <span class="cmt">// 主循环：只做 DS0 闪烁，按键逻辑全在中断里</span>
+	{
+        LED0=!LED0;                 <span class="cmt">// DS0 翻转（PB1 位带写 ODR）</span>
+		delay_ms(250);              <span class="cmt">// 延时250ms：亮 250ms + 灭 250ms，周期 500ms</span>
+	}  
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：为什么是这个顺序</div>
+                        <ol>
+                            <li><strong>HAL_Init 必须在最前</strong>：它建立 1ms 时基（SysTick）与 NVIC 优先级分组 2。后面的 <code>HAL_RCC_OscConfig</code>、<code>HAL_RCC_ClockConfig</code> 里都用 <code>HAL_GetTick()</code> 做超时等待，没有时基就会卡在超时判断里。</li>
+                            <li><strong>时钟必须在 delay_init 前</strong>：<code>delay_init(180)</code> 把 <code>fac_us</code> 设成 180，含义是“1us 需要 180 个 HCLK 节拍”。若先延时后改频，所有延时都会按错误频率计算。</li>
+                            <li><strong>uart_init 必须在 LCD_Init 前</strong>：readme 注意事项第 2 条写明 <code>LCD_Init</code> 内部用到 <code>printf</code>，而 <code>printf</code> 经 <code>fputc</code> 走 USART1；串口未初始化会死等在 <code>while((USART1-&gt;SR&amp;0X40)==0)</code>。</li>
+                            <li><strong>WKUP_Init 放在 LED_Init/KEY_Init 之后</strong>：<code>Check_WKUP</code> 里要操作 <code>LED0</code> 做指示，PA0 的 EXTI 配置又要覆盖 <code>KEY_Init</code> 的普通输入配置，所以必须排在两者后面。</li>
+                            <li><strong>WKUP_Init 是一个“隐藏关卡”</strong>：它内部可能直接调用 <code>Sys_Enter_Standby()</code>，也就是说 main 有可能永远走不到 <code>SDRAM_Init</code>。第 08 节展开。</li>
+                            <li>顺序反例：把 <code>WKUP_Init</code> 放到 <code>LCD_Init</code> 之后，上电不按键会先闪一下屏幕再进待机——功能没错，但现象会误导。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">main 里<strong>没有</strong> <code>KEY_Scan()</code>、<strong>没有</strong> <code>RTC_Init()</code>。按键长按并不在主循环里轮询，而是在 EXTI0 中断里阻塞判断——这是本实验最容易被误读的一处。</div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">上电第一刻硬件只做两件事：从 0x08000000 取 MSP，从 0x08000004 取 PC —— 这两个值都写在 __Vectors 里</div>
+
+                    <p>启动文件是 <code class="inline">CORE/startup_stm32f429xx.s</code>（MDK-ARM 语法，文件头注明 V1.3.2 / 2015-11-13）。它先定义栈和堆，再把向量表放在 <code class="inline">.isr_vector</code> 段，最后给出 <code class="inline">Reset_Handler</code>。</p>
+
+                    <pre class="code">Stack_Size      EQU     0x400;                <span class="cmt">; 栈 1024 字节：MSP 从这里向下生长</span>
+
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3 <span class="cmt">; 定义 STACK 段：未初始化、可读写、8 字节对齐</span>
+Stack_Mem       SPACE   Stack_Size            <span class="cmt">; 分配 Stack_Size 字节的栈空间</span>
+__initial_sp                                   <span class="cmt">; 这个标号的地址 = 栈顶，会被填进向量表第 0 项</span>
+
+Heap_Size       EQU     0x200;                <span class="cmt">; 堆 512 字节：只给 malloc 用，本工程未用 malloc</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3 <span class="cmt">; 定义 HEAP 段：与 STACK 段属性相同</span>
+__heap_base                                    <span class="cmt">; 堆起始地址标号</span>
+Heap_Mem        SPACE   Heap_Size             <span class="cmt">; 分配 Heap_Size 字节的堆空间</span>
+__heap_limit                                   <span class="cmt">; 堆结束地址标号，链接器据此检查堆是否溢出</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：栈与堆的大小直接决定启动能否成功</div>
+                        <ol>
+                            <li><strong>Stack_Size = 0x400（1KB）</strong>是本工程的栈上限。<code>LCD_Init</code>、<code>SDRAM_Init</code> 调用链较深，加上中断嵌套（EXTI0 抢占 2 高于 SysTick 抢占 3），栈不够会直接进 HardFault。</li>
+                            <li><code>__initial_sp</code> 的地址由链接器算出（栈底 + Stack_Size），并作为向量表第 0 项写入 Flash。复位时硬件自动把它装载到 MSP，软件无需也不能修改。</li>
+                            <li><strong>Heap_Size = 0x200（512B）</strong>仅供 <code>malloc</code> 使用。本工程未调用任何动态分配，堆实际为空，设为 0 也能运行，但保留默认值不影响。</li>
+                            <li><code>AREA ... ALIGN=3</code> 表示 8 字节对齐，这是 Cortex-M4 对栈的硬性要求（LDRD/STRD 等指令需要 8 字节对齐）。</li>
+                        </ol>
+                    </div>
+
+                    <p>上面只截取了栈/堆定义段，<strong>省略了文件头的版权注释和 Configuration Wizard 的 &lt;h&gt;/&lt;o&gt; 说明行</strong>。</p>
+
+                    <pre class="code">                PRESERVE8                          <span class="cmt">; 声明当前段 8 字节对齐（与上面 ALIGN=3 呼应）</span>
+                THUMB                              <span class="cmt">; 声明后续指令为 Thumb 指令集（Cortex-M4 只支持 Thumb）</span>
+
+; Vector Table Mapped to Address 0 at Reset
+                AREA    RESET, DATA, READONLY      <span class="cmt">; 定义 RESET 段：只读数据，放向量表</span>
+                EXPORT  __Vectors                  <span class="cmt">; 导出向量表起始标号，供链接器定位</span>
+                EXPORT  __Vectors_End              <span class="cmt">; 导出向量表结束标号</span>
+                EXPORT  __Vectors_Size             <span class="cmt">; 导出向量表大小标号</span>
+
+__Vectors       DCD     __initial_sp               <span class="cmt">; 0x00：初始 MSP（栈顶）</span>
+                DCD     Reset_Handler              <span class="cmt">; 0x04：复位后第一条指令地址</span>
+                DCD     NMI_Handler                <span class="cmt">; 0x08</span>
+                DCD     HardFault_Handler          <span class="cmt">; 0x0C</span>
+                ...
+                DCD     SysTick_Handler            <span class="cmt">; 0x3C：HAL 的 1ms 时基入口</span>
+                ...
+                DCD     EXTI0_IRQHandler           <span class="cmt">; PA0 上升沿走这里（本实验的按键中断）</span>
+                ...
+__Vectors_End                                    <span class="cmt">; 向量表结束标号</span>
+
+__Vectors_Size  EQU  __Vectors_End - __Vectors    <span class="cmt">; 向量表字节数 = 结束地址 - 起始地址</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：向量表是硬件取指的唯一依据</div>
+                        <ol>
+                            <li><strong>前两项决定复位后的初始状态</strong>：第 0 项给 MSP（栈顶），第 1 项给 PC（<code>Reset_Handler</code> 地址）。这两个值由硬件在复位序列中自动装载，不经过任何代码。</li>
+                            <li><code>__Vectors</code> 放在 <code>RESET</code> 段，链接脚本会把它定位到 Flash 起始 0x08000000，这样硬件从 0x00000000（别名到 0x08000000）取到的就是正确的 MSP/PC。</li>
+                            <li><strong>所有异常/中断入口都是弱符号</strong>（启动文件里用 <code>[WEAK]</code> 导出的 <code>Default_Handler</code>）。用户定义同名强符号（如 <code>EXTI0_IRQHandler</code>）即可覆盖，否则进默认死循环。</li>
+                            <li>本实验只关心 <code>SysTick_Handler</code>（HAL 时基）与 <code>EXTI0_IRQHandler</code>（PA0 按键）。两者都在工程中有强符号实现，其余中断若被误触发会落入 <code>Default_Handler</code> 的死循环。</li>
+                        </ol>
+                    </div>
+
+                    <p>向量表<strong>省略了 0x10~0x38 的 SVC/DebugMon/PendSV 以及 0x40 之后各外设中断项</strong>，只保留与本实验相关的 SysTick 与 EXTI0。</p>
+
+                    <pre class="code">; Reset handler
+Reset_Handler    PROC                             <span class="cmt">; 复位处理函数定义开始</span>
+                 EXPORT  Reset_Handler             [WEAK] <span class="cmt">; 弱导出：用户可重写，否则用此默认实现</span>
+        IMPORT  SystemInit                         <span class="cmt">; 引用外部符号 SystemInit（C 函数）</span>
+        IMPORT  __main                             <span class="cmt">; 引用 C 库入口 __main</span>
+
+                 LDR     R0, =SystemInit            <span class="cmt">; 取 SystemInit 的地址（USER/system_stm32f4xx.c）</span>
+                 BLX     R0                         <span class="cmt">; 带状态切换的调用：进入 C 世界，先跑 SystemInit</span>
+                 LDR     R0, =__main                <span class="cmt">; 注意是 __main，不是 main</span>
+                 BX      R0                         <span class="cmt">; 交给 C 库启动代码：建栈帧、清 bss、初始化 data，再调 main</span>
+                 ENDP</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：复位后这 4 条指令决定了什么</div>
+                        <ol>
+                            <li><strong>MSP 来自向量表第 0 项</strong>，不是代码里现算的。所以 <code>Stack_Size 0x400</code> 一旦不够，最先遭殃的是中断嵌套与 <code>LCD_Init</code> 这类深调用，表现为 HardFault 而不是编译错误。</li>
+                            <li><strong>硬件不会调用 main</strong>。Cortex-M4 复位后从 <code>Reset_Handler</code> 开始，必须由 <code>__main</code>（C 库）完成 <code>.data</code> 搬运与 <code>.bss</code> 清零，否则所有初值非 0 的全局变量都是垃圾值。</li>
+                            <li><strong>SystemInit 先于 __main</strong>：此时 <code>.data/.bss</code> 还没初始化，所以 <code>SystemInit</code> 里不能依赖任何带初值的全局变量，只能直接写寄存器（它的实现正是如此）。</li>
+                            <li><strong>EXTI0_IRQHandler 必须在向量表里有名字</strong>：<code>wkup.c</code> 定义的 <code>EXTI0_IRQHandler</code> 与启动文件里的弱符号同名，链接时强符号覆盖弱符号，中断才能进到自己的函数。</li>
+                            <li>SysTick 与 EXTI0 都是<strong>可屏蔽中断</strong>，而 Standby 唤醒不经过向量表——WKUP 唤醒是复位，不是中断返回。这一点在第 10 节会再次对照。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">Keil 里 <code>main</code> 之前的 <code>.data</code> 搬运、<code>.bss</code> 清零与栈初始化都由 <code>__main</code> 完成；<strong>工程中没有用户自己写的启动代码</strong>，除了 <code>SystemInit</code> 之外启动链路全部由库与启动文件提供。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">SystemInit 把时钟退回“出厂状态”，HAL_Init 建立 1ms 时基与中断分组；两件事都在 main 的第一行之前/之首完成</div>
+
+                    <h3>SystemInit：只复位，不配置 180MHz</h3>
+                    <pre class="code">void SystemInit(void)                             <span class="cmt">// 复位后最先执行的 C 函数：把时钟与向量表退回复位默认态</span>
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)    <span class="cmt">// 仅当使用了 FPU 时才打开协处理器访问</span>
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">/* CP10/CP11 全访问：打开硬件 FPU */</span>
+  #endif                                           <span class="cmt">// 结束 FPU 条件编译块</span>
+
+  RCC-&gt;CR |= (uint32_t)0x00000001;              <span class="cmt">/* 置 HSION：先保证有 16MHz 内部时钟可跑 */</span>
+  RCC-&gt;CFGR = 0x00000000;                       <span class="cmt">/* 清 CFGR：SW=HSI、不分频、无 MCO */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;              <span class="cmt">/* 清 HSEON / CSSON / PLLON */</span>
+  RCC-&gt;PLLCFGR = 0x24003010;                    <span class="cmt">/* PLLCFGR 复位值：PLLM=16、PLLN=192、PLLP=2 */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;              <span class="cmt">/* 清 HSEBYP：外部晶振非旁路模式 */</span>
+  RCC-&gt;CIR = 0x00000000;                        <span class="cmt">/* 关闭所有 RCC 中断 */</span>
+
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;     <span class="cmt">/* VECT_TAB_OFFSET = 0x00，向量表仍在 0x08000000 */</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：SystemInit 只做"复位回默认"，不做 180MHz 配置</div>
+                        <ol>
+                            <li><strong>此时 .data/.bss 尚未初始化</strong>（<code>__main</code> 还没跑），所以 <code>SystemInit</code> 只能直接写寄存器，不能读写任何带初值的全局变量。这也是它不调用任何 HAL 函数、只操作 <code>RCC/SCB</code> 的原因。</li>
+                            <li>执行完后系统运行在 <strong>HSI 16MHz</strong>：HSE、PLL、CSS 全部关闭，SYSCLK 切回 HSI，所有 RCC 中断关闭。这保证后续 <code>HAL_Init</code> → <code>Stm32_Clock_Init</code> 从一个干净的时钟状态开始配置 180MHz。</li>
+                            <li><code>SCB-&gt;VTOR</code> 把向量表重定位到 <code>FLASH_BASE | VECT_TAB_OFFSET</code>。本工程 <code>VECT_TAB_OFFSET = 0</code>，所以向量表仍在 0x08000000，与启动文件的 <code>__Vectors</code> 地址一致。</li>
+                            <li>FPU 的开启条件是 <code>__FPU_PRESENT &amp;&amp; __FPU_USED</code>，本工程使用了浮点运算（LCD、printf 等），所以 <code>CPACR</code> 的 CP10/CP11 会被置 3，否则浮点指令会触发 UsageFault。</li>
+                        </ol>
+                    </div>
+
+                    <p>该函数<strong>省略了 <code>DATA_IN_ExtSRAM/DATA_IN_ExtSDRAM</code> 分支</strong>（本工程未定义这两个宏，<code>SystemInit_ExtMemCtl()</code> 不会编译进来）。所以 SystemInit 结束时：SYSCLK = HSI 16MHz，HSE 关闭，PLL 关闭，向量表指向 Flash 起始。</p>
+
+                    <h3>HAL_Init：时基与优先级分组</h3>
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)                  <span class="cmt">// HAL 库总入口：main 第一行调用，建立时基与中断分组</span>
+{
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();   <span class="cmt">// 开 ART 指令缓存（INSTRUCTION_CACHE_ENABLE 非 0 时）</span>
+  __HAL_FLASH_DATA_CACHE_ENABLE();          <span class="cmt">// 开数据缓存</span>
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();     <span class="cmt">// 开预取，180MHz 下必须</span>
+
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2); <span class="cmt">// 优先级分组 2：2 位抢占 + 2 位子优先级</span>
+
+  HAL_InitTick(TICK_INT_PRIORITY);          <span class="cmt">// 用 SysTick 做 1ms 时基（此刻 HCLK=16MHz）</span>
+
+  HAL_MspInit();                            <span class="cmt">// 弱函数，工程未重写，实际是空实现</span>
+
+  return HAL_OK;                                <span class="cmt">// 返回成功状态，main 未检查此返回值</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：HAL_Init 为整个运行期打下两个基础</div>
+                        <ol>
+                            <li><strong>Flash 缓存与预取必须在升频前打开</strong>。<code>FLASH_ACR</code> 的 ICEN/DCEN/PRFTEN 三位一旦置位，180MHz 下取指才不会因为 Flash 等待周期不足而跑飞。<code>Stm32_Clock_Init</code> 里还会再设 5WS，但缓存开关由这里负责。</li>
+                            <li><strong>优先级分组 2</strong>意味着 4 位优先级被拆成"2 位抢占 + 2 位子优先级"。本工程所有中断（SysTick=0x0F、EXTI0=0x22）都在这个分组下解释，分组一旦在 <code>HAL_Init</code> 设定后就不能再改。</li>
+                            <li><code>HAL_InitTick</code> 把 SysTick 配成 1ms 中断，此时 HCLK 还是 16MHz，重装值 16000。等 <code>Stm32_Clock_Init</code> 切到 180MHz 后，<code>HAL_RCC_ClockConfig</code> 会再次调用 <code>HAL_InitTick</code> 把重装值改成 180000。</li>
+                            <li><code>HAL_MspInit()</code> 是 HAL 的"板级初始化"弱钩子，本工程未重写，所以它是空函数。真正的引脚/时钟配置分散在各外设的 <code>XXX_MspInit</code> 里（如 <code>HAL_UART_MspInit</code> 配 PA9/PA10）。</li>
+                        </ol>
+                    </div>
+
+                    <pre class="code">__weak HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority) <span class="cmt">// 弱函数：用户可重写时基实现</span>
+{
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000); <span class="cmt">// 重装值 = 16000000/1000 = 16000 → 1ms</span>
+  HAL_NVIC_SetPriority(SysTick_IRQn, TickPriority ,0); <span class="cmt">// TICK_INT_PRIORITY = 0x0F（hal_conf.h）</span>
+  return HAL_OK;                                <span class="cmt">// 配置成功返回</span>
+}
+
+void SysTick_Handler(void)                   <span class="cmt">// USER/stm32f4xx_it.c</span>
+{
+  HAL_IncTick();                             <span class="cmt">// 只做一件事：uwTick++，供 HAL_Delay/HAL_GetTick 使用</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：时基在改频后会被重算</div>
+                        <ol>
+                            <li><code>HAL_Init</code> 执行时系统还跑在 HSI 16MHz，所以 SysTick 重装值是 16000。真正把主频拉到 180MHz 的是后面的 <code>Stm32_Clock_Init</code>。</li>
+                            <li><code>HAL_RCC_ClockConfig</code> 在切频成功后会把 <code>SystemCoreClock</code> 更新为新的 HCLK，并<strong>再次调用 <code>HAL_InitTick(TICK_INT_PRIORITY)</code></strong>，因此 1ms 时基不会因为改频而失真——这是 HAL 的既定行为，不是本工程额外补的代码。</li>
+                            <li>SysTick 的优先级参数是 <code>TICK_INT_PRIORITY = 0x0F</code>，在分组 2 下等于“抢占 3 / 子 0”；而 <code>WKUP_Init</code> 给 EXTI0 的是“抢占 2 / 子 2”。<strong>EXTI0 的抢占优先级更高</strong>，所以 EXTI0 中断里 SysTick 中断进不来，<code>uwTick</code> 会停住——这一点在 11 节会用到。</li>
+                            <li><strong>HAL_Delay 与本工程的 delay_ms 不是一回事</strong>：前者依赖 <code>uwTick</code>（需要 SysTick 中断），后者直接读 SysTick 计数器（轮询）。所以在 EXTI0 中断里只能用它。</li>
+                            <li>ART 缓存与预取要在 180MHz 之前打开，否则 Flash 等待周期不足会直接跑飞；本工程的 <code>Stm32_Clock_Init</code> 里还会再次设置 <code>FLASH-&gt;ACR</code> 的 5 个等待周期。</li>
+                            <li><code>HAL_MspInit()</code> 在这里是<strong>弱符号空函数</strong>（HAL 库里定义，工程未重写），所以“MSP”这一层没有做任何引脚/时钟配置，别把它和启动文件的 MSP 栈指针混淆。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟、延时与串口">
+                    <h2>06　时钟、延时与串口</h2>
+                    <div class="sec-sub">180MHz 由 HSE 25M 经 PLL 得到；延时靠 SysTick 轮询；串口 115200 只为 printf 服务</div>
+
+                    <h3>Stm32_Clock_Init：先把 PWR 时钟打开</h3>
+                    <pre class="code">void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq) <span class="cmt">// 配置系统时钟：HSE 经 PLL 输出 180MHz</span>
+{
+    HAL_StatusTypeDef ret = HAL_OK;                     <span class="cmt">// 保存 HAL 函数返回值，用于错误判断</span>
+    RCC_OscInitTypeDef RCC_OscInitStructure;             <span class="cmt">// 振荡器配置结构体：HSE/PLL 参数</span>
+    RCC_ClkInitTypeDef RCC_ClkInitStructure;             <span class="cmt">// 总线时钟配置结构体：SYSCLK/AHB/APB 分频</span>
+    
+    __HAL_RCC_PWR_CLK_ENABLE();                  <span class="cmt">// 使能PWR时钟：后面配置调压器、以及待机都要用</span>
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1); <span class="cmt">// 电压级别1，180MHz 必须</span>
+    
+    RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE; <span class="cmt">// 时钟源为HSE</span>
+    RCC_OscInitStructure.HSEState=RCC_HSE_ON;                   <span class="cmt">// 打开HSE（25MHz 晶振）</span>
+    RCC_OscInitStructure.PLL.PLLState=RCC_PLL_ON;               <span class="cmt">// 打开PLL</span>
+    RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;       <span class="cmt">// PLL源 = HSE</span>
+    RCC_OscInitStructure.PLL.PLLM=pllm;   <span class="cmt">// 25：先 /25 得到 1MHz 参考</span>
+    RCC_OscInitStructure.PLL.PLLN=plln;   <span class="cmt">// 360：×360 得到 360MHz VCO</span>
+    RCC_OscInitStructure.PLL.PLLP=pllp;   <span class="cmt">// 2：/2 得到 180MHz SYSCLK</span>
+    RCC_OscInitStructure.PLL.PLLQ=pllq;   <span class="cmt">// 8：/8 得到 45MHz（USB/SDIO/RNG）</span>
+    ret=HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);       <span class="cmt">// 写入振荡器配置：开 HSE、配 PLL 并等待稳定</span>
+    if(ret!=HAL_OK) while(1);                          <span class="cmt">// 失败则死循环：HSE 不起振通常是硬件问题</span>
+    
+    ret=HAL_PWREx_EnableOverDrive();      <span class="cmt">// 开启 Over-Drive，F429 跑 180MHz 的前提</span>
+    if(ret!=HAL_OK) while(1);                          <span class="cmt">// Over-Drive 使能失败同样死循环</span>
+    
+    RCC_ClkInitStructure.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK; <span class="cmt">// SYSCLK = PLL</span>
+    RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;        <span class="cmt">// HCLK = 180MHz</span>
+    RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;         <span class="cmt">// PCLK1 = 45MHz（上限 45）</span>
+    RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;         <span class="cmt">// PCLK2 = 90MHz（上限 90）</span>
+    ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5); <span class="cmt">// 5WS，同时会重设 SysTick 1ms</span>
+    if(ret!=HAL_OK) while(1);                          <span class="cmt">// 切系统时钟到 PLL 失败：死循环</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：180MHz 是这样一步步算出来的</div>
+                        <ol>
+                            <li><strong>PWR 时钟必须先开</strong>。<code>VOLTAGESCALING_CONFIG</code> 与 <code>EnableOverDrive</code> 都要写 <code>PWR</code> 寄存器，APB1 上 PWR 时钟不开则写入无效。本工程在 <code>Stm32_Clock_Init</code> 与 <code>Sys_Enter_Standby</code> 中各开一次，是幂等操作。</li>
+                            <li>PLL 参数：HSE 25M / PLLM(25) = 1M 参考 → × PLLN(360) = 360M VCO → / PLLP(2) = 180M SYSCLK；PLLQ(8) 给出 45M 给 USB/SDIO/RNG。</li>
+                            <li><strong>Over-Drive 是 F429 跑 180MHz 的硬性前提</strong>。普通电压档位（Scale1）最高只到 168MHz，必须开启 Over-Drive 模式才能稳定到 180MHz，否则 <code>HAL_RCC_ClockConfig</code> 会返回错误。</li>
+                            <li><code>HAL_RCC_ClockConfig</code> 最后一个参数 <code>FLASH_LATENCY_5</code> 设 5 个等待周期，与 180MHz 匹配；同时该函数内部会重新调用 <code>HAL_InitTick</code>，把 SysTick 重装值从 16000 更新为 180000。</li>
+                            <li>三个 <code>if(ret!=HAL_OK) while(1)</code> 是"失败即停机"的策略：时钟配置失败没有恢复路径，直接死循环等待看门狗复位或人工干预。</li>
+                        </ol>
+                    </div>
+
+                    <p><strong>省略了原函数的文件头注释与 <code>HAL_RCC_OscConfig</code> 之后的 <code>assert_failed</code> 分支</strong>；函数后半段的 <code>WFI_SET</code>、<code>INTX_DISABLE</code> 等宏与本实验无关。<code>WFI_SET()</code> 虽然在 <code>sys.c</code> 里定义了，但 <code>wkup.c</code> 用的是 HAL 的 <code>HAL_PWR_EnterSTANDBYMode</code>，<strong>没有调用 <code>WFI_SET</code></strong>。</p>
+
+                    <table class="data">
+                        <tr><th>节点</th><th>值</th><th>来源</th></tr>
+                        <tr><td>HSE</td><td>25MHz</td><td><code>stm32f4xx_hal_conf.h</code>：<code>HSE_VALUE 25000000</code></td></tr>
+                        <tr><td>PLL VCO</td><td>25M / 25 × 360 = 360MHz</td><td><code>Stm32_Clock_Init(360,25,2,8)</code></td></tr>
+                        <tr><td>SYSCLK / HCLK</td><td>180MHz / 180MHz</td><td>PLLP=2，AHB DIV1</td></tr>
+                        <tr><td>PCLK1 / PCLK2</td><td>45MHz / 90MHz</td><td>APB1 DIV4，APB2 DIV2</td></tr>
+                        <tr><td>Flash 等待</td><td>5WS</td><td><code>HAL_RCC_ClockConfig(..., FLASH_LATENCY_5)</code></td></tr>
+                        <tr><td>SysTick</td><td>180000 计数 / 1ms</td><td><code>HAL_InitTick</code> 在切频后重算</td></tr>
+                    </table>
+
+                    <h3>delay_init / delay_ms：轮询 SysTick，而不是等中断</h3>
+                    <pre class="code">void delay_init(u8 SYSCLK)                        <span class="cmt">// 初始化延时模块：传入当前 HCLK（MHz）</span>
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">// SysTick 时钟源 = HCLK（180MHz）</span>
+	fac_us=SYSCLK;						<span class="cmt">// fac_us = 180：1us 需要 180 个 HCLK 节拍</span>
+	<span class="cmt">// SYSTEM_SUPPORT_OS == 0，下面整段 OS 分支不参与编译</span>
+}
+
+void delay_us(u32 nus)					<span class="cmt">// 不用 OS 时的实现</span>
+{		
+	u32 ticks; u32 told,tnow,tcnt=0;                <span class="cmt">// ticks=目标节拍数；told=上次读值；tnow=本次读值；tcnt=已过节拍数</span>
+	u32 reload=SysTick->LOAD;			<span class="cmt">// 180000（1ms 的重装值）</span>
+	ticks=nus*fac_us; 					<span class="cmt">// 需要的节拍数</span>
+	told=SysTick->VAL;        			<span class="cmt">// 刚进入时的递减计数器值</span>
+	while(1)                                          <span class="cmt">// 死循环轮询，直到累计节拍数达标</span>
+	{
+		tnow=SysTick->VAL;	                        <span class="cmt">// 读当前递减计数器值（向下计数）</span>
+		if(tnow!=told)                               <span class="cmt">// 只有计数器变化时才累计，避免空转重复加</span>
+		{	    
+			if(tnow&lt;told)tcnt+=told-tnow;	<span class="cmt">// 未跨过重装点</span>
+			else tcnt+=reload-tnow+told;	<span class="cmt">// 跨过重装点，补上余量</span>
+			told=tnow;                               <span class="cmt">// 更新上次读值，供下次比较</span>
+			if(tcnt&gt;=ticks)break;			<span class="cmt">// 时间到</span>
+		}  
+	};
+}
+
+void delay_ms(u16 nms)                           <span class="cmt">// 毫秒级延时：nms 毫秒</span>
+{
+	u32 i;                                         <span class="cmt">// 循环计数变量</span>
+	for(i=0;i&lt;nms;i++) delay_us(1000);	<span class="cmt">// 250ms = 250 次 1000us</span>
+}</pre>
+                    <p><strong>省略了 <code>delay.c</code> 里 <code>#if SYSTEM_SUPPORT_OS</code> 的整套 UCOS 支持代码</strong>（<code>delay_osschedlock</code>、OS 版 <code>delay_us/delay_ms</code>、OS 版 <code>SysTick_Handler</code>），因为 <code>sys.h</code> 中 <code>SYSTEM_SUPPORT_OS</code> 定义为 <strong>0</strong>，这些代码不参与编译。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：为什么这里必须用轮询式延时</div>
+                        <ol>
+                            <li><code>fac_us = 180</code> 与主频强绑定：如果 <code>delay_init(180)</code> 之前没有 <code>Stm32_Clock_Init</code>，延时会长 10 倍以上（按 16MHz 算却按 180MHz 用）。</li>
+                            <li><code>delay_us</code> 只读 <code>SysTick-&gt;VAL</code> 与 <code>SysTick-&gt;LOAD</code>，<strong>不依赖 <code>uwTick</code>，也不依赖 SysTick 中断</strong>。正因如此，它才能在 EXTI0 中断里被 <code>Check_WKUP</code> 调用。</li>
+                            <li>反过来，若把 <code>delay_ms(30)</code> 换成 <code>HAL_Delay(30)</code>：EXTI0（抢占 2）高于 SysTick（抢占 3），SysTick 中断进不来，<code>uwTick</code> 不增，<code>HAL_Delay</code> 会永久卡死——这是一个“看起来等价、实际死机”的改写。</li>
+                            <li>用 <code>SysTick-&gt;LOAD</code> 而不是写死 180000：HAL 每 1ms 重装，LOAD 就是 180000，读它可让 <code>delay_us</code> 自动适配时基。</li>
+                            <li><code>delay_ms(250)</code> 是 250 次 <code>delay_us(1000)</code>，每次都要重新读 VAL，因此实际会长于 250ms（多出循环开销），示波器上看到的周期略大于 500ms。</li>
+                        </ol>
+                    </div>
+
+                    <h3>uart_init：只做 printf 的通道</h3>
+                    <pre class="code">void uart_init(u32 bound)                         <span class="cmt">// 初始化 USART1：波特率由参数 bound 传入（115200）</span>
+{	
+	UART1_Handler.Instance=USART1;					    <span class="cmt">// USART1</span>
+	UART1_Handler.Init.BaudRate=bound;				    <span class="cmt">// 115200</span>
+	UART1_Handler.Init.WordLength=UART_WORDLENGTH_8B;   <span class="cmt">// 8 位数据</span>
+	UART1_Handler.Init.StopBits=UART_STOPBITS_1;	    <span class="cmt">// 1 停止位</span>
+	UART1_Handler.Init.Parity=UART_PARITY_NONE;		    <span class="cmt">// 无校验</span>
+	UART1_Handler.Init.HwFlowCtl=UART_HWCONTROL_NONE;   <span class="cmt">// 无流控</span>
+	UART1_Handler.Init.Mode=UART_MODE_TX_RX;		    <span class="cmt">// 收发</span>
+	HAL_UART_Init(&amp;UART1_Handler);					    <span class="cmt">// 内部会调 HAL_UART_MspInit 配 PA9/PA10 + AF7</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：串口只为 printf 服务，与待机逻辑解耦</div>
+                        <ol>
+                            <li><strong>115200-8-N-1 是标准串口参数</strong>：8 数据位、1 停止位、无校验、无流控。波特率由 <code>bound</code> 传入，<code>main</code> 调用时给 115200。</li>
+                            <li><code>HAL_UART_Init</code> 内部会调用弱函数 <code>HAL_UART_MspInit</code>，工程在 <code>usart.c</code> 中重写了它，完成 GPIOA 时钟使能、PA9/PA10 复用为 AF7（USART1）、以及 USART1 时钟使能。</li>
+                            <li><strong>printf 经 fputc 走 USART1</strong>：<code>LCD_Init</code> 内部有 <code>printf</code> 调试输出，所以 <code>uart_init</code> 必须在 <code>LCD_Init</code> 之前调用，否则 <code>fputc</code> 会死等 <code>USART1-&gt;SR.TXE</code>。</li>
+                            <li>本实验串口<strong>不参与待机/唤醒</strong>：进入待机前不关 USART1 时钟、不发送提示；唤醒后随复位重新初始化。因此串口助手上看到的现象就是"重新上电"。</li>
+                        </ol>
+                    </div>
+
+                    <p><strong>省略了 <code>fputc</code> 重定向、<code>EN_USART1_RX</code> 接收中断相关代码</strong>。<code>printf</code> 走 <code>fputc</code> → 轮询 <code>USART1-&gt;SR</code> 的 TXE 位 → 写 <code>DR</code>，全程阻塞但不需要中断。</p>
+
+                    <div class="note blue">本实验的串口不参与“待机/唤醒”判断：进入待机前没有关闭 USART1，也没有发送任何提示。唤醒后串口随复位重新初始化——所以串口助手上会看到“重新上电”的效果。</div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="待机模式原理与 PWR 时钟">
+                    <h2>07　待机模式原理与 PWR 时钟</h2>
+                    <div class="sec-sub">Standby 是“最省电、也最失忆”的一档：1.2V 域断电，唤醒等于复位</div>
+
+                    <figure class="figure">
+                        <img src="./index32-map/pwr-state.png" alt="STM32F4 的 Run、Sleep、Stop、Standby 四种状态与各自唤醒源对比图">
+                        <figcaption>图 7-1　四种功耗状态对比；本实验只使用最下面的 Standby</figcaption>
+                    </figure>
+
+                    <p>图里的关键差别在最后一列：Sleep 和 Stop 都保留 SRAM 与寄存器，唤醒后接着执行 <code class="inline">__WFI()</code> 下一条；<strong>Standby 断电，唤醒后没有“下一条”</strong>，芯片直接复位。这就是为什么本实验“唤醒后像重启”。</p>
+
+                    <h3>PWR 相关寄存器（本工程实际写到的位）</h3>
+                    <table class="data">
+                        <tr><th>寄存器位</th><th>含义</th><th>谁会写它</th></tr>
+                        <tr><td><code>RCC-&gt;APB1ENR.PWREN</code></td><td>PWR 接口时钟使能</td><td><code>Stm32_Clock_Init</code> 与 <code>Sys_Enter_Standby</code> 各调一次 <code>__HAL_RCC_PWR_CLK_ENABLE()</code></td></tr>
+                        <tr><td><code>PWR-&gt;CR.PDDS</code></td><td>1 = 进入 Standby（0 = Stop）</td><td><code>HAL_PWR_EnterSTANDBYMode()</code></td></tr>
+                        <tr><td><code>PWR-&gt;CR.CWUF</code></td><td>写 1 清除唤醒标志 WUF</td><td><code>__HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU)</code></td></tr>
+                        <tr><td><code>PWR-&gt;CR.CWUF</code>（同一机制）</td><td>清待机标志 SBF</td><td><code>__HAL_PWR_CLEAR_FLAG(PWR_FLAG_SB)</code></td></tr>
+                        <tr><td><code>PWR-&gt;CR.DBP</code></td><td>1 = 允许访问 RTC/BKP 备份域</td><td><code>HAL_PWR_EnableBkUpAccess()</code></td></tr>
+                        <tr><td><code>PWR-&gt;CSR.EWUP</code></td><td>1 = 使能 WKUP 引脚唤醒</td><td><code>HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN1)</code></td></tr>
+                        <tr><td><code>PWR-&gt;CSR.SBF</code></td><td>1 = 本次复位来自 Standby 唤醒</td><td>硬件置位；本工程<strong>只清不读</strong></td></tr>
+                        <tr><td><code>PWR-&gt;CSR.WUF</code></td><td>1 = 发生过唤醒事件</td><td>硬件置位；本工程<strong>只清不读</strong></td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：进入 Standby 的三个必要条件</div>
+                        <ol>
+                            <li><strong>PWR 时钟必须开</strong>。PWR 挂在 APB1 上，<code>RCC-&gt;APB1ENR.PWREN=0</code> 时对 <code>PWR-&gt;CR/CSR</code> 的写入会被总线丢弃且不报错。本工程在 <code>Stm32_Clock_Init</code> 里已经开过，<code>Sys_Enter_Standby</code> 再开一次是幂等操作。</li>
+                            <li><strong>PDDS = 1 且 SLEEPDEEP = 1</strong>。前者选 Standby 而不是 Stop；后者让 <code>WFI</code> 走深度睡眠而不是普通 Sleep。两者缺一，芯片都只停在 Stop/Sleep，唤醒后会继续执行，现象完全不同。</li>
+                            <li><strong>WUF/SBF 要先清</strong>。<code>PWR-&gt;CR</code> 的 CWUF 是“写 1 清零”，如果上一次的唤醒标志还挂着，会让“这次到底是不是被唤醒”无法判断，也可能影响低功耗行为。</li>
+                            <li>Standby 下 <strong>SRAM 不保持</strong>：<code>.data/.bss</code>、堆栈、以及所有全局变量（含 <code>RTC_Handler</code> 结构体）都会丢失，复位后由 <code>__main</code> 重新初始化。</li>
+                            <li>唤醒源的“资格”由硬件决定：EXTI 线、USART 接收、定时器中断在 Standby 下都<strong>不能</strong>唤醒，只有 WKUP 引脚、RTC 事件、NRST、IWDG 可以。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">readme 中把现象写成“长按 3 秒开机，再次长按 3 秒进入待机”。注意这里没有“关机”这个概念：所谓关机就是 Standby，功耗最低但 VBAT 域仍在，RTC 若配置过仍会走时。</div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="PA0 配置与开机判定">
+                    <h2>08　PA0 配置与开机判定</h2>
+                    <div class="sec-sub">WKUP_Init 先改 PA0 为上升沿中断，再花最多 3 秒判断“是不是真的有人要开机”，否则直接送进待机</div>
+
+                    <h3>同一个 PA0，先后被配置两次</h3>
+                    <pre class="code">void KEY_Init(void)                         <span class="cmt">// HARDWARE/KEY/key.c，先执行</span>
+{
+    __HAL_RCC_GPIOA_CLK_ENABLE();               <span class="cmt">// 开启 GPIOA 时钟（PA0 挂在 AHB1）</span>
+    GPIO_Initure.Pin=GPIO_PIN_0;            <span class="cmt">// PA0</span>
+    GPIO_Initure.Mode=GPIO_MODE_INPUT;      <span class="cmt">// 普通输入</span>
+    GPIO_Initure.Pull=GPIO_PULLDOWN;        <span class="cmt">// 下拉：不按时读到 0</span>
+    GPIO_Initure.Speed=GPIO_SPEED_HIGH;         <span class="cmt">// 高速电平翻转（输入模式下此参数影响不大）</span>
+    HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);         <span class="cmt">// 写入 GPIOA 寄存器：PA0 = 下拉输入</span>
+    ...
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：KEY_Init 对 PA0 的配置会被 WKUP_Init 覆盖</div>
+                        <ol>
+                            <li><code>KEY_Init</code> 先把 PA0 配成<strong>普通下拉输入</strong>，用于 <code>KEY_Scan()</code> 读取按键电平。但本实验 <code>main</code> 中并未调用 <code>KEY_Scan()</code>，所以这层配置实际没有被使用。</li>
+                            <li>随后执行的 <code>WKUP_Init</code> 会重新初始化 PA0 为<strong>EXTI 上升沿中断</strong>，覆盖 <code>KEY_Init</code> 的配置。因此本实验中 PA0 最终不是普通输入，而是中断输入。</li>
+                            <li>两次配置都使用了同一个全局变量 <code>GPIO_Initure</code>（在 <code>sys.c</code> 中定义），所以后写的字段会覆盖前写的，这也是为什么 <code>WKUP_Init</code> 必须排在 <code>KEY_Init</code> 之后。</li>
+                            <li><code>...</code> 表示省略了 PC13、PH2、PH3 三个按键的配置（上拉输入），它们与本实验的待机唤醒逻辑无关。</li>
+                        </ol>
+                    </div>
+
+                    <p><strong>省略了 PC13、PH2、PH3 三个按键的配置</strong>（上拉输入），它们与本实验无关。</p>
+
+                    <pre class="code">void WKUP_Init(void)                        <span class="cmt">// HARDWARE/WKUP/wkup.c，后执行，覆盖上面的 PA0 配置</span>
+{
+    GPIO_InitTypeDef GPIO_Initure;              <span class="cmt">// 局部 GPIO 配置结构体（与 KEY_Init 用的全局变量不同名同类型）</span>
+    __HAL_RCC_GPIOA_CLK_ENABLE();			<span class="cmt">// 开启GPIOA时钟</span>
+	
+    GPIO_Initure.Pin=GPIO_PIN_0;            <span class="cmt">// PA0</span>
+    GPIO_Initure.Mode=GPIO_MODE_IT_RISING;  <span class="cmt">// 中断,上升沿：按下瞬间触发</span>
+    GPIO_Initure.Pull=GPIO_PULLDOWN;        <span class="cmt">// 下拉</span>
+    GPIO_Initure.Speed=GPIO_SPEED_FAST;     <span class="cmt">// 快速</span>
+    HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);     <span class="cmt">// 内部会配 SYSCFG->EXTICR[0] = PA0 并清 EXTI 挂起位</span>
+    
+    //检查是否是正常开机
+    if(Check_WKUP()==0)                     <span class="cmt">// 返回 0 = 没有长按 3s</span>
+    {
+        Sys_Enter_Standby();                <span class="cmt">// 不是开机，进入待机模式（此函数不返回）</span>
+    }
+
+    HAL_NVIC_SetPriority(EXTI0_IRQn,0x02,0x02); <span class="cmt">// 抢占优先级2，子优先级2</span>
+    HAL_NVIC_EnableIRQ(EXTI0_IRQn);         <span class="cmt">// 注意：NVIC 是在开机判定之后才使能的</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：开机判定的位置决定了上电现象</div>
+                        <ol>
+                            <li><code>Check_WKUP()</code> 在 <code>HAL_NVIC_EnableIRQ</code> <strong>之前</strong>调用，说明这次判定完全在主线程里轮询完成，不依赖中断。此时 EXTI 的边沿检测已经工作（<code>HAL_GPIO_Init</code> 里配了 <code>EXTI-&gt;IMR</code> 与上升沿），只是 NVIC 还没放行。</li>
+                            <li>因此上电时长按产生的那个上升沿，会<strong>留下一个 EXTI 挂起位</strong>；等 <code>HAL_NVIC_EnableIRQ</code> 一开，ISR 会立刻补进一次，又跑一遍 <code>Check_WKUP</code>。若此时仍按着，它会从 0 重新数 3 秒——所以“按住超过 6 秒”会在开机后又被送进待机。</li>
+                            <li>若这个残留中断进来时已经松手，<code>Check_WKUP</code> 约 120ms 后返回 0，回调里 <code>if(Check_WKUP())</code> 不成立，什么也不做，只是 DS0 闪一下。</li>
+                            <li>PA0 下拉 + 上升沿是有讲究的：板载 WK_UP 按下接 3.3V，不按被下拉到 0。若改成上拉或下降沿，按键将永远触发不了（<code>KEY_Scan</code> 里判断的也是 <code>WK_UP==1</code>）。</li>
+                            <li>优先级 2/2 高于 SysTick 的 3/0，所以 ISR 里的阻塞判定不会被 SysTick 打断；同时也意味着<strong>这 3 秒内主循环完全停止</strong>。</li>
+                        </ol>
+                    </div>
+
+                    <h3>Check_WKUP：用 30ms 一拍数出 3 秒</h3>
+                    <pre class="code">//检测WKUP脚的信号
+//返回值1:连续按下3s以上
+//      0:错误的触发	
+u8 Check_WKUP(void)                              <span class="cmt">// 检测 WKUP 引脚长按：返回 1=按下≥3s，返回 0=未满足</span>
+{
+	u8 t=0;                                       <span class="cmt">// t 记录"按下"的拍数（每拍 30ms）</span>
+	u8 tx=0;                        <span class="cmt">// 记录松开的次数</span>
+	LED0=0;                         <span class="cmt">// 亮灯DS0，提示“正在检测”</span>
+	while(1)                                       <span class="cmt">// 死循环：直到满足长按或判定失败才返回</span>
+	{
+		if(WKUP_KD)                 <span class="cmt">// 已经按下了（PA0 == 1）</span>
+		{
+			t++;                                     <span class="cmt">// 按下拍数 +1（累计，不清零）</span>
+			tx=0;                   <span class="cmt">// 按下就清掉松开计数</span>
+		}else                                        <span class="cmt">// 未按下（PA0 == 0）</span>
+		{
+			tx++;                                    <span class="cmt">// 松开拍数 +1</span>
+			if(tx&gt;3)               <span class="cmt">// 超过90ms内没有WKUP信号</span>
+			{
+				LED0=1;                              <span class="cmt">// 熄灭 DS0：判定失败</span>
+				return 0;           <span class="cmt">// 错误的按键,按下次数不够</span>
+			}
+		}
+		delay_ms(30);               <span class="cmt">// 一拍 30ms（轮询式，可在中断里用）</span>
+		if(t&gt;=100)                 <span class="cmt">// 按下超过3秒钟：100 × 30ms</span>
+		{
+			LED0=0;                 <span class="cmt">// 点亮DS0 </span>
+			return 1;               <span class="cmt">// 按下3s以上了</span>
+		}
+	}
+}</pre>
+                    <p>这段代码<strong>没有省略</strong>，函数体只有这些。两个退出条件互斥：要么 <code>t</code> 先到 100（成功），要么 <code>tx</code> 先到 4（失败）。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：3 秒与 90 毫秒两个阈值</div>
+                        <ol>
+                            <li><code>t</code> 是“按下拍数”，<code>tx</code> 是“松开拍数”，<strong><code>t</code> 从不清零</strong>。所以短暂抖动（松一两拍再按）不会把计时推倒重来，只要累计按下的拍数够 100 就算长按成功——这与“必须连续按 3 秒”的直觉略有差异。</li>
+                            <li><code>tx&gt;3</code> 即连续 4 拍（约 120ms，注释写 90ms 是按 3 拍算）没按下就判失败。<code>delay_ms(30)</code> 的实际时长略大于 30ms，所以真实阈值比标称值稍长。</li>
+                            <li><code>LED0=0</code> 是点亮（低电平点亮），进入函数就亮，成功返回时再亮一次，失败时置 1 熄灭。所以“按住时 DS0 常亮、松手后熄灭”就是判定过程的可视化。</li>
+                            <li>整个函数是<strong>阻塞</strong>的：最坏情况下在 <code>WKUP_Init</code> 里阻塞约 120ms（没人按），在 ISR 里阻塞约 3 秒（一直按着）。这也是它能同时用于“开机判定”和“运行期长按”的原因——只是代价不同。</li>
+                            <li>返回值语义在两条路径上<strong>相反</strong>：<code>WKUP_Init</code> 里 <code>==0</code> 才进待机，回调里 <code>!=0</code> 才进待机。读代码时必须先看清调用点。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">若把 <code>WKUP_Init</code> 里的开机判定删掉，上电就会直接进 <code>while(1)</code>，DS0 照常闪烁——功能上“能用”，但待机实验就退化成了普通 LED 实验，必须靠运行期长按才能验证待机。</div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="进入待机前的寄存器序列">
+                    <h2>09　进入待机前的寄存器序列</h2>
+                    <div class="sec-sub">Sys_Enter_Standby 一共 13 步：先复位 IO、等松手，再动 PWR 与备份域，最后 WFI</div>
+
+                    <figure class="figure">
+                        <img src="./index32-map/standby-seq.png" alt="Sys_Enter_Standby 函数进入待机前的 13 步寄存器操作顺序图">
+                        <figcaption>图 9-1　13 步顺序：前 7 步在左列，后 6 步在右列</figcaption>
+                    </figure>
+
+                    <pre class="code">//系统进入待机模式
+void Sys_Enter_Standby(void)                       <span class="cmt">// 进入 Standby 模式：执行后不返回，唤醒等同复位</span>
+{
+    __HAL_RCC_AHB1_FORCE_RESET();       <span class="cmt">//复位所有IO口（只 FORCE，没有 RELEASE）</span>
+	
+	while(WKUP_KD);                     <span class="cmt">//等待WK_UP按键松开(在有RTC中断时,必须等WK_UP松开再进入待机)</span>
+   
+	__HAL_RCC_PWR_CLK_ENABLE();         <span class="cmt">//使能PWR时钟</span>
+    __HAL_RCC_BACKUPRESET_FORCE();      <span class="cmt">//复位备份区域 RCC->BDCR.BDRST = 1</span>
+    HAL_PWR_EnableBkUpAccess();         <span class="cmt">//后备区域访问使能 PWR->CR.DBP = 1</span>
+	
+	//STM32F4,当开启了RTC相关中断后,必须先关闭RTC中断,再清中断标志位,然后重新设置
+	//RTC中断,再进入待机模式才可以正常唤醒,否则会有问题.	
+    __HAL_PWR_CLEAR_FLAG(PWR_FLAG_SB);  <span class="cmt">//清待机标志 SBF（写 1 清零）</span>
+    __HAL_RTC_WRITEPROTECTION_DISABLE(&amp;RTC_Handler); <span class="cmt">//关闭RTC写保护</span>
+    
+    //关闭RTC相关中断，可能在RTC实验打开了
+    __HAL_RTC_WAKEUPTIMER_DISABLE_IT(&amp;RTC_Handler,RTC_IT_WUT); <span class="cmt">// 关闭 RTC 唤醒定时器中断</span>
+    __HAL_RTC_TIMESTAMP_DISABLE_IT(&amp;RTC_Handler,RTC_IT_TS);     <span class="cmt">// 关闭 RTC 时间戳中断</span>
+    __HAL_RTC_ALARM_DISABLE_IT(&amp;RTC_Handler,RTC_IT_ALRA|RTC_IT_ALRB); <span class="cmt">// 关闭 RTC 闹钟 A/B 中断</span>
+    
+    //清除RTC相关中断标志位
+    __HAL_RTC_ALARM_CLEAR_FLAG(&amp;RTC_Handler,RTC_FLAG_ALRAF|RTC_FLAG_ALRBF); <span class="cmt">// 清闹钟 A/B 标志</span>
+    __HAL_RTC_TIMESTAMP_CLEAR_FLAG(&amp;RTC_Handler,RTC_FLAG_TSF);  <span class="cmt">// 清时间戳标志</span>
+    __HAL_RTC_WAKEUPTIMER_CLEAR_FLAG(&amp;RTC_Handler,RTC_FLAG_WUTF); <span class="cmt">// 清唤醒定时器标志</span>
+    
+    __HAL_RCC_BACKUPRESET_RELEASE();                    <span class="cmt">//备份区域复位结束 BDRST = 0</span>
+    __HAL_RTC_WRITEPROTECTION_ENABLE(&amp;RTC_Handler);     <span class="cmt">//使能RTC写保护</span>
+    __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);                  <span class="cmt">//清除Wake_UP标志（进入前清一次）</span>
+	
+		
+    HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN1);           <span class="cmt">//设置WKUP用于唤醒 PWR->CSR.EWUP = 1</span>
+    HAL_PWR_EnterSTANDBYMode();                         <span class="cmt">//进入待机模式（不返回）</span>
+}</pre>
+                    <p>函数体<strong>未删行</strong>，只加了注释。注意第 2 行的 <code>while(WKUP_KD);</code> 后面是空语句，它靠 <code>WKUP_KD</code> 宏（<code>HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0)</code>）反复读引脚。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：这 13 步为什么不能调换</div>
+                        <ol>
+                            <li><strong>先 <code>FORCE_RESET</code> 再等松手</strong>：<code>__HAL_RCC_AHB1_FORCE_RESET()</code> 让 GPIOA~GPIOK 全部回到复位态；但 <code>WKUP_KD</code> 读的是 <code>GPIOA-&gt;IDR</code>，GPIO 处于复位态时仍可读输入电平，所以等待松手依然有效。</li>
+                            <li><strong>必须等松手</strong>：如果按着就进 Standby，WKUP 引脚一直是高电平，唤醒条件永远成立，芯片会“刚睡就醒”，现象是根本进不了待机（或反复复位）。</li>
+                            <li><strong>BDRST 先置 1、操作完再清 0</strong>：备份域复位会把 RTC 配置、BKP 寄存器全部清掉。顺序反了（先清后置）等于把刚配好的东西又抹掉。</li>
+                            <li><strong>DBP 必须在动 RTC 之前置 1</strong>，否则对 <code>RTC-&gt;CR/ISR</code> 的写全部无效，后面的“关中断、清标志”就是空操作。</li>
+                            <li><strong>先关中断再清标志，最后才 WFI</strong>：顺序颠倒会留下已置位的中断标志，WFI 一执行就被 RTC 唤醒，看起来像“待机失败”。源码注释也明确写了这个坑。</li>
+                            <li><code>RTC_Handler</code> 只是 <code>rtc.c</code> 里的全局句柄，<strong>main 从未调用 <code>RTC_Init()</code></strong>；这里的 RTC 操作是为了兼容“先跑过 RTC 实验、RTC 中断还开着”的情况。</li>
+                            <li><code>__HAL_RCC_AHB1_FORCE_RESET()</code> 之后<strong>没有 <code>RELEASE_RESET</code></strong>：GPIO 会一直保持在复位态直到下次复位。目的就是降低 IO 漏电，反正马上要断电。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">该函数有两个调用点：<code>WKUP_Init</code>（主线程，开机判定失败）与 <code>HAL_GPIO_EXTI_Callback</code>（中断上下文，运行期长按）。同一段代码在中断里执行时，<code>while(WKUP_KD)</code> 与 <code>HAL_PWR_EnterSTANDBYMode</code> 都在 ISR 中完成，这也是为什么必须用轮询延时而不是 <code>HAL_Delay</code>。</div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="唤醒源与唤醒后复位">
+                    <h2>10　唤醒源与唤醒后复位</h2>
+                    <div class="sec-sub">EWUP 给引脚“唤醒资格”，PDDS + SLEEPDEEP 决定睡多深，WFI 一执行就断电；醒来不是继续，而是复位</div>
+
+                    <figure class="figure">
+                        <img src="./index32-map/wakeup-path.png" alt="WKUP 引脚经 PWR 触发 Standby 唤醒并使 MCU 复位的链路图">
+                        <figcaption>图 10-1　从按下 WK_UP 到芯片重新启动的 7 个环节</figcaption>
+                    </figure>
+
+                    <pre class="code">void HAL_PWR_EnableWakeUpPin(uint32_t WakeUpPinx)   <span class="cmt">// stm32f4xx_hal_pwr.c：使能指定 WKUP 引脚唤醒</span>
+{
+  assert_param(IS_PWR_WAKEUP_PIN(WakeUpPinx));          <span class="cmt">// 断言参数合法性：只允许 PWR_WAKEUP_PIN1</span>
+  SET_BIT(PWR-&gt;CSR, WakeUpPinx);                    <span class="cmt">// PWR_WAKEUP_PIN1 = PWR_CSR_EWUP，置位后 PA0 才具备唤醒能力</span>
+}
+
+void HAL_PWR_EnterSTANDBYMode(void)                   <span class="cmt">// 进入 Standby 模式：设置 PDDS + SLEEPDEEP 后执行 WFI</span>
+{
+  SET_BIT(PWR-&gt;CR, PWR_CR_PDDS);                    <span class="cmt">// PDDS = 1：选 Standby 而不是 Stop</span>
+  SET_BIT(SCB-&gt;SCR, ((uint32_t)SCB_SCR_SLEEPDEEP_Msk)); <span class="cmt">// SLEEPDEEP = 1：深度睡眠</span>
+
+#if defined ( __CC_ARM)                                  <span class="cmt">// 仅在 Keil ARMCC 编译器下编译</span>
+  __force_stores();                                 <span class="cmt">// Keil ARMCC 下确保上面两次写寄存器真正落盘</span>
+#endif                                                   <span class="cmt">// 结束条件编译</span>
+  __WFI();                                          <span class="cmt">// 等待中断：执行后进入 Standby，被唤醒时是复位而非返回</span>
+}</pre>
+                    <p>这两个函数<strong>只摘了函数体</strong>，省略了参数注释与 <code>assert_param</code> 的展开；<code>ENTERSTANDBY</code> 里没有清 <code>SLEEPONEXIT</code>，因为该位默认为 0，本工程也未置位。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：唤醒不是“中断返回”</div>
+                        <ol>
+                            <li><code>PWR_WAKEUP_PIN1</code> 与 <code>PWR_CSR_EWUP</code> 是同一个位（bit 8）。不置它，PA0 就只是普通 GPIO，Standby 下按多久都不会醒。</li>
+                            <li><code>PDDS</code> 与 <code>SLEEPDEEP</code> 必须在 <code>__WFI()</code> 之前写，且顺序无所谓；但两者都到位才算“进 Standby”。若只置 SLEEPDEEP 而 PDDS=0，进的是 Stop，唤醒后会从 <code>__WFI()</code> 下一条继续执行。</li>
+                            <li><code>__force_stores()</code> 是 ARMCC 的内建：编译器可能把寄存器写延后，这句强制把 pending 的 store 完成，避免 WFI 先于 PWR 写入生效。GCC 编译时这段被条件编译掉。</li>
+                            <li>唤醒后 <strong>PC 不是回到 <code>__WFI()</code> 下一行</strong>，而是被硬件复位到 <code>0x08000004</code> 指向的 <code>Reset_Handler</code>；MSP 也重新从向量表第 0 项装载。</li>
+                            <li><code>PWR-&gt;CSR.SBF</code> 会在唤醒后置 1，用来区分“上电复位”和“从待机唤醒”。<strong>本工程没有读它</strong>，所以软件层面无法区分这两种复位——这是第 14 节排查表的重点。</li>
+                            <li>唤醒源不止 WKUP：RTC 闹钟/唤醒/时间戳/入侵、NRST 外部复位、IWDG 复位都能让芯片“重启”。本工程把 RTC 中断全关，等于把这条路主动封掉，只留 WKUP。</li>
+                        </ol>
+                    </div>
+
+                    <h3>唤醒后发生了什么</h3>
+                    <table class="data">
+                        <tr><th>阶段</th><th>硬件动作</th><th>软件可见结果</th></tr>
+                        <tr><td>WKUP 上升沿</td><td>PWR 检测到 EWUP 引脚有效电平，置 WUF</td><td>无（此时无时钟、无代码执行）</td></tr>
+                        <tr><td>退出 Standby</td><td>1.2V 域上电，内部复位释放</td><td>等同于上电复位</td></tr>
+                        <tr><td>取向量</td><td>MSP ← [0x08000000]，PC ← [0x08000004]</td><td><code>Reset_Handler</code></td></tr>
+                        <tr><td>时钟</td><td>RCC 回到复位值（HSI 16MHz，HSE/PLL 关）</td><td><code>SystemInit</code> 再走一遍</td></tr>
+                        <tr><td>外设</td><td>全部复位，GPIO 恢复默认</td><td><code>main</code> 重新初始化</td></tr>
+                        <tr><td>开机判定</td><td>—</td><td><code>WKUP_Init</code> → <code>Check_WKUP</code>：没长按满 3s 就再进待机</td></tr>
+                    </table>
+
+                    <div class="note">这也解释了 readme 的现象描述：唤醒时手指通常还按着，但 <code>Check_WKUP</code> 是从复位那刻<strong>重新计数</strong>的。若剩下的按压时间不足 3 秒，芯片会立刻又睡回去，用户看到的就是“按一下没反应，必须长按”。</div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="运行期：长按触发待机">
+                    <h2>11　运行期：长按触发待机</h2>
+                    <div class="sec-sub">开机后按键并不是主循环轮询，而是 EXTI0 中断 → HAL 回调 → Check_WKUP → Sys_Enter_Standby 一条直线</div>
+
+                    <pre class="code">//外部中断线0中断服务函数
+void EXTI0_IRQHandler(void)                            <span class="cmt">// EXTI0 中断入口：PA0 上升沿触发</span>
+{
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);   <span class="cmt">// 交给 HAL 统一处理</span>
+}
+
+//中断线0中断处理过程
+//此函数会被HAL_GPIO_EXTI_IRQHandler()调用
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)         <span class="cmt">// HAL 回调：清挂起位后由 HAL 调用</span>
+{
+    if(GPIO_Pin==GPIO_PIN_0)                <span class="cmt">// PA0</span>
+    {
+        if(Check_WKUP())                    <span class="cmt">//关机：返回 1 表示长按满 3s</span>
+        {
+            Sys_Enter_Standby();            <span class="cmt">//进入待机模式（不返回）</span>
+        }
+    }    
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：运行期长按走中断，判定条件与开机相反</div>
+                        <ol>
+                            <li><code>EXTI0_IRQHandler</code> 是 PA0 上升沿的中断入口，它只做一件事：把 <code>GPIO_PIN_0</code> 交给 <code>HAL_GPIO_EXTI_IRQHandler</code> 统一处理。</li>
+                            <li><code>HAL_GPIO_EXTI_Callback</code> 是 HAL 的弱回调，工程在 <code>wkup.c</code> 中重写了它。回调里先判断引脚是否为 PA0，再调用 <code>Check_WKUP()</code>。</li>
+                            <li><strong>这里的判定条件与开机时相反</strong>：<code>WKUP_Init</code> 里是 <code>if(Check_WKUP()==0)</code> 才进待机（没长按→待机），而回调里是 <code>if(Check_WKUP())</code> 才进待机（长按→待机）。读代码必须看清调用点。</li>
+                            <li>回调运行在 ISR 上下文，<code>Check_WKUP</code> 最坏阻塞 3 秒，期间主循环与 LCD 刷新完全停止。这也是为什么运行期长按时画面会卡住、DS0 常亮。</li>
+                        </ol>
+                    </div>
+
+                    <pre class="code">void HAL_GPIO_EXTI_IRQHandler(uint16_t GPIO_Pin)   <span class="cmt">// HALLIB：被 EXTI0_IRQHandler 调用</span>
+{
+  if(__HAL_GPIO_EXTI_GET_IT(GPIO_Pin) != 0x00u)     <span class="cmt">// 挂起位确实来自该引脚</span>
+  {
+    __HAL_GPIO_EXTI_CLEAR_IT(GPIO_Pin);             <span class="cmt">// 先清挂起位，再进回调</span>
+    HAL_GPIO_EXTI_Callback(GPIO_Pin);               <span class="cmt">// 回调里可能阻塞 3 秒</span>
+  }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：清挂起位在回调之前，决定了中断的可重入性</div>
+                        <ol>
+                            <li><strong>清除挂起位发生在 <code>Check_WKUP</code> 之前</strong>。所以那 3 秒阻塞期间若再出现上升沿（松手后重按），<code>EXTI-&gt;PR</code> 会再次置位，回调返回后 NVIC 立刻再进一次 ISR——长按会被重新计时。</li>
+                            <li>若把清除放到回调之后，3 秒内的新边沿会被"吞掉"（清一次全清），行为反而更接近“按一次只判一次”。两种写法都能工作，但现象不同。</li>
+                            <li>回调里<strong>没有判断返回值的分支处理</strong>：<code>Check_WKUP()</code> 返回 0 时什么也不做，直接返回；只有返回 1 才进待机。所以短按只是让 DS0 亮约 120ms 再灭。</li>
+                            <li>整个回调运行在 ISR 上下文，<code>Sys_Enter_Standby</code> 里最后那句 <code>HAL_PWR_EnterSTANDBYMode()</code> 也是在中断里执行的——这在 Cortex-M 上是允许的，WFI 在 Handler 模式下同样会进入低功耗。</li>
+                            <li><code>Check_WKUP</code> 期间的 <code>delay_ms</code> 是轮询式，所以不会被“SysTick 进不来”卡死；但主循环与 LCD 刷新确实停了 3 秒，表现为长按时画面卡住、DS0 常亮。</li>
+                            <li>EXTI0 的 NVIC 是 <code>WKUP_Init</code> 最后才使能的，也就是说<strong>开机判定阶段长的按不会走中断</strong>；运行期才有中断。两条路径共用同一个 <code>Check_WKUP</code>，但进入条件相反（见 08 节）。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">工程中没有其它 EXTI 服务函数；EXTI0 只服务 PA0，<code>GPIO_Pin</code> 判断实际只会命中一个分支。中断入口名必须与启动文件 <code>EXTI0_IRQHandler</code> 完全一致，否则会落到默认死循环。</div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="主循环、现象与交互演示">
+                    <h2>12　主循环、现象与交互演示</h2>
+                    <div class="sec-sub">while(1) 里只有两行：翻转 DS0、延时 250ms；所有“按键”的事情都不在这里发生</div>
+
+                    <figure class="figure">
+                        <img src="./index32-map/main-loop.png" alt="main 主循环翻转 DS0 与 EXTI0 按键中断进入待机的并行关系图">
+                        <figcaption>图 12-1　左边是前台主循环，右边是随时可能插入的按键中断</figcaption>
+                    </figure>
+
+                    <pre class="code">while(1)                                         <span class="cmt">// 主循环：开机成功后永久运行，只有被中断打断</span>
+{
+    LED0=!LED0;        <span class="cmt">// DS0 翻转：PBout(1) 位带写 GPIOB->ODR 的 bit1</span>
+    delay_ms(250);     <span class="cmt">// 延时250ms（轮询 SysTick，不用中断）</span>
+}</pre>
+                    <p>这就是主循环的全部。<code class="inline">LED0</code> 是 <code class="inline">led.h</code> 里的位带宏 <code class="inline">#define LED0 PBout(1)</code>，不是函数调用，编译后是“读-改-写”ODR 的固定地址操作。</p>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>DS0（PB1）</th><th>屏幕</th><th>原因</th></tr>
+                        <tr><td>上电，不按 WK_UP</td><td>亮约 120ms 后熄灭</td><td>不亮</td><td><code>Check_WKUP</code> 进入即 <code>LED0=0</code>，<code>tx&gt;3</code> 后 <code>LED0=1</code> 并返回 0 → 进待机</td></tr>
+                        <tr><td>上电，按住 ≥3s</td><td>一直亮，之后 500ms 周期闪烁</td><td>正常显示</td><td><code>t&gt;=100</code> 返回 1，继续 <code>SDRAM_Init/LCD_Init</code></td></tr>
+                        <tr><td>运行中长按 ≥3s</td><td>常亮 → 熄灭（待机）</td><td>卡住不动</td><td>ISR 里 <code>Check_WKUP</code> 阻塞 3s，随后 <code>Sys_Enter_Standby</code></td></tr>
+                        <tr><td>运行中短按</td><td>亮约 120ms → 恢复闪烁</td><td>正常</td><td>返回 0，回调不做任何事</td></tr>
+                        <tr><td>待机中长按 ≥3s</td><td>先灭，复位后重新判定</td><td>重新初始化后出现</td><td>WKUP 唤醒 = 复位，再走一遍启动链路</td></tr>
+                        <tr><td>待机中轻点一下</td><td>闪一下又灭</td><td>不亮</td><td>唤醒后 <code>Check_WKUP</code> 不足 3s（复位重新计数）→ 再次待机</td></tr>
+                    </table>
+
+                    <div class="sim">
+                        <div class="sim-title">交互演示：Check_WKUP 的 30ms 计数（仅演示逻辑，不代表真实时序）</div>
+                        <div class="sim-buttons">
+                            <button type="button" data-key="press">按住 WK_UP（+30ms）</button>
+                            <button type="button" data-key="release">松开 WK_UP（+30ms）</button>
+                            <button type="button" data-key="reset">复位 / 重新上电</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0（PB1，判定中点亮）</div>
+                            <div class="led-item"><span class="led-dot" id="dot1"></span>已进入 Standby</div>
+                        </div>
+                        <div class="sim-log" id="simLog">t=0，tx=0</div>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：这个演示对应源码的哪几个分支</div>
+                        <ol>
+                            <li>“按住”对应 <code>if(WKUP_KD)</code> 为真：<code>t++</code>、<code>tx=0</code>，随后 <code>delay_ms(30)</code> 一拍；<code>t&gt;=100</code> 时 <code>LED0=0</code> 并 <code>return 1</code>。</li>
+                            <li>“松开”对应 <code>else</code> 分支：<code>tx++</code>，<code>tx&gt;3</code> 时 <code>LED0=1</code> 并 <code>return 0</code>。演示中“连松 4 拍”才判失败，与源码 <code>tx&gt;3</code> 一致。</li>
+                            <li>返回 1 后（运行期路径）会调用 <code>Sys_Enter_Standby</code>，所以点“按住”到 100 拍时演示直接进入待机、DS0 熄灭。</li>
+                            <li>待机后再点“按住”模拟 WKUP 唤醒：演示把 <code>t</code> 清零并提示“复位重新计数”——对应真实硬件上唤醒即复位、<code>Check_WKUP</code> 从 0 开始。</li>
+                            <li>演示<strong>不模拟</strong> <code>delay_ms</code> 的真实耗时、不模拟 EXTI 挂起位重入，也不模拟 <code>while(WKUP_KD)</code> 的等待松手；它只复现 <code>t/tx</code> 两个计数器的判定规则。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">现象里最容易误判的是“待机中轻点没反应”。这不是按键坏，而是唤醒后 <code>Check_WKUP</code> 从复位那刻重新数 3 秒，轻点那一下只能让 DS0 闪一下，随即又被送回待机。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘">
+                    <h2>13　关键逻辑复盘</h2>
+                    <div class="sec-sub">把“开机判定、运行期长按、进入待机、唤醒复位”四段串成一条链，逐段对照代码与寄存器</div>
+
+                    <table class="data">
+                        <tr><th>阶段</th><th>触发条件</th><th>关键代码</th><th>寄存器 / 状态</th><th>失败时的现象</th></tr>
+                        <tr><td>上电或唤醒复位</td><td>NRST / WKUP / IWDG</td><td><code>Reset_Handler</code> → <code>SystemInit</code> → <code>__main</code></td><td>MSP ← 向量表[0]，VTOR = 0x08000000</td><td>屏幕不亮、无任何反应</td></tr>
+                        <tr><td>建立运行环境</td><td>main 第一行</td><td><code>HAL_Init</code> → <code>Stm32_Clock_Init</code> → <code>delay_init</code></td><td>1ms 时基、180MHz、fac_us=180</td><td>延时不准、初始化超时</td></tr>
+                        <tr><td>外设就绪</td><td>main 中段</td><td><code>uart_init</code> → <code>LED_Init</code> → <code>KEY_Init</code></td><td>PA9/PA10、PB0/PB1、PA0 下拉输入</td><td>LCD_Init 卡死（串口未初始化）</td></tr>
+                        <tr><td>开机判定</td><td><code>WKUP_Init</code></td><td><code>Check_WKUP()==0 → Sys_Enter_Standby</code></td><td>PA0 = EXTI 上升沿 + 下拉</td><td>不按键上电也进不了系统（正常）</td></tr>
+                        <tr><td>放行中断</td><td><code>WKUP_Init</code> 末尾</td><td><code>HAL_NVIC_SetPriority/EnableIRQ</code></td><td>EXTI0：抢占 2 / 子 2</td><td>运行期按 WK_UP 无反应</td></tr>
+                        <tr><td>运行</td><td><code>while(1)</code></td><td><code>LED0=!LED0; delay_ms(250)</code></td><td>GPIOB-&gt;ODR bit1</td><td>DS0 不闪（卡在中断或待机）</td></tr>
+                        <tr><td>运行期长按</td><td>PA0 上升沿</td><td><code>EXTI0_IRQHandler</code> → <code>HAL_GPIO_EXTI_Callback</code> → <code>Check_WKUP</code></td><td>EXTI-&gt;PR bit0 先清</td><td>短按无效（返回 0，正常）</td></tr>
+                        <tr><td>进入待机</td><td><code>Check_WKUP()==1</code></td><td><code>Sys_Enter_Standby</code> 13 步</td><td>PDDS=1、SLEEPDEEP=1、EWUP=1、DBP=1、BDRST 脉冲</td><td>刚睡就醒 / 根本睡不下去</td></tr>
+                        <tr><td>唤醒</td><td>WKUP 上升沿</td><td>硬件 PWR 逻辑</td><td>WUF=1、SBF=1</td><td>按键无反应（EWUP 未置位）</td></tr>
+                        <tr><td>唤醒后</td><td>芯片复位</td><td>重新走第 1 行</td><td>SRAM 全丢、备份域被复位过</td><td>看起来像“重启”，且需再长按 3s</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：全链路只有两个“状态出口”</div>
+                        <ol>
+                            <li><code>WKUP_Init</code> 里 <code>if(Check_WKUP()==0)</code>：失败即待机，<strong>main 不会继续</strong>。所以“上电不按也进系统”在本工程是不可能出现的。</li>
+                            <li><code>HAL_GPIO_EXTI_Callback</code> 里 <code>if(Check_WKUP())</code>：成功即待机，<strong>不返回主循环</strong>。两条路径的判定条件相反，是本工程最容易读错的地方。</li>
+                            <li><code>Sys_Enter_Standby</code> 只在两个地方被调用，都通向 <code>__WFI()</code>；函数末尾没有“恢复现场”的代码，因为 Standby 不需要也无法恢复。</li>
+                            <li>整个工程没有保存任何“运行过”的标志：既没用 <code>PWR-&gt;CSR.SBF</code>，也没用 BKP 寄存器（而且第 04 步 <code>BDRST</code> 会把 BKP 清掉）。所以每次唤醒都是一次“白纸开机”。</li>
+                            <li>四个阶段共用同一个 <code>Check_WKUP</code>，但它依赖的 <code>delay_ms</code>、<code>LED0</code>、<code>WKUP_KD</code> 分别来自 <code>delay.c</code>、<code>led.h</code>、<code>wkup.h</code>——任何一处初始化顺序变了，判定就会失效。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="总结与排查">
+                    <h2>14　总结与排查</h2>
+                    <div class="sec-sub">记住三句话：待机是断电、唤醒是复位、开机要靠长按 3 秒重新判定</div>
+
+                    <h3>三句话总结</h3>
+                    <ol>
+                        <li><strong>Standby 不是“暂停”，是“断电”</strong>：1.2V 域断电，SRAM、寄存器、外设配置全部丢失，只有 VBAT 域（RTC/BKP）例外。</li>
+                        <li><strong>唤醒不是“继续”，是“复位”</strong>：PC 回到 <code>Reset_Handler</code>，<code>SystemInit</code> 与 <code>main</code> 全部重跑，所以串口、LCD、时钟都会重新初始化。</li>
+                        <li><strong>“开机”是软件定义的</strong>：<code>WKUP_Init</code> 里 <code>Check_WKUP()</code> 判 3 秒长按，失败就 <code>Sys_Enter_Standby</code>。这也是为什么“唤醒后还得再长按 3 秒”。</li>
+                    </ol>
+
+                    <h3>常见问题与工程内证据</h3>
+                    <table class="data">
+                        <tr><th>现象</th><th>原因</th><th>工程内证据</th></tr>
+                        <tr><td>唤醒后像重启，变量全丢</td><td>Standby 唤醒是复位，不是中断返回</td><td><code>HAL_PWR_EnterSTANDBYMode</code> 末尾 <code>__WFI()</code>；SRAM 不保持</td></tr>
+                        <tr><td>唤醒后必须再长按 3 秒</td><td>复位后重新执行 <code>WKUP_Init</code>，<code>t</code> 从 0 开始</td><td><code>wkup.c</code>：<code>Check_WKUP()==0 → Sys_Enter_Standby</code></td></tr>
+                        <tr><td>想区分“上电”与“待机唤醒”</td><td>应读 <code>PWR-&gt;CSR.SBF</code>，但本工程<strong>未使用</strong></td><td><code>Sys_Enter_Standby</code> 只 <code>CLEAR_FLAG(PWR_FLAG_SB)</code>，没有读 SBF</td></tr>
+                        <tr><td>想用 BKP 存标志</td><td>本工程第 04 步 <code>BACKUPRESET_FORCE</code> 会清空备份域，BKP 不可用</td><td><code>__HAL_RCC_BACKUPRESET_FORCE()</code> / <code>RELEASE()</code></td></tr>
+                        <tr><td>刚进待机就醒 / 进不去</td><td>RTC 中断或标志未关；或 WK_UP 没松开</td><td><code>__HAL_RTC_*_DISABLE_IT</code> 与 <code>while(WKUP_KD);</code></td></tr>
+                        <tr><td>待机电流偏大</td><td>IO 未处理、板载外设仍在供电</td><td>只用 <code>__HAL_RCC_AHB1_FORCE_RESET()</code> 复位 GPIO，未逐个处理 LCD/SDRAM 等</td></tr>
+                        <tr><td>按键完全无反应</td><td>EWUP 未置位，或 PA0 被后配成普通输入</td><td><code>HAL_PWR_EnableWakeUpPin(PWR_WAKEUP_PIN1)</code>；<code>KEY_Init</code> 与 <code>WKUP_Init</code> 的执行顺序</td></tr>
+                        <tr><td>串口在待机前没有输出</td><td>源码中确实没有输出语句</td><td><code>Sys_Enter_Standby</code> 全文无 <code>printf</code></td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：如果要改，改动点只有三个</div>
+                        <ol>
+                            <li><strong>改判定时长</strong>：<code>t&gt;=100</code> 与 <code>delay_ms(30)</code> 共同决定 3 秒；改 <code>t</code> 的阈值即可，但要注意 <code>tx&gt;3</code> 的松手窗口也要同步调整，否则容易误判。</li>
+                            <li><strong>改唤醒后的行为</strong>：在 <code>WKUP_Init</code> 判定之前读 <code>PWR-&gt;CSR</code> 的 SBF，就能区分“首次上电”和“从待机醒来”，从而决定是否跳过 3 秒长按。</li>
+                            <li><strong>改待机深度</strong>：若要保留 SRAM（唤醒后继续），应改用 Stop 模式（<code>PDDS=0</code> + <code>LPDS=1</code>，或 HAL 的 <code>HAL_PWR_EnterSTOPMode</code>），而不是继续用 Standby。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">本页所有结论均来自工程源码；凡工程未实现的能力（读 SBF、BKP 存标志、待机前串口提示、<code>WFI_SET</code> 调用）都已明确标注“工程中未使用/未找到”，请不要按通用经验补全。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-10 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== WKUP 长按计时演示（仅复现 Check_WKUP 的计数分支） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var t = 0, tx = 0, standby = false;
+
+        function render(msg) {
+            dot0.classList.toggle('on', !standby && t > 0);
+            dot1.classList.toggle('on', standby);
+            if (msg) { simLog.textContent = msg; }
+        }
+
+        function press() {
+            if (standby) {
+                standby = false; t = 0; tx = 0;
+                render('WKUP 唤醒 → 芯片复位 → 重新走启动链路：t=0，仍需再长按 3s（100 拍）');
+                return;
+            }
+            t++; tx = 0;
+            if (t >= 100) {
+                standby = true;
+                render('t=100 → Check_WKUP 返回 1 → Sys_Enter_Standby() → WFI 进入 Standby，DS0 熄灭');
+                return;
+            }
+            render('按下：t=' + t + '/100（' + (t * 30) + 'ms），tx 清零，DS0 点亮');
+        }
+
+        function release() {
+            if (standby) { render('待机中：主循环已停止，只有 WKUP 引脚 / RTC / NRST 能唤醒'); return; }
+            tx++;
+            if (tx > 3) {
+                render('连松 4 拍（约 120ms）→ tx>3，Check_WKUP 返回 0，LED0=1，本次判定失败');
+                t = 0; tx = 0;
+                return;
+            }
+            render('松开：tx=' + tx + '/3，t 仍为 ' + t + '（不足 3s 时松手即判失败）');
+        }
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var act = btn.getAttribute('data-key');
+                if (act === 'press') press();
+                else if (act === 'release') release();
+                else if (act === 'reset') { t = 0; tx = 0; standby = false; render('已复位：t=0，tx=0，DS0 灭，未进入待机'); }
+            });
+        });
+
+        render('t=0，tx=0：未按 WK_UP，DS0 灭；按住累加 t，松开累加 tx');
+    }
+</script>
+</body>
+</html>

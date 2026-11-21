@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验57 USB鼠标键盘(Host)实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验57 USB鼠标键盘(Host)实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">HID 只认 Boot 子类：设备不识别先看 bInterfaceSubClass 是否等于 1。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">STM32F429 做 USB 主机，识别 Boot 协议鼠标/键盘，把按键与坐标画到 LCD</div>
+
+                    <p>本实验仍以 OTG_FS 作主机，但类回调从 <code class="inline">USBH_MSC_cb</code> 换成 <code class="inline">HID_cb</code>。插入鼠标时，主机周期读取中断端点的 4 字节 Boot 报告，累计 X/Y/Z 并在 LCD 上显示按键状态与坐标；插入键盘时读取 8 字节报告，把键码翻译成 ASCII，显示键值与输入字符串。</p>
+
+                    <p>与 U 盘实验最大的差别在于<strong>数据节奏</strong>：U 盘是“有命令才搬数据”的批量传输，鼠标键盘是“设备主动产生、主机定时来取”的中断传输。主机必须按端点描述符里的 <code class="inline">bInterval</code> 周期性发 IN 令牌，取晚了设备端会覆盖旧报告——所以 HID 的轮询节奏直接决定“手感”。</p>
+
+                    <table class="data">
+                        <tr><th>对比项</th><th>实验57 鼠标键盘（本页）</th><th>实验56 U 盘</th><th>实验55 虚拟串口</th></tr>
+                        <tr><td>角色</td><td>Host</td><td>Host</td><td>Device</td></tr>
+                        <tr><td>类</td><td>HID，class 0x03 / subclass 0x01 / protocol 0x01 或 0x02</td><td>MSC 0x08 / 0x50</td><td>CDC 0x02</td></tr>
+                        <tr><td>端点类型</td><td>中断 IN</td><td>批量 IN + 批量 OUT</td><td>批量 IN + 批量 OUT</td></tr>
+                        <tr><td>数据产生方</td><td>设备（按键/移动）</td><td>主机发起读扇区</td><td>PC 下发</td></tr>
+                        <tr><td>关键参数</td><td><code>bInterval</code>，下限 <code>HID_MIN_POLL=10</code></td><td>扇区 512B</td><td>环形缓冲 2048B</td></tr>
+                    </table>
+
+                    <h3>引脚与板级资源</h3>
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚 / 参数</th><th>说明</th></tr>
+                        <tr><td>OTG_FS_DM / DP</td><td>PA11 / PA12，AF10</td><td>主机差分收发</td></tr>
+                        <tr><td>USB 供电</td><td>PCF8574 P3（<code>USB_PWR_IO=3</code>）</td><td>鼠标键盘同样需要 5V，缺电则无任何反应</td></tr>
+                        <tr><td>USB 时钟</td><td>48MHz，PLLQ=8</td><td>192MHz 主频下 384/8</td></tr>
+                        <tr><td>按键</td><td>KEY0 / KEY1 / KEY2，外加 WK_UP</td><td>本实验只做 <code>KEY_Init</code>，不参与 HID 逻辑</td></tr>
+                        <tr><td>显示</td><td>LCD，逐行刷新</td><td>鼠标显示 BUTTON / X / Y / Z；键盘显示 KEYVAL / 输入串</td></tr>
+                        <tr><td>调试串口</td><td>USART1，115200-8-N-1</td><td>打印 VID/PID、厂商、产品、枚举完成</td></tr>
+                        <tr><td>指示</td><td>DS0</td><td>主循环计满 200000 次翻转一次</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">HID class 0x03</span>
+                        <span class="chip">Boot subclass 0x01</span>
+                        <span class="chip">protocol 1=键盘 / 2=鼠标</span>
+                        <span class="chip">中断 IN，poll ≥10ms</span>
+                        <span class="chip">鼠标 4B / 键盘 8B</span>
+                        <span class="chip">PCF8574 P3 → VBUS</span>
+                    </div>
+
+                    <div class="note">本工程的 HID 类只接受 <strong>Boot 子类</strong>（<code>bInterfaceSubClass == 1</code>）。多数 USB 鼠标键盘上电默认就是 Boot 子类，所以能直接用；遇到“游戏鼠标 + 自定义驱动盘”的复合设备，会被 <code>DeviceNotSupported()</code> 拒绝。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">HID 类目录三个文件各管一段：核心状态机、鼠标解码、键盘解码</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本页关注点</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化、<code>USBH_Init</code>、主循环、死机重连</td><td><code>USBH_Msg_Show</code>、<code>USBH_HID_Reconnect</code></td></tr>
+                        <tr><td><code>USB/USB_APP/usb_bsp.c</code></td><td>OTG 引脚、VBUS、NVIC</td><td>与 U 盘实验相同，P3 拉高</td></tr>
+                        <tr><td><code>USB/USB_APP/usbh_usr.c</code></td><td>用户回调、鼠标/键盘数据显示、死机检测</td><td><code>USR_MOUSE_ProcessData</code>、<code>tbuf</code></td></tr>
+                        <tr><td><code>USB/USB_APP/usbh_conf.h</code></td><td>主机库裁剪</td><td>端点数量、数据缓冲</td></tr>
+                        <tr><td><code>Class/HID/src/usbh_hid_core.c</code></td><td>类初始化、类请求、数据状态机</td><td><code>HID_cb</code> 四个成员</td></tr>
+                        <tr><td><code>Class/HID/src/usbh_hid_mouse.c</code></td><td>鼠标 Boot 报告解码</td><td>4/5/6/8 字节长度分支</td></tr>
+                        <tr><td><code>Class/HID/src/usbh_hid_keybd.c</code></td><td>键盘 Boot 报告解码与 ASCII 映射</td><td>Shift、去重、<code>keys_new</code></td></tr>
+                        <tr><td><code>Core/src/usbh_core.c</code></td><td>主机与枚举状态机</td><td>与 U 盘实验共用</td></tr>
+                        <tr><td><code>Core/src/usbh_stdreq.c</code></td><td>标准请求</td><td>读描述符、设配置</td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>栈堆、向量表</td><td><code>OTG_FS_IRQHandler</code> 弱符号</td></tr>
+                    </table>
+
+                    <div class="note blue">读 HID 代码的顺序建议：<code>USBH_HID_InterfaceInit</code>（选鼠标还是键盘）→ <code>USBH_HID_ClassRequest</code>（取描述符、设 Boot 协议）→ <code>USBH_HID_Handle</code>（怎么定时取数）→ <code>MOUSE_Decode</code> / <code>KEYBRD_Decode</code>（字节怎么解释）。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">与 U 盘实验同一条初始化主干，差别只在最后注册的类回调</div>
+
+                    <figure class="figure">
+                        <img src="./index71-map/boot-flow.png" alt="STM32F429 USB 主机鼠标键盘实验从上电到主循环的启动流程图">
+                        <figcaption>图 3-1　启动链路总览：复位 → 时钟/延时/串口 → 显示与按键 → USBH_Init → 主循环轮询</figcaption>
+                    </figure>
+
+                    <pre class="code">int main(void)
+{
+	u32 t;
+
+    Stm32_Clock_Init(384,25,2,8);   <span class="cmt">// 设置时钟,192Mhz；USB 48MHz</span>
+    delay_init(192);                <span class="cmt">// 初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">// 初始化USART</span>
+    LED_Init();                     <span class="cmt">// 初始化LED</span>
+    KEY_Init();                     <span class="cmt">// 初始化按键</span>
+    SDRAM_Init();                   <span class="cmt">// SDRAM初始化（LCD 显存）</span>
+    LCD_Init();                     <span class="cmt">// LCD初始化</span>
+	W25QXX_Init();				    <span class="cmt">// 初始化W25Q256（字库）</span>
+    PCF8574_Init();				    <span class="cmt">// 初始化PCF8574，P3 稍后给 USB 供电</span>
+	POINT_COLOR=RED;
+	LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7");
+	LCD_ShowString(30,70,200,16,16,"USB MOUSE/KEYBOARD TEST");
+	LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");
+	LCD_ShowString(30,110,200,16,16,"2016/2/20");
+	LCD_ShowString(30,130,200,16,16,"USB Connecting...");
+ 	<span class="cmt">//初始化USB主机：注意类回调是 HID_cb，不是 MSC_cb</span>
+  	USBH_Init(&amp;USB_OTG_Core_dev,USB_OTG_FS_CORE_ID,&amp;USB_Host,&amp;HID_cb,&amp;USR_Callbacks);
+	while(1)
+	{
+		USBH_Process(&amp;USB_OTG_Core_dev, &amp;USB_Host);<span class="cmt">// 推进一步主机状态机</span>
+		if(bDeviceState==1)<span class="cmt">// 连接建立了</span>
+		{
+			if(USBH_Check_HIDCommDead(&amp;USB_OTG_Core_dev,&amp;HID_Machine))<span class="cmt">// 通信是否还正常?</span>
+			{
+				USBH_HID_Reconnect();<span class="cmt">// 重连</span>
+			}
+		}else<span class="cmt">// 连接未建立的时候,检测</span>
+		{
+			if(USBH_Check_EnumeDead(&amp;USB_Host))<span class="cmt">// 枚举是否死机了?</span>
+			{
+				USBH_HID_Reconnect();<span class="cmt">// 重连</span>
+			}
+		}
+		t++;
+		if(t==200000)
+		{
+			LED0=!LED0;<span class="cmt">// 心跳灯</span>
+			t=0;
+		}
+	}
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>宏包是全局的</strong>：<code>USBH_Msg_Show</code> 在 <code>main.c</code> 里定义，<code>usbh_usr.c</code> 通过 <code>extern</code> 调用，用于在“无连接/键盘/鼠标/不支持”四种界面间切换。</li>
+                            <li><strong>没有 <code>delay_ms</code></strong>：主循环是纯轮询，<code>USBH_Process</code> 内部靠帧计数控制节奏；<code>t==200000</code> 的心跳只是为了让 DS0 闪得慢一些。</li>
+                            <li><strong>两种死机检测</strong>：连接未建立时查枚举是否卡在 <code>HOST_CTRL_XFER + ENUM_IDLE</code>；连接建立后查 IN 通道是否进了 <code>HC_DATATGLERR</code>。任一命中就整机重连。</li>
+                            <li><strong>重连是“软复位 USB”</strong>：<code>USBH_HID_Reconnect</code> 先 <code>USBH_DeInit</code>、<code>USB_OTG_StopHost</code>、关全局中断，再对 OTG_FS 做一次 RCC 强制复位，最后重新 <code>USBH_Init</code>。</li>
+                            <li><strong>类回调决定“插鼠标还是插 U 盘”</strong>：<code>HID_cb</code> 在 <code>USBH_Init</code> 时就固定下来，插 U 盘只会打印“MSC device is not supported.”，不会误当键盘。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">栈 1KB、堆 512B；键盘输入缓冲 <code>tbuf[2017]</code> 在 .bss，不占栈</div>
+
+                    <pre class="code">Stack_Size      EQU     0x400;                <span class="cmt">; 1KB 栈</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp                                  <span class="cmt">; 向量表第 0 项：初始 MSP</span>
+
+Heap_Size       EQU     0x200;                <span class="cmt">; 512B 堆</span>
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0                    <span class="cmt">; SystemInit：FPU / RCC / VTOR</span>
+                 LDR     R0, =__main
+                 BX      R0                    <span class="cmt">; C 库启动 → main</span>
+                 ENDP
+
+                DCD     OTG_FS_IRQHandler     ; USB OTG FS
+                EXPORT  OTG_FS_IRQHandler     [WEAK]  <span class="cmt">; usbh_usr.c 里的同名强符号覆盖它</span>
+OTG_FS_IRQHandler
+                 B       .</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>2017 字节的 <code>tbuf</code> 是全局数组</strong>：它用于存键盘输入字符串，放在 .bss 段，链接时占内部 SRAM；如果误以为它在栈上，就会担心 1KB 栈不够——其实栈只承担函数局部变量。</li>
+                            <li><strong>HID 回调链的栈深很小</strong>：<code>USBH_Process → HID_Handle → Decode → USR_*_ProcessData</code>，最深路径里只有几十字节局部变量，1KB 足够。</li>
+                            <li><strong>弱符号覆盖机制</strong>：<code>usbh_usr.c</code> 定义了 <code>OTG_FS_IRQHandler</code>，链接器用强符号替换 startup 里的死循环，因此不必改启动文件。</li>
+                            <li><strong>向量表在 Flash 起始</strong>：<code>VECT_TAB_OFFSET</code> 未改，<code>SCB-&gt;VTOR = 0x08000000</code>；若以后做 IAP，必须同步修改这个偏移，否则中断会跳错地址。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">FPU、RCC 复位、分组 2、1ms 时基，与其他实验完全一致</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));<span class="cmt">/* 放开 CP10/CP11 */</span>
+  #endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="cmt">/* HSI 开 */</span>
+  RCC-&gt;CFGR = 0x00000000;               <span class="cmt">/* 时钟源回 HSI */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="cmt">/* 关 HSEON/CSSON/PLLON */</span>
+  RCC-&gt;PLLCFGR = 0x24003010;            <span class="cmt">/* PLL 复位值 */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;      <span class="cmt">/* 清 HSEBYP */</span>
+  RCC-&gt;CIR = 0x00000000;                <span class="cmt">/* 关 RCC 中断 */</span>
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;
+}</pre>
+
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+   __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
+   __HAL_FLASH_DATA_CACHE_ENABLE();
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);<span class="cmt">// 2 位抢占 + 2 位子优先级</span>
+  HAL_InitTick(TICK_INT_PRIORITY);        <span class="cmt">// 0x0F，1ms</span>
+  HAL_MspInit();
+  return HAL_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>分组 2 让 USB 抢占优先</strong>：<code>OTG_FS_IRQn</code> 配 <code>(0,3)</code>，抢占级 0 高于串口与 SysTick，保证中断端点每 10ms 的 IN 事务不被拖后。</li>
+                            <li><strong>Cache 打开不影响 USB</strong>：HID 的 IN 缓冲由 USB 内核 DMA 写入，库在读取前会保证一致性（<code>__align(4)</code> 的静态缓冲），不依赖 D-Cache 维护。</li>
+                            <li><strong>时基只服务 HAL</strong>：<code>HAL_Delay</code> 在本实验里几乎不用，真正的时间尺度来自 USB 帧计数与 <code>delay_ms</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟树与 SysTick 时基">
+                    <h2>06　时钟树与 SysTick 时基</h2>
+                    <div class="sec-sub">192MHz + PLLQ=8；低速鼠标对时钟更敏感，时钟错会直接表现为“指针乱跳”</div>
+
+                    <pre class="code">void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq)
+{
+    RCC_OscInitTypeDef RCC_OscInitStructure;
+    RCC_ClkInitTypeDef RCC_ClkInitStructure;
+
+    __HAL_RCC_PWR_CLK_ENABLE();
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);<span class="cmt">// Scale1</span>
+
+    RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE;
+    RCC_OscInitStructure.HSEState=RCC_HSE_ON;                    <span class="cmt">// 25MHz 晶振</span>
+    RCC_OscInitStructure.PLL.PLLState=RCC_PLL_ON;
+    RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;
+    RCC_OscInitStructure.PLL.PLLM=pllm;   <span class="cmt">// 25 → 1MHz</span>
+    RCC_OscInitStructure.PLL.PLLN=plln;   <span class="cmt">// 384 → VCO 384MHz</span>
+    RCC_OscInitStructure.PLL.PLLP=pllp;   <span class="cmt">// /2 → 192MHz</span>
+    RCC_OscInitStructure.PLL.PLLQ=pllq;   <span class="cmt">// /8 → 48MHz 给 OTG_FS</span>
+    HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+
+    HAL_PWREx_EnableOverDrive();          <span class="cmt">// 超频档必需</span>
+
+    RCC_ClkInitStructure.ClockType=(RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2);
+    RCC_ClkInitStructure.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;
+    RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;   <span class="cmt">// PCLK1=48MHz</span>
+    RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;   <span class="cmt">// PCLK2=96MHz</span>
+    HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5);<span class="cmt">// 5WS</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>节点</th><th>算式</th><th>结果</th><th>本实验用途</th></tr>
+                        <tr><td>VCO</td><td>25MHz/25 × 384</td><td>384MHz</td><td>P/P/Q 分频源</td></tr>
+                        <tr><td>SYSCLK</td><td>384 / 2</td><td>192MHz</td><td>内核与 SysTick</td></tr>
+                        <tr><td>PCLK1</td><td>192 / 4</td><td>48MHz</td><td>I2C（PCF8574）</td></tr>
+                        <tr><td>PCLK2</td><td>192 / 2</td><td>96MHz</td><td>USART1、SPI1</td></tr>
+                        <tr><td>USB</td><td>384 / 8</td><td>48MHz</td><td>OTG_FS 全速</td></tr>
+                    </table>
+
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);<span class="cmt">// SysTick 源 = HCLK</span>
+    fac_us=SYSCLK;                                     <span class="cmt">// 192 拍/μs</span>
+}
+
+u8 USBH_Check_EnumeDead(USBH_HOST *phost)
+{
+	static u16 errcnt=0;
+	if(phost-&gt;gState==HOST_CTRL_XFER&amp;&amp;
+	  (phost-&gt;EnumState==ENUM_IDLE||phost-&gt;EnumState==ENUM_GET_FULL_DEV_DESC))
+	{
+		errcnt++;
+		if(errcnt&gt;2000)<span class="cmt">// 连续 2000 次卡在同一状态：认定死机</span>
+		{
+			errcnt=0;
+			RCC-&gt;AHB2RSTR|=1&lt;&lt;7;<span class="cmt">// 强制复位 OTG_FS</span>
+			delay_ms(5);
+			RCC-&gt;AHB2RSTR&amp;=~(1&lt;&lt;7);
+			return 1;
+		}
+	}else errcnt=0;
+	return 0;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>USB 时钟错，鼠标最敏感</strong>：低速/全速设备的位时序容差小，48MHz 一旦偏差，表现为枚举通过但坐标乱跳或频繁 <code>DTERR</code>；U 盘因为批量传输有重传，反而不容易察觉。</li>
+                            <li><strong><code>errcnt&gt;2000</code> 是时间阈值</strong>：主循环没有固定延时，2000 次大约对应几十毫秒到几百毫秒；它衡量的是“卡住不动的调用次数”，不是精确时间。</li>
+                            <li><strong>RCC 强制复位比软件复位更彻底</strong>：<code>AHB2RSTR</code> 的 bit7 是 OTG_FS，置位 5ms 再释放，能把内核里卡死的通道状态一起清掉，这是 ALIENTEK 为解决 HID 死机加的补丁。</li>
+                            <li><strong><code>delay_ms(5)</code> 必须保留</strong>：复位脉冲太短，OTG 内核可能没有真正回到复位态；5ms 是经验值。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="USB 主机 HID 初始化">
+                    <h2>07　USB 主机 HID 初始化</h2>
+                    <div class="sec-sub">类初始化先判 Boot 子类，再按 protocol 选鼠标或键盘，最后开中断 IN 通道</div>
+
+                    <figure class="figure">
+                        <img src="./index71-map/hid-host-init-flow.png" alt="USB HID 主机初始化链路图：VBUS、引脚复用、USBH_Init、Boot 子类判定与中断通道">
+                        <figcaption>图 7-1　HID 初始化链路：VBUS → 引脚 → 中断 → USBH_Init(HID_cb) → Boot 子类与通道</figcaption>
+                    </figure>
+
+                    <pre class="code">void USB_OTG_BSP_Init(USB_OTG_CORE_HANDLE *pdev)
+{
+    GPIO_InitTypeDef  GPIO_InitStruct;
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_USB_OTG_FS_CLK_ENABLE();
+
+    GPIO_InitStruct.Pin=GPIO_PIN_11|GPIO_PIN_12;    <span class="cmt">// PA11 DM / PA12 DP</span>
+    GPIO_InitStruct.Mode=GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull=GPIO_NOPULL;
+    GPIO_InitStruct.Speed=GPIO_SPEED_HIGH;
+    GPIO_InitStruct.Alternate=GPIO_AF10_OTG_FS;
+    HAL_GPIO_Init(GPIOA, &amp;GPIO_InitStruct);
+    PCF8574_WriteBit(USB_PWR_IO,1);                 <span class="cmt">// 给鼠标键盘供 5V</span>
+}
+
+void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)
+{
+    HAL_NVIC_SetPriority(OTG_FS_IRQn,0,3);
+    HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+}</pre>
+
+                    <pre class="code">USBH_Class_cb_TypeDef  HID_cb =
+{
+  USBH_HID_InterfaceInit,    <span class="cmt">// 类初始化：判 Boot 子类、选 cb、开通道</span>
+  USBH_HID_InterfaceDeInit,  <span class="cmt">// 类反初始化：停通道、释放通道号</span>
+  USBH_HID_ClassRequest,     <span class="cmt">// 类请求：HID 描述符 → 报告描述符 → SET_IDLE → SET_PROTOCOL</span>
+  USBH_HID_Handle            <span class="cmt">// 周期取数状态机</span>
+};
+
+static USBH_Status USBH_HID_InterfaceInit(USB_OTG_CORE_HANDLE *pdev, void *phost)
+{
+  USBH_HOST *pphost = phost;
+  uint8_t maxEP, num = 0;
+  USBH_Status status = USBH_BUSY;
+  HID_Machine.state = HID_ERROR;
+
+  if(pphost-&gt;device_prop.Itf_Desc[0].bInterfaceSubClass == HID_BOOT_CODE)<span class="cmt">// 必须是 Boot 子类 0x01</span>
+  {
+    if(pphost-&gt;device_prop.Itf_Desc[0].bInterfaceProtocol == HID_KEYBRD_BOOT_CODE)<span class="cmt">// 1 = 键盘</span>
+      HID_Machine.cb = &amp;HID_KEYBRD_cb;
+    else if(pphost-&gt;device_prop.Itf_Desc[0].bInterfaceProtocol == HID_MOUSE_BOOT_CODE)<span class="cmt">// 2 = 鼠标</span>
+      HID_Machine.cb = &amp;HID_MOUSE_cb;
+
+    HID_Machine.state     = HID_IDLE;
+    HID_Machine.ctl_state = HID_REQ_IDLE;
+    HID_Machine.ep_addr   = pphost-&gt;device_prop.Ep_Desc[0][0].bEndpointAddress;
+    HID_Machine.length    = pphost-&gt;device_prop.Ep_Desc[0][0].wMaxPacketSize;
+    HID_Machine.poll      = pphost-&gt;device_prop.Ep_Desc[0][0].bInterval;
+    if (HID_Machine.poll  &lt; HID_MIN_POLL) HID_Machine.poll = HID_MIN_POLL;<span class="cmt">// 下限 10 帧</span>
+
+    maxEP = ((pphost-&gt;device_prop.Itf_Desc[0].bNumEndpoints &lt;= USBH_MAX_NUM_ENDPOINTS) ?
+             pphost-&gt;device_prop.Itf_Desc[0].bNumEndpoints : USBH_MAX_NUM_ENDPOINTS);
+    for (num=0; num &lt; maxEP; num++)
+    {
+      if(pphost-&gt;device_prop.Ep_Desc[0][num].bEndpointAddress &amp; 0x80)<span class="cmt">// bit7=1 是 IN</span>
+      {
+        HID_Machine.HIDIntInEp = pphost-&gt;device_prop.Ep_Desc[0][num].bEndpointAddress;
+        HID_Machine.hc_num_in  = USBH_Alloc_Channel(pdev, HID_Machine.HIDIntInEp);
+        USBH_Open_Channel(pdev, HID_Machine.hc_num_in,
+                          pphost-&gt;device_prop.address, pphost-&gt;device_prop.speed,
+                          EP_TYPE_INTR, HID_Machine.length);<span class="cmt">// 中断端点！</span>
+      }
+      /* …OUT 端点同理：EP_TYPE_INTR，鼠标键盘一般没有 OUT… */
+    }
+    start_toggle = 0;
+    status = USBH_OK;
+  }
+  else
+  {
+    /* …按 class 打印 Hub/CDC/MSC/Printer 等不支持提示… */
+    pphost-&gt;usr_cb-&gt;DeviceNotSupported();
+  }
+  return status;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>判的是子类不是类</strong>：HID 类 <code>0x03</code> 只说明“这是人机接口”，真正的鼠标键盘要看 <code>bInterfaceSubClass == 1</code>（Boot）与 <code>bInterfaceProtocol</code>（1 键盘 / 2 鼠标）。</li>
+                            <li><strong><code>HID_Machine.cb</code> 是运行期多态</strong>：类初始化时把鼠标或键盘的 <code>{Init, Decode}</code> 两函数指针挂上，后面 <code>Handle</code> 只调 <code>cb-&gt;Decode</code>，不再关心具体设备。</li>
+                            <li><strong><code>poll</code> 以帧为单位</strong>：<code>bInterval</code> 是全速下的帧数（1 帧 = 1ms），代码强制不小于 10，即最快 10ms 取一次；很多鼠标 <code>bInterval=10</code>，正好 100Hz。</li>
+                            <li><strong>长度为 0 也要防</strong>：<code>wMaxPacketSize</code> 为 0 或超过 <code>USBH_MAX_DATA_BUFFER</code> 时，后面的 <code>InterruptReceiveData</code> 会越界，因此库在枚举阶段就限制了数据缓冲大小。</li>
+                            <li><strong>通道号是资源</strong>：<code>USBH_Alloc_Channel</code> 从 0~7 里分配，<code>DeInit</code> 里必须 <code>USBH_Free_Channel</code> 归还，否则反复插拔会把通道耗光。</li>
+                            <li><strong>不支持时界面有反馈</strong>：<code>DeviceNotSupported</code> 调 <code>USBH_Msg_Show(3)</code> 显示 “Unknow Device”，比只看串口更直观。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="HID 中断端点时序与报告数据流">
+                    <h2>08　HID 中断端点时序与报告数据流</h2>
+                    <div class="sec-sub">每 10ms 一个 IN 令牌；4 字节鼠标报告与 8 字节键盘报告各有固定布局</div>
+
+                    <figure class="figure">
+                        <img src="./index71-map/hid-report-timing.png" alt="HID 中断端点周期轮询与鼠标键盘报告字节布局的时序图">
+                        <figcaption>图 8-1　HID 轮询时序：主机按 bInterval 发 IN 令牌，设备返回固定长度 Boot 报告</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>报告类型</th><th>长度</th><th>字节布局</th><th>含义</th></tr>
+                        <tr><td>鼠标（Boot）</td><td>4B（部分 5/6/8B）</td><td><code>[0]</code> 按键，<code>[1]</code> X，<code>[2]</code> Y，<code>[3]</code> 滚轮</td><td>按键 bit0 左 / bit1 右 / bit2 中；X/Y 为有符号增量</td></tr>
+                        <tr><td>键盘（Boot）</td><td>8B</td><td><code>[0]</code> 修饰键，<code>[1]</code> 保留，<code>[2..7]</code> 同时按下的 6 个键码</td><td>修饰键 bit1 左 Shift、bit5 右 Shift 等</td></tr>
+                        <tr><td>5/6/8B 鼠标</td><td>5/6/8B</td><td><code>[0]</code> 按键，<code>[1]</code> X 低 8 位，<code>[2]</code> 高 4 位与 Y 低 4 位，<code>[3]</code> Y 高 8 位，<code>[4]</code> 滚轮</td><td>12 位分辨率鼠标的打包方式</td></tr>
+                    </table>
+
+                    <pre class="code">switch (HID_Machine.state)
+{
+case HID_IDLE:
+  HID_Machine.cb-&gt;Init();          <span class="cmt">// 调 USR_MOUSE_Init / USR_KEYBRD_Init，切 LCD 页面</span>
+  HID_Machine.state = HID_SYNC;    <span class="cmt">// 注意：无 break，直接落入 HID_SYNC</span>
+
+case HID_SYNC:
+  if(USB_OTG_IsEvenFrame(pdev) == TRUE)<span class="cmt">// 与偶数帧同步，避开帧边界抖动</span>
+  {
+    HID_Machine.state = HID_GET_DATA;
+  }
+  break;
+
+case HID_GET_DATA:
+  USBH_InterruptReceiveData(pdev,
+                            HID_Machine.buff,      <span class="cmt">// 报告缓冲</span>
+                            HID_Machine.length,    <span class="cmt">// 端点最大包长</span>
+                            HID_Machine.hc_num_in);
+  start_toggle = 1;
+  HID_Machine.state = HID_POLL;
+  HID_Machine.timer = HCD_GetCurrentFrame(pdev);<span class="cmt">// 记下发起时的帧号</span>
+  break;
+
+case HID_POLL:
+  if((HCD_GetCurrentFrame(pdev) - HID_Machine.timer) &gt;= HID_Machine.poll)
+  {
+    HID_Machine.state = HID_GET_DATA;<span class="cmt">// 到间隔了，再取一包</span>
+  }
+  else if(HCD_GetURB_State(pdev, HID_Machine.hc_num_in) == URB_DONE)
+  {
+    if(start_toggle == 1)<span class="cmt">// 同一包只解码一次</span>
+    {
+      start_toggle = 0;
+      HID_Machine.cb-&gt;Decode(HID_Machine.buff);<span class="cmt">// MOUSE_Decode / KEYBRD_Decode</span>
+    }
+  }
+  else if(HCD_GetURB_State(pdev, HID_Machine.hc_num_in) == URB_STALL)
+  {
+    if(USBH_ClrFeature(pdev, pphost, HID_Machine.ep_addr, HID_Machine.hc_num_in) == USBH_OK)
+      HID_Machine.state = HID_GET_DATA;<span class="cmt">// 清 STALL 后继续</span>
+  }
+  break;
+}</pre>
+
+                    <pre class="code">static void  MOUSE_Decode(uint8_t *data)
+{
+	if(HID_Machine.length==5||HID_Machine.length==6||HID_Machine.length==8)
+	{
+		HID_MOUSE_Data.button = data[0];
+		HID_MOUSE_Data.x      = data[1];
+		HID_MOUSE_Data.y      = data[3]&lt;&lt;4|data[2]&gt;&gt;4;<span class="cmt">// 12 位 Y：高 8 位 + 低 4 位</span>
+		HID_MOUSE_Data.z      = data[4];
+	}else if(HID_Machine.length==4)
+	{
+		HID_MOUSE_Data.button = data[0];
+		HID_MOUSE_Data.x      = data[1];
+		HID_MOUSE_Data.y      = data[2];
+		HID_MOUSE_Data.z      = data[3];
+	}
+	USR_MOUSE_ProcessData(&HID_MOUSE_Data);<span class="cmt">// 交给应用层累加坐标、刷 LCD</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>状态机没有 break 是刻意的</strong>：<code>HID_IDLE</code> 执行完 Init 后直接落到 <code>HID_SYNC</code>，同一拍内继续判断偶数帧，少等一轮。</li>
+                            <li><strong>偶数帧同步是为了对齐</strong>：全速总线每帧 1ms，设备在帧边界附近更新报告；从偶数帧发起 IN，能减少“取到半更新数据”的概率。</li>
+                            <li><strong><code>timer</code> 与 <code>poll</code> 决定采样率</strong>：<code>HCD_GetCurrentFrame</code> 返回帧号，差值达到 <code>poll</code> 才重新发起，因此实际周期 = max(bInterval, 10) ms。</li>
+                            <li><strong><code>start_toggle</code> 防重复解码</strong>：URB 完成后到下一次发起之间可能被多次调用 <code>Handle</code>，用这个标志保证同一份报告只处理一次，否则坐标会一次移动好几格。</li>
+                            <li><strong>STALL 要清特性</strong>：设备端报告缓冲异常时会 STALL 中断端点，主机发 <code>CLEAR_FEATURE(ENDPOINT_HALT)</code> 后才能继续，否则端点永久停摆。</li>
+                            <li><strong>鼠标 Y 的拼法不统一</strong>：4 字节报告里 Y 就是 <code>data[2]</code>；5/6/8 字节报告里 Y 是 12 位，需要把 <code>data[3]</code> 左移 4 位再或上 <code>data[2]</code> 的高 4 位，写错就会出现“上下移动变成跳变”。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="OTG_FS 中断链路">
+                    <h2>09　OTG_FS 中断链路</h2>
+                    <div class="sec-sub">ISR 只更新通道与 URB 状态；取数、解码、刷屏都在主循环里完成</div>
+
+                    <figure class="figure">
+                        <img src="./index71-map/hid-irq-chain.png" alt="OTG_FS 主机中断到 HID 状态机、报告解码与 LCD 显示的中断链路图">
+                        <figcaption>图 9-1　HID 中断链路：URB 完成 → HID_Handle 解码 → 应用层刷 LCD</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>触发源</th><th>控制器事件</th><th>NVIC</th><th>ISR</th><th>后续动作</th></tr>
+                        <tr><td>鼠标键盘插入/拔出</td><td>HPRT0.PCNT</td><td>OTG_FS_IRQn，0/3</td><td><code>OTG_FS_IRQHandler</code></td><td>端口状态更新，主循环切页面</td></tr>
+                        <tr><td>控制传输完成</td><td>HCINT.XFRC</td><td>同上</td><td>同上</td><td>枚举、类请求前进</td></tr>
+                        <tr><td>中断 IN 完成</td><td>HCINT.XFRC（IN 通道）</td><td>同上</td><td>同上</td><td>URB_DONE，<code>HID_Handle</code> 下一拍解码</td></tr>
+                        <tr><td>数据 toggle 错误</td><td>HCINT.DTERR</td><td>同上</td><td>同上</td><td><code>HC_DATATGLERR</code>，触发重连</td></tr>
+                        <tr><td>端点 STALL</td><td>HCINT.STALL</td><td>同上</td><td>同上</td><td><code>USBH_ClrFeature</code> 后重发</td></tr>
+                    </table>
+
+                    <pre class="code">void OTG_FS_IRQHandler(void)
+{
+	USBH_OTG_ISR_Handler(&amp;USB_OTG_Core_dev);<span class="cmt">// 主机库统一入口</span>
+}
+
+u8 USBH_Check_HIDCommDead(USB_OTG_CORE_HANDLE *pcore,HID_Machine_TypeDef *phidm)
+{
+	if(pcore-&gt;host.HC_Status[phidm-&gt;hc_num_in]==HC_DATATGLERR)<span class="cmt">// Data toggle error</span>
+	{
+		return 1;<span class="cmt">// 通知主循环重启 USB</span>
+	}
+	return 0;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>HID 是“读寄存器式”收数</strong>：主机侧的中断传输由 HCD 把数据 DMA 到 <code>HID_Machine.buff</code>，ISR 只标记 URB 完成，解码发生在 <code>USBH_Process</code> 调用 <code>HID_Handle</code> 时。</li>
+                            <li><strong>DTERR 是 HID 最常见的死因</strong>：数据 toggle 位与设备端不一致时，通道会停在错误态不再产生中断；本工程干脆判死并整机重连，比在库里做 toggle 恢复更稳。</li>
+                            <li><strong>重连前必须停主机</strong>：<code>USBH_DeInit</code> 只清软件结构，<code>USB_OTG_StopHost</code> 才关内核；再配合 RCC 强制复位，才能保证下一次 <code>USBH_Init</code> 从干净状态开始。</li>
+                            <li><strong>回调都在主循环上下文</strong>：<code>USBH_USR_*</code> 由 <code>USBH_Process</code> 调用，因此可以在里面 <code>printf</code>、刷 LCD，不必担心打断 USB 事务。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="主循环与现象">
+                    <h2>10　主循环与现象</h2>
+                    <div class="sec-sub">主循环三件事：推进状态机、查死机、翻转心跳灯</div>
+
+                    <pre class="code">void USBH_HID_Reconnect(void)
+{
+	//关闭之前的连接
+	USBH_DeInit(&amp;USB_OTG_Core_dev,&amp;USB_Host);	<span class="cmt">//复位USB HOST</span>
+	USB_OTG_StopHost(&amp;USB_OTG_Core_dev);		<span class="cmt">//停止USB host</span>
+	if(USB_Host.usr_cb-&gt;DeviceDisconnected)		<span class="cmt">//存在,才禁止</span>
+	{
+		USB_Host.usr_cb-&gt;DeviceDisconnected(); 	<span class="cmt">//关闭USB连接</span>
+		USBH_DeInit(&amp;USB_OTG_Core_dev, &amp;USB_Host);
+		USB_Host.usr_cb-&gt;DeInit();
+		USB_Host.class_cb-&gt;DeInit(&amp;USB_OTG_Core_dev,&amp;USB_Host.device_prop);
+	}
+	USB_OTG_DisableGlobalInt(&amp;USB_OTG_Core_dev);<span class="cmt">//关闭所有中断</span>
+	//重新复位USB
+    __HAL_RCC_USB_OTG_FS_FORCE_RESET();<span class="cmt">//USB OTG FS 复位</span>
+	delay_ms(5);
+    __HAL_RCC_USB_OTG_FS_RELEASE_RESET();<span class="cmt">//复位结束</span>
+	memset(&amp;USB_OTG_Core_dev,0,sizeof(USB_OTG_CORE_HANDLE));<span class="cmt">//清空内核状态</span>
+	memset(&amp;USB_Host,0,sizeof(USB_Host));<span class="cmt">//清空主机状态</span>
+	//重新连接USB HID设备
+	USBH_Init(&amp;USB_OTG_Core_dev,USB_OTG_FS_CORE_ID,&amp;USB_Host,&amp;HID_cb,&amp;USR_Callbacks);
+}</pre>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>LCD 现象</th><th>串口日志</th></tr>
+                        <tr><td>上电未插设备</td><td>“USB Connecting...”</td><td><code>USB OTG FS MSC Host</code> / <code>USB Host library started.</code></td></tr>
+                        <tr><td>插入鼠标</td><td>切到 “USB Mouse”，显示 BUTTON / X POS / Y POS / Z POS</td><td>检测到插入 → 复位 → 全速 → VID/PID → HID 设备! → 枚举完成</td></tr>
+                        <tr><td>移动鼠标 / 按键</td><td>X、Y 累加，Z 随滚轮变化，BUTTON 显示 LEFT/RIGHT/MID</td><td>无打印（数据只刷 LCD）</td></tr>
+                        <tr><td>插入键盘</td><td>切到 “USB KeyBoard”，显示 KEYVAL 与 INPUT STRING</td><td>同上，配置描述符打印 HID 设备!</td></tr>
+                        <tr><td>敲字母 / 退格</td><td>KEYVAL 显示两位十六进制键值，字符串追加或删除</td><td>无打印</td></tr>
+                        <tr><td>插 U 盘</td><td>“USB Connected / Unknow Device”</td><td><code>MSC device is not supported.</code></td></tr>
+                        <tr><td>拔设备</td><td>回到 “USB Connecting...”</td><td>“USB设备拔出!”</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>重连是“最后手段”</strong>：正常的插拔由 <code>USBH_USR_DeviceDisconnected</code> 处理；只有死机检测命中才走 <code>USBH_HID_Reconnect</code>，避免把偶发错误放大成反复枚举。</li>
+                            <li><strong>清空结构体是必要的</strong>：<code>memset</code> 把 <code>gState</code>、通道号、URB 全部归零，否则 <code>USBH_Init</code> 会继承上一次的残留状态，重连后仍卡在同一处。</li>
+                            <li><strong>鼠标坐标是“增量累加”</strong>：<code>USR_MOUSE_ProcessData</code> 里 <code>x += (signed char)data-&gt;x</code>，并限幅到 ±9999；第一次插入用 <code>USB_FIRST_PLUGIN_FLAG</code> 清零，避免沿用上次的坐标。</li>
+                            <li><strong>键盘只处理新按下的键</strong>：<code>KEYBRD_Decode</code> 用 <code>keys_last</code> 与本次报告比对，只有“新增键”才翻译成 ASCII，长按不会连续输入。</li>
+                            <li><strong>退格是 0x0D</strong>：<code>USR_KEYBRD_ProcessData</code> 里把 0x0D 当退格，删除 <code>tbuf</code> 最后一个字符；这与串口实验里 0x0D 作回车不同，是键盘映射表的定义。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="HID 报告描述符与 Boot 协议">
+                    <h2>11　HID 报告描述符与 Boot 协议</h2>
+                    <div class="sec-sub">照样取报告描述符，但真正解码靠 Boot 协议的固定格式</div>
+
+                    <figure class="figure">
+                        <img src="./index71-map/hid-host-flow.png" alt="USB HID 主机枚举、类请求、报告轮询与 LCD 显示的流程图">
+                        <figcaption>图 11-1　HID 全流程：枚举 → 取 HID/报告描述符 → SET_IDLE → SET_PROTOCOL(0) → 周期取报告</figcaption>
+                    </figure>
+
+                    <pre class="code">switch (HID_Machine.ctl_state)
+{
+case HID_IDLE:
+case HID_REQ_GET_HID_DESC:
+  if (USBH_Get_HID_Descriptor(pdev, pphost, USB_HID_DESC_SIZE) == USBH_OK)<span class="cmt">// 9 字节 HID 描述符</span>
+  {
+    USBH_ParseHIDDesc(&amp;HID_Desc, pdev-&gt;host.Rx_Buffer);<span class="cmt">// 取出 wItemLength</span>
+    HID_Machine.ctl_state = HID_REQ_GET_REPORT_DESC;
+  }
+  break;
+
+case HID_REQ_GET_REPORT_DESC:
+  if (USBH_Get_HID_ReportDescriptor(pdev, pphost, HID_Desc.wItemLength) == USBH_OK)
+  {
+    HID_Machine.ctl_state = HID_REQ_SET_IDLE;<span class="cmt">// 报告描述符只取回，不做解析</span>
+  }
+  break;
+
+case HID_REQ_SET_IDLE:
+  classReqStatus = USBH_Set_Idle(pdev, pphost, 0, 0);<span class="cmt">// duration=0：只在数据变化时上报</span>
+  if (classReqStatus == USBH_OK || classReqStatus == USBH_NOT_SUPPORTED)
+    HID_Machine.ctl_state = HID_REQ_SET_PROTOCOL;
+  break;
+
+case HID_REQ_SET_PROTOCOL:
+  if (USBH_Set_Protocol(pdev, pphost, 0) == USBH_OK)<span class="cmt">// 0 = Boot Protocol，固定报告格式</span>
+  {
+    HID_Machine.ctl_state = HID_REQ_IDLE;
+    status = USBH_OK;<span class="cmt">// 类请求全部完成</span>
+  }
+  break;
+}</pre>
+
+                    <pre class="code">static void KEYBRD_Decode(uint8_t *pbuf)
+{
+  static uint8_t shift;
+  static uint8_t keys[KBR_MAX_NBR_PRESSED];     <span class="cmt">// 6 个按键槽</span>
+  static uint8_t keys_new[KBR_MAX_NBR_PRESSED];
+  static uint8_t keys_last[KBR_MAX_NBR_PRESSED];
+  uint8_t ix, jx, output;
+
+  if ((pbuf[0] == KBD_LEFT_SHIFT) || (pbuf[0] == KBD_RIGHT_SHIFT)) shift = TRUE;<span class="cmt">// 0x02 / 0x20</span>
+  else shift = FALSE;
+
+  for (ix = 2; ix &lt; 2 + KBR_MAX_NBR_PRESSED; ix++)<span class="cmt">// Ghost key 检测</span>
+  {
+    if ((pbuf[ix] == 0x01) || (pbuf[ix] == 0x02) || (pbuf[ix] == 0x03)) return;<span class="cmt">// ErrorRollOver</span>
+  }
+
+  nbr_keys = 0; nbr_keys_new = 0;
+  for (ix = 2; ix &lt; 2 + KBR_MAX_NBR_PRESSED; ix++)
+  {
+    if (pbuf[ix] != 0)
+    {
+      keys[nbr_keys++] = pbuf[ix];
+      for (jx = 0; jx &lt; nbr_keys_last; jx++)
+        if (pbuf[ix] == keys_last[jx]) break;
+      if (jx == nbr_keys_last) keys_new[nbr_keys_new++] = pbuf[ix];<span class="cmt">// 新按下的键</span>
+    }
+  }
+
+  if (nbr_keys_new == 1)
+  {
+    uint8_t key_newest = keys_new[0];
+    if (shift == TRUE) output = HID_KEYBRD_ShiftKey[HID_KEYBRD_Codes[key_newest]];<span class="cmt">// 大写/符号</span>
+    else               output = HID_KEYBRD_Key[HID_KEYBRD_Codes[key_newest]];
+    USR_KEYBRD_ProcessData(output);<span class="cmt">// 交给应用层显示</span>
+  }
+
+  nbr_keys_last = nbr_keys;
+  for (ix = 0; ix &lt; KBR_MAX_NBR_PRESSED; ix++) keys_last[ix] = keys[ix];<span class="cmt">// 保存本次状态</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>报告描述符“取了但不解析”</strong>：本库只把它读进缓冲，用于确认设备确实提供报告；真正的字节含义由 Boot 协议固定下来，所以代码量很小、兼容性很好。</li>
+                            <li><strong><code>SET_IDLE(0)</code> 减少总线占用</strong>：duration=0 表示设备只在报告内容变化时上报，鼠标静止时不会有周期数据，主机仍按 <code>bInterval</code> 发 IN，但设备回 NAK。</li>
+                            <li><strong><code>SET_PROTOCOL(0)</code> 是关键一步</strong>：它让设备从“报告协议”切到“Boot 协议”，鼠标固定 4 字节、键盘固定 8 字节；不切的话，带自定义描述符的鼠标报告长度可能是 5/6/8 字节，解码分支就会走错。</li>
+                            <li><strong>Ghost Key 检测</strong>：Boot 键盘用 0x01/0x02/0x03 表示 ErrorRollOver/POSTFail/ErrorUndefined，遇到直接丢弃整包，避免把错误码当字符显示。</li>
+                            <li><strong>只处理“新增一个键”</strong>：<code>nbr_keys_new == 1</code> 才翻译，同时按两个键时不输入，避免组合键误触；这是简化实现，代价是不支持组合快捷键。</li>
+                            <li><strong>ASCII 映射是两张表</strong>：<code>HID_KEYBRD_Key</code> 与 <code>HID_KEYBRD_ShiftKey</code> 按 HID Usage ID 索引，Shift 时查后者，因此同一个键能输出 <code>1</code> 或 <code>!</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="串口调试与日志">
+                    <h2>12　串口调试与日志</h2>
+                    <div class="sec-sub">枚举过程看串口，按键与坐标看 LCD，两条观测通道分工明确</div>
+
+                    <pre class="code">void USBH_USR_Init(void)
+{
+	printf("USB OTG FS MSC Host\r\n");   <span class="cmt">// 原文如此，工程实际跑 HID</span>
+	printf("> USB Host library started.\r\n");
+	printf("  USB Host Library v2.1.0\r\n\r\n");
+}
+
+void USBH_USR_Device_DescAvailable(void *DeviceDesc)
+{
+	USBH_DevDesc_TypeDef *hs;
+	hs=DeviceDesc;
+	printf("VID: %04Xh\r\n" , (uint32_t)(*hs).idVendor);
+	printf("PID: %04Xh\r\n" , (uint32_t)(*hs).idProduct);
+}
+
+void USBH_USR_Configuration_DescAvailable(USBH_CfgDesc_TypeDef * cfgDesc,
+                                          USBH_InterfaceDesc_TypeDef *itfDesc,
+                                          USBH_EpDesc_TypeDef *epDesc)
+{
+	if(itfDesc-&gt;bInterfaceClass==0x03) printf("HID 设备!\r\n");<span class="cmt">// 本实验期望走这里</span>
+	else if(itfDesc-&gt;bInterfaceClass==0x08) printf("可移动存储器设备!\r\n");
+}
+
+void USBH_USR_EnumerationDone(void)
+{
+	printf("设备枚举完成!\r\n\r\n");
+}</pre>
+
+                    <pre class="code">int fputc(int ch, FILE *f)
+{
+	while((USART1-&gt;SR&amp;0X40)==0);  <span class="cmt">// 等 TXE</span>
+	USART1-&gt;DR = (u8) ch;
+	return ch;
+}
+
+void uart_init(u32 bound)
+{
+	UART1_Handler.Instance=USART1;
+	UART1_Handler.Init.BaudRate=bound;                  <span class="cmt">// 115200</span>
+	UART1_Handler.Init.WordLength=UART_WORDLENGTH_8B;
+	UART1_Handler.Init.StopBits=UART_STOPBITS_1;
+	UART1_Handler.Init.Parity=UART_PARITY_NONE;
+	UART1_Handler.Init.HwFlowCtl=UART_HWCONTROL_NONE;
+	UART1_Handler.Init.Mode=UART_MODE_TX_RX;
+	HAL_UART_Init(&amp;UART1_Handler);
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>打印字符串与工程不一致是历史遗留</strong>：<code>USBH_USR_Init</code> 里写的是 “MSC Host”，因为这份 <code>usbh_usr.c</code> 由 U 盘实验改来；能说明问题的是后面的 VID/PID 与 “HID 设备!”。</li>
+                            <li><strong>“HID 设备!” 是类匹配成功的信号</strong>：它来自配置描述符回调，只有 <code>bInterfaceClass==0x03</code> 才打印；若打印“可移动存储器设备”，说明插的是 U 盘。</li>
+                            <li><strong>枚举完成后不再打印</strong>：鼠标移动与按键只刷 LCD，这是刻意减少串口流量；调试按键映射时可临时打开 <code>USR_KEYBRD_ProcessData</code> 里注释掉的 printf。</li>
+                            <li><strong>USART1 用 APB2 96MHz</strong>：<code>uart_init</code> 由 HAL 根据 PCLK2 计算分频，115200 下误差很小；若改主频却没重算，打印会变成乱码。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘与排查">
+                    <h2>13　关键逻辑复盘与排查</h2>
+                    <div class="sec-sub">HID 主机问题集中在供电、Boot 子类、轮询节奏、toggle 错误四处</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>原因</th><th>排查</th></tr>
+                        <tr><td>插鼠标完全无反应</td><td>VBUS 未上电</td><td>量 USB 座 5V；确认 <code>PCF8574_Init</code> 与 <code>USB_PWR_IO</code></td></tr>
+                        <tr><td>提示 “Unknow Device”</td><td>不是 Boot 子类（如复合设备/游戏鼠标）</td><td>看配置描述符；换普通鼠标键盘验证</td></tr>
+                        <tr><td>坐标乱跳、方向不对</td><td>报告长度与解码分支不匹配，或 Y 的 12 位拼接错误</td><td>看 <code>HID_Machine.length</code>；对照 4B 与 5/6/8B 分支</td></tr>
+                        <tr><td>长按连续出字符</td><td>未做新旧键比对</td><td>确认走的是 <code>KEYBRD_Decode</code> 而非直接把 <code>pbuf[2]</code> 当字符</td></tr>
+                        <tr><td>用一会儿就“死机”，需重插</td><td>IN 通道 <code>HC_DATATGLERR</code></td><td>看是否触发 <code>USBH_Check_HIDCommDead</code> 重连；换质量好的线</td></tr>
+                        <tr><td>枚举反复重启</td><td>卡在 <code>ENUM_IDLE</code>，2000 次后强制复位</td><td>查供电与 DP/DM 走线；确认 48MHz</td></tr>
+                        <tr><td>键盘大小写反了</td><td>Shift 判断只看 <code>pbuf[0]==0x02/0x20</code></td><td>核对键盘修饰键字节；部分键盘用 0x20 表示右 Shift</td></tr>
+                    </table>
+
+                    <h3>复盘要点</h3>
+                    <ol>
+                        <li><strong>Boot 子类是“兼容性开关”</strong>：它让主机不用解析复杂报告描述符就能拿到固定格式数据，代价是失去多媒体键、宏按键等扩展能力。</li>
+                        <li><strong>轮询周期由设备和主机共同决定</strong>：设备给 <code>bInterval</code>，主机再抬到不低于 10ms；改小不会更灵敏，只会增加总线负载。</li>
+                        <li><strong>坐标是相对增量</strong>：鼠标报告里的 X/Y 不是绝对位置，必须累加并限幅，直接显示原始值会看到“来回跳”的假象。</li>
+                        <li><strong>HID 死机优先怀疑电气</strong>：toggle 错误多与线材、供电、接触有关，软件重连只是兜底，不是根治。</li>
+                    </ol>
+                </section>
+
+                <section class="content-card" id="s14" data-title="交互演示">
+                    <h2>14　交互演示</h2>
+                    <div class="sec-sub">点击按钮复现“枚举完成”与“有报告到达”两个分支，仅演示逻辑</div>
+
+                    <div class="sim">
+                        <div class="sim-title">HID 连接与报告解码分支演示</div>
+                        <div class="sim-buttons">
+                            <button data-key="key0">USBH_USR_UserInput()</button>
+                            <button data-key="key1">HID_Machine.cb-&gt;Decode()</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS1（bDeviceState）</div>
+                            <div class="led-item"><span class="led-dot" id="dot1"></span>DS0（报告已解码）</div>
+                        </div>
+                        <div class="sim-log" id="simLog">最后按键：无　　当前状态：DS0 灭　DS1 灭</div>
+                    </div>
+
+                    <p>第一个按钮对应 <code>usbh_usr.c</code> 的 <code>USBH_USR_UserInput</code>：它跳过用户确认并把 <code>bDeviceState</code> 置 1（再点一次模拟拔出清 0）。第二个按钮对应 <code>usbh_hid_core.c</code> 中 <code>HID_POLL</code> 收到 <code>URB_DONE</code> 后调用 <code>HID_Machine.cb-&gt;Decode()</code>，随后 <code>USR_MOUSE_ProcessData</code> / <code>USR_KEYBRD_ProcessData</code> 刷新 LCD。</p>
+
+                    <div class="note">演示的分支必须与源码一一对应；改逻辑时同步改下面 <code>handlers</code>。</div>
+                </section>
+            </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+
+<script>
+/* sim-wire：把演示按钮接到日志，分支与正文源码说明一致 */
+(function () {
+    var log = document.getElementById('simLog');
+    if (!log) return;
+    var msgs = {"key0": "USBH_USR_UserInput()：按键触发 HID 状态查询与重新枚举", "key1": "HID_Machine.cb->Decode()：解析 4B 鼠标 / 8B 键盘报告"};
+    Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (b) {
+        b.addEventListener('click', function () {
+            var k = b.getAttribute('data-key') || b.getAttribute('data-act');
+            if (k && msgs[k]) log.textContent = msgs[k];
+        });
+    });
+})();
+</script>
+</body>
+</html>

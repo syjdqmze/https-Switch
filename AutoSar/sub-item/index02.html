@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Sub-Item 管理页面</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+            margin: 0;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background-color: #c5d8e8; border-radius: 3px; }
+        .sidebar-menu::-webkit-scrollbar-track { background-color: transparent; }
+
+        .sidebar-actions {
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid #dce8f2;
+            flex-shrink: 0;
+        }
+
+        .sidebar-actions button {
+            flex: 1;
+            padding: 5px 0;
+            font-size: 12px;
+            border: 1px solid #dce8f2;
+            background: #fff;
+            color: #999;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .sidebar-actions button:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+            background: #e6f7ff;
+        }
+
+        .sidebar-menu > li {
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu > li > .menu-title {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .sidebar-menu > li > .menu-title:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu > li.active > .menu-title {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu > li.active {
+            border-left-color: #1890ff;
+        }
+
+        .sidebar-menu .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-menu .arrow {
+            margin-left: auto;
+            font-size: 10px;
+            transition: transform .25s;
+            color: #999;
+        }
+
+        .sidebar-menu > li.open > .menu-title .arrow {
+            transform: rotate(90deg);
+        }
+
+        .submenu {
+            list-style: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .3s ease;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu > li.open > .submenu {
+            max-height: 800px;
+        }
+
+        .submenu li {
+            padding: 8px 20px 8px 44px;
+            cursor: pointer;
+            color: #999;
+            font-size: 13px;
+            transition: all .2s;
+            border-left: 3px solid transparent;
+            margin-left: 3px;
+        }
+
+        .submenu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .submenu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .content-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1890ff;
+            margin: 18px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #1890ff;
+        }
+
+        .content-card img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 14px auto;
+            border: 1px solid #dce8f2;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .img-caption {
+            text-align: center;
+            font-size: 13px;
+            color: #888;
+            margin-top: -6px;
+            margin-bottom: 16px;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">AutoSar介绍和目标</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <div class="sidebar-actions">
+                    <button class="btn-expand-all">全部展开</button>
+                    <button class="btn-collapse-all">全部收起</button>
+                </div>
+                <ul class="sidebar-menu">
+                    <li class="open" data-target="sec-intro">
+                        <div class="menu-title"><span class="icon">&#9654;</span>AutoSAR简介<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-1-1">1.1 什么是 AutoSAR</li>
+                            <li data-target="sec-1-2">1.2 AutoSAR 成员</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-history">
+                        <div class="menu-title"><span class="icon">&#9654;</span>发展历程<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-2-1">2.1 历史发展</li>
+                            <li data-target="sec-2-2">2.2 使用 AutoSAR 前的状态</li>
+                            <li data-target="sec-2-3">2.3 使用 AutoSAR 后的状态</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-arch">
+                        <div class="menu-title"><span class="icon">&#9654;</span>核心架构<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-3-1">3.1 应用软件层</li>
+                            <li data-target="sec-3-2">3.2 实时运行环境（RTE）</li>
+                            <li data-target="sec-3-3">3.3 基础软件层（BSW）</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-goals">
+                        <div class="menu-title"><span class="icon">&#9654;</span>AutoSAR目标</div>
+                    </li>
+                    <li class="open" data-target="sec-tools">
+                        <div class="menu-title"><span class="icon">&#9654;</span>工具链</div>
+                    </li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+                        <h3 id="sec-intro">一、AutoSAR 简介</h3>
+                        <h4 id="sec-1-1">1.1 什么是 AutoSAR</h4>
+                        <p><strong>AUTOSAR</strong> 是 <strong>AUT</strong>omotive <strong>O</strong>pen <strong>S</strong>ystem <strong>AR</strong>chitecture 的简称，中文译为"汽车开放系统架构"。它是由全球主要汽车制造商、零部件供应商及工具开发商共同制定的汽车电子软件开发标准。</p>
+                        <p><strong>大白话来讲：</strong>AutoSAR 将汽车电子控制单元（ECU）的软件底层做了一个标准的封装，使得大家都能共用一套底层软件，只需修改部分参数即可匹配不同硬件和应用层。用户只需专心负责应用层功能开发，底层交给 AutoSAR 工程师即可。</p>
+                        <p><strong>通俗比喻：</strong>AutoSAR 就像"一套写得比较好的底层软件"——它实现了硬件驱动的封装（类似 STM32 的库）和操作系统功能，用户只需基于它开发上层应用（类似基于安卓开发 App）。</p>
+
+                        <h4 id="sec-1-2">1.2 AutoSAR 成员</h4>
+                        <p>AutoSAR 联盟的成员大体可分为三类：</p>
+                        <p><strong>核心成员（Core Partners）</strong>：包括宝马、博世、大陆、戴姆勒、福特、通用、标致雪铁龙、丰田、大众等，主导标准的制定与发展方向。</p>
+                        <p><strong>高级成员（Premium Partners）</strong>：深度参与标准开发，具有较高的话语权和贡献度。</p>
+                        <p><strong>发展成员（Associate Partners）</strong>：参与标准的应用与推广，可获取早期规范版本。</p>
+                        <img src="index02-map/02-members-diagram.png" alt="AutoSAR核心合作伙伴">
+                        <div class="img-caption">图1-1 AutoSAR 核心合作伙伴及成员类型</div>
+                        <img src="index02-map/03-members-map.png" alt="AutoSAR成员关系图">
+                        <div class="img-caption">图1-2 AutoSAR 成员关系图（2008年）</div>
+
+                        <h3 id="sec-history">二、发展历程</h3>
+                        <h4 id="sec-2-1">2.1 历史发展</h4>
+                        <p>AutoSAR 联盟成立于 2003 年，致力于为汽车电子软件开发建立统一的标准化架构。历经多年发展，已发布 <strong>Classic Platform</strong>（面向传统分布式 ECU，基于 OSEK 操作系统）和 <strong>Adaptive Platform</strong>（面向高性能计算平台，支持 POSIX 与 SOME/IP）两大平台。</p>
+                        <img src="index02-map/04-history.png" alt="AutoSAR版本发展时间轴">
+                        <div class="img-caption">图2-1 AutoSAR 版本发展时间轴</div>
+
+                        <h4 id="sec-2-2">2.2 使用 AutoSAR 前的状态</h4>
+                        <p><strong>原始状态（敲代码法）</strong>：开发人员直接手写代码驱动硬件，目前部分简单 ECU 仍在使用。缺点明显，主要源于软硬件耦合严重：</p>
+                        <p>① 开发效率低下　② 开发周期长　③ 代码协作与维护困难　④ 可重用性差（换硬件几乎要重写）　⑤ 代码量增加后质量下降。</p>
+                        <p><strong>进阶状态（架构师设计 + OS 封装）</strong>：由有经验的架构师设计优化架构，结合操作系统（如 OSEK）对代码进行封装，可大幅提升效率。但仍存在不足：</p>
+                        <p>① 不同客户需求差异大，重用性依然不好　② 软件耦合仍然存在，方案优劣与架构师能力直接挂钩。</p>
+                        <img src="index02-map/05-osek-arch.png" alt="OSEK架构图">
+                        <div class="img-caption">图2-2 AutoSAR 出现前常用的 OSEK 架构（耦合较严重）</div>
+
+                        <h4 id="sec-2-3">2.3 使用 AutoSAR 后的状态</h4>
+                        <p><strong>软硬件隔离</strong>：无论使用 NXP、英飞凌还是 TI 的芯片，无论硬件如何设计，都无需修改应用代码，只需通过 AutoSAR 配置工具告诉它"换硬件了"，AutoSAR 会自动匹配硬件驱动。</p>
+                        <img src="index02-map/06-hw-sw-isolation.png" alt="软硬件隔离示意图">
+                        <div class="img-caption">图2-3 AutoSAR 实现软硬件隔离示意</div>
+                        <p><strong>AutoSAR 的优势</strong>（对应使用前的缺点）：</p>
+                        <p>① 缩短开发周期，提高开发效率　② 代码重用性大大增加　③ 多人并行开发更易实现，维护方便　④ 提供图形界面配置工具（如 Vector DaVinci），无需手写底层代码，生成代码质量有保证。</p>
+
+                        <h3 id="sec-arch">三、核心架构</h3>
+                        <p>AutoSAR Classic 架构自上而下分为三层，通过标准化接口实现各层解耦：</p>
+                        <img src="index02-map/11-overall-framework.png" alt="AutoSAR整体框架">
+                        <div class="img-caption">图3-1 AutoSAR 整体框架（应用层 + RTE + BSW + 硬件）</div>
+                        <h4 id="sec-3-1">3.1 应用软件层（Application Layer）</h4>
+                        <p>位于架构最上层，包含若干软件组件（SWC, Software Component），每个 SWC 实现具体的车辆功能（如电机控制、电池管理等）。组件之间通过端口（Port）进行通信，不直接访问底层硬件。</p>
+                        <h4 id="sec-3-2">3.2 实时运行环境（RTE, Runtime Environment）</h4>
+                        <p>RTE 是应用层与基础软件层之间的"通信中间件"，提供标准化接口。它实现了组件间的位置透明通信——无论 SWC 部署在哪个 ECU，都能通过 RTE 透明地收发数据，无需关心底层实现。</p>
+                        <img src="index02-map/12-layered-architecture.png" alt="AutoSAR分层架构图">
+                        <div class="img-caption">图3-2 AutoSAR 分层架构详解（含 BSW 子层：服务层 / ECU 抽象层 / 硬件抽象层 / 复杂驱动）</div>
+                        <h4 id="sec-3-3">3.3 基础软件层（BSW, Basic Software）</h4>
+                        <p>BSW 提供操作系统、通信协议栈、诊断、存储、输入输出等通用服务，自顶向下又细分为：<strong>服务层（Service Layer）</strong>、<strong>ECU 抽象层（ECU Abstraction Layer）</strong>和 <strong>MCAL 层（微控制器抽象层）</strong>。MCAL 直接与硬件交互，是整个架构的硬件驱动基础。</p>
+                        <img src="index02-map/13-rte-diagram.png" alt="架构与工程文件映射关系">
+                        <div class="img-caption">图3-3 AutoSAR 架构与实际工程文件的映射关系（AppL → SWC*.c，RTE → 2_RTE，BSW → 3_BSW）</div>
+
+                        <h3 id="sec-goals">四、AutoSAR 目标</h3>
+                        <p>AutoSAR 的核心目标是推动汽车软件的标准化与规范化，具体包括：</p>
+                        <p><strong>1. 标准化接口</strong>：定义统一的软件接口与架构规范，使不同供应商的软件组件能够无缝集成。</p>
+                        <p><strong>2. 软硬件解耦</strong>：应用软件不依赖于具体硬件平台，可在多个 ECU 间复用与迁移。</p>
+                        <p><strong>3. 提升复用性</strong>：通过组件化设计，减少重复开发，缩短产品上市周期。</p>
+                        <p><strong>4. 可扩展性</strong>：支持从低端 MCU 到高性能 SoC 的多种硬件平台，满足不同车型与功能需求。</p>
+                        <p><strong>5. 质量与安全</strong>：标准化架构与流程有助于提高软件质量，并满足功能安全（ISO 26262）与信息安全（ISO/SAE 21434）要求。</p>
+
+                        <h3 id="sec-tools">五、工具链</h3>
+                        <p>AutoSAR 的开发依赖于一系列工具链，主要工具包括：</p>
+                        <p><strong>Vector DaVinci</strong>：业界主流的 AutoSAR 配置工具套件，包含 DaVinci Developer（SWC 设计）、DaVinci Configurator（BSW 配置）等模块，支持图形化配置并自动生成代码。</p>
+                        <img src="index02-map/14-davinci.png" alt="Vector DaVinci工具链">
+                        <div class="img-caption">图5-1 Vector DaVinci 工具链开发流程（Developer 设计 SWC，Configurator Pro 配置 RTE 与 BSW）</div>
+                        <p><strong>MATLAB / Simulink</strong>：主要用于应用层算法建模与代码生成，可与 AutoSAR 工具链集成，实现从模型到代码的自动化开发。</p>
+                        <p><strong>其他工具</strong>：还包括 EB tresos（Elektrobit 提供的 AutoSAR 配置工具）、IBM Rational Rhapsody（系统建模）等，不同 OEM 与供应商会根据需求选择合适的工具组合。</p>
+                        <p>通过工具链的配合，开发者可以从需求建模、软件架构设计、BSW 配置到代码生成实现全流程自动化，大幅提升开发效率与代码质量。</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 侧边栏两级菜单交互
+        (function () {
+            'use strict';
+            var topItems = document.querySelectorAll('.sidebar-menu > li');
+            var subItems = document.querySelectorAll('.submenu li');
+
+            function clearActive() {
+                document.querySelectorAll('.sidebar-menu .active').forEach(function (el) {
+                    el.classList.remove('active');
+                });
+            }
+
+            function scrollToTarget(targetId) {
+                if (!targetId) { return; }
+                var target = document.getElementById(targetId);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+
+            // 展开按钮：一键展开所有一级目录
+            var btnExpand = document.querySelector('.btn-expand-all');
+            if (btnExpand) {
+                btnExpand.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    topItems.forEach(function (li) { li.classList.add('open'); });
+                });
+            }
+
+            // 折叠按钮：一键折叠所有一级目录
+            var btnCollapse = document.querySelector('.btn-collapse-all');
+            if (btnCollapse) {
+                btnCollapse.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    topItems.forEach(function (li) { li.classList.remove('open'); });
+                });
+            }
+
+            // 一级目录：点击独立展开/折叠 + 跳转 + 高亮
+            topItems.forEach(function (li) {
+                var title = li.querySelector('.menu-title');
+                if (!title) { return; }
+                title.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    li.classList.toggle('open');
+                    clearActive();
+                    li.classList.add('active');
+                    scrollToTarget(li.getAttribute('data-target'));
+                });
+            });
+
+            // 二级目录：点击跳转 + 高亮自身与父级
+            subItems.forEach(function (li) {
+                li.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    clearActive();
+                    li.classList.add('active');
+                    var parentLi = li.closest('.sidebar-menu > li');
+                    if (parentLi) {
+                        parentLi.classList.add('open');
+                        parentLi.classList.add('active');
+                    }
+                    scrollToTarget(li.getAttribute('data-target'));
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

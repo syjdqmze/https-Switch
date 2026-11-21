@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验45 音乐播放实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验45 音乐播放实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">14 节 · 从复位向量到 SAI 双缓冲播放</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">用 SAI + DMA 双缓冲播放 SD 卡中的 WAV，支持 16bit/24bit 与按键切歌</div>
+
+                    <p>实验45 的软件结构比图片实验更“应用化”：<code class="inline">main</code> 只做板级初始化，然后反复调用 <code class="inline">audio_play()</code>；真正的曲目扫描、文件解析、SAI 配置、DMA 供数、按键处理都在 <code class="inline">audioplay.c</code> 与 <code class="inline">wavplay.c</code> 中完成。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>型号 / 引脚</th><th>作用</th></tr>
+                        <tr><td>Codec</td><td>WM8978（IIC 控制 + I2S 数据）</td><td>DAC 输出耳机/喇叭，ADC 留作录音实验</td></tr>
+                        <tr><td>SAI</td><td>SAI1 Block A，PE2/3/4/5/6</td><td>主机 TX，产生 MCLK/BCLK/LRCK 与数据</td></tr>
+                        <tr><td>DMA</td><td>DMA2_Stream3 / Channel0</td><td>存储器到外设，循环双缓冲</td></tr>
+                        <tr><td>SD 卡</td><td>SDMMC1</td><td>存放 <code>0:/MUSIC</code> 下的 WAV</td></tr>
+                        <tr><td>按键</td><td>KEY0 / KEY2 / KEY_UP</td><td>下一曲 / 上一曲 / 暂停继续</td></tr>
+                        <tr><td>LCD</td><td>RGB 屏</td><td>显示曲名、索引、时间与比特率</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">WM8978</span>
+                        <span class="chip">SAI1_Block_A</span>
+                        <span class="chip">DMA2_Stream3</span>
+                        <span class="chip">PLLI2S</span>
+                        <span class="chip">16/24bit WAV</span>
+                    </div>
+
+                    <div class="note">WAV 是未压缩 PCM，播放不需要复杂解码，真正的难点在“持续、不断流地给 SAI 喂数据”。因此本实验的核心不是算法，而是双缓冲与中断节拍。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="工程目录与模块分工">
+                    <h2>02　工程目录与模块分工</h2>
+                    <div class="sec-sub">应用层、编解码层、驱动层三层分明</div>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>关键符号</th><th>说明</th></tr>
+                        <tr><td>USER/main.c</td><td><code>main</code></td><td>板级初始化 + 音量设置 + <code>audio_play</code></td></tr>
+                        <tr><td>APP/audioplay.c</td><td><code>audio_play</code> / <code>audio_start</code></td><td>曲目索引、按键、暂停状态机</td></tr>
+                        <tr><td>AUDIOCODEC/wav/wavplay.c</td><td><code>wav_play_song</code> / <code>wav_buffill</code></td><td>WAV 头解析、SAI 配置、补数据</td></tr>
+                        <tr><td>HARDWARE/SAI/sai.c</td><td><code>SAIA_Init</code> / <code>SAIA_TX_DMA_Init</code></td><td>SAI 帧格式、采样率、DMA 双缓冲</td></tr>
+                        <tr><td>HARDWARE/WM8978/wm8978.c</td><td><code>WM8978_Init</code> / <code>WM8978_I2S_Cfg</code></td><td>Codec 寄存器与 I2S 数据长度</td></tr>
+                        <tr><td>SYSTEM/delay</td><td><code>delay_us</code></td><td>DMA 启动前后的短延时</td></tr>
+                    </table>
+
+                    <p>这种分层的好处是：换 Codec 只需改 WM8978 驱动，换 MCU 只需改 SAI 驱动，<code class="inline">audioplay.c</code> 的状态机与按键逻辑可以原样复用。</p>
+                </section>
+
+                <section class="content-card" id="s03" data-title="上电启动与 main 全貌">
+                    <h2>03　上电启动与 main 全貌</h2>
+                    <div class="sec-sub">main 只有 30 多行，初始化完就把控制权交给 audio_play</div>
+
+                    <figure class="figure">
+                        <img src="./index59-map/boot-flow.png" alt="实验45 音乐播放实验从上电到播放的启动流程图">
+                        <figcaption>图 3-1　音乐播放实验启动链路总览</figcaption>
+                    </figure>
+
+                    <pre class="code">int main(void)
+{
+    HAL_Init();                     <span class="cmt">// HAL 与时基</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// 180MHz</span>
+    delay_init(180);
+    uart_init(115200);
+    LED_Init();
+    KEY_Init();
+    SDRAM_Init();                   <span class="cmt">// 外部内存池依赖</span>
+    LCD_Init();
+    W25QXX_Init();                  <span class="cmt">// 字库</span>
+    WM8978_Init();                  <span class="cmt">// 软复位 + 通用寄存器</span>
+    WM8978_HPvol_Set(40,40);        <span class="cmt">// 耳机音量 40/63</span>
+    WM8978_SPKvol_Set(40);          <span class="cmt">// 喇叭音量 40/63</span>
+    my_mem_init(SRAMIN);
+    my_mem_init(SRAMEX);
+    my_mem_init(SRAMCCM);
+    exfuns_init();
+    f_mount(fs[0],"0:",1);          <span class="cmt">// SD 卡</span>
+    f_mount(fs[1],"1:",1);          <span class="cmt">// SPI FLASH</span>
+
+    POINT_COLOR = RED;
+    while (font_init())                      <span class="cmt">// 字库自检</span>
+    {
+        LCD_ShowString(30,50,200,16,16,"Font Error!");
+        delay_ms(200);
+        LCD_Fill(30,50,240,66,WHITE);
+        delay_ms(200);
+    }
+
+    Show_Str(60,50,200,16,"阿波罗STM32F4/F7开发板",16,0);
+    Show_Str(60,70,200,16,"音乐播放器实验",16,0);
+    Show_Str(60,130,200,16,"KEY0:NEXT   KEY2:PREV",16,0);
+    Show_Str(60,150,200,16,"KEY_UP:PAUSE/PLAY",16,0);
+
+    while (1)
+    {
+        audio_play();               <span class="cmt">// 内部是完整的播放状态机</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">main 里最容易被忽略的三件事</div>
+                        <ol>
+                            <li><code>WM8978_Init</code> 只做通用配置，真正的 I2S 格式要等解析完 WAV 头才设置。</li>
+                            <li>音量在播放前设置一次即可，播放过程中不会自动改变。</li>
+                            <li><code>audio_play</code> 返回只发生在目录/内存等致命错误时，正常播放会一直循环。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">DMA2_Stream3 的中断入口决定了音频能否连续供数</div>
+
+                    <pre class="code">__Vectors       DCD     __initial_sp
+                DCD     Reset_Handler
+                DCD     NMI_Handler
+                DCD     HardFault_Handler
+                ...
+                DCD     DMA2_Stream3_IRQHandler    <span class="cmt">// SAI TX 传输完成</span>
+                DCD     DMA2_Stream6_IRQHandler    <span class="cmt">// SDIO 备用</span>
+                DCD     SDIO_IRQHandler
+                DCD     USART1_IRQHandler
+                DCD     SysTick_Handler</pre>
+
+                    <pre class="code">Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+                 IMPORT  SystemInit
+                 IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0                    <span class="cmt">// 最小系统与 FPU</span>
+                 LDR     R0, =__main
+                 BX      R0                    <span class="cmt">// C 库初始化后跳 main</span>
+                 ENDP</pre>
+
+                    <div class="note blue">音频断续且串口没有报错时，先确认 <code class="inline">DMA2_Stream3_IRQHandler</code> 确实被链接进来。若启动文件里名字写错，DMA 传输完成中断不会触发，双缓冲永远只播第一块。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">时基优先级必须低于 DMA，否则补数据会被延迟</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+    RCC-&gt;CR |= (1 &lt;&lt; 0);
+    RCC-&gt;CFGR = 0x00000000;
+    RCC-&gt;CR &amp;= ~(1 &lt;&lt; 24);
+    RCC-&gt;CR &amp;= ~(1 &lt;&lt; 16);
+    SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;   <span class="cmt">// 向量表</span>
+#if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2)); <span class="cmt">// FPU</span>
+#endif
+}</pre>
+
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+    HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4); <span class="cmt">// 4 位抢占</span>
+    HAL_InitTick(TICK_INT_PRIORITY);                    <span class="cmt">// 1ms，最低优先级</span>
+    HAL_MspInit();
+    return HAL_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">为什么 DMA 优先级是 0,0</div>
+                        <ol>
+                            <li>SAI 的 FIFO 很浅，若 DMA 补数被其他中断拖延，立刻会听到“咔哒”声。</li>
+                            <li>DMA2_Stream3 设为最高抢占优先级，保证每个传输完成事件都能及时处理。</li>
+                            <li>SysTick 保持 0x0F，<code>HAL_Delay</code> 只用于非实时路径（界面刷新、按键去抖）。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟树与 SAI 时钟源">
+                    <h2>06　时钟树与 SAI 时钟源</h2>
+                    <div class="sec-sub">SAI 不用 SYSCLK，而是专用 PLLI2S；采样率靠查表反算分频</div>
+
+                    <p>SAI1 的时钟来自 PLLI2S，公式为 <code class="inline">SAI_CK = (HSE/pllm) × PLLI2SN / PLLI2SQ / (PLLI2SDIVQ+1)</code>。代码里预先算好 11 档常用采样率的参数表，运行时按采样率查表，避免浮点运算。</p>
+
+                    <pre class="code">const u16 SAI_PSC_TBL[][5]=
+{
+    {800 ,344,7,0,12},   <span class="cmt">// 8kHz</span>
+    {1102,429,2,18,2},   <span class="cmt">// 11.025kHz</span>
+    {1600,344,7, 0,6},   <span class="cmt">// 16kHz</span>
+    {2205,429,2,18,1},   <span class="cmt">// 22.05kHz</span>
+    {3200,344,7, 0,3},   <span class="cmt">// 32kHz</span>
+    {4410,429,2,18,0},   <span class="cmt">// 44.1kHz</span>
+    {4800,344,7, 0,2},   <span class="cmt">// 48kHz</span>
+    {8820,271,2, 2,1},   <span class="cmt">// 88.2kHz</span>
+    {9600,344,7, 0,1},   <span class="cmt">// 96kHz</span>
+    {17640,271,2,2,0},   <span class="cmt">// 176.4kHz</span>
+    {19200,344,7,0,0},   <span class="cmt">// 192kHz</span>
+};
+
+u8 SAIA_SampleRate_Set(u32 samplerate)
+{
+    u8 i = 0;
+    RCC_PeriphCLKInitTypeDef RCCSAI1_Sture;
+    for (i = 0; i &lt; (sizeof(SAI_PSC_TBL)/10); i++)
+        if ((samplerate/10) == SAI_PSC_TBL[i][0]) break;
+    if (i == (sizeof(SAI_PSC_TBL)/10)) return 1;      <span class="cmt">// 不支持的采样率</span>
+
+    RCCSAI1_Sture.PeriphClockSelection = RCC_PERIPHCLK_SAI_PLLI2S;
+    RCCSAI1_Sture.PLLI2S.PLLI2SN = SAI_PSC_TBL[i][1];
+    RCCSAI1_Sture.PLLI2S.PLLI2SQ = SAI_PSC_TBL[i][2];
+    RCCSAI1_Sture.PLLI2SDivQ = SAI_PSC_TBL[i][3] + 1;  <span class="cmt">// HAL 内部会减 1</span>
+    HAL_RCCEx_PeriphCLKConfig(&amp;RCCSAI1_Sture);
+    __HAL_RCC_SAI_BLOCKACLKSOURCE_CONFIG(RCC_SAIACLKSOURCE_PLLI2S);
+
+    __HAL_SAI_DISABLE(&amp;SAI1A_Handler);
+    SAI1A_Handler.Init.AudioFrequency = samplerate;
+    HAL_SAI_Init(&amp;SAI1A_Handler);
+    SAIA_DMA_Enable();                                <span class="cmt">// CR1 bit17</span>
+    __HAL_SAI_ENABLE(&amp;SAI1A_Handler);
+    return 0;
+}</pre>
+
+                    <div class="note"><code class="inline">SAIA_DMA_Enable</code> 是标准库没有提供、必须自己写寄存器的函数：置位 <code class="inline">SAI1_Block_A-&gt;CR1</code> 的 bit17，否则 DMA 请求不会送到 SAI。</div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">采样率设置的三个细节</div>
+                        <ol>
+                            <li>表中第一列是采样率除以 10，所以 44.1kHz 写作 4410，避免浮点。</li>
+                            <li><code>PLLI2SDivQ</code> 在 HAL 里会减 1，所以表里预加 1，否则整体频率差一档。</li>
+                            <li>改采样率必须重新 <code>HAL_SAI_Init</code>，不能只写分频寄存器。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="WM8978 上电与 I2S 配置">
+                    <h2>07　WM8978 上电与 I2S 配置</h2>
+                    <div class="sec-sub">Codec 先 soft reset，再开 DAC/输出，最后由 WAV 头决定 16 位还是 24 位</div>
+
+                    <figure class="figure">
+                        <img src="./index59-map/audio-init-flow.png" alt="音乐播放实验从 main 到首帧 SAI 数据的初始化链路图">
+                        <figcaption>图 7-1　从 main 到首帧 SAI 数据的初始化链路</figcaption>
+                    </figure>
+
+                    <p><code class="inline">WM8978_Init</code> 先软复位，再配置 MIC 偏置、耳机与喇叭输出、MCLK 来源、过热保护与采样倍率。播放前再调用 <code class="inline">WM8978_ADDA_Cfg(1,0)</code> 开 DAC、关 ADC，<code class="inline">WM8978_Input_Cfg(0,0,0)</code> 关输入，<code class="inline">WM8978_Output_Cfg(1,0)</code> 开 DAC 输出。</p>
+
+                    <pre class="code">u8 WM8978_Init(void)
+{
+    u8 res;
+    IIC_Init();                  <span class="cmt">// 软件 IIC</span>
+    res = WM8978_Write_Reg(0,0); <span class="cmt">// 软复位</span>
+    if (res) return 1;
+
+    WM8978_Write_Reg(1,0X1B);    <span class="cmt">// MICEN/BIASEN/VMIDSEL</span>
+    WM8978_Write_Reg(2,0X1B0);   <span class="cmt">// 耳机输出 + BOOST</span>
+    WM8978_Write_Reg(3,0X6C);    <span class="cmt">// 喇叭输出 + MIX</span>
+    WM8978_Write_Reg(6,0);       <span class="cmt">// MCLK 由外部提供</span>
+    WM8978_Write_Reg(43,1&lt;&lt;4);   <span class="cmt">// INVROUT2 反相驱动喇叭</span>
+    WM8978_Write_Reg(47,1&lt;&lt;8);   <span class="cmt">// 左 MIC 20 倍增益</span>
+    WM8978_Write_Reg(48,1&lt;&lt;8);   <span class="cmt">// 右 MIC 20 倍增益</span>
+    WM8978_Write_Reg(49,1&lt;&lt;1);   <span class="cmt">// 过热保护</span>
+    WM8978_Write_Reg(49,1&lt;&lt;2);   <span class="cmt">// SPEAKER BOOST 1.5x</span>
+    WM8978_Write_Reg(10,1&lt;&lt;3);   <span class="cmt">// 128x 过采样</span>
+    WM8978_Write_Reg(14,1&lt;&lt;3);   <span class="cmt">// ADC 128x</span>
+    return 0;
+}
+
+void WM8978_I2S_Cfg(u8 fmt,u8 len)
+{
+    fmt &amp;= 0X03;
+    len &amp;= 0X03;
+    WM8978_Write_Reg(4,(fmt&lt;&lt;3)|(len&lt;&lt;5)); <span class="cmt">// R4：I2S 格式 + 数据长度</span>
+}</pre>
+
+                    <div class="note blue">WM8978 的“寄存器读”读的是本地缓存 <code class="inline">WM8978_REGVAL_TBL</code>，不是芯片真实值；写成功才更新缓存。因此读改写流程（如 <code>WM8978_ADDA_Cfg</code>）依赖于每次写都成功。</div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">16 位与 24 位的区别</div>
+                        <ol>
+                            <li>16 位：<code>WM8978_I2S_Cfg(2,0)</code>，SAI 数据长度 <code>SAI_DATASIZE_16</code>，DMA 半字传输。</li>
+                            <li>24 位：<code>WM8978_I2S_Cfg(2,2)</code>，SAI 数据长度 <code>SAI_DATASIZE_24</code>，DMA 以 32 位字传输。</li>
+                            <li>SAI 帧长固定 64 个 SCK，左右各 32 个 slot；数据长度只改有效位，不改帧结构。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="播放时序与 DMA 双缓冲">
+                    <h2>08　播放时序与 DMA 双缓冲</h2>
+                    <div class="sec-sub">一块在播、一块在填；传输完成中断是唯一的换块信号</div>
+
+                    <figure class="figure">
+                        <img src="./index59-map/sai-dma-timing.png" alt="SAI 播放与 DMA 双缓冲切换时序图">
+                        <figcaption>图 8-1　SAI 播放与双缓冲切换时序</figcaption>
+                    </figure>
+
+                    <p>SAI 配成异步主机 TX、自由协议（兼容 I2S）、MSB 优先、帧长 64、slot 32 位、双 slot 有效、FS 低有效且位于 slot0 前一位，正好匹配飞利浦标准。DMA 用循环双缓冲，<code class="inline">M0AR=buf0</code>、<code class="inline">M1AR=buf1</code>，每次搬 <code class="inline">WAV_SAI_TX_DMA_BUFSIZE</code> 个半字或字。</p>
+
+                    <pre class="code">void SAIA_Init(u32 mode,u32 cpol,u32 datalen)
+{
+    HAL_SAI_DeInit(&amp;SAI1A_Handler);
+    SAI1A_Handler.Instance = SAI1_Block_A;
+    SAI1A_Handler.Init.AudioMode = mode;                 <span class="cmt">// 主机 TX</span>
+    SAI1A_Handler.Init.Synchro = SAI_ASYNCHRONOUS;
+    SAI1A_Handler.Init.OutputDrive = SAI_OUTPUTDRIVE_ENABLE;
+    SAI1A_Handler.Init.NoDivider = SAI_MASTERDIVIDER_ENABLE;
+    SAI1A_Handler.Init.FIFOThreshold = SAI_FIFOTHRESHOLD_1QF;
+    SAI1A_Handler.Init.ClockSource = SAI_CLKSOURCE_PLLI2S;
+    SAI1A_Handler.Init.MonoStereoMode = SAI_STEREOMODE;
+    SAI1A_Handler.Init.Protocol = SAI_FREE_PROTOCOL;     <span class="cmt">// 自由协议模拟 I2S</span>
+    SAI1A_Handler.Init.DataSize = datalen;               <span class="cmt">// 16 / 24</span>
+    SAI1A_Handler.Init.FirstBit = SAI_FIRSTBIT_MSB;
+    SAI1A_Handler.Init.ClockStrobing = cpol;
+
+    SAI1A_Handler.FrameInit.FrameLength = 64;            <span class="cmt">// 左右各 32 SCK</span>
+    SAI1A_Handler.FrameInit.ActiveFrameLength = 32;
+    SAI1A_Handler.FrameInit.FSDefinition = SAI_FS_CHANNEL_IDENTIFICATION;
+    SAI1A_Handler.FrameInit.FSPolarity = SAI_FS_ACTIVE_LOW;
+    SAI1A_Handler.FrameInit.FSOffset = SAI_FS_BEFOREFIRSTBIT; <span class="cmt">// 飞利浦标准</span>
+
+    SAI1A_Handler.SlotInit.FirstBitOffset = 0;
+    SAI1A_Handler.SlotInit.SlotSize = SAI_SLOTSIZE_32B;
+    SAI1A_Handler.SlotInit.SlotNumber = 2;
+    SAI1A_Handler.SlotInit.SlotActive = SAI_SLOTACTIVE_0|SAI_SLOTACTIVE_1;
+
+    HAL_SAI_Init(&amp;SAI1A_Handler);
+    __HAL_SAI_ENABLE(&amp;SAI1A_Handler);
+}</pre>
+
+                    <pre class="code">void SAIA_TX_DMA_Init(u8* buf0,u8 *buf1,u16 num,u8 width)
+{
+    ...
+    __HAL_LINKDMA(&amp;SAI1A_Handler,hdmatx,SAI1_TXDMA_Handler);
+    SAI1_TXDMA_Handler.Instance = DMA2_Stream3;                 <span class="cmt">// Stream3</span>
+    SAI1_TXDMA_Handler.Init.Channel = DMA_CHANNEL_0;
+    SAI1_TXDMA_Handler.Init.Direction = DMA_MEMORY_TO_PERIPH;   <span class="cmt">// 内存到外设</span>
+    SAI1_TXDMA_Handler.Init.PeriphInc = DMA_PINC_DISABLE;
+    SAI1_TXDMA_Handler.Init.MemInc = DMA_MINC_ENABLE;
+    SAI1_TXDMA_Handler.Init.PeriphDataAlignment = perwidth;     <span class="cmt">// 16/32 位</span>
+    SAI1_TXDMA_Handler.Init.MemDataAlignment = memwidth;
+    SAI1_TXDMA_Handler.Init.Mode = DMA_CIRCULAR;                <span class="cmt">// 循环</span>
+    SAI1_TXDMA_Handler.Init.Priority = DMA_PRIORITY_HIGH;
+    SAI1_TXDMA_Handler.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+
+    HAL_DMA_DeInit(&amp;SAI1_TXDMA_Handler);
+    HAL_DMA_Init(&amp;SAI1_TXDMA_Handler);
+    HAL_DMAEx_MultiBufferStart(&amp;SAI1_TXDMA_Handler,(u32)buf0,
+                               (u32)&amp;SAI1_Block_A-&gt;DR,(u32)buf1,num);
+    __HAL_DMA_DISABLE(&amp;SAI1_TXDMA_Handler);                     <span class="cmt">// 先停，等 main 启动</span>
+    delay_us(10);                                               <span class="cmt">// 防止 -O2 优化时序</span>
+    __HAL_DMA_ENABLE_IT(&amp;SAI1_TXDMA_Handler,DMA_IT_TC);
+    __HAL_DMA_CLEAR_FLAG(&amp;SAI1_TXDMA_Handler,DMA_FLAG_TCIF3_7);
+    HAL_NVIC_SetPriority(DMA2_Stream3_IRQn,0,0);
+    HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">双缓冲的换块规则</div>
+                        <ol>
+                            <li>DMA 的 CT 位为 1 时当前使用 M1AR，说明刚播完的是 buf2。</li>
+                            <li>回调据此设置 <code>wavwitchbuf</code>，主循环只填“已经播完”的那一块。</li>
+                            <li>播放开始前必须先手动填满两块，否则第一次中断时另一块是未初始化数据。</li>
+                            <li>暂停时回调不补新数据，而是把当前块清零，实现静音而不停时钟。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="中断链路：DMA2_Stream3">
+                    <h2>09　中断链路：DMA2_Stream3</h2>
+                    <div class="sec-sub">整个播放链路只有 DMA 传输完成一个实时事件</div>
+
+                    <figure class="figure">
+                        <img src="./index59-map/sai-dma-chain.png" alt="SAI 与 DMA 双缓冲供数链路图">
+                        <figcaption>图 9-1　SAI + DMA 双缓冲供数链路</figcaption>
+                    </figure>
+
+                    <pre class="code">void (*sai_tx_callback)(void);   <span class="cmt">// 由应用层注册</span>
+
+void DMA2_Stream3_IRQHandler(void)
+{
+    if (__HAL_DMA_GET_FLAG(&amp;SAI1_TXDMA_Handler,DMA_FLAG_TCIF3_7) != RESET)
+    {
+        __HAL_DMA_CLEAR_FLAG(&amp;SAI1_TXDMA_Handler,DMA_FLAG_TCIF3_7); <span class="cmt">// 清标志</span>
+        sai_tx_callback();                                        <span class="cmt">// wav_sai_dma_tx_callback</span>
+    }
+}
+
+void wav_sai_dma_tx_callback(void)
+{
+    u16 i;
+    if (DMA2_Stream3-&gt;CR &amp; (1&lt;&lt;19))       <span class="cmt">// CT=1：刚播完 buf2</span>
+    {
+        wavwitchbuf = 0;
+        if ((audiodev.status &amp; 0X01) == 0) <span class="cmt">// 暂停</span>
+            for (i = 0; i &lt; WAV_SAI_TX_DMA_BUFSIZE; i++)
+                audiodev.saibuf1[i] = 0;
+    }
+    else                                   <span class="cmt">// 刚播完 buf1</span>
+    {
+        wavwitchbuf = 1;
+        if ((audiodev.status &amp; 0X01) == 0)
+            for (i = 0; i &lt; WAV_SAI_TX_DMA_BUFSIZE; i++)
+                audiodev.saibuf2[i] = 0;
+    }
+    wavtransferend = 1;                    <span class="cmt">// 通知主循环可以补数据</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">为什么回调里不做 f_read</div>
+                        <ol>
+                            <li>SD 卡一次读可能几毫秒，放在中断里会阻塞其他中断并拉长中断关闭时间。</li>
+                            <li>回调只置标志与清零，真正的 <code>f_read</code> 在主循环 <code>wav_buffill</code> 中执行。</li>
+                            <li>双缓冲提供了“一块播放时间”的余量，通常足够完成一次读卡。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="主循环、按键与暂停">
+                    <h2>10　主循环、按键与暂停</h2>
+                    <div class="sec-sub">audio_play 管目录与切歌，wav_play_song 管单曲播放与暂停</div>
+
+                    <pre class="code">void audio_play(void)
+{
+    u8 res;
+    DIR wavdir;
+    FILINFO *wavfileinfo;
+    u8 *pname;
+    u16 totwavnum;
+    u16 curindex;
+    u8 key;
+    u32 temp;
+    u32 *wavoffsettbl;
+
+    WM8978_ADDA_Cfg(1,0);        <span class="cmt">// 开 DAC，关 ADC</span>
+    WM8978_Input_Cfg(0,0,0);     <span class="cmt">// 关输入</span>
+    WM8978_Output_Cfg(1,0);      <span class="cmt">// 开 DAC 输出</span>
+
+    while (f_opendir(&amp;wavdir,"0:/MUSIC"))   <span class="cmt">// 目录不存在则死等</span>
+    {
+        Show_Str(60,190,240,16,"MUSIC文件夹错误!",16,0);
+        delay_ms(200);
+        LCD_Fill(60,190,240,206,WHITE);
+        delay_ms(200);
+    }
+    totwavnum = audio_get_tnum("0:/MUSIC"); <span class="cmt">// 统计音乐文件</span>
+    while (totwavnum == NULL) { ... }       <span class="cmt">// 0 首也死等</span>
+
+    wavfileinfo = mymalloc(SRAMIN,sizeof(FILINFO));
+    pname = mymalloc(SRAMIN,_MAX_LFN*2+1);
+    wavoffsettbl = mymalloc(SRAMIN,4*totwavnum); <span class="cmt">// u32 索引表</span>
+    ...
+    curindex = 0;
+    res = f_opendir(&amp;wavdir,"0:/MUSIC");
+    while (res == FR_OK)
+    {
+        dir_sdi(&amp;wavdir,wavoffsettbl[curindex]); <span class="cmt">// O(1) 定位</span>
+        f_readdir(&amp;wavdir,wavfileinfo);
+        strcpy((char*)pname,"0:/MUSIC/");
+        strcat((char*)pname,(const char*)wavfileinfo-&gt;fname);
+        Show_Str(60,190,lcddev.width-60,16,(u8*)wavfileinfo-&gt;fname,16,0);
+        audio_index_show(curindex+1,totwavnum);
+
+        key = audio_play_song(pname);       <span class="cmt">// 阻塞直到切歌/出错</span>
+        if (key == KEY2_PRES)               <span class="cmt">// 上一曲</span>
+        {
+            if (curindex) curindex--;
+            else curindex = totwavnum - 1;
+        }
+        else if (key == KEY0_PRES)          <span class="cmt">// 下一曲</span>
+        {
+            curindex++;
+            if (curindex &gt;= totwavnum) curindex = 0;
+        }
+        else break;                         <span class="cmt">// 其他错误退出</span>
+    }
+}</pre>
+
+                    <pre class="code">while (res == 0)
+{
+    while (wavtransferend == 0);            <span class="cmt">// 等一块播完</span>
+    wavtransferend = 0;
+    if (fillnum != WAV_SAI_TX_DMA_BUFSIZE) <span class="cmt">// 上次没填满 = 文件结束</span>
+    {
+        res = KEY0_PRES;
+        break;
+    }
+    if (wavwitchbuf) fillnum = wav_buffill(audiodev.saibuf2,WAV_SAI_TX_DMA_BUFSIZE,wavctrl.bps);
+    else             fillnum = wav_buffill(audiodev.saibuf1,WAV_SAI_TX_DMA_BUFSIZE,wavctrl.bps);
+
+    while (1)
+    {
+        key = KEY_Scan(0);
+        if (key == WKUP_PRES)               <span class="cmt">// 暂停 / 继续</span>
+        {
+            if (audiodev.status &amp; 0X01) audiodev.status &amp;= ~(1&lt;&lt;0);
+            else                        audiodev.status |= 0X01;
+        }
+        if (key == KEY2_PRES || key == KEY0_PRES) <span class="cmt">// 切歌</span>
+        {
+            res = key;
+            break;
+        }
+        wav_get_curtime(audiodev.file,&amp;wavctrl); <span class="cmt">// 更新秒数</span>
+        audio_msg_show(wavctrl.totsec,wavctrl.cursec,wavctrl.bitrate);
+        t++;
+        if (t == 20) { t = 0; LED0 = !LED0; } <span class="cmt">// 200ms 心跳</span>
+        if ((audiodev.status &amp; 0X01) == 0) delay_ms(10);
+        else break;                          <span class="cmt">// 继续播放就回去补数据</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">暂停为什么还能听到“静音”</div>
+                        <ol>
+                            <li>暂停不关 SAI 时钟，只把下一块缓冲填 0，Codec 仍然持续收到 0 样本。</li>
+                            <li>这样恢复播放时不需要重新同步 I2S，也不会有爆音。</li>
+                            <li>暂停期间主循环每 10ms 扫一次按键，仍可切歌。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="WAV 头解析与位深转换">
+                    <h2>11　WAV 头解析与位深转换</h2>
+                    <div class="sec-sub">先读 512 字节，再按 RIFF/FMT/FACT/DATA 的顺序定位数据区</div>
+
+                    <pre class="code">u8 wav_decode_init(u8* fname,__wavctrl* wavx)
+{
+    ...
+    res = f_open(ftemp,(TCHAR*)fname,FA_READ);
+    if (res == FR_OK)
+    {
+        f_read(ftemp,buf,512,&amp;br);              <span class="cmt">// 头一般不超过 512 字节</span>
+        riff = (ChunkRIFF *)buf;
+        if (riff-&gt;Format == 0X45564157)          <span class="cmt">// "WAVE"</span>
+        {
+            fmt = (ChunkFMT *)(buf+12);
+            fact = (ChunkFACT *)(buf+12+8+fmt-&gt;ChunkSize);
+            if (fact-&gt;ChunkID == 0X74636166 || fact-&gt;ChunkID == 0X5453494C)
+                wavx-&gt;datastart = 12+8+fmt-&gt;ChunkSize+8+fact-&gt;ChunkSize;
+            else
+                wavx-&gt;datastart = 12+8+fmt-&gt;ChunkSize;
+
+            data = (ChunkDATA *)(buf+wavx-&gt;datastart);
+            if (data-&gt;ChunkID == 0X61746164)     <span class="cmt">// "data"</span>
+            {
+                wavx-&gt;audioformat = fmt-&gt;AudioFormat;
+                wavx-&gt;nchannels   = fmt-&gt;NumOfChannels;
+                wavx-&gt;samplerate  = fmt-&gt;SampleRate;
+                wavx-&gt;bitrate     = fmt-&gt;ByteRate*8;
+                wavx-&gt;blockalign  = fmt-&gt;BlockAlign;
+                wavx-&gt;bps         = fmt-&gt;BitsPerSample;
+                wavx-&gt;datasize    = data-&gt;ChunkSize;
+                wavx-&gt;datastart  += 8;           <span class="cmt">// 跳过 data ID + size</span>
+            }
+        }
+    }
+    f_close(ftemp);
+    ...
+}</pre>
+
+                    <p>24 位 WAV 的每个样本占 3 字节，而 SAI/DMA 以 32 位字搬运，所以 <code class="inline">wav_buffill</code> 先把 3 字节样本“左对齐”扩展成 4 字节：读 <code class="inline">size/4*3</code> 字节，再逐样本复制到 <code class="inline">u32</code> 数组。</p>
+
+                    <pre class="code">u32 wav_buffill(u8 *buf,u16 size,u8 bits)
+{
+    u16 readlen = 0;
+    u32 bread;
+    u16 i;
+    u32 *p,*pbuf;
+
+    if (bits == 24)                          <span class="cmt">// 24bit 需要 3→4 字节扩展</span>
+    {
+        readlen = (size/4)*3;
+        f_read(audiodev.file,audiodev.tbuf,readlen,(UINT*)&amp;bread);
+        pbuf = (u32*)buf;
+        for (i = 0; i &lt; size/4; i++)
+        {
+            p = (u32*)(audiodev.tbuf+i*3);
+            pbuf[i] = p[0];                  <span class="cmt">// 低 3 字节 + 1 字节残留</span>
+        }
+        bread = (bread*4)/3;
+    }
+    else
+    {
+        f_read(audiodev.file,buf,size,(UINT*)&amp;bread); <span class="cmt">// 16bit 直接读</span>
+        if (bread &lt; size)
+            for (i = bread; i &lt; size-bread; i++) buf[i] = 0; <span class="cmt">// 末尾补 0</span>
+    }
+    return bread;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">解析阶段的易错点</div>
+                        <ol>
+                            <li>FACT/LIST 块是可选的，必须先判断 ChunkID 再决定 datastart。</li>
+                            <li><code>datastart</code> 最终要再加 8，跳过 data 的 ID 与 size。</li>
+                            <li>16 位样本直接按半字搬运，24 位必须扩展，否则左右声道会错位。</li>
+                            <li>文件尾不足一块时补 0，避免 DMA 播出缓冲区残留的旧数据。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="串口日志与播放信息">
+                    <h2>12　串口日志与播放信息</h2>
+                    <div class="sec-sub">WAV 头解析结果直接打印，是判断文件是否合法的第一手证据</div>
+
+                    <p><code class="inline">wav_decode_init</code> 会把音频格式、通道数、采样率、位速、块对齐、位深、数据长度与数据起点全部打印出来。只要这几项与 PC 上看到的文件属性一致，就说明解析正确。</p>
+
+                    <pre class="code">printf("wavx-&gt;audioformat:%d\r\n",wavx-&gt;audioformat);
+printf("wavx-&gt;nchannels:%d\r\n",wavx-&gt;nchannels);
+printf("wavx-&gt;samplerate:%d\r\n",wavx-&gt;samplerate);
+printf("wavx-&gt;bitrate:%d\r\n",wavx-&gt;bitrate);
+printf("wavx-&gt;blockalign:%d\r\n",wavx-&gt;blockalign);
+printf("wavx-&gt;bps:%d\r\n",wavx-&gt;bps);
+printf("wavx-&gt;datasize:%d\r\n",wavx-&gt;datasize);
+printf("wavx-&gt;datastart:%d\r\n",wavx-&gt;datastart);</pre>
+
+                    <table class="data">
+                        <tr><th>打印项</th><th>正常值示例</th><th>异常含义</th></tr>
+                        <tr><td>audioformat</td><td>1（PCM）</td><td>非 1 表示不是线性 PCM，本实验不支持</td></tr>
+                        <tr><td>nchannels</td><td>2</td><td>1 为单声道，仍可播放但音量偏小</td></tr>
+                        <tr><td>samplerate</td><td>44100</td><td>不在 11 档表中时 <code>SAIA_SampleRate_Set</code> 返回 1</td></tr>
+                        <tr><td>bps</td><td>16 / 24</td><td>其他值会走错分支，导致杂音</td></tr>
+                        <tr><td>datastart</td><td>44 / 58 等</td><td>明显偏大说明 FACT/LIST 判断错误</td></tr>
+                    </table>
+                </section>
+
+                <section class="content-card" id="s13" data-title="排错路径与验证清单">
+                    <h2>13　排错路径与验证清单</h2>
+                    <div class="sec-sub">先分清“没声音”“有噪声”“断续”“不能切歌”四类问题</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>最可能原因</th><th>验证方法</th></tr>
+                        <tr><td>完全没声音</td><td>DAC 未开或 SAI 未启动</td><td>查 <code>WM8978_ADDA_Cfg(1,0)</code> 与 <code>SAI_Play_Start</code></td></tr>
+                        <tr><td>只有噪声</td><td>I2S 格式/位深不匹配</td><td>核对 <code>WM8978_I2S_Cfg</code> 与 <code>SAI_DATASIZE</code></td></tr>
+                        <tr><td>播放速度不对</td><td>采样率查表或 PLLI2S 分频错误</td><td>串口打印 samplerate；核对 <code>SAI_PSC_TBL</code></td></tr>
+                        <tr><td>周期性咔哒</td><td>DMA 补数不及时</td><td>确认 DMA 优先级 0,0；缩短单块或提高读卡速度</td></tr>
+                        <tr><td>无法切歌</td><td>索引表或按键分支错误</td><td>看 <code>wavoffsettbl</code> 是否记录、KEY0/KEY2 是否返回</td></tr>
+                        <tr><td>暂停后爆音</td><td>暂停时关闭了 SAI 时钟</td><td>确认只填 0 不关 DMA</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">最小验证顺序</div>
+                        <ol>
+                            <li>先只跑 WM8978_Init + 固定正弦测试音，确认 Codec 与喇叭通路。</li>
+                            <li>再跑 SAI + DMA 输出固定缓冲区，确认时钟与格式。</li>
+                            <li>然后解析一个 16 位 WAV，确认能完整播完。</li>
+                            <li>最后换 24 位、高采样率文件，验证扩展与查表。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="交互演示：播放控制">
+                    <h2>14　交互演示：播放控制</h2>
+                    <div class="sec-sub">仅演示暂停与切歌的按键分支，不涉及真实音频</div>
+
+                    <div class="sim">
+                        <div class="sim-title">KEY_UP / KEY0 控制演示</div>
+                        <div class="sim-buttons">
+                            <button data-key="key0">KEY0：下一曲</button>
+                            <button data-key="key1">KEY_UP：暂停 / 继续</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0（播放心跳）</div>
+                            <div class="led-item"><span class="led-dot" id="dot1"></span>DS1（暂停指示）</div>
+                        </div>
+                        <div class="sim-log" id="simLog">最后按键：无　　当前状态：DS0 灭　DS1 灭</div>
+                    </div>
+
+                    <div class="note">真实源码中 KEY0 让 <code class="inline">curindex++</code> 并跳出 <code>wav_play_song</code>，KEY_UP 只翻转 <code>audiodev.status</code> 的 bit0；暂停时 DMA 仍在运行，只是数据被填 0。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY_UP'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+
+<script>
+/* sim-wire：把演示按钮接到日志，分支与正文源码说明一致 */
+(function () {
+    var log = document.getElementById('simLog');
+    if (!log) return;
+    var msgs = {"key0": "KEY0 → 播放索引 +1，wav_play_song 重新打开文件并启动 DMA", "key1": "KEY_UP → 暂停/继续：暂停时关闭 SAI DMA，继续时恢复"};
+    Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (b) {
+        b.addEventListener('click', function () {
+            var k = b.getAttribute('data-key') || b.getAttribute('data-act');
+            if (k && msgs[k]) log.textContent = msgs[k];
+        });
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验9 输入捕获实验</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+            white-space: pre-line;
+            line-height: 1.75;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验9 · 输入捕获实验</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">左侧目录可点击跳转；正文中的代码、寄存器与数值均取自本工程源码。</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验概述与硬件资源">
+                    <h2>01　实验概述与硬件资源</h2>
+                    <div class="sec-sub">在实验8 的 PWM 输出之上，再加一路 TIM5 输入捕获，把“外部高电平有多长”量出来</div>
+
+                    <p>本工程（Keil 工程名 <code class="inline">ICAPTURE</code>，器件 <code class="inline">STM32F429IGTx</code>）做两件事：一是用 <strong>TIM3_CH4 在 PB1 上输出 2kHz PWM</strong>，让板载 LED 亮度缓慢变化；二是用 <strong>TIM5_CH1 在 PA0 上捕获输入信号的高电平宽度</strong>，通过串口打印 <code class="inline">HIGH:xxx us</code>。前者是“输出”，后者是“输入”，合起来正好是定时器最常用的两种用法。</p>
+
+                    <h3>引脚与信号</h3>
+                    <table class="data">
+                        <tr><th>引脚</th><th>配置</th><th>外设信号</th><th>在本实验中的作用</th></tr>
+                        <tr><td>PB0</td><td>推挽输出，上电置高</td><td>GPIO 输出</td><td>DS1 指示灯，低电平点亮，本实验保持熄灭</td></tr>
+                        <tr><td>PB1</td><td>复用推挽，上拉，高速</td><td><code>AF2_TIM3</code> / TIM3_CH4</td><td>PWM 输出，驱动 DS0 亮度渐变</td></tr>
+                        <tr><td>PA0</td><td>复用推挽，下拉，高速</td><td><code>AF2_TIM5</code> / TIM5_CH1</td><td>捕获输入：被测信号的上升沿与下降沿</td></tr>
+                        <tr><td>PA9 / PA10</td><td>复用推挽，上拉</td><td><code>AF7_USART1</code> TX / RX</td><td>调试串口，115200 打印捕获结果</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">PA0 → TIM5_CH1</span>
+                        <span class="chip">PB1 → TIM3_CH4</span>
+                        <span class="chip">定时器时钟 90MHz</span>
+                        <span class="chip">捕获分辨率 1µs</span>
+                    </div>
+
+                    <h3>与实验8 的差别</h3>
+                    <table class="data">
+                        <tr><th>对比项</th><th>实验8 PWM 输出</th><th>实验9 输入捕获</th></tr>
+                        <tr><td>定时器</td><td>TIM3 通道4（输出比较）</td><td>TIM3 通道4 + TIM5 通道1（输入捕获）</td></tr>
+                        <tr><td>数据方向</td><td>MCU 输出波形到引脚</td><td>引脚波形被 MCU 采样、计时</td></tr>
+                        <tr><td>中断</td><td>不使用</td><td>TIM5 捕获中断 + 更新（溢出）中断</td></tr>
+                        <tr><td>主循环</td><td>只扫占空比</td><td>扫占空比 + 查 bit7 + printf + 清状态</td></tr>
+                    </table>
+
+                    <div class="note">板载 LED 是低电平点亮。LED_Init 先把 PB0/PB1 都置高（灯灭），随后 TIM3 的 MSP 又把 PB1 改成复用功能——同一引脚“先当 GPIO、后当外设”，这是本工程里唯一一处引脚复用冲突，顺序不能颠倒。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="工程目录与文件分工">
+                    <h2>02　工程目录与文件分工</h2>
+                    <div class="sec-sub">六个文件夹，真正决定启动行为的只有 USER、CORE 与 SYSTEM 三处</div>
+
+                    <p>工程由正点原子 HAL 库模板裁剪而来。HALLIB 是 ST 的驱动库本体，本页只在需要解释某条寄存器操作时引用，不逐行展开。</p>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本页关注点</th></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>向量表、栈/堆定义、复位入口</td><td>栈 0x400、堆 0x200，Reset_Handler 三行汇编</td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td><code>SystemInit()</code>、<code>SystemCoreClock</code></td><td>开 FPU、复位 RCC、设置 VTOR</td></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化顺序与主循环</td><td>全部 8 个启动步骤</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>异常处理与 <code>SysTick_Handler</code></td><td>只调用 <code>HAL_IncTick()</code></td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td><code>Stm32_Clock_Init()</code> 与汇编小工具</td><td>PLL 参数、AHB/APB 分频</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>基于 SysTick 的 µs / ms 延时</td><td>fac_us = 180 的来历</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>USART1 初始化、<code>fputc</code> 重定向</td><td>printf 为什么能直接输出</td></tr>
+                        <tr><td><code>HARDWARE/LED/led.c</code></td><td>PB0/PB1 推挽输出</td><td>与 PWM 的引脚覆盖关系</td></tr>
+                        <tr><td><code>HARDWARE/TIMER/timer.c</code></td><td>TIM3 PWM、TIM5 捕获、两个回调</td><td>本页核心，占一半篇幅</td></tr>
+                        <tr><td><code>HARDWARE/KEY/key.c</code></td><td>按键扫描</td><td>工程里有，但 main 未调用</td></tr>
+                    </table>
+
+                    <p>工程宏定义只有两个：<code class="inline">USE_HAL_DRIVER</code> 与 <code class="inline">STM32F429xx</code>，写在 <code class="inline">USER/ICAPTURE.uvprojx</code> 的 C/C++ 选项卡里；包含路径覆盖 CORE、USER、HALLIB、SYSTEM、HARDWARE 五组目录。</p>
+
+                    <div class="note blue">读这类模板工程时，先看 <code>main.c</code> 的调用顺序，再去 <code>timer.c</code> 里找同名函数，最后才去 HALLIB 里确认 HAL 帮你写了哪些寄存器——顺序反了会在 600KB 的库里迷路。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览与 main">
+                    <h2>03　启动流程总览与 main</h2>
+                    <div class="sec-sub">从上电取栈顶到进入 while(1)，只有 8 步，顺序不是随便写的</div>
+
+                    <figure class="figure">
+                        <img src="./index23-map/boot-flow.png" alt="从上电复位到 while(1) 的启动流程图，含 main 的 8 个初始化步骤">
+                        <figcaption>图 3-1　启动链路总览：复位 → Reset_Handler → SystemInit → __main → main → while(1)</figcaption>
+                    </figure>
+
+                    <h3>main 全文</h3>
+                    <pre class="code"><span class="kw">int</span> main(<span class="kw">void</span>)
+{
+    <span class="kw">long long</span> temp=0;  
+    HAL_Init();                     	<span class="cmt">//初始化HAL库</span>
+    Stm32_Clock_Init(360,25,2,8);   	<span class="cmt">//设置时钟,180Mhz</span>
+    delay_init(180);               	 	<span class="cmt">//初始化延时函数</span>
+    uart_init(115200);             		<span class="cmt">//初始化USART</span>
+    LED_Init();                     	<span class="cmt">//初始化LED</span>
+    TIM3_PWM_Init(500-1,90-1);      	<span class="cmt">//90M/90=1M的计数频率，自动重装载为500，那么PWM频率为1M/500=2kHZ</span>
+    TIM5_CH1_Cap_Init(0XFFFFFFFF,90-1); <span class="cmt">//以1MHZ的频率计数</span>
+    <span class="kw">while</span>(1)
+    {
+        delay_ms(10);
+		TIM_SetTIM3Compare4(TIM_GetTIM3Capture4()+1); 
+		<span class="kw">if</span>(TIM_GetTIM3Capture4()==300)TIM_SetTIM3Compare4(0);        
+        <span class="kw">if</span>(TIM5CH1_CAPTURE_STA&amp;0X80)        <span class="cmt">//成功捕获到了一次高电平</span>
+		{
+			temp=TIM5CH1_CAPTURE_STA&amp;0X3F; 
+			temp*=0XFFFFFFFF;		 	    <span class="cmt">//溢出时间总和</span>
+			temp+=TIM5CH1_CAPTURE_VAL;      <span class="cmt">//得到总的高电平时间</span>
+			printf("HIGH:%lld us\r\n",temp);<span class="cmt">//打印总的高点平时间</span>
+			TIM5CH1_CAPTURE_STA=0;          <span class="cmt">//开启下一次捕获</span>
+		}
+    }
+}</pre>
+
+                    <h3>为什么是这个顺序</h3>
+                    <table class="data">
+                        <tr><th>步骤</th><th>做了什么</th><th>如果放到后面会怎样</th></tr>
+                        <tr><td>① HAL_Init</td><td>Flash Cache、优先级分组、SysTick 1ms</td><td>后面所有 <code>HAL_Delay</code> 与中断优先级都没有基准</td></tr>
+                        <tr><td>② Stm32_Clock_Init</td><td>PLL 到 180MHz，APB1 45MHz / APB2 90MHz</td><td>串口波特率、PWM 频率、捕获分辨率全部算错</td></tr>
+                        <tr><td>③ delay_init</td><td>SysTick 时钟源切到 HCLK</td><td>delay_us 的倍乘数对不上，10ms 变几十 ms</td></tr>
+                        <tr><td>④ uart_init</td><td>USART1 8N1、115200</td><td>中断回调里 printf 无输出，现象“全黑”</td></tr>
+                        <tr><td>⑤ LED_Init</td><td>PB0/PB1 推挽输出并置高</td><td>PB1 上电状态不确定，PWM 未启动时灯可能半亮</td></tr>
+                        <tr><td>⑥ TIM3_PWM_Init</td><td>PB1 复用为 TIM3_CH4，启动 PWM</td><td>LED 无渐变</td></tr>
+                        <tr><td>⑦ TIM5_CH1_Cap_Init</td><td>PA0 复用为 TIM5_CH1，开捕获与更新中断</td><td>没有捕获，主循环永远读不到 bit7</td></tr>
+                        <tr><td>⑧ while(1)</td><td>延时、扫占空比、查标志、打印</td><td>—</td></tr>
+                    </table>
+
+                    <div class="note">注意 <code>main()</code> 里没有任何显式的 GPIO 时钟或 NVIC 配置：这些都在各外设的 <code>MspInit()</code> 回调里，由 <code>HAL_xxx_Init()</code> 自动调用。看启动流程时要顺着“初始化函数 → MspInit”这条暗线走。</div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">CPU 复位后干的第一件事：从 0x08000000 取栈顶、取复位入口</div>
+
+                    <p><code class="inline">startup_stm32f429xx.s</code> 是汇编文件，它把栈、堆、向量表和复位入口都定义好了。Cortex-M4 复位时硬件自动从向量表第 0 项读 MSP、第 1 项读 PC，所以“第一条指令”其实不是代码，而是查表。</p>
+
+                    <pre class="code">Stack_Size      EQU     0x400          <span class="cmt">; 1KB 栈</span>
+Heap_Size       EQU     0x200          <span class="cmt">; 512B 堆</span>
+
+__Vectors       DCD     __initial_sp   <span class="cmt">; 第 0 项：栈顶地址</span>
+                DCD     Reset_Handler  <span class="cmt">; 第 1 项：复位入口</span>
+                DCD     NMI_Handler
+                DCD     HardFault_Handler
+                ...
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+
+                 LDR     R0, =SystemInit
+                 BLX     R0                     <span class="cmt">; 先跑 SystemInit</span>
+                 LDR     R0, =__main
+                 BX      R0                     <span class="cmt">; 再交给 C 库启动代码</span>
+                 ENDP</pre>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>数值</th><th>说明</th></tr>
+                        <tr><td>栈大小</td><td><code>0x400</code> = 1KB</td><td>本工程中断嵌套浅、无递归，够用</td></tr>
+                        <tr><td>堆大小</td><td><code>0x200</code> = 512B</td><td>工程未调用 malloc，实际不消耗</td></tr>
+                        <tr><td>Flash 起始</td><td><code>0x08000000</code></td><td>向量表默认位置，1MB Flash</td></tr>
+                        <tr><td>RAM</td><td><code>0x20000000</code>（192KB）+ <code>0x10000000</code>（64KB）</td><td>来自 uvprojx 的 <code>IRAM</code>/<code>IRAM2</code></td></tr>
+                        <tr><td><code>Reset_Handler</code></td><td><code>[WEAK]</code></td><td>用户可重定义，本工程未重定义</td></tr>
+                    </table>
+
+                    <p><code class="inline">__main</code> 不是 <code class="inline">main</code>：它是 ARM 编译器运行库的入口，负责按分散加载文件把 .data 从 Flash 搬到 RAM、把 .bss 清零、初始化堆栈，最后才 <code class="inline">BL main</code>。因此 <code class="inline">main()</code> 里的全局变量一定已经是确定值。</p>
+
+                    <div class="note blue">向量表里 <code>Reset_Handler</code> 之后的每一项都是弱符号实现（死循环）。本工程只重定义了 <code>SysTick_Handler</code>（在 <code>stm32f4xx_it.c</code>）和 <code>TIM5_IRQHandler</code>（在 <code>timer.c</code>），其余保持默认。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">一个在 C 库之前跑，一个在 main 第一行跑，两者都不配置系统时钟</div>
+
+                    <h3>SystemInit：只做三件“打扫卫生”的事</h3>
+                    <pre class="code"><span class="kw">void</span> SystemInit(<span class="kw">void</span>)
+{
+  <span class="cmt">/* FPU settings */</span>
+  #<span class="kw">if</span> (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">/* 开 CP10/CP11 全权限 */</span>
+  #endif
+  <span class="cmt">/* Reset the RCC clock configuration to the default reset state */</span>
+  RCC-&gt;CR |= (uint32_t)0x00000001;   <span class="cmt">/* 打开 HSI */</span>
+  RCC-&gt;CFGR = 0x00000000;            <span class="cmt">/* 清空分频与时钟源选择 */</span>
+  ...
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;  <span class="cmt">/* 向量表指向 0x08000000 */</span>
+}</pre>
+
+                    <p>这三件事依次是：开 FPU（<code class="inline">long long</code> 与浮点运算依赖它）、把时钟退回内部 HSI 16MHz、把向量表地址写进 <code class="inline">SCB-&gt;VTOR</code>。它<strong>不</strong>配置 PLL——真正的 180MHz 还在后面。</p>
+
+                    <h3>HAL_Init：时基、优先级分组、底层初始化</h3>
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(<span class="kw">void</span>)
+{
+  ...  <span class="cmt">// 使能 Instruction Cache、Data Cache、Prefetch</span>
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);<span class="cmt">//中断优先级分组2</span>
+  HAL_InitTick(TICK_INT_PRIORITY);   <span class="cmt">// SysTick 1ms，优先级 0x0F</span>
+  HAL_MspInit();                     <span class="cmt">// 本工程未重写，是空函数</span>
+  <span class="kw">return</span> HAL_OK;
+}</pre>
+
+                    <p>本工程的 <code class="inline">stm32f4xx_hal.c</code> 被正点原子改过：优先级分组用的是 <strong>GROUP_2</strong>，而不是 ST 原版的 GROUP_4。</p>
+
+                    <table class="data">
+                        <tr><th>中断</th><th>源码里的设置</th><th>分组 2 编码后</th></tr>
+                        <tr><td>TIM5_IRQn</td><td><code>HAL_NVIC_SetPriority(TIM5_IRQn,2,0)</code></td><td>抢占 2，子 0（最高）</td></tr>
+                        <tr><td>USART1_IRQn</td><td><code>HAL_NVIC_SetPriority(USART1_IRQn,3,3)</code></td><td>抢占 3，子 3</td></tr>
+                        <tr><td>SysTick</td><td><code>TICK_INT_PRIORITY = 0x0F</code></td><td>只保留高 2 位 → 抢占 3，子 0</td></tr>
+                    </table>
+
+                    <p>分组 2 意味着抢占优先级只有 0~3 四档、子优先级也只有 0~3 四档。所以 TIM5 的捕获中断（抢占 2）可以打断串口中断与 SysTick（抢占 3），但反过来不行。</p>
+
+                    <div class="note">如果改成 ST 原版的 GROUP_4，抢占就有 16 档，<code>TICK_INT_PRIORITY = 0x0F</code> 会变成最低优先级——这会影响 <code>HAL_Delay</code> 在中断里的可用性。看代码时别把“分组”当成可有可无的一行。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟树与 1µs 时基">
+                    <h2>06　时钟树与 1µs 时基</h2>
+                    <div class="sec-sub">25MHz 晶振 → 180MHz 系统时钟 → 90MHz 定时器时钟 → 1MHz 计数</div>
+
+                    <figure class="figure">
+                        <img src="./index23-map/clock-tree.png" alt="时钟树：HSE 25MHz 经 PLL 得到 180MHz，APB1 定时器时钟 90MHz，预分频 89 后为 1MHz">
+                        <figcaption>图 6-1　时钟分配：捕获与 PWM 都建立在 APB1 定时器时钟 90MHz 之上</figcaption>
+                    </figure>
+
+                    <h3>源码里的四个参数</h3>
+                    <pre class="code">Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// plln=360, pllm=25, pllp=2, pllq=8</span>
+
+RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE;
+RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;
+RCC_OscInitStructure.PLL.PLLM=pllm;   <span class="cmt">// 25</span>
+RCC_OscInitStructure.PLL.PLLN=plln;   <span class="cmt">// 360</span>
+RCC_OscInitStructure.PLL.PLLP=pllp;   <span class="cmt">// 2</span>
+RCC_OscInitStructure.PLL.PLLQ=pllq;   <span class="cmt">// 8</span>
+ret=HAL_PWREx_EnableOverDrive();      <span class="cmt">// 180MHz 必须开 Over-Drive</span>
+
+RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;
+RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;
+ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5);</pre>
+
+                    <h3>逐级推算</h3>
+                    <table class="data">
+                        <tr><th>节点</th><th>算式</th><th>结果</th></tr>
+                        <tr><td>PLL 输入</td><td>25MHz ÷ PLLM(25)</td><td>1MHz</td></tr>
+                        <tr><td>VCO</td><td>1MHz × PLLN(360)</td><td>360MHz</td></tr>
+                        <tr><td>SYSCLK</td><td>360MHz ÷ PLLP(2)</td><td><strong>180MHz</strong></td></tr>
+                        <tr><td>USB / SDIO / RNG</td><td>360MHz ÷ PLLQ(8)</td><td>45MHz</td></tr>
+                        <tr><td>HCLK</td><td>180MHz ÷ AHB(1)</td><td>180MHz</td></tr>
+                        <tr><td>PCLK1</td><td>180MHz ÷ 4</td><td>45MHz</td></tr>
+                        <tr><td>PCLK2</td><td>180MHz ÷ 2</td><td>90MHz</td></tr>
+                        <tr><td>TIM3 / TIM5 时钟</td><td>PCLK1 × 2（APB 分频≠1 时自动倍频）</td><td><strong>90MHz</strong></td></tr>
+                        <tr><td>捕获计数频率</td><td>90MHz ÷ (PSC+1) = 90MHz ÷ 90</td><td><strong>1MHz → 1µs</strong></td></tr>
+                        <tr><td>PWM 频率</td><td>1MHz ÷ (ARR+1) = 1MHz ÷ 500</td><td><strong>2kHz</strong></td></tr>
+                    </table>
+
+                    <p><code class="inline">FLASH_LATENCY_5</code> 对应 6 个 CPU 周期等待，这是 180MHz 下 3.3V 供电的必需值；<code class="inline">HAL_PWREx_EnableOverDrive()</code> 也是 F42x/F43x 跑到 180MHz 的前提，缺一个都会在 <code class="inline">if(ret!=HAL_OK) while(1);</code> 里卡死。</p>
+
+                    <div class="note">定时器时钟不是 PCLK1 的 45MHz，而是它的 2 倍。很多人在这里把 1MHz 算成 0.5MHz，结果捕获值整整差一倍——判断依据是 <code class="inline">RCC-&gt;CFGR</code> 的 APB 预分频位不为 0。</div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="延时与串口初始化">
+                    <h2>07　延时与串口初始化</h2>
+                    <div class="sec-sub">SysTick 既做 HAL 的 1ms 时基，又被 delay_us 借去数微秒；USART1 负责把结果送出来</div>
+
+                    <h3>delay_init(180) 与 delay_us</h3>
+                    <pre class="code"><span class="kw">void</span> delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);<span class="cmt">//SysTick频率为HCLK</span>
+    fac_us=SYSCLK;   <span class="cmt">// fac_us = 180，即 1µs 需要 180 个 HCLK 计数</span>
+}
+
+<span class="kw">void</span> delay_us(u32 nus)
+{
+    u32 ticks = nus*fac_us;      <span class="cmt">// 需要的节拍数</span>
+    u32 told=SysTick-&gt;VAL;       <span class="cmt">// 递减计数器</span>
+    <span class="kw">while</span>(1)
+    {
+        u32 tnow=SysTick-&gt;VAL;
+        <span class="kw">if</span>(tnow!=told)
+        {
+            <span class="kw">if</span>(tnow&lt;told) tcnt+=told-tnow;
+            <span class="kw">else</span> tcnt+=reload-tnow+told;  <span class="cmt">// 跨过重装点</span>
+            told=tnow;
+            <span class="kw">if</span>(tcnt&gt;=ticks)<span class="kw">break</span>;
+        }
+    }
+}</pre>
+
+                    <p>SysTick 是 24 位递减计数器，本工程不开它的中断（<code class="inline">SYSTEM_SUPPORT_OS = 0</code>），<code class="inline">delay_us</code> 只是轮询 <code class="inline">VAL</code> 的变化量。<code class="inline">delay_ms(10)</code> 在非 OS 分支里就是循环 10 次 <code class="inline">delay_us(1000)</code>，所以主循环的节奏是<strong>10ms 一步</strong>。</p>
+
+                    <h3>uart_init(115200)</h3>
+                    <pre class="code">UART1_Handler.Init.BaudRate=bound;              <span class="cmt">// 115200</span>
+UART1_Handler.Init.WordLength=UART_WORDLENGTH_8B;
+UART1_Handler.Init.StopBits=UART_STOPBITS_1;
+UART1_Handler.Init.Parity=UART_PARITY_NONE;
+UART1_Handler.Init.Mode=UART_MODE_TX_RX;
+HAL_UART_Init(&amp;UART1_Handler);
+HAL_UART_Receive_IT(&amp;UART1_Handler,(u8 *)aRxBuffer,RXBUFFERSIZE); <span class="cmt">// 每字节中断</span>
+
+<span class="cmt">// fputc 重定向：printf 直接写 USART1-&gt;DR</span>
+<span class="kw">int</span> fputc(<span class="kw">int</span> ch, FILE *f)
+{
+    <span class="kw">while</span>((USART1-&gt;SR&amp;0X40)==0);   <span class="cmt">// 等 TXE</span>
+    USART1-&gt;DR = (u8) ch;
+    <span class="kw">return</span> ch;
+}</pre>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>设置</th><th>说明</th></tr>
+                        <tr><td>引脚</td><td>PA9 / PA10，<code>GPIO_AF7_USART1</code></td><td>在 <code>HAL_UART_MspInit</code> 里配置</td></tr>
+                        <tr><td>帧格式</td><td>8 数据位、1 停止位、无校验、无流控</td><td>与串口助手保持一致</td></tr>
+                        <tr><td>接收</td><td><code>EN_USART1_RX = 1</code>，缓冲 1 字节</td><td>本实验只发不收，接收中断保留</td></tr>
+                        <tr><td>中断优先级</td><td><code>HAL_NVIC_SetPriority(USART1_IRQn,3,3)</code></td><td>低于 TIM5 的抢占 2</td></tr>
+                        <tr><td>printf</td><td><code>#pragma import(__use_no_semihosting)</code></td><td>不依赖 MicroLIB，也不用半主机</td></tr>
+                    </table>
+
+                    <div class="note blue">主循环里打印的是 <code>long long</code>，格式串用 <code>%lld</code>。若换成 <code>%d</code>，高电平超过 32 位时结果会直接截断——这类“偶发打印错值”的问题，九成是格式串不匹配。</div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="LED 与 TIM3 PWM 初始化">
+                    <h2>08　LED 与 TIM3 PWM 初始化</h2>
+                    <div class="sec-sub">PB1 先被 LED_Init 配成普通输出，再被 TIM3 的 MSP 抢走复用功能</div>
+
+                    <pre class="code"><span class="kw">void</span> LED_Init(<span class="kw">void</span>)
+{
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    GPIO_Initure.Pin=GPIO_PIN_0|GPIO_PIN_1;   <span class="cmt">// PB0 / PB1</span>
+    GPIO_Initure.Mode=GPIO_MODE_OUTPUT_PP;
+    GPIO_Initure.Pull=GPIO_PULLUP;
+    HAL_GPIO_Init(GPIOB,&amp;GPIO_Initure);
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_0,GPIO_PIN_SET);  <span class="cmt">// 置高，灯灭</span>
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,GPIO_PIN_SET);
+}
+
+<span class="kw">void</span> TIM3_PWM_Init(u16 arr,u16 psc)
+{
+    TIM3_Handler.Instance=TIM3;
+    TIM3_Handler.Init.Prescaler=psc;            <span class="cmt">// 89</span>
+    TIM3_Handler.Init.Period=arr;               <span class="cmt">// 499</span>
+    HAL_TIM_PWM_Init(&amp;TIM3_Handler);
+
+    TIM3_CH4Handler.OCMode=TIM_OCMODE_PWM1;
+    TIM3_CH4Handler.Pulse=arr/2;                <span class="cmt">// 初始 249，约 50%</span>
+    TIM3_CH4Handler.OCPolarity=TIM_OCPOLARITY_LOW; <span class="cmt">// 低电平有效</span>
+    HAL_TIM_PWM_ConfigChannel(&amp;TIM3_Handler,&amp;TIM3_CH4Handler,TIM_CHANNEL_4);
+    HAL_TIM_PWM_Start(&amp;TIM3_Handler,TIM_CHANNEL_4);
+}</pre>
+
+                    <p>TIM3 的 <code class="inline">MspInit</code> 里，PB1 被重新配置为 <code class="inline">GPIO_MODE_AF_PP</code> + <code class="inline">GPIO_AF2_TIM3</code>，上拉、高速。至此 PB1 不再是普通 GPIO，而是定时器的输出引脚——所以 <code class="inline">LED_Init</code> 里对 PB1 的写操作只在 PWM 启动前有效（用来保证灯先熄灭）。</p>
+
+                    <table class="data">
+                        <tr><th>参数</th><th>值</th><th>结果</th></tr>
+                        <tr><td>预分频 PSC</td><td>89</td><td>90MHz / 90 = 1MHz 计数</td></tr>
+                        <tr><td>自动重装 ARR</td><td>499</td><td>周期 500 个计数</td></tr>
+                        <tr><td>PWM 频率</td><td>1MHz / 500</td><td><strong>2kHz</strong></td></tr>
+                        <tr><td>初始比较值 CCR4</td><td><code>arr/2 = 249</code></td><td>接近 50% 占空比</td></tr>
+                        <tr><td>主循环范围</td><td>0 → 300 → 0</td><td>占空比 0% → 60% → 0%，3 秒一轮</td></tr>
+                        <tr><td>输出极性</td><td><code>TIM_OCPOLARITY_LOW</code></td><td>CNT &lt; CCR4 时输出低，LED 亮</td></tr>
+                    </table>
+
+                    <p>主循环里 <code class="inline">TIM_SetTIM3Compare4(TIM_GetTIM3Capture4()+1)</code> 每 10ms 把 CCR4 加一，读到 300 就归零。之所以用 <code class="inline">HAL_TIM_ReadCapturedValue()</code> 读回 CCR4，是因为通道 4 工作在输出比较模式，<code class="inline">CCR4</code> 本身就是比较值寄存器，读它就是读当前占空比。</p>
+
+                    <div class="note">LED 是低电平点亮 + PWM 低有效，两个“低”叠加的结果是：CCR4 越大，低电平时间越长，灯越亮。若把极性改成 <code>TIM_OCPOLARITY_HIGH</code>，现象会反过来——调占空比之前先确认极性。</div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="TIM5 输入捕获初始化">
+                    <h2>09　TIM5 输入捕获初始化</h2>
+                    <div class="sec-sub">时基只配一次，通道 1 只配极性；真正的捕获动作由中断完成</div>
+
+                    <pre class="code"><span class="kw">void</span> TIM5_CH1_Cap_Init(u32 arr,u16 psc)
+{  
+    TIM_IC_InitTypeDef TIM5_CH1Config;  
+    
+    TIM5_Handler.Instance=TIM5;                          <span class="cmt">//通用定时器5</span>
+    TIM5_Handler.Init.Prescaler=psc;                     <span class="cmt">//分频系数</span>
+    TIM5_Handler.Init.CounterMode=TIM_COUNTERMODE_UP;    <span class="cmt">//向上计数器</span>
+    TIM5_Handler.Init.Period=arr;                        <span class="cmt">//自动装载值</span>
+    TIM5_Handler.Init.ClockDivision=TIM_CLOCKDIVISION_DIV1;
+    HAL_TIM_IC_Init(&amp;TIM5_Handler);<span class="cmt">//初始化输入捕获时基参数</span>
+    
+    TIM5_CH1Config.ICPolarity=TIM_ICPOLARITY_RISING;    <span class="cmt">//上升沿捕获</span>
+    TIM5_CH1Config.ICSelection=TIM_ICSELECTION_DIRECTTI;<span class="cmt">//映射到TI1上</span>
+    TIM5_CH1Config.ICPrescaler=TIM_ICPSC_DIV1;          <span class="cmt">//配置输入分频，不分频</span>
+    TIM5_CH1Config.ICFilter=0;                          <span class="cmt">//配置输入滤波器，不滤波</span>
+    HAL_TIM_IC_ConfigChannel(&amp;TIM5_Handler,&amp;TIM5_CH1Config,TIM_CHANNEL_1);
+	
+    HAL_TIM_IC_Start_IT(&amp;TIM5_Handler,TIM_CHANNEL_1);   <span class="cmt">//开捕获通道1与捕获中断</span>
+    __HAL_TIM_ENABLE_IT(&amp;TIM5_Handler,TIM_IT_UPDATE);   <span class="cmt">//使能更新中断</span>
+}</pre>
+
+                    <h3>底层：时钟、引脚、NVIC</h3>
+                    <pre class="code"><span class="kw">void</span> HAL_TIM_IC_MspInit(TIM_HandleTypeDef *htim)
+{
+    __HAL_RCC_TIM5_CLK_ENABLE();            <span class="cmt">//使能TIM5时钟</span>
+    __HAL_RCC_GPIOA_CLK_ENABLE();			<span class="cmt">//开启GPIOA时钟</span>
+    GPIO_Initure.Pin=GPIO_PIN_0;            <span class="cmt">//PA0</span>
+    GPIO_Initure.Mode=GPIO_MODE_AF_PP;
+    GPIO_Initure.Pull=GPIO_PULLDOWN;        <span class="cmt">//下拉</span>
+    GPIO_Initure.Alternate=GPIO_AF2_TIM5;   <span class="cmt">//PA0复用为TIM5通道1</span>
+    HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+
+    HAL_NVIC_SetPriority(TIM5_IRQn,2,0);    <span class="cmt">//抢占2，子优先级0</span>
+    HAL_NVIC_EnableIRQ(TIM5_IRQn);
+}</pre>
+
+                    <table class="data">
+                        <tr><th>参数</th><th>取值</th><th>含义</th></tr>
+                        <tr><td>Instance</td><td><code>TIM5</code></td><td>32 位通用定时器，ARR 可到 0xFFFFFFFF</td></tr>
+                        <tr><td>PSC</td><td>89</td><td>90MHz / 90 = 1MHz，1 个计数 = 1µs</td></tr>
+                        <tr><td>ARR</td><td>0xFFFFFFFF</td><td>满量程计数，溢出周期约 4294.97 秒</td></tr>
+                        <tr><td>计数模式</td><td><code>TIM_COUNTERMODE_UP</code></td><td>向上计数，捕获值就是时间差</td></tr>
+                        <tr><td>ICSelection</td><td><code>DIRECTTI</code></td><td>通道 1 直连 TI1（PA0）</td></tr>
+                        <tr><td>ICPolarity</td><td><code>RISING</code></td><td>初始等上升沿，回调里会切到下降沿</td></tr>
+                        <tr><td>ICPrescaler</td><td><code>DIV1</code></td><td>每个边沿都捕获，不丢事件</td></tr>
+                        <tr><td>ICFilter</td><td>0</td><td>不滤波，边沿抖动会直接进中断</td></tr>
+                        <tr><td>中断</td><td><code>CC1IE</code> + <code>UIE</code></td><td>捕获中断 + 溢出计数，两路都要开</td></tr>
+                    </table>
+
+                    <div class="note">PA0 配了<strong>下拉</strong>：信号源不接时引脚被拉到低电平，不会悬空乱触发。如果你用按键或信号发生器输入，注意信号幅度要能盖过下拉，否则上升沿不可靠。</div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="信号链路与寄存器落点">
+                    <h2>10　信号链路与寄存器落点</h2>
+                    <div class="sec-sub">一个边沿从 PA0 进来，要经过复用、滤波、极性选择、锁存，才变成 CCR1 里的数字</div>
+
+                    <figure class="figure">
+                        <img src="./index23-map/capture-chain.png" alt="输入捕获信号链路：PA0 经 AF2 进 TIM5_CH1，经滤波与边沿检测锁存到 CCR1，再触发 CC1IF 与 NVIC 中断">
+                        <figcaption>图 10-1　硬件通路与软件通路：上排是信号怎么走，下排是中断怎么传到回调</figcaption>
+                    </figure>
+
+                    <h3>HAL 替你写了哪些位</h3>
+                    <table class="data">
+                        <tr><th>寄存器 / 位</th><th>值</th><th>来源</th><th>作用</th></tr>
+                        <tr><td><code>CCMR1[1:0]</code> CC1S</td><td>01</td><td><code>ICSelection=DIRECTTI</code></td><td>IC1 映射到 TI1，通道变输入</td></tr>
+                        <tr><td><code>CCMR1[3:2]</code> IC1PSC</td><td>00</td><td><code>ICPrescaler=DIV1</code></td><td>每个边沿都触发捕获</td></tr>
+                        <tr><td><code>CCMR1[7:4]</code> IC1F</td><td>0000</td><td><code>ICFilter=0</code></td><td>不滤波，无采样延迟</td></tr>
+                        <tr><td><code>CCER</code> CC1P</td><td>0 / 1</td><td><code>ICPolarity</code></td><td>0 = 上升沿，1 = 下降沿</td></tr>
+                        <tr><td><code>CCER</code> CC1E</td><td>1</td><td><code>HAL_TIM_IC_Start_IT</code></td><td>使能通道 1 捕获</td></tr>
+                        <tr><td><code>DIER</code> CC1IE</td><td>1</td><td><code>HAL_TIM_IC_Start_IT</code></td><td>捕获事件产生中断</td></tr>
+                        <tr><td><code>DIER</code> UIE</td><td>1</td><td><code>__HAL_TIM_ENABLE_IT</code></td><td>溢出产生更新中断</td></tr>
+                        <tr><td><code>SR</code> CC1IF / UIF</td><td>硬件置位</td><td>边沿 / 溢出</td><td>中断标志，HAL 在 ISR 里清</td></tr>
+                        <tr><td><code>CR1</code> CEN</td><td>1</td><td><code>HAL_TIM_IC_Start_IT</code></td><td>启动计数器</td></tr>
+                    </table>
+
+                    <p><code class="inline">HAL_TIM_IC_Start_IT()</code> 实际做了三件事：<code class="inline">__HAL_TIM_ENABLE_IT(CC1)</code>、<code class="inline">TIM_CCxChannelCmd(ENABLE)</code>、<code class="inline">__HAL_TIM_ENABLE</code>。所以捕获通道和计数器是一起打开的，谁也不用单独再启动一次。</p>
+
+                    <h3>数值怎么读出来</h3>
+                    <p>上升沿到来时，硬件把当前 <code class="inline">CNT</code> 复制进 <code class="inline">CCR1</code> 并置 <code class="inline">CC1IF</code>；但本工程在上升沿里做的是“清零 + 换极性”，所以上升沿那次捕获值被丢弃，真正要的是下降沿读到的 <code class="inline">CCR1</code>——它等于“从上升沿到下降沿经过了多少个 1µs”。</p>
+
+                    <div class="note blue">图 10-1 里的“滤波 / 边沿”是同一个 <code>CCMR1</code> 与 <code>CCER</code> 在起作用：滤波决定采不采噪声，极性决定数哪条边。两者都改了，捕获结果才会跟着变。</div>
+
+                    <figure>
+                        <img src="./index23-map/capture-timing.png" alt="TIM5_CH1 输入信号上升/下降沿到来时 CCR1 锁存与中断时序">
+                        <figcaption>图 10-2　TIM5_CH1 输入信号上升/下降沿到来时 CCR1 锁存与中断时序</figcaption>
+                    </figure>
+                </section>
+
+                <section class="content-card" id="s11" data-title="捕获中断：上升沿与下降沿">
+                    <h2>11　捕获中断：上升沿与下降沿</h2>
+                    <div class="sec-sub">同一个回调被调用两次：第一次准备计时，第二次保存结果</div>
+
+                    <pre class="code"><span class="kw">void</span> TIM5_IRQHandler(<span class="kw">void</span>)
+{
+	HAL_TIM_IRQHandler(&amp;TIM5_Handler);<span class="cmt">//定时器共用处理函数</span>
+}
+
+<span class="kw">void</span> HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)<span class="cmt">//捕获中断发生时执行</span>
+{
+	<span class="kw">if</span>((TIM5CH1_CAPTURE_STA&amp;0X80)==0)<span class="cmt">//还未成功捕获</span>
+	{
+		<span class="kw">if</span>(TIM5CH1_CAPTURE_STA&amp;0X40)		<span class="cmt">//捕获到一个下降沿</span>
+		{	  			
+			TIM5CH1_CAPTURE_STA|=0X80;	<span class="cmt">//标记成功捕获到一次高电平脉宽</span>
+			TIM5CH1_CAPTURE_VAL=HAL_TIM_ReadCapturedValue(&amp;TIM5_Handler,TIM_CHANNEL_1);
+			TIM_RESET_CAPTUREPOLARITY(&amp;TIM5_Handler,TIM_CHANNEL_1);<span class="cmt">//先清原设置</span>
+			TIM_SET_CAPTUREPOLARITY(&amp;TIM5_Handler,TIM_CHANNEL_1,TIM_ICPOLARITY_RISING);
+		}<span class="kw">else</span>  <span class="cmt">//还未开始,第一次捕获上升沿</span>
+		{
+			TIM5CH1_CAPTURE_STA=0;		<span class="cmt">//清空</span>
+			TIM5CH1_CAPTURE_VAL=0;
+			TIM5CH1_CAPTURE_STA|=0X40;<span class="cmt">//标记捕获到了上升沿</span>
+			__HAL_TIM_DISABLE(&amp;TIM5_Handler);<span class="cmt">//关闭定时器5</span>
+			__HAL_TIM_SET_COUNTER(&amp;TIM5_Handler,0);
+			TIM_RESET_CAPTUREPOLARITY(&amp;TIM5_Handler,TIM_CHANNEL_1);
+			TIM_SET_CAPTUREPOLARITY(&amp;TIM5_Handler,TIM_CHANNEL_1,TIM_ICPOLARITY_FALLING);
+			__HAL_TIM_ENABLE(&amp;TIM5_Handler);<span class="cmt">//使能定时器5</span>
+		}		    
+	}		
+}</pre>
+
+                    <figure class="figure">
+                        <img src="./index23-map/capture-fsm.png" alt="捕获状态机：等待上升沿、已捕获上升沿、捕获完成三态，以及溢出中断与主循环清零的回环">
+                        <figcaption>图 11-1　状态机：bit6 决定“现在数的是哪条边”，bit7 告诉主循环“结果好了”</figcaption>
+                    </figure>
+
+                    <h3>状态字三个区段</h3>
+                    <table class="data">
+                        <tr><th>位</th><th>含义</th><th>谁置位</th><th>谁清除</th></tr>
+                        <tr><td>bit7</td><td>成功捕获一次完整高电平</td><td>下降沿回调 / 溢出到极限</td><td>主循环 printf 之后写 <code>STA=0</code></td></tr>
+                        <tr><td>bit6</td><td>已经捕获到上升沿，正在等下降沿</td><td>第一次捕获回调</td><td>上升沿回调开头的 <code>STA=0</code></td></tr>
+                        <tr><td>bit5~0</td><td>这段时间里计数器溢出了几次（最大 0x3F）</td><td>更新中断里 <code>STA++</code></td><td>同上</td></tr>
+                    </table>
+
+                    <p>顺序很关键：上升沿回调里先 <code class="inline">STA=0</code> 把溢出计数清零，再 <code class="inline">STA|=0x40</code> 标记“已遇上升沿”，最后把计数器清零并切换极性。如果先切极性再清 CNT，切换期间多走的几个计数会被算进宽度里。</p>
+
+                    <div class="note">极性切换必须“先 RESET 再 SET”。<code>TIM_RESET_CAPTUREPOLARITY</code> 清 <code>CC1P</code>，<code>TIM_SET_CAPTUREPOLARITY</code> 写新值；省掉前者会出现上升沿和下降沿都触发，捕获值随机跳变——这是本实验最经典的坑。</div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="溢出中断与时间合成">
+                    <h2>12　溢出中断与时间合成</h2>
+                    <div class="sec-sub">32 位计数器也会溢出，6 位溢出计数把量程扩展到 76 小时</div>
+
+                    <pre class="code"><span class="kw">void</span> HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)<span class="cmt">//更新中断（溢出）</span>
+{
+	<span class="kw">if</span>((TIM5CH1_CAPTURE_STA&amp;0X80)==0)<span class="cmt">//还未成功捕获</span>
+	{
+		<span class="kw">if</span>(TIM5CH1_CAPTURE_STA&amp;0X40)<span class="cmt">//已经捕获到高电平了</span>
+		{
+			<span class="kw">if</span>((TIM5CH1_CAPTURE_STA&amp;0X3F)==0X3F)<span class="cmt">//高电平太长了</span>
+			{
+				TIM5CH1_CAPTURE_STA|=0X80;<span class="cmt">//标记成功捕获了一次</span>
+				TIM5CH1_CAPTURE_VAL=0XFFFFFFFF;
+			}<span class="kw">else</span> TIM5CH1_CAPTURE_STA++;
+		}	 
+	}		
+}</pre>
+
+                    <p>只有“已经遇到上升沿、还没完成”的那段时间里，溢出才需要计数。溢出上限设为 0x3F 是为了不把 bit6/bit7 冲掉：一旦 6 位全满，直接认定“信号太长”，把 <code class="inline">VAL</code> 填成满量程并标记完成，主循环照样能打印出一个明确的异常值。</p>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>数值</th><th>推算</th></tr>
+                        <tr><td>单次溢出周期</td><td>4294.967 s</td><td>2³² µs ≈ 4294.97 秒（约 71.6 分钟）</td></tr>
+                        <tr><td>溢出计数上限</td><td>63 次</td><td><code>STA &amp; 0x3F</code> 最大 0x3F</td></tr>
+                        <tr><td>可测最长高电平</td><td>约 76.4 小时</td><td>(63+1) × 4294.97 s ≈ 274878 s</td></tr>
+                        <tr><td>实际用途</td><td>毫秒级脉宽</td><td>溢出计数在正常信号下通常为 0</td></tr>
+                    </table>
+
+                    <h3>主循环里的合成</h3>
+                    <pre class="code">temp = TIM5CH1_CAPTURE_STA &amp; 0X3F;   <span class="cmt">//溢出次数</span>
+temp *= 0XFFFFFFFF;                  <span class="cmt">//溢出时间总和</span>
+temp += TIM5CH1_CAPTURE_VAL;         <span class="cmt">//加上最后一次的捕获值</span>
+printf("HIGH:%lld us\r\n", temp);
+TIM5CH1_CAPTURE_STA = 0;             <span class="cmt">//开启下一次捕获</span></pre>
+
+                    <p><code class="inline">temp</code> 声明为 <code class="inline">long long</code>，乘法在 64 位下完成，所以 63 × 0xFFFFFFFF 不会溢出。严格来说每个溢出周期是 2³² µs，源码乘的是 <code class="inline">0xFFFFFFFF</code>（少 1），每次溢出少算 1µs；在毫秒级测量里可以忽略，但知道这个差别有助于理解“为什么大数会有一点点偏差”。</p>
+
+                    <div class="note blue">如果把 <code>temp</code> 改成 <code>u32</code>，<code>temp *= 0xFFFFFFFF</code> 会直接溢出，打印结果变成随机值。<code>%lld</code> 和 <code>long long</code> 必须成对出现。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="主循环现象与交互演示">
+                    <h2>13　主循环现象与交互演示</h2>
+                    <div class="sec-sub">主循环只做两件事：扫 PWM 占空比、把捕获结果打印出来</div>
+
+                    <figure class="figure">
+                        <img src="./index23-map/capture-wave.png" alt="捕获时序图：上升沿把 CNT 清零并切下降沿，下降沿把宽度锁进 CCR1，主循环合成总时间">
+                        <figcaption>图 13-1　时序：从上升沿清零到下降沿读数，CCR1 的数值就是高电平的微秒数</figcaption>
+                    </figure>
+
+                    <h3>上电后能看到什么</h3>
+                    <ul>
+                        <li><strong>DS1 常灭</strong>：PB0 被置高，低电平点亮的 LED 不导通。</li>
+                        <li><strong>DS0 呼吸</strong>：CCR4 每 10ms 加一，从 0 到 300 再回 0，3 秒一个来回；极性为低，所以越往后越亮。</li>
+                        <li><strong>串口输出</strong>：每完成一次捕获打印一行 <code class="inline">HIGH:xxx us</code>，随后状态字被清零，等待下一个上升沿。</li>
+                        <li><strong>PA0 无信号时</strong>：下拉把引脚钉在低电平，没有上升沿，串口保持安静。</li>
+                    </ul>
+
+                    <h3>交互演示</h3>
+                    <p>下面的按钮复现 <code class="inline">timer.c</code> 与 <code class="inline">main.c</code> 里的四个分支，仅演示状态位与打印逻辑，不涉及真实硬件。</p>
+
+                    <div class="sim">
+                        <div class="sim-title">捕获状态字演示（bit7 / bit6 / 溢出计数）</div>
+                        <div class="sim-buttons">
+                            <button data-act="rise">模拟上升沿</button>
+                            <button data-act="fall">模拟下降沿</button>
+                            <button data-act="ovf">模拟一次溢出</button>
+                            <button data-act="main">主循环检查</button>
+                            <button data-act="reset">复位状态</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item">bit7 完成 <span class="led-dot" id="b7"></span></div>
+                            <div class="led-item">bit6 已遇上升沿 <span class="led-dot" id="b6"></span></div>
+                            <div class="led-item">溢出计数 <strong id="ovfCnt">0</strong></div>
+                            <div class="led-item">捕获值 <strong id="capVal">0</strong></div>
+                        </div>
+                        <div class="sim-log" id="simLog">状态：STA = 0x00，等待 PA0 上的上升沿</div>
+                    </div>
+
+                    <div class="note">上升沿按钮对应回调里的 <code>else</code> 分支（清状态、置 bit6、切下降沿）；下降沿按钮对应 <code>if(STA&amp;0x40)</code> 分支（存值、置 bit7、切回上升沿）；溢出按钮对应更新中断里的自增与饱和。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="全链路回顾与常见问题">
+                    <h2>14　全链路回顾与常见问题</h2>
+                    <div class="sec-sub">把八步启动、两路定时器、三个中断串成一条线，再给出排查表</div>
+
+                    <h3>一条完整的调用链</h3>
+                    <table class="data">
+                        <tr><th>阶段</th><th>入口</th><th>关键动作</th></tr>
+                        <tr><td>复位</td><td><code>Reset_Handler</code></td><td>取 MSP/PC，跳 <code>SystemInit</code></td></tr>
+                        <tr><td>系统初始化</td><td><code>SystemInit</code></td><td>开 FPU、RCC 回 HSI、设 VTOR</td></tr>
+                        <tr><td>C 运行时</td><td><code>__main</code></td><td>搬 .data、清 .bss、跳 <code>main</code></td></tr>
+                        <tr><td>HAL</td><td><code>HAL_Init</code></td><td>Cache、分组 2、SysTick 1ms</td></tr>
+                        <tr><td>时钟</td><td><code>Stm32_Clock_Init</code></td><td>180MHz，APB1 45 / APB2 90</td></tr>
+                        <tr><td>时基</td><td><code>delay_init(180)</code></td><td>fac_us = 180，SysTick 源切 HCLK</td></tr>
+                        <tr><td>串口</td><td><code>uart_init(115200)</code></td><td>PA9/PA10 AF7，fputc 重定向</td></tr>
+                        <tr><td>输出</td><td><code>TIM3_PWM_Init</code></td><td>PB1 → AF2，2kHz PWM</td></tr>
+                        <tr><td>输入</td><td><code>TIM5_CH1_Cap_Init</code></td><td>PA0 → AF2，1MHz，开 CC1IE+UIE</td></tr>
+                        <tr><td>异步</td><td><code>TIM5_IRQHandler</code></td><td>捕获回调切极性，溢出回调计数</td></tr>
+                        <tr><td>主循环</td><td><code>while(1)</code></td><td>调占空比、合成时间、printf、清标志</td></tr>
+                    </table>
+
+                    <h3>现象 → 原因 → 排查</h3>
+                    <table class="data">
+                        <tr><th>现象</th><th>可能原因</th><th>排查动作</th></tr>
+                        <tr><td>串口完全没有输出</td><td>波特率不匹配 / PA9 未复用 / <code>uart_init</code> 被放到 printf 之后</td><td>先确认 115200-8N1，再量 PA9 是否有波形</td></tr>
+                        <tr><td>一直不打印 HIGH</td><td>PA0 无上升沿（下拉）、NVIC 未使能、极性配错</td><td>示波器看 PA0；确认 <code>TIM5_IRQn</code> 已 <code>HAL_NVIC_EnableIRQ</code></td></tr>
+                        <tr><td>打印 <code>HIGH:0 us</code></td><td>信号太窄，上升沿后立刻下降；或极性被重复设置</td><td>换低频信号源；检查 RESET/SET 极性是否成对</td></tr>
+                        <tr><td>读数跳动几十 µs</td><td>信号抖动，<code>ICFilter = 0</code> 未滤波</td><td>把 <code>ICFilter</code> 调大（如 0x3）或加大信号上升时间</td></tr>
+                        <tr><td>只打印一次就没了</td><td>主循环没清 <code>STA</code>，回调被 <code>bit7==1</code> 挡住</td><td>确认 <code>TIM5CH1_CAPTURE_STA=0;</code> 在 printf 之后执行</td></tr>
+                        <tr><td>值恒为 4294967295</td><td>溢出计数饱和，高电平超过 76 小时量程</td><td>基本可判定信号一直为高或接线错误</td></tr>
+                        <tr><td>LED 不呼吸</td><td>PB1 仍是普通 GPIO，MSP 未执行</td><td>确认 <code>HAL_TIM_PWM_Init</code> 之前已使能 GPIOB/TIM3 时钟</td></tr>
+                    </table>
+
+                    <h3>三句话记住本实验</h3>
+                    <ol>
+                        <li><strong>时钟先行</strong>：1MHz 计数来自 90MHz ÷ 90，90MHz 来自 APB1 的 45MHz 倍频。</li>
+                        <li><strong>边沿分工</strong>：上升沿清零并换到下降沿，下降沿读数并换回上升沿，极性切换必须先清后设。</li>
+                        <li><strong>状态传递</strong>：中断只改 <code class="inline">STA/VAL</code>，主循环只看 bit7，谁写谁清要分清，否则要么丢数据、要么重复打印。</li>
+                    </ol>
+
+                    <div class="note blue">本页所有代码、寄存器值与推算均来自 <code>USER/main.c</code>、<code>HARDWARE/TIMER/timer.c</code>、<code>SYSTEM/sys/sys.c</code>、<code>SYSTEM/delay/delay.c</code>、<code>USER/system_stm32f4xx.c</code> 与 <code>CORE/startup_stm32f429xx.s</code>；HALLIB 中仅引用 <code>HAL_Init</code>、<code>HAL_TIM_IC_Start_IT</code>、<code>TIM_Base_SetConfig</code> 三处实现，用于解释寄存器行为。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">© 广州市星翼电子科技有限公司 · 本页仅用于学习记录，代码版权归原作者所有</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 捕获状态字演示（与 timer.c / main.c 分支一一对应） =====
+    var b7 = document.getElementById('b7');
+    var b6 = document.getElementById('b6');
+    var ovfCnt = document.getElementById('ovfCnt');
+    var capVal = document.getElementById('capVal');
+    var simLog = document.getElementById('simLog');
+
+    if (b7 && b6 && simLog) {
+        var sta = 0;          // 对应 TIM5CH1_CAPTURE_STA
+        var val = 0;          // 对应 TIM5CH1_CAPTURE_VAL
+        var demoWidth = 500;  // 演示用：下降沿时的 CCR1 读数
+
+        function log(msg) {
+            var line = msg + '\n';
+            if (simLog.textContent.length > 600) simLog.textContent = '';
+            simLog.textContent = line + simLog.textContent;
+        }
+
+        function render() {
+            b7.classList.toggle('on', (sta & 0x80) !== 0);
+            b6.classList.toggle('on', (sta & 0x40) !== 0);
+            ovfCnt.textContent = String(sta & 0x3F);
+            capVal.textContent = String(val);
+        }
+
+        var actions = {
+            rise: function () {           // HAL_TIM_IC_CaptureCallback 的 else 分支
+                if (sta & 0x80) { log('已置 bit7，回调在 bit7==1 时直接返回，先等主循环清状态'); return; }
+                sta = 0x40;               // 清空后标记已捕获上升沿
+                val = 0;
+                log('上升沿：STA=0x40，CNT 清零，极性切下降沿');
+            },
+            fall: function () {           // if(STA&0x40) 分支
+                if (sta & 0x80) { log('已置 bit7，回调在 bit7==1 时直接返回'); return; }
+                if (!(sta & 0x40)) { log('未捕获上升沿：源码分支不成立，忽略本次下降沿'); return; }
+                sta |= 0x80;
+                val = demoWidth;
+                log('下降沿：读 CCR1=' + demoWidth + '，置 bit7，极性切回上升沿');
+            },
+            ovf: function () {            // HAL_TIM_PeriodElapsedCallback
+                if (sta & 0x80) { log('已完成，更新中断不再累计溢出'); return; }
+                if (!(sta & 0x40)) { log('未遇上升沿，溢出中断不计数（源码分支不成立）'); return; }
+                if ((sta & 0x3F) === 0x3F) {
+                    sta |= 0x80;
+                    val = 0xFFFFFFFF;
+                    log('溢出计数已满 0x3F：直接标记完成，VAL=0xFFFFFFFF');
+                } else {
+                    sta++;
+                    log('溢出一次：溢出计数 = ' + (sta & 0x3F));
+                }
+            },
+            main: function () {           // main 的 while(1) 分支
+                if (sta & 0x80) {
+                    var temp = (sta & 0x3F) * 0xFFFFFFFF + val;
+                    log('printf("HIGH:%lld us", ' + temp + ')  →  STA=0，开始下一次捕获');
+                    sta = 0;
+                    val = 0;
+                } else {
+                    log('bit7=0，主循环什么都不做，继续 delay_ms(10)');
+                }
+            },
+            reset: function () {
+                sta = 0;
+                val = 0;
+                simLog.textContent = '状态已复位：STA = 0x00，等待 PA0 上的上升沿';
+            }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var act = btn.getAttribute('data-act');
+                if (actions[act]) actions[act]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

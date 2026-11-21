@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验34 MPU9250九轴传感器实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        .keylogic {
+            background: #f3fbf6;
+            border: 1px solid #d8eee1;
+            border-left: 4px solid #45B97C;
+            border-radius: 5px;
+            padding: 12px 16px 12px;
+            margin: -4px 0 18px;
+        }
+
+        .kl-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #2f7d5b;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .kl-title::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #45B97C;
+            flex-shrink: 0;
+        }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4a6f88; font-size: 12.8px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 4px; }
+
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+            white-space: pre-wrap;
+            line-height: 1.7;
+        }
+
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验34 MPU9250九轴传感器实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">沿 main 的调用顺序，一路读到姿态数据出屏。</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">用软件 IIC 读取 MPU9250，再由 DMP 输出 pitch / roll / yaw</div>
+
+                    <p>本实验的目标不是“点亮某个外设”，而是把一颗九轴传感器从复位、自检、量程配置，一路带到可用的欧拉角。工程使用 ALIENTEK 阿波罗 STM32F429 开发板，MPU9250 通过板载 IIC 总线连接，代码里没有使用 STM32 的硬件 I2C 外设，而是用 GPIO 模拟时序。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>工程中的落点</th><th>作用</th></tr>
+                        <tr><td>MCU</td><td>STM32F429IGT6，SYSCLK 180 MHz</td><td>运行 DMP 解算与显示刷新</td></tr>
+                        <tr><td>传感器</td><td>MPU9250（三轴加速度 + 三轴陀螺 + AK8963 三轴磁力计）</td><td>输出原始数据与四元数</td></tr>
+                        <tr><td>IIC</td><td><code class="inline">PH4 = SCL</code>、<code class="inline">PH5 = SDA</code></td><td>软件模拟 IIC，地址 0x68 / 0x0C</td></tr>
+                        <tr><td>显示</td><td>SDRAM + LCD（LTDC 或 FMC 屏）</td><td>显示温度、姿态与上传开关</td></tr>
+                        <tr><td>串口</td><td>USART1，PA9/PA10，500000 bps</td><td>上报匿名协议数据帧</td></tr>
+                        <tr><td>按键 / LED</td><td>KEY0 切换上报，LED0 心跳</td><td>交互与状态指示</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">HAL_Init</span>
+                        <span class="chip">Stm32_Clock_Init(360,25,2,8)</span>
+                        <span class="chip">delay_init(180)</span>
+                        <span class="chip">uart_init(500000)</span>
+                        <span class="chip">mpu_dmp_init</span>
+                    </div>
+
+                    <div class="note blue">实验现象：LCD 先显示 “MPU9250 OK”，随后每 10 帧刷新温度与姿态；按 KEY0 可在 “UPLOAD ON / OFF” 之间切换，开启时串口持续输出原始数据帧与状态帧。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">先认清哪些文件是“板级公共代码”，哪些是本实验独有的传感器代码</div>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>关键函数</th><th>在本实验中的职责</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td><code>main()</code></td><td>初始化顺序、DMP 自检循环、主循环取数与显示</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td><code>SysTick_Handler()</code></td><td>只做 <code>HAL_IncTick()</code>，没有传感器中断</td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td><code>Reset_Handler</code></td><td>建立栈堆、取复位向量、跳 SystemInit / __main</td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td><code>SystemInit()</code></td><td>开 FPU、设置 VTOR</td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td><code>Stm32_Clock_Init()</code></td><td>HSE 25 MHz → PLL → 180 MHz</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td><code>delay_init/us/ms</code></td><td>SysTick 轮询延时</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td><code>uart_init</code>、<code>fputc</code></td><td>500000 bps，printf 重定向</td></tr>
+                        <tr><td><code>HARDWARE/IIC/myiic.c</code></td><td><code>IIC_Start/Stop/Read_Byte</code></td><td>GPIO 模拟 IIC 时序</td></tr>
+                        <tr><td><code>HARDWARE/MPU9250/mpu9250.c</code></td><td><code>MPU9250_Init</code>、<code>MPU_Get_*</code></td><td>寄存器级初始化与原始数据读取</td></tr>
+                        <tr><td><code>DMP/driver/eMPL/inv_mpu.c</code></td><td><code>mpu_dmp_init</code>、<code>mpu_mpl_get_data</code></td><td>加载 DMP 固件并输出四元数</td></tr>
+                        <tr><td><code>HARDWARE/SDRAM</code>、<code>LCD</code>、<code>LED</code>、<code>KEY</code></td><td>各自 <code>*_Init()</code></td><td>帧缓存、显示、心跳与按键</td></tr>
+                    </table>
+
+                    <div class="note">阅读顺序建议：<code>main.c</code> → <code>sys.c</code> → <code>delay.c</code> → <code>usart.c</code> → <code>myiic.c</code> → <code>mpu9250.c</code> → <code>inv_mpu.c</code>。先看调用关系，再钻进寄存器细节，避免一上来就被 DMP 的大文件淹没。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电复位到 while(1)，14 个初始化动作有严格的先后依赖</div>
+
+                    <figure class="figure">
+                        <img src="./index48-map/boot-flow.png" alt="实验34 从上电复位到主循环的启动流程图">
+                        <figcaption>图 3-1　启动链路总览：复位 → 时钟 → 时基 → 串口 → 板级外设 → 传感器</figcaption>
+                    </figure>
+
+                    <p><code>main()</code> 的前 6 行是全工程的骨架：没有 <code>HAL_Init()</code> 就没有 SysTick 与优先级分组；没有 <code>Stm32_Clock_Init()</code>，后面所有基于 180 MHz 计算的分频都会偏；没有 <code>delay_init(180)</code>，IIC 的微秒延时和 DMP 的重试节奏都会失真。</p>
+
+                    <pre class="code">int main(void)
+{
+    u8 t=0,report=1;                <span class="cmt">// 默认开启上报</span>
+    u8 key;
+    float pitch,roll,yaw;           <span class="cmt">// 欧拉角</span>
+    short aacx,aacy,aacz;           <span class="cmt">// 加速度原始值</span>
+    short gyrox,gyroy,gyroz;        <span class="cmt">// 陀螺原始值</span>
+    short temp;                     <span class="cmt">// 温度</span>
+
+    HAL_Init();                     <span class="cmt">// HAL 初始化：Cache、NVIC 分组、1 ms SysTick</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// 系统时钟 180 MHz</span>
+    delay_init(180);                <span class="cmt">// 延时函数按 180 MHz 校准</span>
+    uart_init(500000);              <span class="cmt">// USART1，500000 bps</span>
+    LED_Init();                     <span class="cmt">// LED0 / LED1</span>
+    KEY_Init();                     <span class="cmt">// WKUP / KEY0 / KEY1 / KEY2</span>
+    SDRAM_Init();                   <span class="cmt">// 外部 SDRAM，LCD 帧缓存</span>
+    LCD_Init();                     <span class="cmt">// 根据面板 ID 选择 LTDC 或 FMC</span>
+    POINT_COLOR=RED;
+    LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7");
+    LCD_ShowString(30,70,200,16,16,"MPU9250 TEST");
+
+    while(mpu_dmp_init())           <span class="cmt">// 失败就重试，直到 DMP 就绪</span>
+    {
+        LCD_ShowString(30,130,200,16,16,"MPU9250 Error");
+        delay_ms(200);
+        LCD_Fill(30,130,239,130+16,WHITE);
+        delay_ms(200);
+        LED0=!LED0;                 <span class="cmt">// 失败时 LED0 闪烁</span>
+    }
+    LCD_ShowString(30,130,200,16,16,"MPU9250 OK");
+    ...
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>顺序不可交换：<code>delay_init</code> 依赖 <code>Stm32_Clock_Init</code> 之后的 180 MHz；<code>mpu_dmp_init</code> 内部的 IIC 时序又依赖 <code>delay_us</code>。</li>
+                            <li><code>while(mpu_dmp_init())</code> 把“失败重试”写在主流程里，失败期间 LCD 会先显示 Error，再清屏，形成可见的闪烁。</li>
+                            <li>只有 DMP 初始化返回 0，才会打印 “MPU9250 OK” 并进入主循环；否则程序永远停在这个重试循环。</li>
+                            <li>所有外设初始化都在进入 <code>while(1)</code> 之前完成，主循环里不再做时钟或总线配置。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">MSP 从哪里来、复位后第一条指令在哪、栈堆到底给了多少</div>
+
+                    <p>启动文件 <code>CORE/startup_stm32f429xx.s</code> 定义了栈区、堆区和向量表。复位时 Cortex-M4 硬件自动从地址 0x08000000 取第一个字作为 MSP，第二个字作为 Reset_Handler 入口。</p>
+
+                    <pre class="code">Stack_Size      EQU     0x00000400      <span class="cmt">// 栈 1 KB</span>
+
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp
+
+Heap_Size       EQU     0x00000200      <span class="cmt">// 堆 512 B</span>
+
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit
+
+                PRESERVE8
+                THUMB
+
+                AREA    RESET, DATA, READONLY
+                EXPORT  __Vectors
+__Vectors       DCD     __initial_sp              <span class="cmt">// 第 0 项：初始 MSP</span>
+                DCD     Reset_Handler             <span class="cmt">// 第 1 项：复位入口</span>
+                DCD     NMI_Handler
+                DCD     HardFault_Handler
+                ...</pre>
+
+                    <pre class="code">Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+
+                 LDR     R0, =SystemInit
+                 BLX     R0                        <span class="cmt">// 先跑 SystemInit</span>
+                 LDR     R0, =__main
+                 BX      R0                        <span class="cmt">// 再交给 C 库启动代码</span>
+                 ENDP</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>栈只有 1 KB、堆只有 512 B。DMP 解算与浮点打印会消耗较多栈空间，这是本工程最容易被忽视的余量点。</li>
+                            <li><code>__main</code> 不是 <code>main</code>：它负责把 .data 从 Flash 复制到 SRAM、把 .bss 清零，然后才跳 <code>main()</code>。</li>
+                            <li>向量表默认链接在 0x08000000；只要不改 <code>VECT_TAB_OFFSET</code>，<code>SystemInit</code> 就会把 VTOR 指回这里。</li>
+                            <li>启动文件里的 <code>IMPORT SystemInit</code> 与 <code>IMPORT __main</code> 决定了执行顺序，不能在汇编里直接跳 <code>main</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">一个负责 FPU 与向量表，一个负责 Cache、优先级分组和时基</div>
+
+                    <p><code>SystemInit()</code> 在 <code>USER/system_stm32f4xx.c</code> 中。它不做 PLL 配置，真正的 180 MHz 在 <code>Stm32_Clock_Init()</code> 里完成。它做的是三件底层事：打开 FPU、设置向量表偏移、给出复位后的 <code>SystemCoreClock</code> 初值。</p>
+
+                    <pre class="code">void SystemInit(void)
+{
+    RCC->CR |= (uint32_t)0x00000001;          <span class="cmt">// 打开 HSI</span>
+    RCC->CFGR = 0x00000000;
+    RCC->CR &amp;= ~(uint32_t)0x01000000;         <span class="cmt">// 关闭 PLL</span>
+    ...
+    SCB->CPACR |= ((3UL &lt;&lt; 10*2) | (3UL &lt;&lt; 11*2)); <span class="cmt">// CP10/CP11 全访问，开 FPU</span>
+
+#ifdef VECT_TAB_SRAM
+    SCB->VTOR = SRAM_BASE | VECT_TAB_OFFSET;
+#else
+    SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;  <span class="cmt">// 默认 0x08000000</span>
+#endif
+}</pre>
+
+                    <p><code>HAL_Init()</code> 位于 HAL 库，工程没有重写它。它先打开指令/数据 Cache 和 Prefetch，再设置 NVIC 优先级分组为 2，最后调用 <code>HAL_InitTick()</code> 配置 1 ms SysTick。</p>
+
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+    __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();   <span class="cmt">// I-Cache</span>
+    __HAL_FLASH_DATA_CACHE_ENABLE();          <span class="cmt">// D-Cache</span>
+    __HAL_FLASH_PREFETCH_BUFFER_ENABLE();     <span class="cmt">// Prefetch</span>
+
+    HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);
+    HAL_InitTick(TICK_INT_PRIORITY);          <span class="cmt">// TICK_INT_PRIORITY = 0x0F</span>
+    return HAL_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>SystemInit</code> 里的 <code>SCB-&gt;VTOR</code> 与启动文件配合：只要程序从 0x08000000 起链接，向量表就无需搬移。</li>
+                            <li>FPU 必须在任何浮点运算之前打开；DMP 与欧拉角公式大量使用 <code>float</code>/<code>double</code>，这一步漏掉会直接进 HardFault。</li>
+                            <li><code>HAL_InitTick()</code> 先按复位默认的 16 MHz 配一次 SysTick；随后 <code>HAL_RCC_ClockConfig()</code> 会再次调用它，按 180 MHz 重装 LOAD。</li>
+                            <li>优先级分组 2 表示 2 位抢占优先级、2 位子优先级，后续 USART1 中断的优先级都按这个分组解释。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟、延时与串口">
+                    <h2>06　时钟、延时与串口</h2>
+                    <div class="sec-sub">25 MHz 晶振如何得到 180 MHz，以及 delay 与 printf 各自挂在哪</div>
+
+                    <figure class="figure">
+                        <img src="./index48-map/clock-tree.png" alt="实验34 时钟树：HSE 25 MHz 到 SYSCLK 180 MHz">
+                        <figcaption>图 6-1　PLL 参数与总线分频，Flash 需要 5 个等待周期</figcaption>
+                    </figure>
+
+                    <pre class="code">void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq)
+{
+    HAL_Init();                                   <span class="cmt">// 确保 HAL 时基已建立</span>
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+    RCC_OscInitStruct.HSEState = RCC_HSE_ON;      <span class="cmt">// 25 MHz 外部晶振</span>
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+    RCC_OscInitStruct.PLL.PLLM = pllm;            <span class="cmt">// 25</span>
+    RCC_OscInitStruct.PLL.PLLN = plln;            <span class="cmt">// 360</span>
+    RCC_OscInitStruct.PLL.PLLP = pllp;            <span class="cmt">// 2</span>
+    RCC_OscInitStruct.PLL.PLLQ = pllq;            <span class="cmt">// 8</span>
+    HAL_RCC_OscConfig(&amp;RCC_OscInitStruct);
+
+    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                                |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;    <span class="cmt">// HCLK 180 MHz</span>
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;     <span class="cmt">// PCLK1 45 MHz</span>
+    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;     <span class="cmt">// PCLK2 90 MHz</span>
+    HAL_RCC_ClockConfig(&amp;RCC_ClkInitStruct, FLASH_LATENCY_5);
+}</pre>
+
+                    <table class="data">
+                        <tr><th>量</th><th>算式</th><th>结果</th></tr>
+                        <tr><td>VCO 输入</td><td>HSE / PLLM = 25 / 25</td><td>1 MHz</td></tr>
+                        <tr><td>VCO 输出</td><td>1 MHz × PLLN = 1 × 360</td><td>360 MHz</td></tr>
+                        <tr><td>SYSCLK</td><td>360 / PLLP = 360 / 2</td><td>180 MHz</td></tr>
+                        <tr><td>HCLK</td><td>SYSCLK / AHB 1</td><td>180 MHz</td></tr>
+                        <tr><td>PCLK1</td><td>180 / 4</td><td>45 MHz</td></tr>
+                        <tr><td>PCLK2</td><td>180 / 2</td><td>90 MHz</td></tr>
+                        <tr><td>USB 时钟</td><td>360 / PLLQ = 360 / 8</td><td>45 MHz</td></tr>
+                    </table>
+
+                    <p>延时没有使用 HAL_Delay，而是 <code>SYSTEM/delay/delay.c</code> 里的 SysTick 轮询版本。<code>delay_init(180)</code> 把 <code>fac_us</code> 设为 180，<code>delay_us(nus)</code> 直接按 CPU 周期数装载 SysTick 并等待 COUNTFLAG，不产生中断。</p>
+
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
+    fac_us = SYSCLK;                  <span class="cmt">// 180 MHz → 1 us 需要 180 个周期</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks;
+    u32 told,tnow,tcnt=0;
+    u32 reload = SysTick-&gt;LOAD;
+    ticks = nus * fac_us;             <span class="cmt">// 本次要数的周期数</span>
+    told = SysTick-&gt;VAL;
+    while(1)
+    {
+        tnow = SysTick-&gt;VAL;
+        if(tnow != told)
+        {
+            if(tnow &lt; told) tcnt += told - tnow;
+            else tcnt += reload - tnow + told;
+            told = tnow;
+            if(tcnt &gt;= ticks) break;
+        }
+    }
+}</pre>
+
+                    <p>串口是 USART1，波特率 500000。重定向通过重写 <code>fputc</code> 完成，<code>printf</code> 最终逐字节写 <code>USART1-&gt;DR</code>；接收侧开了 RXNE 中断，中断里把字节塞进 <code>USART_RX_BUF</code>。</p>
+
+                    <pre class="code">void uart_init(u32 bound)
+{
+    UART1_Handler.Instance = USART1;
+    UART1_Handler.Init.BaudRate = bound;        <span class="cmt">// 500000</span>
+    UART1_Handler.Init.WordLength = UART_WORDLENGTH_8B;
+    UART1_Handler.Init.StopBits = UART_STOPBITS_1;
+    UART1_Handler.Init.Parity = UART_PARITY_NONE;
+    UART1_Handler.Init.Mode = UART_MODE_TX_RX;
+    HAL_UART_Init(&amp;UART1_Handler);
+
+#if EN_USART1_RX
+    __HAL_UART_ENABLE_IT(&amp;UART1_Handler, UART_IT_RXNE);
+    HAL_NVIC_EnableIRQ(USART1_IRQn);
+#endif
+}
+
+int fputc(int ch, FILE *f)
+{
+    while((USART1-&gt;SR &amp; 0X40) == 0);           <span class="cmt">// 等 TC 置位</span>
+    USART1-&gt;DR = (u8)ch;
+    return ch;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>PLL 的输入必须落在 1~2 MHz、VCO 落在 100~432 MHz：25/25=1 MHz、1×360=360 MHz，均满足 F429 的限制。</li>
+                            <li>180 MHz 超过 150 MHz 档，Flash 必须配 5 个等待周期；<code>HAL_RCC_ClockConfig(..., FLASH_LATENCY_5)</code> 同时完成等待周期与总线分频。</li>
+                            <li><code>delay_us</code> 通过读取 SysTick-&gt;VAL 的差值累计，不依赖中断，因此可以在中断关闭的临界区里使用。</li>
+                            <li>500000 bps 对 90 MHz 的 PCLK2 来说分频误差很小；改波特率时要重新核算 <code>USARTDIV</code>。</li>
+                            <li><code>fputc</code> 用查询 TC 的方式发送，效率不高但足够本实验的帧率；大量打印时可能拖慢主循环。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="软件 IIC 与器件访问">
+                    <h2>07　软件 IIC 与器件访问</h2>
+                    <div class="sec-sub">PH4/PH5 如何模拟 Start、字节、ACK 与 Stop</div>
+
+                    <figure class="figure">
+                        <img src="./index48-map/i2c-path.png" alt="软件 IIC 访问 MPU9250 与 AK8963 的连线与读时序">
+                        <figcaption>图 7-1　MPU9250 与 AK8963 共用一组 GPIO 模拟的 IIC</figcaption>
+                    </figure>
+
+                    <p><code>myiic.c</code> 用开漏输出模拟 IIC：SCL 与 SDA 都在 <code>GPIOH</code>，初始化时把两个引脚设为开漏输出，随后通过 <code>IIC_SCL</code> / <code>IIC_SDA</code> 宏直接写 BSRR。读 SDA 前要先把方向切到输入。</p>
+
+                    <pre class="code">#define IIC_SCL    PHout(4)      <span class="cmt">// PH4</span>
+#define IIC_SDA    PHout(5)      <span class="cmt">// PH5</span>
+#define READ_SDA   PHin(5)       <span class="cmt">// 读 PH5</span>
+
+void IIC_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_GPIOH_CLK_ENABLE();
+    GPIO_Initure.Pin = GPIO_PIN_4 | GPIO_PIN_5;
+    GPIO_Initure.Mode = GPIO_MODE_OUTPUT_OD;   <span class="cmt">// 开漏输出</span>
+    GPIO_Initure.Pull = GPIO_PULLUP;
+    GPIO_Initure.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOH, &amp;GPIO_Initure);
+
+    IIC_SCL = 1;
+    IIC_SDA = 1;
+}
+
+void IIC_Start(void)
+{
+    SDA_OUT();
+    IIC_SDA = 1;
+    IIC_SCL = 1;
+    delay_us(2);
+    IIC_SDA = 0;              <span class="cmt">// SCL 高时 SDA 下降沿 = Start</span>
+    delay_us(2);
+    IIC_SCL = 0;
+}</pre>
+
+                    <pre class="code">u8 IIC_Read_Byte(unsigned char ack)
+{
+    unsigned char i, receive = 0;
+    SDA_IN();                 <span class="cmt">// 切换为输入，准备采样</span>
+    for(i = 0; i &lt; 8; i++)
+    {
+        IIC_SCL = 0;
+        delay_us(2);
+        IIC_SCL = 1;
+        receive &lt;&lt;= 1;
+        if(READ_SDA) receive++;
+        delay_us(2);
+    }
+    if(!ack) IIC_NAck();
+    else IIC_Ack();
+    return receive;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>总线上所有器件都是开漏，必须依赖外部上拉；代码把内部上拉也打开，保证空闲时 SCL/SDA 为高。</li>
+                            <li>Start 的定义是“SCL 高电平期间 SDA 由高变低”，Stop 相反；这两个边沿由软件顺序保证。</li>
+                            <li>读字节时主机先拉低 SCL，释放后在高电平期间采样 SDA；8 位凑齐后由主机发 ACK/NACK。</li>
+                            <li>MPU9250 的地址是 0x68（写 0xD0、读 0xD1），AK8963 是 0x0C；两者挂在同一组总线上，靠地址区分。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="MPU9250 初始化与量程">
+                    <h2>08　MPU9250 初始化与量程</h2>
+                    <div class="sec-sub">复位、唤醒、量程、采样率、BYPASS 与 ID 自检</div>
+
+                    <p><code>MPU9250_Init()</code> 是本实验的传感器入口。它先复位 MPU9250，再配置陀螺 ±2000 dps、加速度 ±2 g、采样率 50 Hz，然后通过 <code>INT_PIN_CFG</code> 打开 BYPASS，让主机可以直接访问 AK8963。</p>
+
+                    <pre class="code">u8 MPU9250_Init(void)
+{
+    u8 res=0;
+    IIC_Init();                                        <span class="cmt">// 先初始化 IIC 引脚</span>
+    MPU_Write_Byte(MPU9250_ADDR,MPU_PWR_MGMT1_REG,0X80); <span class="cmt">// 复位</span>
+    delay_ms(100);
+    MPU_Write_Byte(MPU9250_ADDR,MPU_PWR_MGMT1_REG,0X00); <span class="cmt">// 唤醒</span>
+    MPU_Set_Gyro_Fsr(3);                               <span class="cmt">// ±2000 dps</span>
+    MPU_Set_Accel_Fsr(0);                              <span class="cmt">// ±2 g</span>
+    MPU_Set_Rate(50);                                  <span class="cmt">// 50 Hz</span>
+    MPU_Write_Byte(MPU9250_ADDR,MPU_INT_EN_REG,0X00);   <span class="cmt">// 关中断</span>
+    MPU_Write_Byte(MPU9250_ADDR,MPU_USER_CTRL_REG,0X00);<span class="cmt">// 关 I2C 主模式</span>
+    MPU_Write_Byte(MPU9250_ADDR,MPU_FIFO_EN_REG,0X00);  <span class="cmt">// 关 FIFO</span>
+    MPU_Write_Byte(MPU9250_ADDR,MPU_INTBP_CFG_REG,0X82);<span class="cmt">// 低电平有效 + BYPASS</span>
+
+    res=MPU_Read_Byte(MPU9250_ADDR,MPU_DEVICE_ID_REG);
+    if(res==MPU6500_ID)                                <span class="cmt">// 0x71</span>
+    {
+        MPU_Write_Byte(MPU9250_ADDR,MPU_PWR_MGMT1_REG,0X01); <span class="cmt">// PLL X 轴参考</span>
+        MPU_Write_Byte(MPU9250_ADDR,MPU_PWR_MGMT2_REG,0X00); <span class="cmt">// 不循环、不低功耗</span>
+        MPU_Set_Rate(50);
+    }else return 1;
+
+    res=MPU_Read_Byte(AK8963_ADDR,MAG_WIA);
+    if(res==AK8963_ID)                                 <span class="cmt">// 0x48</span>
+    {
+        MPU_Write_Byte(AK8963_ADDR,MAG_CNTL1,0X11);     <span class="cmt">// 单次测量模式</span>
+    }else return 1;
+
+    return 0;
+}</pre>
+
+                    <table class="data">
+                        <tr><th>配置项</th><th>写入</th><th>含义</th></tr>
+                        <tr><td>陀螺量程</td><td><code>fsr=3</code> → 0x18</td><td>±2000 dps，灵敏度 16.4 LSB/(°/s)</td></tr>
+                        <tr><td>加速度量程</td><td><code>fsr=0</code> → 0x00</td><td>±2 g，灵敏度 16384 LSB/g</td></tr>
+                        <tr><td>采样率</td><td><code>1000/50-1 = 19</code></td><td>SMPLRT_DIV=19，输出 50 Hz</td></tr>
+                        <tr><td>低通滤波</td><td><code>MPU_Set_LPF(25)</code></td><td>CFG=3，约 42 Hz 带宽</td></tr>
+                        <tr><td>BYPASS</td><td><code>0x82</code></td><td>INT 低有效，主机可直连 AK8963</td></tr>
+                    </table>
+
+                    <p>初始化里的每一次 <code>MPU_Write_Byte</code> / <code>MPU_Read_Byte</code> 都落在同一条软件 IIC 总线上：写操作是“START → 地址 0xD0 → 寄存器 → 数据 → STOP”，读操作则在寄存器地址后插入重复 START，再把地址最低位置 1（0xD1）取回数据。</p>
+
+                    <figure class="figure">
+                        <img src="./index48-map/mpu9250-timing.png" alt="MPU9250 软件 IIC 寄存器读时序：START、0xD0、寄存器地址、ACK、重复 START、0xD1、读数据、NACK、STOP">
+                        <figcaption>图 8-1　MPU_Read_Byte 的寄存器读时序（PH4=SCL / PH5=SDA）</figcaption>
+                    </figure>
+
+                    <p>图中四个延时值都来自 <code>delay.c</code>：起始/停止各 4 µs，发送每位约 6 µs，读位在 SCL 拉高后 1 µs 采样；<code>IIC_Wait_Ack</code> 最多轮询 250 次，超时直接发 STOP 并返回 1。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>先写 0x80 复位、延时 100 ms，再写 0x00 唤醒；复位后所有寄存器回到默认值，量程配置必须放在唤醒之后。</li>
+                            <li>MPU6500 的 ID 是 0x71，AK8963 的 WIA 是 0x48；任一不符就返回 1，外层 <code>mpu_dmp_init</code> 会因此失败。</li>
+                            <li><code>INT_PIN_CFG=0x82</code> 打开了 BYPASS，否则主机无法通过 0x0C 访问磁力计。</li>
+                            <li><code>MPU_Set_Rate(50)</code> 内部把 LPF 自动设为采样率的一半（25 Hz），这是源码里写死的联动。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="DMP 解算与姿态数据链">
+                    <h2>09　DMP 解算与姿态数据链</h2>
+                    <div class="sec-sub">四元数在芯片内部算好，MCU 只负责取数与转欧拉角</div>
+
+                    <figure class="figure">
+                        <img src="./index48-map/mpu-dataflow.png" alt="MPU9250 原始数据经 DMP 输出四元数与欧拉角的数据链">
+                        <figcaption>图 9-1　原始寄存器 → DMP FIFO → 四元数 → pitch / roll / yaw</figcaption>
+                    </figure>
+
+                    <p><code>mpu_dmp_init()</code> 依次完成：<code>mpu_init()</code>（复位并自检）、<code>dmp_load_motion_driver_firmware()</code>（把 InvenSense 的 DMP 固件写进芯片）、<code>dmp_set_orientation()</code>、<code>dmp_enable_feature()</code>、<code>dmp_set_fifo_rate()</code>、<code>mpu_set_dmp_state(1)</code>。全部成功才返回 0。</p>
+
+                    <pre class="code">int mpu_dmp_init(void)
+{
+    u8 res = 0;
+    if(mpu_init() == 0)                          <span class="cmt">// 复位、自检、读 ID</span>
+    {
+        res = dmp_load_motion_driver_firmware(); <span class="cmt">// 写 DMP 固件</span>
+        if(res) return 1;
+        res = dmp_set_orientation(inv_orientation_matrix_to_scalar(gyro_orientation));
+        if(res) return 2;
+        res = dmp_enable_feature(DMP_FEATURE_6X_LP_QUAT|DMP_FEATURE_TAP
+              |DMP_FEATURE_ANDROID_ORIENT|DMP_FEATURE_SEND_RAW_ACCEL
+              |DMP_FEATURE_SEND_CAL_GYRO|DMP_FEATURE_GYRO_CAL);
+        if(res) return 3;
+        res = dmp_set_fifo_rate(DEFAULT_MPU_HZ); <span class="cmt">// 默认 200 Hz</span>
+        if(res) return 4;
+        res = mpu_set_dmp_state(1);              <span class="cmt">// 启动 DMP</span>
+        if(res) return 5;
+    }else return 6;
+    return 0;
+}</pre>
+
+                    <pre class="code">int mpu_mpl_get_data(float *pitch,float *roll,float *yaw)
+{
+    float q0=1.0f,q1=0.0f,q2=0.0f,q3=0.0f;
+    unsigned long sensor_timestamp;
+    short gyro[3], accel[3], sensors;
+    unsigned char more;
+    long quat[4];
+
+    if(dmp_read_fifo(gyro, accel, quat, &amp;sensor_timestamp, &amp;sensors, &amp;more)) return 1;
+    if(sensors &amp; INV_WXYZ_QUAT)
+    {
+        q0 = quat[0] / q30;      <span class="cmt">// q30 格式转浮点</span>
+        q1 = quat[1] / q30;
+        q2 = quat[2] / q30;
+        q3 = quat[3] / q30;
+        *pitch = asin(-2 * q1 * q3 + 2 * q0 * q2) * 57.3;
+        *roll  = atan2(2 * q2 * q3 + 2 * q0 * q1,
+                       -2 * q1 * q1 - 2 * q2 * q2 + 1) * 57.3;
+        *yaw   = atan2(2 * (q1 * q2 + q0 * q3),
+                        q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3) * 57.3;
+    }
+    return 0;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>DMP 固件是二进制数组，<code>dmp_load_motion_driver_firmware()</code> 通过 IIC 分块写入芯片内部 RAM；失败通常意味着 IIC 不通或芯片未复位好。</li>
+                            <li>四元数是 q30 定点：<code>q0..q3</code> 都是 32 位整数，除以 2<sup>30</sup> 才是 -1~1 的浮点。</li>
+                            <li>返回非 0 表示本次 FIFO 没有新数据，main 里会跳过刷新；这不是错误，不能据此判断传感器坏了。</li>
+                            <li>pitch / roll / yaw 的单位是度（乘 57.3），上报时再乘 100 转成 0.01 度整数。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="显示与外设初始化">
+                    <h2>10　显示与外设初始化</h2>
+                    <div class="sec-sub">SDRAM 是帧缓存，LCD 负责出图，LED/KEY 负责交互</div>
+
+                    <p><code>SDRAM_Init()</code> 先通过 FMC 配置 BANK5，把 32 MB SDRAM 映射到 <code>0xC0000000</code>；LCD 的 RGB 面板把这块内存当作帧缓存。<code>LCD_Init()</code> 会读面板 ID：识别到 RGB 屏走 LTDC，否则走 FMC 的 MCU 屏。</p>
+
+                    <pre class="code">void SDRAM_Init(void)
+{
+    FMC_SDRAM_InitTypeDef SDRAM_InitStructure;
+    ...
+    SDRAM_InitStructure.SDBank = FMC_SDRAM_BANK2;        <span class="cmt">// BANK5</span>
+    SDRAM_InitStructure.ColumnBitsNumber = FMC_SDRAM_COLUMN_BITS_NUM_9;
+    SDRAM_InitStructure.RowBitsNumber = FMC_SDRAM_ROW_BITS_NUM_13;
+    SDRAM_InitStructure.MemoryDataWidth = FMC_SDRAM_MEM_BUS_WIDTH_16;
+    ...
+    HAL_SDRAM_Init(&amp;SDRAM_Handler,&amp;SDRAM_InitStructure);
+    SDRAM_Initialization_Sequence(&amp;SDRAM_Handler);
+}
+
+void LCD_Init(void)
+{
+    ...
+    lcddev.id = LTDC_PanelID_Read();      <span class="cmt">// 读 RGB 面板 ID</span>
+    if(lcddev.id)
+    {
+        LTDC_Init();                      <span class="cmt">// RGB 屏走 LTDC</span>
+        LCD_Display_Dir(0);
+    }
+    else
+    {
+        LCD_FMC_Init();                   <span class="cmt">// MCU 屏走 FMC</span>
+    }
+    LCD_Clear(WHITE);
+}</pre>
+
+                    <pre class="code">void LED_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    GPIO_Initure.Pin = GPIO_PIN_0 | GPIO_PIN_1;
+    GPIO_Initure.Mode = GPIO_MODE_OUTPUT_PP;   <span class="cmt">// 推挽输出</span>
+    GPIO_Initure.Pull = GPIO_PULLUP;
+    GPIO_Initure.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOB,&amp;GPIO_Initure);
+    LED0 = 1;                                  <span class="cmt">// 默认熄灭</span>
+    LED1 = 1;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>SDRAM 不初始化就直接写 LCD，会出现花屏或总线错误；<code>0xC0000000</code> 是 LTDC 帧缓存的默认基址。</li>
+                            <li><code>LTDC_PanelID_Read()</code> 通过面板 ID 引脚区分屏幕型号，决定后续走 LTDC 还是 FMC，这条分支在 <code>LCD_Init</code> 内部完成。</li>
+                            <li>LED0/PB0 与 LED1/PB1 低电平点亮；主循环用 <code>LED0=!LED0</code> 做心跳。</li>
+                            <li>KEY0/KEY1 在 <code>KEY_Init</code> 中配置为上拉输入，按下为低；<code>KEY_Scan(0)</code> 不做连按，只返回单次按下。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="中断链路与时基">
+                    <h2>11　中断链路与时基</h2>
+                    <div class="sec-sub">本实验没有传感器中断，唯一周期性的中断是 SysTick</div>
+
+                    <table class="data">
+                        <tr><th>触发源</th><th>NVIC / 入口</th><th>处理内容</th></tr>
+                        <tr><td>SysTick 1 ms</td><td><code>SysTick_Handler</code> → <code>HAL_IncTick()</code></td><td>uwTick 自增，供 HAL_Delay 使用</td></tr>
+                        <tr><td>USART1 RXNE</td><td><code>USART1_IRQHandler</code></td><td>把收到的字节写入环形缓冲，供 USMART/调试使用</td></tr>
+                        <tr><td>MPU9250 INT</td><td>工程中未体现</td><td>DMP 数据靠主循环轮询 FIFO，不接 EXTI</td></tr>
+                        <tr><td>DMP FIFO</td><td>工程中未体现</td><td><code>dmp_read_fifo</code> 在主循环里查询</td></tr>
+                    </table>
+
+                    <pre class="code">void SysTick_Handler(void)
+{
+    HAL_IncTick();          <span class="cmt">// 只累加 1 ms 计数</span>
+}
+
+void USART1_IRQHandler(void)
+{
+    u8 Res;
+    if((__HAL_UART_GET_FLAG(&amp;UART1_Handler,UART_FLAG_RXNE)!=RESET) &amp;&amp;
+       (__HAL_UART_GET_IT_SOURCE(&amp;UART1_Handler,UART_IT_RXNE)!=RESET))
+    {
+        HAL_UART_Receive(&amp;UART1_Handler,&amp;Res,1,1000);
+        if(USART_RX_STA &lt; 0x8000)
+        {
+            USART_RX_BUF[USART_RX_STA &amp; 0X3FFF] = Res;
+            USART_RX_STA++;
+            if(Res == '\r') USART_RX_STA |= 0x8000;
+        }
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>HAL_IncTick()</code> 只做计数，不做业务；真正的延时判断在 <code>HAL_Delay</code> 或 <code>delay_us</code> 里完成。</li>
+                            <li>Sensor 数据没有中断链路：DMP FIFO 是否可读，靠 <code>dmp_read_fifo</code> 的返回值判断，属于纯轮询。</li>
+                            <li>USART1 中断使用 HAL 的 <code>HAL_UART_Receive</code>，每次读 1 字节，超时 1000 ms；这是阻塞式 API 在中断里的用法。</li>
+                            <li>USART_RX_STA 的最高位作为“收到回车”标志，低 14 位是长度；这种写法常见于 ALIENTEK 的串口实验。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="主循环与现象">
+                    <h2>12　主循环与现象</h2>
+                    <div class="sec-sub">按键、取数、显示、上报，四条支路都在一个 while(1) 里</div>
+
+                    <figure class="figure">
+                        <img src="./index48-map/main-loop.png" alt="实验34 主循环的按键、取数、显示与上报流程">
+                        <figcaption>图 12-1　主循环：每 10 帧刷屏一次，LED0 每帧翻转</figcaption>
+                    </figure>
+
+                    <pre class="code">while(1)
+{
+    key=KEY_Scan(0);
+    if(key==KEY0_PRES)                    <span class="cmt">// KEY0 切换上报</span>
+    {
+        report=!report;
+        if(report)LCD_ShowString(30,170,200,16,16,"UPLOAD ON ");
+        else LCD_ShowString(30,170,200,16,16,"UPLOAD OFF");
+    }
+    if(mpu_mpl_get_data(&amp;pitch,&amp;roll,&amp;yaw)==0)
+    {
+        temp=MPU_Get_Temperature();       <span class="cmt">// 温度</span>
+        MPU_Get_Accelerometer(&amp;aacx,&amp;aacy,&amp;aacz);
+        MPU_Get_Gyroscope(&amp;gyrox,&amp;gyroy,&amp;gyroz);
+        if(report)mpu6050_send_data(aacx,aacy,aacz,gyrox,gyroy,gyroz);
+        if(report)usart1_report_imu((int)(roll*100),(int)(pitch*100),(int)(yaw*100),0,0);
+        if((t%10)==0)                     <span class="cmt">// 每 10 帧刷一次 LCD</span>
+        {
+            ...
+            t=0;
+            LED0=!LED0;                   <span class="cmt">// 心跳</span>
+        }
+    }
+    t++;
+}</pre>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>可观察现象</th><th>对应代码</th></tr>
+                        <tr><td>上电</td><td>LCD 显示 “MPU9250 OK”，LED0 缓慢闪烁</td><td><code>mpu_dmp_init()</code> 成功后进入主循环</td></tr>
+                        <tr><td>传感器未接好</td><td>LCD 反复显示 “MPU9250 Error”，LED0 快闪</td><td><code>while(mpu_dmp_init())</code></td></tr>
+                        <tr><td>按下 KEY0</td><td>“UPLOAD ON / OFF” 切换，串口输出随之启停</td><td><code>report=!report</code></td></tr>
+                        <tr><td>倾斜开发板</td><td>Pitch / Roll 数值变化，Yaw 缓慢漂移</td><td><code>mpu_mpl_get_data</code> + 欧拉角公式</td></tr>
+                        <tr><td>串口工具打开</td><td>500000 bps 下收到 0xAA 0xAA 开头的帧</td><td><code>usart1_niming_report</code></td></tr>
+                    </table>
+
+                    <div class="sim">
+                        <div class="sim-title">DMP 初始化分支演示（仅演示逻辑，不代表真实硬件）</div>
+                        <div class="sim-buttons">
+                            <button data-key="ok">器件正常</button>
+                            <button data-key="idfail">ID 不符</button>
+                            <button data-key="firmware">固件加载失败</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>LED0 重试闪烁</div>
+                        </div>
+                        <div class="sim-log" id="simLog">等待选择分支……</div>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>先处理按键再取数：KEY0 的切换要立即反映到本轮上报，所以放在 <code>mpu_mpl_get_data</code> 之前。</li>
+                            <li>只有 <code>mpu_mpl_get_data()==0</code> 才读温度、加速度、陀螺；否则这一轮直接跳过，避免读到半更新数据。</li>
+                            <li>温度每帧都读，但 LCD 只在 <code>t%10==0</code> 时刷新，降低刷屏对 IIC 的占用。</li>
+                            <li><code>t</code> 在 if 内清零、在 if 外自增，保证 10 帧一个周期；<code>LED0</code> 与刷屏同频。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘">
+                    <h2>13　关键逻辑复盘</h2>
+                    <div class="sec-sub">把散落在各文件的“因果链”串成 6 条</div>
+
+                    <ol>
+                        <li><strong>时钟链：</strong><code>SystemInit</code> 只开 FPU 与 VTOR；PLL 在 <code>Stm32_Clock_Init</code> 里配置。HSE 25 MHz → 1 MHz → 360 MHz → 180 MHz，Flash 5 WS。</li>
+                        <li><strong>时基链：</strong><code>HAL_Init</code> 先配 1 ms SysTick；<code>HAL_RCC_ClockConfig</code> 再按 180 MHz 重装；<code>delay_init(180)</code> 只设置 <code>fac_us</code> 与时钟源。</li>
+                        <li><strong>总线链：</strong>软件 IIC 的 PH4/PH5 是开漏 GPIO，所有时序靠 <code>delay_us(2)</code> 撑开；MPU9250 的 0x68 与 AK8963 的 0x0C 共用这组线。</li>
+                        <li><strong>传感器链：</strong><code>MPU9250_Init</code> 复位/唤醒/量程/BYPASS，再让 <code>mpu_dmp_init</code> 写 DMP 固件；任一步失败都会回到 main 的重试循环。</li>
+                        <li><strong>数据链：</strong>DMP FIFO 输出 q30 四元数 → 除以 2<sup>30</sup> → 欧拉角 → LCD 字符串 / 串口帧。</li>
+                        <li><strong>交互链：</strong>KEY0 只改 <code>report</code>，不改传感器配置；LED0 只做心跳，不参与业务判断。</li>
+                    </ol>
+
+                    <div class="note">如果只想快速定位问题，先看 LCD 停在哪一行：停在 “MPU9250 Error” 说明 DMP/传感器没通；停在正常界面但数值不动，说明 <code>mpu_mpl_get_data</code> 一直返回非 0，优先查 FIFO 与采样率。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="总结与排查">
+                    <h2>14　总结与排查</h2>
+                    <div class="sec-sub">按“电源 → 时钟 → 总线 → 器件 → 数据”的顺序排查，最快</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>优先检查</th><th>依据</th></tr>
+                        <tr><td>LCD 全黑</td><td>SDRAM 是否初始化、面板 ID 分支是否走对</td><td><code>SDRAM_Init</code> → <code>LCD_Init</code></td></tr>
+                        <tr><td>一直显示 Error</td><td>PH4/PH5 上拉、0x68 是否应答、AK8963 是否为 0x48</td><td><code>MPU9250_Init</code> 的两个 ID 判断</td></tr>
+                        <tr><td>Error 后偶发 OK</td><td>IIC 延时是否过短、电源是否抖动</td><td><code>delay_us(2)</code> 与 DMP 重试</td></tr>
+                        <tr><td>姿态数值跳变</td><td>陀螺量程与安装方向、DMP 方向矩阵</td><td><code>MPU_Set_Gyro_Fsr(3)</code>、<code>dmp_set_orientation</code></td></tr>
+                        <tr><td>串口乱码</td><td>波特率是否 500000、PCLK2 是否 90 MHz</td><td><code>uart_init(500000)</code></td></tr>
+                        <tr><td>运行一段时间死机</td><td>栈只剩 1 KB，DMP 浮点与 printf 可能溢出</td><td><code>Stack_Size EQU 0x00000400</code></td></tr>
+                    </table>
+
+                    <p>本实验的启动过程可以压缩成一句话：<strong>复位后先建立 180 MHz 的时钟与 1 ms 时基，再用软件 IIC 把 MPU9250 从复位带到 DMP 就绪，最后在主循环里轮询四元数并转成欧拉角显示/上报。</strong>把这句话记住，再回头看任何一行初始化代码，都能找到它在这条链上的位置。</p>
+
+                    <div class="note blue">工程中未体现的内容：MPU9250 的 INT 引脚没有接入 EXTI，磁力计的持续采集也没有独立任务；姿态更新完全依赖主循环轮询 DMP FIFO。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-12 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    var dot0 = document.getElementById('dot0');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && simLog) {
+        var blink = false;
+        var timer = null;
+        var handlers = {
+            ok: function () {
+                if (timer) { clearInterval(timer); timer = null; }
+                dot0.classList.remove('on');
+                return 'mpu_dmp_init() 返回 0\nLCD 显示 "MPU9250 OK"\n进入 while(1)，允许读姿态并上报';
+            },
+            idfail: function () {
+                if (!timer) {
+                    timer = setInterval(function () {
+                        blink = !blink;
+                        dot0.classList.toggle('on', blink);
+                    }, 450);
+                }
+                return 'mpu_init() 读 WHO_AM_I 不是 0x71 或 AK8963 WIA 不是 0x48\nmpu_dmp_init() 返回 6\nmain 的 while 循环持续重试，LED0 闪烁';
+            },
+            firmware: function () {
+                if (!timer) {
+                    timer = setInterval(function () {
+                        blink = !blink;
+                        dot0.classList.toggle('on', blink);
+                    }, 450);
+                }
+                return 'ID 正确，但 dmp_load_motion_driver_firmware() 失败\nmpu_dmp_init() 返回 1\nLCD 显示 "MPU9250 Error"，200 ms 后清屏再试';
+            }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) simLog.textContent = handlers[key]();
+            });
+        });
+    }
+</script>
+</body>
+</html>

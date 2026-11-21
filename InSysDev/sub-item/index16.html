@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验2 按键输入实验 · 代码启动流程详解</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-menu::-webkit-scrollbar-thumb {
+            background: #cfe0ec;
+            border-radius: 3px;
+        }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num {
+            font-family: Consolas, monospace;
+            font-size: 11px;
+            color: #9db4c6;
+            flex-shrink: 0;
+        }
+
+        .sidebar-menu li.active .num {
+            color: #1890ff;
+        }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            display: block;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar {
+            width: 9px;
+        }
+
+        .content-body::-webkit-scrollbar-thumb {
+            background: #c8dcec;
+            border-radius: 5px;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 {
+            font-size: 13.5px;
+            color: #2f5d7c;
+            margin: 14px 0 6px;
+        }
+
+        .content-card p {
+            color: #5a6b78;
+            line-height: 1.85;
+            margin-bottom: 10px;
+            font-size: 13.5px;
+        }
+
+        .content-card ul, .content-card ol {
+            margin: 6px 0 12px 22px;
+            color: #5a6b78;
+            font-size: 13.5px;
+            line-height: 1.85;
+        }
+
+        .content-card li {
+            margin-bottom: 3px;
+        }
+
+        .content-card strong {
+            color: #35566d;
+        }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        /* 表格 */
+        table.data {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin: 10px 0 16px;
+        }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td {
+            padding: 9px 12px;
+            border: 1px solid #e4eef7;
+            color: #556;
+            line-height: 1.65;
+            vertical-align: top;
+        }
+
+        table.data tr:nth-child(even) td {
+            background: #fafdff;
+        }
+
+        /* 代码块 */
+        pre.code {
+            background: #1f2d38;
+            color: #dfeaf2;
+            padding: 16px 18px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.75;
+            margin: 10px 0 14px;
+            tab-size: 4;
+        }
+
+        pre.code .c {
+            color: #7fb69b;
+        }
+
+        pre.code .n {
+            color: #ffd479;
+        }
+
+        pre.code .s {
+            color: #f2b6c6;
+        }
+
+        pre.code::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        pre.code::-webkit-scrollbar-thumb {
+            background: #4a6273;
+            border-radius: 4px;
+        }
+
+        /* 目录树 */
+        pre.tree {
+            background: #f8fcff;
+            border: 1px solid #e0edf7;
+            border-left: 4px solid #6AADD4;
+            padding: 16px 18px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.85;
+            color: #4a6b82;
+            margin: 12px 0 16px;
+        }
+
+        /* 提示框 */
+        .callout {
+            border-radius: 4px;
+            padding: 12px 16px 12px 44px;
+            position: relative;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            line-height: 1.8;
+            color: #54666f;
+        }
+
+        .callout::before {
+            position: absolute;
+            left: 14px;
+            top: 12px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #6AADD4;
+            color: #fff;
+            font-size: 12px;
+            text-align: center;
+            line-height: 18px;
+            font-weight: 700;
+            font-family: Georgia, serif;
+        }
+
+        .callout.info {
+            background: #eef6fc;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .callout.info::before {
+            content: 'i';
+            font-style: italic;
+        }
+
+        .callout.tip {
+            background: #eef8f3;
+            border-left: 3px solid #45b97c;
+        }
+
+        .callout.tip::before {
+            content: '✓';
+            background: #45b97c;
+            font-size: 10px;
+        }
+
+        .callout.warn {
+            background: #fff7e8;
+            border-left: 3px solid #e8a33d;
+        }
+
+        .callout.warn::before {
+            content: '!';
+            background: #e8a33d;
+        }
+
+        /* 标签 */
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 10px 0 6px;
+        }
+
+        .chip {
+            background: #eef6fc;
+            color: #3d7fa6;
+            border: 1px solid #d6e9f7;
+            border-radius: 14px;
+            padding: 4px 12px;
+            font-size: 12.5px;
+        }
+
+        .pin {
+            display: inline-block;
+            font-family: Consolas, monospace;
+            background: #eef6fc;
+            color: #2f7bb0;
+            border: 1px solid #cfe6f7;
+            border-radius: 3px;
+            padding: 1px 6px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        /* 流程步骤 */
+        .flow {
+            margin: 16px 0 8px;
+        }
+
+        .flow-step {
+            position: relative;
+            padding-left: 42px;
+            padding-bottom: 18px;
+        }
+
+        .flow-step::before {
+            content: '';
+            position: absolute;
+            left: 13px;
+            top: 27px;
+            bottom: -4px;
+            width: 2px;
+            background: #dce8f2;
+        }
+
+        .flow-step:last-child::before {
+            display: none;
+        }
+
+        .flow-step .num {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6AADD4, #4a90c2);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 4px rgba(106, 173, 212, 0.45);
+        }
+
+        .flow-step h4 {
+            margin: 3px 0 4px;
+            font-size: 13.5px;
+            color: #2f5d7c;
+        }
+
+        .flow-step p {
+            margin: 0;
+            font-size: 13px;
+            color: #667a88;
+            line-height: 1.75;
+        }
+
+        /* 插图 */
+        .figure {
+            margin: 18px 0 6px;
+            text-align: center;
+        }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption {
+            font-size: 12.5px;
+            color: #8aa4b8;
+            margin-bottom: 6px;
+        }
+
+        /* 现象模拟 */
+        .sim {
+            background: #f8fcff;
+            border: 1px solid #e0edf7;
+            border-radius: 8px;
+            padding: 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-main {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sim-board {
+            display: flex;
+            gap: 30px;
+            padding: 4px 8px;
+        }
+
+        .sim-led {
+            text-align: center;
+        }
+
+        .led-dot {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: #c9d6e0;
+            box-shadow: inset 0 0 0 3px #fff, 0 1px 4px rgba(0, 0, 0, 0.15);
+            transition: all 0.25s;
+            margin-bottom: 6px;
+        }
+
+        .led-dot.on {
+            background: radial-gradient(circle at 35% 35%, #fff8c0, #ffd400 55%, #efa900);
+            box-shadow: 0 0 18px rgba(255, 200, 0, 0.75), inset 0 0 0 3px #fff;
+        }
+
+        .led-label {
+            font-size: 12px;
+            color: #7c95a8;
+            font-family: Consolas, monospace;
+        }
+
+        .sim-keys {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .sim-key {
+            padding: 10px 16px;
+            border: 1px solid #cfe3f2;
+            background: #fff;
+            color: #3d7fa6;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            user-select: none;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+
+        .sim-key:hover {
+            background: #eef6fc;
+            border-color: #6AADD4;
+        }
+
+        .sim-key:active {
+            transform: scale(0.96);
+        }
+
+        .sim-log {
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px dashed #dce8f2;
+            font-size: 12.5px;
+            color: #7c95a8;
+            min-height: 22px;
+        }
+
+        .sim-log b {
+            color: #3d7fa6;
+        }
+
+        /* 底部信息区域 */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        /* 响应式 */
+        @media (max-width: 1080px) {
+            .sidebar {
+                width: 215px;
+            }
+            .content-card {
+                padding: 18px 18px 16px;
+            }
+        }
+
+        @media (max-width: 820px) {
+            .sidebar {
+                width: 178px;
+            }
+            .sidebar-menu li {
+                font-size: 12px;
+                padding: 8px 10px;
+            }
+            .content-card h2 {
+                font-size: 17px;
+            }
+            .content-card {
+                padding: 16px 14px 14px;
+            }
+            .navbar-logo {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .sidebar {
+                display: none;
+            }
+            .navbar-logo {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">STM32F429 · 按键输入实验</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏：由本页内容自行归纳的目录架构 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---实-验-目-录---</div>
+                <ul class="sidebar-menu">
+                    <li data-target="overview"><span class="num">01</span>实验概述与硬件资源</li>
+                    <li data-target="structure"><span class="num">02</span>工程目录架构</li>
+                    <li data-target="boot"><span class="num">03</span>启动流程总览</li>
+                    <li data-target="startup"><span class="num">04</span>启动文件与 Reset_Handler</li>
+                    <li data-target="systeminit"><span class="num">05</span>SystemInit 系统初始化</li>
+                    <li data-target="halinit"><span class="num">06</span>HAL_Init 初始化</li>
+                    <li data-target="clock"><span class="num">07</span>时钟配置 180MHz</li>
+                    <li data-target="delay"><span class="num">08</span>delay 延时初始化</li>
+                    <li data-target="uart"><span class="num">09</span>USART1 串口初始化</li>
+                    <li data-target="gpio"><span class="num">10</span>LED 与 KEY 的 GPIO</li>
+                    <li data-target="keyscan"><span class="num">11</span>按键扫描 KEY_Scan</li>
+                    <li data-target="mainloop"><span class="num">12</span>主循环与实验现象</li>
+                    <li data-target="summary"><span class="num">13</span>实验总结</li>
+                </ul>
+                <div class="sidebar-tip">目录按「启动 → 时钟 → 外设 → 应用」的代码执行顺序归纳</div>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+
+                    <!-- 01 实验概述 -->
+                    <section class="content-card" id="overview">
+                        <h2>01 实验概述与硬件资源</h2>
+                        <div class="sec-sub">参考工程：实验2 按键输入实验（HAL 库版本） · 芯片：STM32F429IGT6 · 主频：180MHz</div>
+
+                        <p>本实验是 STM32F429 的第二个标准例程，核心目的是<strong>学习 GPIO 作为输入口的使用方法</strong>。程序通过 4 个板载按键控制 2 个 LED，完整走通「时钟使能 → GPIO 模式配置 → 电平读取 → 软件消抖 → 按键动作映射」这条链路。</p>
+
+                        <div class="chips">
+                            <span class="chip">GPIO 输入模式</span>
+                            <span class="chip">上拉 / 下拉</span>
+                            <span class="chip">软件消抖</span>
+                            <span class="chip">HAL_GPIO_ReadPin</span>
+                            <span class="chip">位带操作输出</span>
+                        </div>
+
+                        <h3>硬件资源与引脚分配</h3>
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>器件</th>
+                                    <th>引脚</th>
+                                    <th>GPIO 配置</th>
+                                    <th>有效电平 / 说明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>DS0（LED0）</td>
+                                    <td><span class="pin">PB1</span></td>
+                                    <td>推挽输出</td>
+                                    <td>低电平点亮，初始化输出高电平（熄灭）</td>
+                                </tr>
+                                <tr>
+                                    <td>DS1（LED1）</td>
+                                    <td><span class="pin">PB0</span></td>
+                                    <td>推挽输出</td>
+                                    <td>低电平点亮，初始化输出高电平（熄灭）</td>
+                                </tr>
+                                <tr>
+                                    <td>KEY0</td>
+                                    <td><span class="pin">PH3</span></td>
+                                    <td>输入 + 上拉</td>
+                                    <td>按下为低电平</td>
+                                </tr>
+                                <tr>
+                                    <td>KEY1</td>
+                                    <td><span class="pin">PH2</span></td>
+                                    <td>输入 + 上拉</td>
+                                    <td>按下为低电平</td>
+                                </tr>
+                                <tr>
+                                    <td>KEY2</td>
+                                    <td><span class="pin">PC13</span></td>
+                                    <td>输入 + 上拉</td>
+                                    <td>按下为低电平</td>
+                                </tr>
+                                <tr>
+                                    <td>WK_UP（KEY_UP）</td>
+                                    <td><span class="pin">PA0</span></td>
+                                    <td>输入 + 下拉</td>
+                                    <td>按下为高电平（唯一高有效按键）</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3>预期实验现象</h3>
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>按键</th>
+                                    <th>键值宏</th>
+                                    <th>动作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>WK_UP</td>
+                                    <td><code class="inline">WKUP_PRES = 4</code></td>
+                                    <td>DS0 与 DS1 互斥点亮（一亮一灭，再按互换）</td>
+                                </tr>
+                                <tr>
+                                    <td>KEY2</td>
+                                    <td><code class="inline">KEY2_PRES = 3</code></td>
+                                    <td>DS0 状态翻转</td>
+                                </tr>
+                                <tr>
+                                    <td>KEY1</td>
+                                    <td><code class="inline">KEY1_PRES = 2</code></td>
+                                    <td>DS1 状态翻转</td>
+                                </tr>
+                                <tr>
+                                    <td>KEY0</td>
+                                    <td><code class="inline">KEY0_PRES = 1</code></td>
+                                    <td>DS0、DS1 同时翻转（同亮 / 同灭）</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3>交互模拟（按键逻辑演示）</h3>
+                        <div class="sim">
+                            <div class="sim-main">
+                                <div class="sim-board">
+                                    <div class="sim-led">
+                                        <div class="led-dot" id="sim-led0"></div>
+                                        <div class="led-label">DS0 / PB1</div>
+                                    </div>
+                                    <div class="sim-led">
+                                        <div class="led-dot" id="sim-led1"></div>
+                                        <div class="led-label">DS1 / PB0</div>
+                                    </div>
+                                </div>
+                                <div class="sim-keys">
+                                    <button class="sim-key" data-key="wkup" type="button">WK_UP</button>
+                                    <button class="sim-key" data-key="key2" type="button">KEY2</button>
+                                    <button class="sim-key" data-key="key1" type="button">KEY1</button>
+                                    <button class="sim-key" data-key="key0" type="button">KEY0</button>
+                                </div>
+                            </div>
+                            <div class="sim-log" id="sim-log">点击按键，观察与代码完全一致的 LED 翻转逻辑。</div>
+                        </div>
+                        <div class="callout info">该面板只是对 <code class="inline">switch(key)</code> 逻辑的等效模拟，不涉及真实硬件；上电初始状态对应 <code class="inline">LED_Init()</code> 中两个引脚都写 1（灯灭）。</div>
+                    </section>
+
+                    <!-- 02 工程目录架构 -->
+                    <section class="content-card" id="structure">
+                        <h2>02 工程目录架构</h2>
+                        <div class="sec-sub">先认清每个文件夹在启动链条中的角色，再看代码就不容易迷路</div>
+
+                        <p>该工程沿用正点原子标准例程的分层结构：内核启动、用户代码、板级驱动、系统组件、ST 官方 HAL 驱动彼此分开。下图为根据本实验实际文件归纳的目录架构。</p>
+
+                        <pre class="tree">实验2 按键输入实验/
+├─ CORE/                        内核与启动相关
+│  ├─ startup_stm32f429xx.s     中断向量表 + Reset_Handler（汇编启动文件）
+│  ├─ core_cm4.h                Cortex-M4 内核外设（NVIC/SysTick/SCB）定义
+│  ├─ cmsis_armcc.h             CMSIS 针对 ARMCC 编译器的适配
+│  ├─ core_cmFunc.h            内核功能指令封装
+│  ├─ core_cmInstr.h           内核汇编指令封装
+│  └─ core_cmSimd.h            SIMD 指令封装
+├─ USER/                        用户代码与 MDK 工程
+│  ├─ main.c                    main()：初始化顺序 + 按键处理主循环
+│  ├─ main.h
+│  ├─ stm32f4xx_it.c            异常/中断服务函数（SysTick_Handler 等）
+│  ├─ stm32f4xx_it.h
+│  ├─ stm32f4xx_hal_conf.h      HAL 模块裁剪与 HSE_VALUE 等配置
+│  ├─ system_stm32f4xx.c        SystemInit()：FPU、RCC 复位、向量表
+│  ├─ system_stm32f4xx.h
+│  ├─ stm32f4xx.h               ／ stm32f429xx.h：寄存器与器件定义
+│  ├─ KEY.uvprojx               MDK-ARM 工程文件
+│  └─ KEY.uvoptx                工程调试/选项配置
+├─ HARDWARE/                    板级外设驱动（本实验重点）
+│  ├─ LED/
+│  │  ├─ led.c                  LED_Init()：PB0/PB1 推挽输出
+│  │  └─ led.h                  LED0/LED1 位带宏
+│  └─ KEY/
+│     ├─ key.c                  KEY_Init() + KEY_Scan()
+│     └─ key.h                  引脚读取宏 + 键值宏
+├─ SYSTEM/                      正点原子系统组件
+│  ├─ delay/                    delay_init / delay_us / delay_ms（SysTick）
+│  ├─ sys/                      Stm32_Clock_Init()、位带宏、数据类型
+│  └─ usart/                    uart_init()、USART1 中断与 printf 重定向
+├─ HALLIB/
+│  └─ STM32F4xx_HAL_Driver/
+│     ├─ Inc/                   HAL 头文件（rcc/gpio/uart/cortex...）
+│     └─ Src/                   HAL 源文件
+├─ OBJ/                         编译中间文件与 .hex/.axf 输出
+├─ readme.txt                   实验目的、硬件资源、现象说明
+└─ keilkilll.bat                一键清理编译中间文件</pre>
+
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>目录 / 文件</th>
+                                    <th>启动过程中的角色</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>CORE / startup_stm32f429xx.s</td>
+                                    <td>定义栈、堆、向量表；复位后第一个执行的 <code class="inline">Reset_Handler</code> 就在这里</td>
+                                </tr>
+                                <tr>
+                                    <td>USER / system_stm32f4xx.c</td>
+                                    <td><code class="inline">SystemInit()</code>，在进入 main 之前被启动文件调用</td>
+                                </tr>
+                                <tr>
+                                    <td>USER / main.c</td>
+                                    <td>完成 HAL、时钟、延时、串口、LED、按键的初始化，再进入死循环</td>
+                                </tr>
+                                <tr>
+                                    <td>SYSTEM / sys、delay、usart</td>
+                                    <td>提供 180MHz 时钟配置、SysTick 延时、串口初始化等基础能力</td>
+                                </tr>
+                                <tr>
+                                    <td>HARDWARE / LED、KEY</td>
+                                    <td>把 GPIO 配置与按键扫描封装成板级驱动，main.c 只需调用接口</td>
+                                </tr>
+                                <tr>
+                                    <td>HALLIB / STM32F4xx_HAL_Driver</td>
+                                    <td>所有 <code class="inline">HAL_xxx()</code> 函数的实现来源</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="callout info">工程编译宏为 <code class="inline">USE_HAL_DRIVER, STM32F429xx</code>；头文件搜索路径包含 <code class="inline">..\CORE; ..\USER; ..\HALLIB\STM32F4xx_HAL_Driver\Inc; ..\SYSTEM\...; ..\HARDWARE\...</code>。这也是为什么 main.c 可以直接 <code class="inline">#include "sys.h"</code>。</div>
+                    </section>
+
+                    <!-- 03 启动流程总览 -->
+                    <section class="content-card" id="boot">
+                        <h2>03 启动流程总览</h2>
+                        <div class="sec-sub">从按下复位键到进入 while(1)，芯片到底执行了什么</div>
+
+                        <p>STM32F429 复位后并不是直接执行 <code class="inline">main()</code>，而是先由 Cortex-M4 内核从 Flash 起始地址取出栈顶和复位入口，再经过启动文件、系统初始化、C 库初始化，最后才进入用户 main。整个链条如下：</p>
+
+                        <div class="flow">
+                            <div class="flow-step">
+                                <span class="num">1</span>
+                                <h4>上电 / 复位，硬件取向量</h4>
+                                <p>内核从 <code class="inline">0x08000000</code> 读取第 1 个字写入 MSP（主栈指针），从 <code class="inline">0x08000004</code> 读取第 2 个字写入 PC，该地址正是 <code class="inline">Reset_Handler</code>。</p>
+                            </div>
+                            <div class="flow-step">
+                                <span class="num">2</span>
+                                <h4>Reset_Handler 执行</h4>
+                                <p>启动文件中的复位入口先调用 <code class="inline">SystemInit()</code>，随后跳转到 C 库入口 <code class="inline">__main</code>。</p>
+                            </div>
+                            <div class="flow-step">
+                                <span class="num">3</span>
+                                <h4>SystemInit()</h4>
+                                <p>使能 FPU、把 RCC 恢复到复位默认状态（HSI 16MHz）、设置向量表地址。注意：180MHz 不在这一步配置。</p>
+                            </div>
+                            <div class="flow-step">
+                                <span class="num">4</span>
+                                <h4>__main（C 库启动代码）</h4>
+                                <p>完成分散加载：把已初始化的全局变量从 Flash 搬到 SRAM（.data）、把未初始化变量区清零（.bss）、初始化堆栈，然后调用 <code class="inline">main()</code>。</p>
+                            </div>
+                            <div class="flow-step">
+                                <span class="num">5</span>
+                                <h4>main() 中的初始化序列</h4>
+                                <p><code class="inline">HAL_Init()</code> → <code class="inline">Stm32_Clock_Init(360,25,2,8)</code> → <code class="inline">delay_init(180)</code> → <code class="inline">uart_init(115200)</code> → <code class="inline">LED_Init()</code> → <code class="inline">KEY_Init()</code>。</p>
+                            </div>
+                            <div class="flow-step">
+                                <span class="num">6</span>
+                                <h4>进入 while(1) 主循环</h4>
+                                <p>每 10ms 扫描一次按键，根据返回值翻转 LED，如此往复。</p>
+                            </div>
+                        </div>
+
+                        <figure class="figure">
+                            <img src="./index16-map/boot-flow.png" alt="STM32F429 从上电复位、Reset_Handler、SystemInit、__main、main 到 while(1) 的启动流程图">
+                            <figcaption>图 3-1　上电复位到 while(1) 的完整启动链路</figcaption>
+                        </figure>
+
+                        <h3>关键地址与向量表</h3>
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>地址</th>
+                                    <th>内容</th>
+                                    <th>作用</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="pin">0x08000000</span></td>
+                                    <td><code class="inline">__initial_sp</code></td>
+                                    <td>栈顶地址，复位时由硬件自动装入 MSP</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="pin">0x08000004</span></td>
+                                    <td><code class="inline">Reset_Handler</code></td>
+                                    <td>复位入口地址，复位时装入 PC</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="pin">0x08000008</span> 起</td>
+                                    <td>NMI / HardFault / ... / 外设中断</td>
+                                    <td>异常与中断向量，按固定顺序排列</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="pin">0x20000000</span></td>
+                                    <td>SRAM</td>
+                                    <td>存放 .data、.bss、堆和栈</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="callout warn">常见误解：<code class="inline">SystemInit()</code> 并没有把主频配到 180MHz。它只是把时钟恢复到 16MHz HSI 并设置向量表，真正的 PLL 配置在 <code class="inline">main()</code> 里由 <code class="inline">Stm32_Clock_Init()</code> 完成。</div>
+                    </section>
+
+                    <!-- 04 启动文件 -->
+                    <section class="content-card" id="startup">
+                        <h2>04 启动文件与 Reset_Handler</h2>
+                        <div class="sec-sub">CORE/startup_stm32f429xx.s</div>
+
+                        <p>启动文件是唯一一段汇编代码，负责“把 C 世界搭起来”。它先定义栈和堆，然后把栈顶与复位入口放进向量表最前面的两个 32 位单元。</p>
+
+                        <pre class="code">Stack_Size      EQU     0x400                <span class="c">; 栈大小 1KB</span>
+Heap_Size       EQU     0x200                <span class="c">; 堆大小 512B</span>
+
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp                                <span class="c">; 栈顶地址（向下生长）</span>
+
+                AREA    RESET, DATA, READONLY
+__Vectors       DCD     __initial_sp        <span class="c">; 0x08000000：上电装入 MSP</span>
+                DCD     Reset_Handler       <span class="c">; 0x08000004：上电装入 PC</span>
+                DCD     NMI_Handler
+                DCD     HardFault_Handler
+                <span class="c">; ... 其余异常与中断向量 ...</span>
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler       [WEAK]
+                 IMPORT  SystemInit
+                 IMPORT  __main
+
+                 LDR     R0, =SystemInit
+                 BLX     R0                  <span class="c">; ① 先执行 SystemInit</span>
+                 LDR     R0, =__main
+                 BX      R0                  <span class="c">; ② 再跳 C 库启动，最终调用 main</span>
+                 ENDP</pre>
+
+                        <h3>为什么要经过 __main 而不是直接跳 main</h3>
+                        <ul>
+                            <li><strong>__main 属于 ARM C 库</strong>，它会先执行 <code class="inline">__scatterload</code>，按照分散加载文件把 RW 数据从 Flash 复制到 RAM，并把 ZI 段清零。</li>
+                            <li>只有全局变量、静态变量都处于正确初值后，<code class="inline">main()</code> 里的 C 代码才可信。</li>
+                            <li>如果直接跳到 main，未初始化变量可能是随机值，<code class="inline">KEY_Scan()</code> 中的静态变量 <code class="inline">key_up</code> 也不会得到预期的初值 1。</li>
+                        </ul>
+
+                        <div class="callout tip">本工程栈只有 0x400（1KB）。本实验调用层级很浅，足够使用；若后续加入浮点运算、递归或大数组局部变量，需要适当增大 Stack_Size。</div>
+                    </section>
+
+                    <!-- 05 SystemInit -->
+                    <section class="content-card" id="systeminit">
+                        <h2>05 SystemInit 系统初始化</h2>
+                        <div class="sec-sub">USER/system_stm32f4xx.c · 在 main 之前执行</div>
+
+                        <p><code class="inline">SystemInit()</code> 是 ST 官方提供的系统级初始化函数，启动文件在跳转 C 库之前调用它。它只做三件基础工作：开 FPU、复位时钟树、定位向量表。</p>
+
+                        <pre class="code">void SystemInit(void)
+{
+  <span class="c">/* 1. 使能浮点单元：允许访问 CP10 / CP11 */</span>
+  SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2) | (3UL &lt;&lt; 11*2));
+
+  <span class="c">/* 2. 把 RCC 时钟配置恢复到复位默认值 */</span>
+  RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="c">// 打开 HSI</span>
+  RCC-&gt;CFGR = 0x00000000;               <span class="c">// 时钟源选择、分频全部清零</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="c">// 关闭 HSEON / CSSON / PLLON</span>
+  RCC-&gt;PLLCFGR = 0x24003010;            <span class="c">// PLL 配置恢复默认</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;      <span class="c">// 关闭 HSEBYP</span>
+  RCC-&gt;CIR = 0x00000000;                <span class="c">// 关闭所有中断</span>
+
+  <span class="c">/* 3. 向量表定位到内部 Flash 起始地址 */</span>
+#ifdef VECT_TAB_SRAM
+  SCB-&gt;VTOR = SRAM_BASE | VECT_TAB_OFFSET;
+#else
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;   <span class="c">// 0x08000000</span>
+#endif
+}</pre>
+
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>动作</th>
+                                    <th>目的</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>设置 CPACR 的 CP10/CP11</td>
+                                    <td>让后续 C 代码可以使用硬件 FPU（浮点指令），否则触发 UsageFault</td>
+                                </tr>
+                                <tr>
+                                    <td>复位 RCC 相关寄存器</td>
+                                    <td>保证从确定状态开始，此时系统时钟为内部 HSI 16MHz</td>
+                                </tr>
+                                <tr>
+                                    <td>设置 SCB-&gt;VTOR</td>
+                                    <td>告诉内核异常向量表在哪里；本工程偏移为 0x00，即 Flash 起始处</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="callout info">此时 <code class="inline">SystemCoreClock</code> 仍为 16000000。它会在 <code class="inline">HAL_RCC_ClockConfig()</code> 中被自动更新为 180000000。</div>
+                    </section>
+
+                    <!-- 06 HAL_Init -->
+                    <section class="content-card" id="halinit">
+                        <h2>06 HAL_Init 初始化</h2>
+                        <div class="sec-sub">main() 的第一个调用 · HAL 库的地基</div>
+
+                        <p><code class="inline">HAL_Init()</code> 是进入 main 后的第一步，负责 Flash 加速、中断优先级分组、SysTick 时基以及底层 MspInit 回调。</p>
+
+                        <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();   <span class="c">// 使能指令 Cache</span>
+  __HAL_FLASH_DATA_CACHE_ENABLE();          <span class="c">// 使能数据 Cache</span>
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();     <span class="c">// 使能预取缓冲</span>
+
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2); <span class="c">// 中断优先级分组 2</span>
+
+  HAL_InitTick(TICK_INT_PRIORITY);          <span class="c">// SysTick 1ms 时基，TICK_INT_PRIORITY = 0x0F</span>
+
+  HAL_MspInit();                            <span class="c">// 底层初始化回调（本工程为空实现）</span>
+
+  return HAL_OK;
+}</pre>
+
+                        <p>其中 <code class="inline">HAL_InitTick()</code> 的默认实现为：</p>
+
+                        <pre class="code">__weak HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
+{
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq() / 1000);  <span class="c">// 每 1ms 产生一次中断</span>
+  HAL_NVIC_SetPriority(SysTick_IRQn, TickPriority, 0);
+  return HAL_OK;
+}</pre>
+
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>阶段</th>
+                                    <th>HCLK</th>
+                                    <th>SysTick 重装值</th>
+                                    <th>说明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>HAL_Init 时</td>
+                                    <td>16MHz（HSI）</td>
+                                    <td>16000</td>
+                                    <td>先建立一个可用的 1ms 时基</td>
+                                </tr>
+                                <tr>
+                                    <td>Stm32_Clock_Init 之后</td>
+                                    <td>180MHz</td>
+                                    <td>180000</td>
+                                    <td><code class="inline">HAL_RCC_ClockConfig()</code> 末尾会再次调用 <code class="inline">HAL_InitTick()</code>，自动按新频率重算</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3>SysTick 中断做了什么</h3>
+                        <p>在 <code class="inline">USER/stm32f4xx_it.c</code> 中：</p>
+                        <pre class="code">void SysTick_Handler(void)
+{
+  HAL_IncTick();      <span class="c">// uwTick++，HAL_Delay() 依赖这个全局节拍</span>
+}</pre>
+
+                        <div class="callout tip">HAL_Init 完成后，<code class="inline">HAL_Delay(10)</code> 已经可用；而本实验的 <code class="inline">delay_ms(10)</code> 走的是正点原子自己写的 SysTick 轮询延时，不依赖该中断节拍。</div>
+                    </section>
+
+                    <!-- 07 时钟 -->
+                    <section class="content-card" id="clock">
+                        <h2>07 时钟配置 180MHz</h2>
+                        <div class="sec-sub">Stm32_Clock_Init(360, 25, 2, 8) · SYSTEM/sys/sys.c</div>
+
+                        <p>板载外部晶振为 25MHz。通过主 PLL 的「先分频、再倍频、后分频」把 25MHz 抬升到 180MHz，并分别给 AHB、APB1、APB2 与 USB 等总线提供时钟。</p>
+
+                        <pre class="code">HAL_Init();                       <span class="c">// ① 先建立 HAL 基础时基</span>
+Stm32_Clock_Init(360, 25, 2, 8);  <span class="c">// ② plln=360, pllm=25, pllp=2, pllq=8</span>
+delay_init(180);                  <span class="c">// ③ 告诉延时函数当前系统时钟为 180MHz</span></pre>
+
+                        <pre class="code">void Stm32_Clock_Init(u32 plln, u32 pllm, u32 pllp, u32 pllq)
+{
+  __HAL_RCC_PWR_CLK_ENABLE();                                   <span class="c">// 使能 PWR 时钟</span>
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1); <span class="c">// 调压器电压级别 1</span>
+
+  RCC_OscInitStructure.OscillatorType = RCC_OSCILLATORTYPE_HSE;  <span class="c">// 时钟源 HSE</span>
+  RCC_OscInitStructure.HSEState       = RCC_HSE_ON;              <span class="c">// 打开外部晶振</span>
+  RCC_OscInitStructure.PLL.PLLState   = RCC_PLL_ON;
+  RCC_OscInitStructure.PLL.PLLSource  = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStructure.PLL.PLLM = pllm;   <span class="c">// 25</span>
+  RCC_OscInitStructure.PLL.PLLN = plln;   <span class="c">// 360</span>
+  RCC_OscInitStructure.PLL.PLLP = pllp;   <span class="c">// 2</span>
+  RCC_OscInitStructure.PLL.PLLQ = pllq;   <span class="c">// 8</span>
+  HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+
+  HAL_PWREx_EnableOverDrive();            <span class="c">// 开启 Over-Drive，180MHz 必需</span>
+
+  RCC_ClkInitStructure.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK; <span class="c">// 系统时钟选 PLL</span>
+  RCC_ClkInitStructure.AHBCLKDivider  = RCC_SYSCLK_DIV1;         <span class="c">// HCLK = 180MHz</span>
+  RCC_ClkInitStructure.APB1CLKDivider = RCC_HCLK_DIV4;           <span class="c">// PCLK1 = 45MHz</span>
+  RCC_ClkInitStructure.APB2CLKDivider = RCC_HCLK_DIV2;           <span class="c">// PCLK2 = 90MHz</span>
+  HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure, FLASH_LATENCY_5);   <span class="c">// Flash 5 个等待周期</span>
+}</pre>
+
+                        <h3>时钟树与计算结果</h3>
+                        <figure class="figure">
+                            <img src="./index16-map/clock-tree.png" alt="STM32F429 时钟树：HSE 25MHz 经 PLL 得到 SYSCLK 180MHz，并分频出 HCLK、PCLK1、PCLK2">
+                            <figcaption>图 7-1　HSE 25MHz 到 SYSCLK 180MHz 的时钟树</figcaption>
+                        </figure>
+
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>参数</th>
+                                    <th>公式</th>
+                                    <th>结果</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>VCO 频率 Fvco</td>
+                                    <td>25MHz × (360 / 25)</td>
+                                    <td>360MHz</td>
+                                </tr>
+                                <tr>
+                                    <td>系统时钟 SYSCLK</td>
+                                    <td>Fvco / PLLP = 360 / 2</td>
+                                    <td>180MHz</td>
+                                </tr>
+                                <tr>
+                                    <td>USB/SDIO/RNG</td>
+                                    <td>Fvco / PLLQ = 360 / 8</td>
+                                    <td>45MHz</td>
+                                </tr>
+                                <tr>
+                                    <td>AHB 总线 HCLK</td>
+                                    <td>SYSCLK / 1</td>
+                                    <td>180MHz</td>
+                                </tr>
+                                <tr>
+                                    <td>APB1 总线 PCLK1</td>
+                                    <td>HCLK / 4</td>
+                                    <td>45MHz（上限 45MHz）</td>
+                                </tr>
+                                <tr>
+                                    <td>APB2 总线 PCLK2</td>
+                                    <td>HCLK / 2</td>
+                                    <td>90MHz（上限 90MHz）</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="callout warn">STM32F429 跑 180MHz 必须同时满足三个条件：调压器电压级别 1、使能 Over-Drive、Flash 等待周期 5WS。缺一不可，否则可能死机或运行不稳定。</div>
+                        <div class="callout info">GPIO 挂在 AHB1 总线上，因此 GPIO 时钟频率为 180MHz；但 GPIO 翻转速度还受输出 Speed 档位限制，本实验统一配置为 <code class="inline">GPIO_SPEED_HIGH</code>。</div>
+                    </section>
+
+                    <!-- 08 delay -->
+                    <section class="content-card" id="delay">
+                        <h2>08 delay 延时初始化</h2>
+                        <div class="sec-sub">delay_init(180) · SYSTEM/delay/delay.c</div>
+
+                        <p><code class="inline">delay_init(180)</code> 把系统时钟频率告诉延时模块，并把 SysTick 的计数时钟切换为 HCLK。本工程 <code class="inline">SYSTEM_SUPPORT_OS = 0</code>，所以使用不依赖操作系统的轮询延时。</p>
+
+                        <pre class="code">static u32 fac_us = 0;      <span class="c">// 每 1us 需要的 SysTick 计数个数</span>
+
+void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="c">// SysTick 时钟 = HCLK</span>
+    fac_us = SYSCLK;                                     <span class="c">// 180MHz → fac_us = 180</span>
+}</pre>
+
+                        <h3>delay_us 的计数原理</h3>
+                        <pre class="code">void delay_us(u32 nus)
+{
+    u32 ticks = nus * fac_us;        <span class="c">// 需要的 SysTick 节拍数</span>
+    u32 reload = SysTick-&gt;LOAD;      <span class="c">// 当前重装值</span>
+    u32 told = SysTick-&gt;VAL;         <span class="c">// 读当前计数值</span>
+    u32 tnow, tcnt = 0;
+
+    while (1)
+    {
+        tnow = SysTick-&gt;VAL;         <span class="c">// SysTick 是递减计数器</span>
+        if (tnow != told)
+        {
+            if (tnow &lt; told) tcnt += told - tnow;      <span class="c">// 未发生重装</span>
+            else             tcnt += reload - tnow + told; <span class="c">// 发生重装，补偿</span>
+            told = tnow;
+            if (tcnt &gt;= ticks) break;                  <span class="c">// 时间到</span>
+        }
+    }
+}
+
+void delay_ms(u16 nms)
+{
+    u32 i;
+    for (i = 0; i &lt; nms; i++) delay_us(1000);  <span class="c">// 1ms = 1000us</span>
+}</pre>
+
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>要点</th>
+                                    <th>说明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>不占用中断</td>
+                                    <td>直接轮询 <code class="inline">SysTick-&gt;VAL</code> 的递减过程，即使 SysTick 中断未开启也能工作</td>
+                                </tr>
+                                <tr>
+                                    <td>自动处理重装</td>
+                                    <td>计数器减到 0 会重装，代码用 <code class="inline">reload - tnow + told</code> 做跨周期补偿</td>
+                                </tr>
+                                <tr>
+                                    <td>精度依赖 fac_us</td>
+                                    <td>传入 180 才与 180MHz 的 HCLK 匹配；若仍传 168 等旧值，延时会出现偏差</td>
+                                </tr>
+                                <tr>
+                                    <td>本实验用途</td>
+                                    <td><code class="inline">KEY_Scan()</code> 内的 10ms 消抖与主循环末尾的 10ms 节拍都来自这里</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+
+                    <!-- 09 uart -->
+                    <section class="content-card" id="uart">
+                        <h2>09 USART1 串口初始化</h2>
+                        <div class="sec-sub">uart_init(115200) · SYSTEM/usart/usart.c</div>
+
+                        <p>虽然本实验的最终现象只体现在 LED 上，main 仍然按标准流程初始化了串口，便于后续调试输出。串口 1 使用 PA9（TX）、PA10（RX），复用功能为 AF7。</p>
+
+                        <pre class="code">UART1_Handler.Instance        = USART1;
+UART1_Handler.Init.BaudRate   = 115200;                <span class="c">// 波特率</span>
+UART1_Handler.Init.WordLength = UART_WORDLENGTH_8B;    <span class="c">// 8 位数据</span>
+UART1_Handler.Init.StopBits   = UART_STOPBITS_1;       <span class="c">// 1 位停止位</span>
+UART1_Handler.Init.Parity     = UART_PARITY_NONE;      <span class="c">// 无校验</span>
+UART1_Handler.Init.HwFlowCtl  = UART_HWCONTROL_NONE;   <span class="c">// 无硬件流控</span>
+UART1_Handler.Init.Mode       = UART_MODE_TX_RX;       <span class="c">// 收发模式</span>
+HAL_UART_Init(&amp;UART1_Handler);                         <span class="c">// 内部会调用 HAL_UART_MspInit</span>
+
+HAL_UART_Receive_IT(&amp;UART1_Handler, (u8 *)aRxBuffer, RXBUFFERSIZE); <span class="c">// 开启接收中断</span></pre>
+
+                        <h3>底层初始化 HAL_UART_MspInit</h3>
+                        <pre class="code">if (huart-&gt;Instance == USART1)
+{
+    __HAL_RCC_GPIOA_CLK_ENABLE();          <span class="c">// GPIOA 时钟</span>
+    __HAL_RCC_USART1_CLK_ENABLE();         <span class="c">// USART1 时钟</span>
+
+    GPIO_Initure.Pin       = GPIO_PIN_9;   <span class="c">// PA9  → TX</span>
+    GPIO_Initure.Mode      = GPIO_MODE_AF_PP;
+    GPIO_Initure.Pull      = GPIO_PULLUP;
+    GPIO_Initure.Speed     = GPIO_SPEED_FAST;
+    GPIO_Initure.Alternate = GPIO_AF7_USART1;
+    HAL_GPIO_Init(GPIOA, &amp;GPIO_Initure);
+
+    GPIO_Initure.Pin = GPIO_PIN_10;        <span class="c">// PA10 → RX</span>
+    HAL_GPIO_Init(GPIOA, &amp;GPIO_Initure);
+
+    HAL_NVIC_EnableIRQ(USART1_IRQn);
+    HAL_NVIC_SetPriority(USART1_IRQn, 3, 3); <span class="c">// 抢占 3，子优先级 3</span>
+}</pre>
+
+                        <div class="callout info">HAL 库采用「句柄 + MspInit 回调」的设计：<code class="inline">HAL_UART_Init()</code> 负责通用参数，<code class="inline">HAL_UART_MspInit()</code> 负责时钟、引脚、中断这些与具体板子相关的底层配置，并且会被自动调用。</div>
+                        <div class="callout tip">串口 1 的引脚配置与按键 PA0 同属 GPIOA，但互不冲突：PA0 是普通输入，PA9/PA10 是复用推挽。二者共用 GPIOA 时钟，重复使能不会出错。</div>
+                    </section>
+
+                    <!-- 10 GPIO -->
+                    <section class="content-card" id="gpio">
+                        <h2>10 LED 与 KEY 的 GPIO 配置</h2>
+                        <div class="sec-sub">LED_Init() · KEY_Init() · HARDWARE 目录</div>
+
+                        <h3>LED：PB0 / PB1 推挽输出</h3>
+                        <pre class="code">void LED_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+
+    __HAL_RCC_GPIOB_CLK_ENABLE();                 <span class="c">// 开 GPIOB 时钟（必须先开）</span>
+
+    GPIO_Initure.Pin   = GPIO_PIN_0 | GPIO_PIN_1; <span class="c">// PB0、PB1</span>
+    GPIO_Initure.Mode  = GPIO_MODE_OUTPUT_PP;     <span class="c">// 推挽输出</span>
+    GPIO_Initure.Pull  = GPIO_PULLUP;             <span class="c">// 上拉</span>
+    GPIO_Initure.Speed = GPIO_SPEED_HIGH;         <span class="c">// 高速</span>
+    HAL_GPIO_Init(GPIOB, &amp;GPIO_Initure);
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET); <span class="c">// 输出 1，DS1 熄灭</span>
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET); <span class="c">// 输出 1，DS0 熄灭</span>
+}</pre>
+
+                        <p>LED 采用<strong>低电平点亮</strong>：写 0 → 灯亮，写 1 → 灯灭。因此初始化时两个引脚都写 1，保证上电后两灯全灭。</p>
+
+                        <h3>LED 的位带宏</h3>
+                        <pre class="code"><span class="c">// led.h</span>
+#define LED0 PBout(1)   <span class="c">// BSRR/ODR 位带别名，写 0/1 直接操作 PB1</span>
+#define LED1 PBout(0)   <span class="c">// 操作 PB0</span>
+
+<span class="c">// sys.h：把外设位映射到别名区，实现类似 51 单片机的位操作</span>
+#define BITBAND(addr, bitnum) ((addr &amp; 0xF0000000) + 0x2000000 + ((addr &amp; 0xFFFFF) &lt;&lt; 5) + (bitnum &lt;&lt; 2))
+#define PBout(n) BIT_ADDR(GPIOB_ODR_Addr, n)</pre>
+
+                        <h3>KEY：三组输入配置</h3>
+                        <pre class="code">void KEY_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();   <span class="c">// PA0 → WK_UP</span>
+    __HAL_RCC_GPIOC_CLK_ENABLE();   <span class="c">// PC13 → KEY2</span>
+    __HAL_RCC_GPIOH_CLK_ENABLE();   <span class="c">// PH2/PH3 → KEY1/KEY0</span>
+
+    GPIO_Initure.Pin   = GPIO_PIN_0;         <span class="c">// PA0</span>
+    GPIO_Initure.Mode  = GPIO_MODE_INPUT;    <span class="c">// 输入</span>
+    GPIO_Initure.Pull  = GPIO_PULLDOWN;      <span class="c">// 下拉：松开为低，按下为高</span>
+    GPIO_Initure.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &amp;GPIO_Initure);
+
+    GPIO_Initure.Pin  = GPIO_PIN_13;         <span class="c">// PC13</span>
+    GPIO_Initure.Mode = GPIO_MODE_INPUT;
+    GPIO_Initure.Pull = GPIO_PULLUP;         <span class="c">// 上拉：松开为高，按下为低</span>
+    HAL_GPIO_Init(GPIOC, &amp;GPIO_Initure);
+
+    GPIO_Initure.Pin = GPIO_PIN_2 | GPIO_PIN_3; <span class="c">// PH2、PH3</span>
+    HAL_GPIO_Init(GPIOH, &amp;GPIO_Initure);       <span class="c">// 沿用上一步的上拉配置</span>
+}</pre>
+
+                        <div class="callout warn">注意最后一段只修改了 <code class="inline">Pin</code>，<code class="inline">Mode</code> 和 <code class="inline">Pull</code> 仍是上一步 PC13 的「输入 + 上拉」。这不是遗漏，而是有意复用配置：KEY0/KEY1 与 KEY2 一样都是上拉输入、按下为低。若独立写代码，建议重新完整赋值，避免可读性下降。</div>
+
+                        <h3>按键读取：HAL 函数 vs 位带</h3>
+                        <pre class="code"><span class="c">// key.h：本工程实际启用的 HAL 读取方式</span>
+#define KEY0  HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_3)   <span class="c">// PH3</span>
+#define KEY1  HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_2)   <span class="c">// PH2</span>
+#define KEY2  HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)  <span class="c">// PC13</span>
+#define WK_UP HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0)   <span class="c">// PA0</span>
+
+<span class="c">// 被注释掉的位带写法，效果等价，执行更快</span>
+<span class="c">//#define KEY0  PHin(3)</span>
+<span class="c">//#define WK_UP PAin(0)</span></pre>
+
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>引脚</th>
+                                    <th>模式</th>
+                                    <th>上下拉</th>
+                                    <th>松开时</th>
+                                    <th>按下时</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>PA0 / WK_UP</td>
+                                    <td>输入</td>
+                                    <td>下拉</td>
+                                    <td>0</td>
+                                    <td>1</td>
+                                </tr>
+                                <tr>
+                                    <td>PC13 / KEY2</td>
+                                    <td>输入</td>
+                                    <td>上拉</td>
+                                    <td>1</td>
+                                    <td>0</td>
+                                </tr>
+                                <tr>
+                                    <td>PH2 / KEY1</td>
+                                    <td>输入</td>
+                                    <td>上拉</td>
+                                    <td>1</td>
+                                    <td>0</td>
+                                </tr>
+                                <tr>
+                                    <td>PH3 / KEY0</td>
+                                    <td>输入</td>
+                                    <td>上拉</td>
+                                    <td>1</td>
+                                    <td>0</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <figure class="figure">
+                            <img src="./index16-map/key-input.png" alt="WK_UP 下拉输入电路与 KEY0~KEY2 上拉输入电路的等效示意图">
+                            <figcaption>图 10-1　下拉输入（WK_UP）与上拉输入（KEY0~KEY2）的等效电路</figcaption>
+                        </figure>
+                    </section>
+
+                    <!-- 11 KEY_Scan -->
+                    <section class="content-card" id="keyscan">
+                        <h2>11 按键扫描 KEY_Scan</h2>
+                        <div class="sec-sub">HARDWARE/KEY/key.c · 消抖 + 单次触发 + 优先级</div>
+
+                        <p>机械按键在按下和松开的瞬间会产生数毫秒的抖动，直接读取可能一次按下被识别成多次。本实验用「检测到按下 → 延时 10ms → 再确认」的方式做软件消抖，并用静态变量 <code class="inline">key_up</code> 实现单次触发。</p>
+
+                        <pre class="code">u8 KEY_Scan(u8 mode)
+{
+    static u8 key_up = 1;        <span class="c">// 按键松开标志，静态变量只初始化一次</span>
+
+    if (mode == 1) key_up = 1;   <span class="c">// 支持连按：每次进来都允许再次触发</span>
+
+    <span class="c">// 有任意按键处于按下状态，且上一次已松开</span>
+    if (key_up &amp;&amp; (KEY0 == 0 || KEY1 == 0 || KEY2 == 0 || WK_UP == 1))
+    {
+        delay_ms(10);            <span class="c">// ① 延时 10ms，跳过抖动区</span>
+        key_up = 0;              <span class="c">// ② 标记已处理，按住期间不再重复触发</span>
+
+        <span class="c">// ③ 按优先级再次确认，KEY0 最高，WK_UP 最低</span>
+        if      (KEY0 == 0)  return KEY0_PRES;   <span class="c">// 1</span>
+        else if (KEY1 == 0)  return KEY1_PRES;   <span class="c">// 2</span>
+        else if (KEY2 == 0)  return KEY2_PRES;   <span class="c">// 3</span>
+        else if (WK_UP == 1) return WKUP_PRES;   <span class="c">// 4</span>
+    }
+    else if (KEY0 == 1 &amp;&amp; KEY1 == 1 &amp;&amp; KEY2 == 1 &amp;&amp; WK_UP == 0)
+    {
+        key_up = 1;              <span class="c">// ④ 四个按键全部松开，恢复可触发状态</span>
+    }
+
+    return 0;                    <span class="c">// 无按键按下</span>
+}</pre>
+
+                        <h3>消抖时序</h3>
+                        <figure class="figure">
+                            <img src="./index16-map/debounce-timing.png" alt="按键按下抖动、10ms 延时、确认采样、松开抖动的时序波形">
+                            <figcaption>图 11-1　按键消抖与单次触发的时序关系</figcaption>
+                        </figure>
+
+                        <h3>三种关键机制</h3>
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>机制</th>
+                                    <th>代码</th>
+                                    <th>效果</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>消抖</td>
+                                    <td><code class="inline">delay_ms(10)</code></td>
+                                    <td>避开按下瞬间 5~10ms 的电平抖动，第二次读取才是稳定值</td>
+                                </tr>
+                                <tr>
+                                    <td>单次触发</td>
+                                    <td><code class="inline">key_up = 0</code></td>
+                                    <td>按住不放期间只返回一次键值；必须松开（key_up 复位为 1）才能再次触发</td>
+                                </tr>
+                                <tr>
+                                    <td>连按模式</td>
+                                    <td><code class="inline">mode == 1</code></td>
+                                    <td>每次调用都强制 <code class="inline">key_up = 1</code>，按住即可周期性返回键值；本实验传 0，不使用连按</td>
+                                </tr>
+                                <tr>
+                                    <td>优先级</td>
+                                    <td>if / else if 顺序</td>
+                                    <td>KEY0 &gt; KEY1 &gt; KEY2 &gt; WK_UP，同时按下多个键时只响应优先级最高的那个</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="callout info">按键是「按下即触发」，不是「松手触发」。检测到稳定按下时立刻返回键值，因此操作手感是按下瞬间灯就变化。</div>
+                        <div class="callout warn">如果按键没有反应，优先检查三件事：对应 GPIO 端口的时钟是否使能、上拉/下拉是否与按键电路匹配、按下时电平是否与代码判断一致（KEY0~KEY2 低有效，WK_UP 高有效）。</div>
+                    </section>
+
+                    <!-- 12 主循环 -->
+                    <section class="content-card" id="mainloop">
+                        <h2>12 主循环与实验现象</h2>
+                        <div class="sec-sub">main() 的 while(1) · 键值到 LED 动作的映射</div>
+
+                        <pre class="code">int main(void)
+{
+    u8 key;
+
+    HAL_Init();                     <span class="c">// ① HAL 库初始化</span>
+    Stm32_Clock_Init(360, 25, 2, 8);<span class="c">// ② 系统时钟 180MHz</span>
+    delay_init(180);                <span class="c">// ③ 延时函数初始化</span>
+    uart_init(115200);              <span class="c">// ④ 串口 1 初始化</span>
+    LED_Init();                     <span class="c">// ⑤ LED 引脚初始化</span>
+    KEY_Init();                     <span class="c">// ⑥ 按键引脚初始化</span>
+
+    while (1)
+    {
+        key = KEY_Scan(0);          <span class="c">// ⑦ 扫描按键，0 = 不支持连按</span>
+
+        switch (key)
+        {
+            case WKUP_PRES:         <span class="c">// 4：两灯互斥点亮</span>
+                LED1 = !LED1;
+                LED0 = !LED1;
+                break;
+
+            case KEY2_PRES:         <span class="c">// 3：DS0 翻转</span>
+                LED0 = !LED0;
+                break;
+
+            case KEY1_PRES:         <span class="c">// 2：DS1 翻转</span>
+                LED1 = !LED1;
+                break;
+
+            case KEY0_PRES:         <span class="c">// 1：两灯同时翻转</span>
+                LED0 = !LED0;
+                LED1 = !LED1;
+                break;
+        }
+
+        delay_ms(10);               <span class="c">// ⑧ 主循环节拍约 10ms</span>
+    }
+}</pre>
+
+                        <h3>初始化顺序为什么不能随意打乱</h3>
+                        <ol>
+                            <li><code class="inline">HAL_Init()</code> 必须最先，后续所有 HAL 函数依赖它建立的基础环境。</li>
+                            <li><code class="inline">Stm32_Clock_Init()</code> 之后系统才运行在 180MHz，因此 <code class="inline">delay_init()</code> 必须传 180 而不是 16。</li>
+                            <li>GPIO 初始化前必须先使能对应端口时钟（GPIOA/C/H/B），否则寄存器写入无效。</li>
+                            <li>外设初始化完成后才进入 while(1)，避免扫描到未配置的引脚。</li>
+                        </ol>
+
+                        <h3>键值与动作对照</h3>
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>返回值</th>
+                                    <th>触发条件</th>
+                                    <th>执行动作</th>
+                                    <th>最终效果</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>4 / WKUP_PRES</td>
+                                    <td>PA0 为高</td>
+                                    <td><code class="inline">LED1 = !LED1; LED0 = !LED1;</code></td>
+                                    <td>两灯互斥：先翻转 DS1，再让 DS0 取 DS1 的反值</td>
+                                </tr>
+                                <tr>
+                                    <td>3 / KEY2_PRES</td>
+                                    <td>PC13 为低</td>
+                                    <td><code class="inline">LED0 = !LED0;</code></td>
+                                    <td>DS0 单独翻转</td>
+                                </tr>
+                                <tr>
+                                    <td>2 / KEY1_PRES</td>
+                                    <td>PH2 为低</td>
+                                    <td><code class="inline">LED1 = !LED1;</code></td>
+                                    <td>DS1 单独翻转</td>
+                                </tr>
+                                <tr>
+                                    <td>1 / KEY0_PRES</td>
+                                    <td>PH3 为低</td>
+                                    <td><code class="inline">LED0 = !LED0; LED1 = !LED1;</code></td>
+                                    <td>两灯同时翻转：同亮或同灭</td>
+                                </tr>
+                                <tr>
+                                    <td>0</td>
+                                    <td>无键按下</td>
+                                    <td>switch 不进入任何分支</td>
+                                    <td>LED 保持原状态</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="callout tip">WK_UP 分支的「互斥」并不需要判断当前状态：因为 <code class="inline">LED0 = !LED1</code> 直接把 DS0 赋成 DS1 的反值，所以无论之前两灯是什么状态，执行后一定一亮一灭。</div>
+                        <div class="callout info">位带写操作是原子性的单比特写入，不存在「读—改—写」被中断打断的问题；这也是 LED 控制使用 <code class="inline">PBout(n)</code> 而不是 <code class="inline">HAL_GPIO_WritePin()</code> 的原因之一。</div>
+                    </section>
+
+                    <!-- 13 总结 -->
+                    <section class="content-card" id="summary">
+                        <h2>13 实验总结</h2>
+                        <div class="sec-sub">把启动链条、输入配置与按键逻辑串成一条线</div>
+
+                        <h3>完整启动链条（按执行顺序）</h3>
+                        <pre class="tree">上电复位
+  └─ 硬件从 0x08000000 取 MSP、从 0x08000004 取 PC
+      └─ Reset_Handler（startup_stm32f429xx.s）
+          ├─ SystemInit()            开 FPU、复位 RCC、设置 VTOR
+          └─ __main                  .data 搬移、.bss 清零、初始化堆栈
+              └─ main()
+                  ├─ HAL_Init()                  Cache/预取、优先级分组、SysTick 1ms
+                  ├─ Stm32_Clock_Init(360,25,2,8) HSE 25MHz → SYSCLK 180MHz
+                  ├─ delay_init(180)             fac_us = 180，SysTick 时钟 = HCLK
+                  ├─ uart_init(115200)           PA9/PA10 AF7，USART1 收发
+                  ├─ LED_Init()                  PB0/PB1 推挽输出，初始输出 1（灭）
+                  ├─ KEY_Init()                  PA0 下拉；PC13/PH2/PH3 上拉
+                  └─ while(1)
+                      ├─ KEY_Scan(0)             10ms 消抖 + 单次触发 + 优先级
+                      ├─ switch(key)             翻转对应 LED
+                      └─ delay_ms(10)            主循环节拍</pre>
+
+                        <h3>必须掌握的四个要点</h3>
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>要点</th>
+                                    <th>本实验中的体现</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>时钟先行</td>
+                                    <td>GPIOA/C/H/B、USART1、PWR 的时钟都必须先使能，否则后续寄存器配置无效</td>
+                                </tr>
+                                <tr>
+                                    <td>输入模式 + 上下拉</td>
+                                    <td>WK_UP 下拉、高有效；KEY0~KEY2 上拉、低有效。上下拉决定松开时的默认电平</td>
+                                </tr>
+                                <tr>
+                                    <td>消抖与单次触发</td>
+                                    <td>10ms 延时避开抖动；静态 <code class="inline">key_up</code> 保证按住只响应一次，松手后才能再次触发</td>
+                                </tr>
+                                <tr>
+                                    <td>输出电平语义</td>
+                                    <td>LED 低电平点亮，初始化写 1 表示熄灭；位带宏让 <code class="inline">LED0 = !LED0</code> 一行完成翻转</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3>可以继续延伸的方向</h3>
+                        <ul>
+                            <li><strong>外部中断方式</strong>：把按键引脚配置为 EXTI 下降沿/上升沿触发，在中断里置标志，主循环处理，避免轮询。</li>
+                            <li><strong>长按与双击</strong>：用状态机记录按下时长与连续按下次数，实现长按、双击等复合手势。</li>
+                            <li><strong>按键队列</strong>：中断中把键值写入环形缓冲区，主循环按顺序消费，适合复杂界面交互。</li>
+                            <li><strong>串口调试</strong>：本实验已初始化 USART1，可加入 <code class="inline">printf</code> 输出键值，验证扫描结果。</li>
+                        </ul>
+
+                        <div class="callout tip">学习建议：先只改 <code class="inline">KEY_Scan()</code> 返回的键值观察现象，再尝试修改优先级顺序或把 <code class="inline">mode</code> 改为 1 体验连按，最后再动手改成中断方式。每一步都只改一个变量，现象才容易解释。</div>
+                    </section>
+
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        (function () {
+            var scroller = document.querySelector('.content-body');
+            var items = Array.prototype.slice.call(document.querySelectorAll('.sidebar-menu li'));
+            var sections = items.map(function (li) {
+                return document.getElementById(li.dataset.target);
+            });
+
+            function topInScroller(el) {
+                return el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+            }
+
+            function activate(index) {
+                items.forEach(function (li, i) {
+                    li.classList.toggle('active', i === index);
+                });
+            }
+
+            items.forEach(function (li, i) {
+                li.addEventListener('click', function () {
+                    var target = sections[i];
+                    if (!target) return;
+                    scroller.scrollTo({ top: topInScroller(target) - 6, behavior: 'smooth' });
+                    activate(i);
+                });
+            });
+
+            var ticking = false;
+            scroller.addEventListener('scroll', function () {
+                if (ticking) return;
+                ticking = true;
+                window.requestAnimationFrame(function () {
+                    var pos = scroller.scrollTop + 90;
+                    var current = 0;
+                    sections.forEach(function (sec, i) {
+                        if (sec && topInScroller(sec) <= pos) current = i;
+                    });
+                    activate(current);
+                    ticking = false;
+                });
+            }, { passive: true });
+
+            activate(0);
+
+            // 按键现象模拟：与 main.c 的 switch 逻辑保持一致
+            var led0On = false;
+            var led1On = false;
+            var lastKey = '无';
+            var led0 = document.getElementById('sim-led0');
+            var led1 = document.getElementById('sim-led1');
+            var log = document.getElementById('sim-log');
+
+            function render() {
+                led0.classList.toggle('on', led0On);
+                led1.classList.toggle('on', led1On);
+                log.innerHTML = '最后按键：<b>' + lastKey + '</b>　当前状态：DS0 <b>' +
+                    (led0On ? '亮' : '灭') + '</b>　DS1 <b>' + (led1On ? '亮' : '灭') + '</b>';
+            }
+
+            var handlers = {
+                wkup: function () {
+                    led1On = !led1On;
+                    led0On = !led1On;
+                    lastKey = 'WK_UP';
+                },
+                key2: function () {
+                    led0On = !led0On;
+                    lastKey = 'KEY2';
+                },
+                key1: function () {
+                    led1On = !led1On;
+                    lastKey = 'KEY1';
+                },
+                key0: function () {
+                    led0On = !led0On;
+                    led1On = !led1On;
+                    lastKey = 'KEY0';
+                }
+            };
+
+            document.querySelectorAll('.sim-key').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var name = btn.dataset.key;
+                    handlers[name]();
+                    render();
+                });
+            });
+
+            render();
+        })();
+    </script>
+</body>
+</html>

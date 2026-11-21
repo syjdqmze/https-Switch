@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI 超级员工 · 登录</title>
+<style>
+  :root {
+    --bg: #050a13;
+    --card-bg: #0a1322;
+    --line: rgba(140, 175, 220, 0.12);
+    --text: #f2f6fd;
+    --text-dim: #8a97ac;
+    --accent: #1e9bef;
+    --accent-2: #4a5dfe;
+    --accent-3: #9a3dfb;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(900px 520px at 88% 8%, rgba(16, 148, 176, 0.16), transparent 65%),
+      radial-gradient(820px 520px at 8% 96%, rgba(124, 58, 237, 0.14), transparent 65%),
+      linear-gradient(rgba(120, 170, 220, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(120, 170, 220, 0.035) 1px, transparent 1px);
+    background-size: auto, auto, 64px 64px, 64px 64px;
+    font-family: "Inter", "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .card {
+    position: relative;
+    width: 100%;
+    max-width: 860px;
+    min-height: 452px;
+    display: flex;
+    border-radius: 18px;
+    border: 1px solid rgba(150, 185, 230, 0.14);
+    background:
+      radial-gradient(620px 300px at 0% 0%, rgba(20, 90, 140, 0.18), transparent 60%),
+      linear-gradient(160deg, #0a1424 0%, #081020 55%, #070e1b 100%);
+    box-shadow:
+      0 40px 90px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+  }
+
+  /* ---------- 左侧品牌区 ---------- */
+  .brand {
+    position: relative;
+    flex: 1 1 54%;
+    padding: 54px 44px 46px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background-image:
+      linear-gradient(rgba(110, 160, 220, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(110, 160, 220, 0.05) 1px, transparent 1px);
+    background-size: 38px 38px;
+    background-position: -1px -1px;
+  }
+
+  .brand::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba(150, 190, 235, 0.18) 18%, rgba(150, 190, 235, 0.18) 82%, transparent);
+  }
+
+  .badge {
+    align-self: flex-start;
+    padding: 6px 13px;
+    border: 1px solid rgba(110, 195, 245, 0.42);
+    border-radius: 999px;
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    color: #cfeaff;
+    background: rgba(40, 150, 220, 0.06);
+  }
+
+  .brand h1 {
+    margin-top: 26px;
+    font-size: 33px;
+    line-height: 1.25;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    color: #f6f9ff;
+    white-space: nowrap;
+  }
+
+  .brand h1 .light { font-weight: 500; letter-spacing: 2px; }
+
+  .brand .sub {
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    letter-spacing: 0.4px;
+  }
+
+  .stats {
+    display: flex;
+    gap: 10px;
+    margin-top: 30px;
+  }
+
+  .stat {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 13px 14px 12px;
+    border: 1px solid rgba(140, 175, 220, 0.16);
+    border-radius: 9px;
+    background: rgba(24, 44, 72, 0.28);
+    text-align: center;
+  }
+
+  .stat strong {
+    display: block;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #ffffff;
+  }
+
+  .stat span {
+    display: block;
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  /* ---------- 右侧登录区 ---------- */
+  .panel {
+    flex: 0 0 46%;
+    padding: 34px 38px 26px 34px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: rgba(8, 15, 27, 0.55);
+  }
+
+  .logo {
+    width: 46px;
+    height: 46px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(150deg, #e8f4ff 0%, #b9d8f7 45%, #6fa8e8 100%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 6px 18px rgba(80, 150, 230, 0.25);
+  }
+
+  .logo span {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(140deg, #2a5c9e 0%, #3d7bd0 55%, #6a3ec8 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .panel h2 {
+    margin-top: 18px;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #ffffff;
+  }
+
+  .panel .hint {
+    margin-top: 9px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+
+  form { margin-top: 18px; }
+
+  .field {
+    position: relative;
+    margin-bottom: 14px;
+  }
+
+  .field svg {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 15px;
+    height: 15px;
+    stroke: #7f8ea3;
+    pointer-events: none;
+  }
+
+  .field input {
+    width: 100%;
+    height: 38px;
+    padding: 0 14px 0 37px;
+    border-radius: 8px;
+    border: 1px solid rgba(140, 175, 220, 0.2);
+    background: rgba(10, 20, 34, 0.9);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+
+  .field input::placeholder { color: #62718a; }
+
+  .field input:hover { border-color: rgba(140, 175, 220, 0.32); }
+
+  .field input:focus {
+    border-color: rgba(74, 93, 254, 0.75);
+    background: rgba(12, 24, 42, 0.95);
+    box-shadow: 0 0 0 3px rgba(74, 93, 254, 0.14);
+  }
+
+  .remember {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 16px;
+    font-size: 12.5px;
+    color: #c3cede;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .remember input { position: absolute; opacity: 0; pointer-events: none; }
+
+  .box {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(140, 175, 220, 0.35);
+    background: rgba(10, 20, 34, 0.9);
+    display: grid;
+    place-items: center;
+    transition: all 0.18s;
+  }
+
+  .box svg { width: 9px; height: 9px; stroke: #04121f; stroke-width: 3; opacity: 0; }
+
+  .remember input:checked + .box {
+    border-color: transparent;
+    background: linear-gradient(140deg, #38c6e8, #3f8ef2);
+  }
+
+  .remember input:checked + .box svg { opacity: 1; }
+
+  .remember input:focus-visible + .box { box-shadow: 0 0 0 3px rgba(74, 93, 254, 0.25); }
+
+  .submit {
+    width: 100%;
+    height: 40px;
+    border: none;
+    border-radius: 9px;
+    background: linear-gradient(90deg, #1e9bef 0%, #4a5dfe 52%, #9a3dfb 100%);
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.42em;
+    text-indent: 0.42em;
+    cursor: pointer;
+    box-shadow: 0 10px 26px rgba(74, 93, 254, 0.32);
+    transition: transform 0.18s, box-shadow 0.18s, filter 0.18s;
+  }
+
+  .submit:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 12px 32px rgba(74, 93, 254, 0.45);
+    transform: translateY(-1px);
+  }
+
+  .submit:active { transform: translateY(0); }
+
+  .register {
+    width: 100%;
+    height: 40px;
+    margin-top: 12px;
+    border: 1px solid rgba(140, 175, 220, 0.28);
+    border-radius: 9px;
+    background: rgba(30, 48, 74, 0.55);
+    color: #d7e3f4;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.42em;
+    text-indent: 0.42em;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s, color 0.18s;
+  }
+
+  .register:hover {
+    background: rgba(40, 62, 95, 0.72);
+    border-color: rgba(90, 170, 240, 0.5);
+    color: #ffffff;
+  }
+
+  .register:active { background: rgba(34, 53, 82, 0.8); }
+
+  .powered {
+    margin-top: 14px;
+    text-align: right;
+    font-size: 11px;
+    color: #5d6b80;
+    letter-spacing: 0.3px;
+  }
+
+  /* ---------- 注册弹窗 ---------- */
+  .modal-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(3, 7, 14, 0.72);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.22s ease, visibility 0.22s ease;
+  }
+
+  .modal-mask.open { opacity: 1; visibility: visible; }
+
+  .modal {
+    width: 100%;
+    max-width: 400px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    padding: 26px 26px 22px;
+    border-radius: 16px;
+    border: 1px solid rgba(150, 185, 230, 0.16);
+    background: linear-gradient(160deg, #0c1727 0%, #08111f 100%);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+    transform: translateY(10px) scale(0.98);
+    transition: transform 0.22s ease;
+  }
+
+  .modal-mask.open .modal { transform: none; }
+
+  .modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-head h3 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #ffffff;
+  }
+
+  .modal-close {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #8a97ac;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+  }
+
+  .modal-close:hover { background: rgba(255, 255, 255, 0.07); color: #ffffff; }
+
+  .modal-close svg { width: 14px; height: 14px; stroke: currentColor; }
+
+  .modal-sub {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .reg-item { margin-top: 15px; }
+
+  .reg-item label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 12px;
+    color: #aab7c9;
+  }
+
+  .reg-item input {
+    width: 100%;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(140, 175, 220, 0.2);
+    background: rgba(10, 20, 34, 0.9);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+
+  .reg-item input::placeholder { color: #62718a; }
+
+  .reg-item input:hover { border-color: rgba(140, 175, 220, 0.32); }
+
+  .reg-item input:focus {
+    border-color: rgba(74, 93, 254, 0.75);
+    background: rgba(12, 24, 42, 0.95);
+    box-shadow: 0 0 0 3px rgba(74, 93, 254, 0.14);
+  }
+
+  .reg-item input.invalid {
+    border-color: rgba(255, 92, 112, 0.72);
+    box-shadow: 0 0 0 3px rgba(255, 92, 112, 0.12);
+  }
+
+  .err {
+    display: none;
+    margin-top: 5px;
+    font-size: 11px;
+    line-height: 1.4;
+    color: #ff5c70;
+  }
+
+  .err.show { display: block; }
+
+  .reg-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 22px;
+  }
+
+  .reg-actions .submit {
+    width: auto;
+    flex: 1 1 0;
+  }
+
+  .delete-btn {
+    flex: 1 1 0;
+    height: 40px;
+    border: 1px solid rgba(255, 92, 112, 0.45);
+    border-radius: 9px;
+    background: rgba(255, 92, 112, 0.1);
+    color: #ff8a9a;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-indent: 0.3em;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s, color 0.18s;
+  }
+
+  .delete-btn:hover {
+    background: rgba(255, 92, 112, 0.18);
+    border-color: rgba(255, 92, 112, 0.7);
+    color: #ffb3bd;
+  }
+
+  .delete-btn:active { background: rgba(255, 92, 112, 0.24); }
+
+  .delete-btn:disabled { opacity: 0.65; cursor: default; }
+
+  .form-msg {
+    min-height: 16px;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 12px;
+    color: #ff5c70;
+  }
+
+  .form-msg.ok { color: #3ddc97; }
+
+  .form-msg.done { color: #ffb86b; }
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width: 820px) {
+    .card { flex-direction: column; min-height: 0; }
+    .brand { flex: none; padding: 40px 30px 32px; }
+    .brand::after {
+      inset: auto 0 0 0;
+      width: auto;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(150, 190, 235, 0.18) 15%, rgba(150, 190, 235, 0.18) 85%, transparent);
+    }
+    .brand h1 { font-size: 27px; white-space: normal; }
+    .panel { flex: none; padding: 32px 30px 34px; }
+  }
+
+  @media (max-width: 520px) {
+    .stats { flex-wrap: wrap; }
+    .stat { flex: 1 1 40%; }
+  }
+</style>
+</head>
+<body>
+  <main class="card">
+    <section class="brand">
+      <span class="badge">AI CHANGES WORLD AND LIFE</span>
+      <h1><span class="light">智能</span> AI 超级工厂</h1>
+      <p class="sub">驱动 · 赋能 · 重塑 </p>
+
+      <div class="stats">
+        <div class="stat">
+          <strong>AI生活</strong>
+        </div>
+        <div class="stat">
+          <strong>AI工作</strong>
+        </div>
+        <div class="stat">
+          <strong>AI决策</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="logo" aria-hidden="true"><span>AI</span></div>
+      <h2>欢迎登录</h2>
+      <p class="hint">请输入账号信息进入控制台</p>
+
+      <form id="loginForm" autocomplete="off">
+        <div class="field">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="8" r="3.6" />
+            <path d="M4.5 20c0-3.6 3.4-5.8 7.5-5.8s7.5 2.2 7.5 5.8" />
+          </svg>
+          <input type="text" id="account" name="account" placeholder="请输入账号" aria-label="账号" />
+        </div>
+
+        <div class="field">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="4.5" y="10.5" width="15" height="9.5" rx="2" />
+            <path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7" />
+          </svg>
+          <input type="password" id="password" name="password" placeholder="请输入密码" aria-label="密码" />
+        </div>
+
+        <label class="remember">
+          <input type="checkbox" id="remember" checked />
+          <span class="box" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5" /></svg>
+          </span>
+          记住登录状态
+        </label>
+
+        <button type="submit" class="submit">登录</button>
+        <button type="button" class="register">注册</button>
+        <p class="form-msg" id="loginMsg" role="status"></p>
+      </form>
+
+      <p class="powered">Powered by Erish</p>
+    </section>
+  </main>
+
+  <!-- 用户注册弹窗 -->
+  <div class="modal-mask" id="registerModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="regTitle">
+      <div class="modal-head">
+        <h3 id="regTitle">用户注册</h3>
+        <button type="button" class="modal-close" id="closeRegister" aria-label="关闭注册窗口">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+      <p class="modal-sub">请填写以下信息完成注册</p>
+
+      <form id="registerForm" novalidate autocomplete="off">
+        <div class="reg-item">
+          <label for="regUser">用户名称</label>
+          <input type="text" id="regUser" name="username" maxlength="30" placeholder="仅支持可见字符（不含空格）" />
+          <span class="err" id="regUserErr"></span>
+        </div>
+
+        <div class="reg-item">
+          <label for="regPwd">用户密码</label>
+          <input type="password" id="regPwd" name="password" maxlength="64" placeholder="仅支持可见字符（不含空格）" />
+          <span class="err" id="regPwdErr"></span>
+        </div>
+
+        <div class="reg-item">
+          <label for="regPhone">用户手机号</label>
+          <input type="tel" id="regPhone" name="phone" maxlength="11" inputmode="numeric" placeholder="请输入 11 位手机号" />
+          <span class="err" id="regPhoneErr"></span>
+        </div>
+
+        <div class="reg-item">
+          <label for="regYears">工作年限</label>
+          <input type="number" id="regYears" name="workYears" min="0" max="60" step="1" placeholder="请输入工作年限（年）" />
+          <span class="err" id="regYearsErr"></span>
+        </div>
+
+        <div class="reg-actions">
+          <button type="submit" class="submit" id="regSubmit">确认</button>
+          <button type="button" class="delete-btn" id="deleteBtn">删除</button>
+        </div>
+        <p class="form-msg" id="regMsg" role="status"></p>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById("loginForm");
+      var account = document.getElementById("account");
+      var password = document.getElementById("password");
+      var msg = document.getElementById("loginMsg");
+      var submitBtn = form.querySelector("button[type=submit]");
+      var submitting = false;
+
+      function showMsg(text) {
+        msg.textContent = text || "";
+      }
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (submitting) return;
+
+        var username = account.value.trim();
+        var pwd = password.value;
+
+        if (!username || !pwd) {
+          showMsg("请输入用户名称和用户登录密码");
+          (!username ? account : password).focus();
+          return;
+        }
+
+        submitting = true;
+        showMsg("");
+        submitBtn.disabled = true;
+        submitBtn.textContent = "登录中...";
+
+        fetch("api.php?action=login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: username, password: pwd })
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (res) {
+            if (res && res.code === 0) {
+              window.location.href = "portal.html";
+              return;
+            }
+            showMsg((res && res.message) || "用户名称和用户密码不一致");
+          })
+          .catch(function () {
+            showMsg("网络异常，请稍后重试");
+          })
+          .finally(function () {
+            submitting = false;
+            submitBtn.disabled = false;
+            submitBtn.textContent = "登录";
+          });
+      });
+    })();
+
+    (function () {
+      var mask = document.getElementById("registerModal");
+      var openBtn = document.querySelector(".register");
+      var closeBtn = document.getElementById("closeRegister");
+      var form = document.getElementById("registerForm");
+      var submitBtn = document.getElementById("regSubmit");
+      var deleteBtn = document.getElementById("deleteBtn");
+      var msg = document.getElementById("regMsg");
+      var submitting = false;
+
+      var fields = {
+        user: {
+          input: document.getElementById("regUser"),
+          err: document.getElementById("regUserErr")
+        },
+        pwd: {
+          input: document.getElementById("regPwd"),
+          err: document.getElementById("regPwdErr")
+        },
+        phone: {
+          input: document.getElementById("regPhone"),
+          err: document.getElementById("regPhoneErr")
+        },
+        years: {
+          input: document.getElementById("regYears"),
+          err: document.getElementById("regYearsErr")
+        }
+      };
+
+      var RE_VISIBLE = /^[\x21-\x7E]+$/;
+      var RE_PHONE = /^1[3-9]\d{9}$/;
+
+      function checkUser(value) {
+        if (!value) return "请输入用户名称";
+        if (!RE_VISIBLE.test(value)) return "用户名称仅支持可见字符（不含空格）";
+        return "";
+      }
+
+      function checkPwd(value) {
+        if (!value) return "请输入用户密码";
+        if (!RE_VISIBLE.test(value)) return "用户密码仅支持可见字符（不含空格）";
+        return "";
+      }
+
+      function checkPhone(value) {
+        if (!value) return "请输入用户手机号";
+        if (!RE_PHONE.test(value)) return "请输入正确的手机号";
+        return "";
+      }
+
+      function checkYears(value) {
+        if (value === "") return "请输入工作年限";
+        if (!/^\d+$/.test(value) || Number(value) > 60) return "请输入 0~60 之间的整数年限";
+        return "";
+      }
+
+      function setErr(field, message) {
+        field.err.textContent = message;
+        field.err.classList.toggle("show", !!message);
+        field.input.classList.toggle("invalid", !!message);
+        field.input.setAttribute("aria-invalid", message ? "true" : "false");
+      }
+
+      function validate(field, checker) {
+        var message = checker(field.input.value.trim());
+        setErr(field, message);
+        return !message;
+      }
+
+      function bindLive(field, checker) {
+        field.input.addEventListener("input", function () {
+          if (field.input.value.trim() === "") {
+            setErr(field, "");
+          } else {
+            setErr(field, checker(field.input.value.trim()));
+          }
+        });
+        field.input.addEventListener("blur", function () {
+          validate(field, checker);
+        });
+      }
+
+      bindLive(fields.user, checkUser);
+      bindLive(fields.pwd, checkPwd);
+      bindLive(fields.phone, checkPhone);
+      bindLive(fields.years, checkYears);
+
+      function showMsg(text, type) {
+        msg.textContent = text || "";
+        msg.classList.toggle("ok", type === "ok");
+        msg.classList.toggle("done", type === "done");
+      }
+
+      function setBusy(busy, label, target) {
+        submitBtn.disabled = busy;
+        deleteBtn.disabled = busy;
+        submitBtn.style.opacity = busy ? "0.65" : "";
+        deleteBtn.style.opacity = busy ? "0.65" : "";
+        if (busy) {
+          target.textContent = label;
+        } else {
+          submitBtn.textContent = "确认";
+          deleteBtn.textContent = "删除";
+        }
+      }
+
+      function clearFields() {
+        Object.keys(fields).forEach(function (name) {
+          var field = fields[name];
+          field.input.value = "";
+          field.input.classList.remove("invalid");
+          field.err.textContent = "";
+        });
+        showMsg("");
+      }
+
+      function openModal() {
+        clearFields();
+        fields.user.input.focus();
+        mask.classList.add("open");
+        mask.setAttribute("aria-hidden", "false");
+      }
+
+      function closeModal() {
+        if (submitting) return;
+        mask.classList.remove("open");
+        mask.setAttribute("aria-hidden", "true");
+        showMsg("");
+      }
+
+      openBtn.addEventListener("click", openModal);
+      closeBtn.addEventListener("click", closeModal);
+      mask.addEventListener("click", function (e) {
+        if (e.target === mask) closeModal();
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && mask.classList.contains("open")) closeModal();
+      });
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        showMsg("");
+
+        var checks = [
+          validate(fields.user, checkUser),
+          validate(fields.pwd, checkPwd),
+          validate(fields.phone, checkPhone),
+          validate(fields.years, checkYears)
+        ];
+
+        if (checks.indexOf(false) !== -1) {
+          var firstInvalid = document.querySelector("#registerForm .invalid");
+          if (firstInvalid) firstInvalid.focus();
+          return;
+        }
+
+        submitting = true;
+        setBusy(true, "提交中...", submitBtn);
+
+        fetch("api.php?action=register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: fields.user.input.value.trim(),
+            password: fields.pwd.input.value,
+            phone: fields.phone.input.value.trim(),
+            workYears: Number(fields.years.input.value)
+          })
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (res) {
+            if (res && res.code === 0) {
+              showMsg("注册成功", "ok");
+              submitting = false;
+              setTimeout(function () {
+                form.reset();
+                Object.keys(fields).forEach(function (key) { setErr(fields[key], ""); });
+                showMsg("");
+                mask.classList.remove("open");
+                mask.setAttribute("aria-hidden", "true");
+              }, 900);
+            } else {
+              showMsg((res && res.message) || "注册失败，请稍后重试");
+            }
+          })
+          .catch(function () {
+            showMsg("网络异常，请稍后重试");
+          })
+          .finally(function () {
+            submitting = false;
+            setBusy(false);
+          });
+      });
+
+      deleteBtn.addEventListener("click", function () {
+        showMsg("");
+
+        var checks = [
+          validate(fields.user, checkUser),
+          validate(fields.pwd, checkPwd)
+        ];
+
+        if (checks.indexOf(false) !== -1) {
+          var invalidInput = document.querySelector("#registerForm .invalid");
+          if (invalidInput) invalidInput.focus();
+          return;
+        }
+
+        if (!window.confirm("确定删除该用户吗？")) return;
+
+        submitting = true;
+        setBusy(true, "删除中...", deleteBtn);
+
+        fetch("api.php?action=deleteUser", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: fields.user.input.value.trim(),
+            password: fields.pwd.input.value
+          })
+        })
+          .then(function (res) { return res.json(); })
+          .then(function (res) {
+            if (res && res.code === 0) {
+              showMsg(res.message, "done");
+            } else {
+              showMsg((res && res.message) || "删除失败，请稍后重试");
+            }
+          })
+          .catch(function () {
+            showMsg("网络异常，请稍后重试");
+          })
+          .finally(function () {
+            submitting = false;
+            setBusy(false);
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

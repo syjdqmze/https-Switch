@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验4 外部中断实验 · 代码启动流程详解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验4 · 外部中断实验</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu">
+                <li class="active" data-target="s01"><span class="num">01</span>实验概述与硬件资源</li>
+                <li data-target="s02"><span class="num">02</span>工程目录与文件分工</li>
+                <li data-target="s03"><span class="num">03</span>启动流程总览</li>
+                <li data-target="s04"><span class="num">04</span>启动文件与中断向量表</li>
+                <li data-target="s05"><span class="num">05</span>SystemInit 与 HAL_Init</li>
+                <li data-target="s06"><span class="num">06</span>时钟、延时与串口初始化</li>
+                <li data-target="s07"><span class="num">07</span>EXTI 初始化：GPIO 一侧</li>
+                <li data-target="s08"><span class="num">08</span>SYSCFG 映射与 EXTI 寄存器</li>
+                <li data-target="s09"><span class="num">09</span>NVIC 优先级与使能</li>
+                <li data-target="s10"><span class="num">10</span>中断服务函数与公共处理</li>
+                <li data-target="s11"><span class="num">11</span>回调函数中的业务逻辑</li>
+                <li data-target="s12"><span class="num">12</span>边沿触发与软件消抖</li>
+                <li data-target="s13"><span class="num">13</span>主循环与实验现象</li>
+                <li data-target="s14"><span class="num">14</span>实验总结与常见问题</li>
+            </ul>
+            <div class="sidebar-tip">按代码启动顺序讲解：从向量表、时钟，到 EXTI 配置、NVIC 与中断回调。</div>
+        </aside>
+
+        <!-- 主内容 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <!-- 01 -->
+                <section class="content-card" id="s01">
+                    <h2>01　实验概述与硬件资源</h2>
+                    <div class="sec-sub">用外部中断替代按键轮询，理解“主循环 + 异步中断”的协作方式</div>
+
+                    <p>实验2 的按键输入采用<strong>轮询</strong>：主循环不断调用 <code class="inline">KEY_Scan()</code> 读取引脚，只有程序执行到扫描函数时才能发现按键。本实验改为<strong>外部中断</strong>：按键引起的电平跳变直接触发 EXTI，CPU 暂停主循环、进入中断服务函数完成 LED 翻转，处理完再返回原来的位置继续执行。</p>
+
+                    <table class="data">
+                        <tr><th>对比项</th><th>实验2：按键轮询</th><th>实验4：外部中断</th></tr>
+                        <tr><td>发现按键的时机</td><td>主循环执行到 KEY_Scan 时</td><td>边沿出现后立即响应（微秒级）</td></tr>
+                        <tr><td>主循环负担</td><td>需要周期性扫描，占用 CPU</td><td>主循环可以做别的事，如打印 OK</td></tr>
+                        <tr><td>消抖方式</td><td>扫描函数内 delay_ms(10)</td><td>回调函数内 delay_ms(100)</td></tr>
+                        <tr><td>关键代码</td><td>KEY_Scan() 返回值 + switch</td><td>EXTI_Init() + HAL_GPIO_EXTI_Callback()</td></tr>
+                    </table>
+
+                    <h3>硬件资源</h3>
+                    <table class="data">
+                        <tr><th>器件</th><th>引脚</th><th>配置</th><th>有效电平</th><th>说明</th></tr>
+                        <tr><td>DS0（LED0）</td><td>PB1</td><td>推挽输出</td><td>低电平点亮</td><td><code>#define LED0 PBout(1)</code></td></tr>
+                        <tr><td>DS1（LED1）</td><td>PB0</td><td>推挽输出</td><td>低电平点亮</td><td><code>#define LED1 PBout(0)</code></td></tr>
+                        <tr><td>KEY0</td><td>PH3</td><td>输入 + 上拉</td><td>低电平有效</td><td>下降沿触发 EXTI3</td></tr>
+                        <tr><td>KEY1</td><td>PH2</td><td>输入 + 上拉</td><td>低电平有效</td><td>下降沿触发 EXTI2</td></tr>
+                        <tr><td>KEY2</td><td>PC13</td><td>输入 + 上拉</td><td>低电平有效</td><td>下降沿触发 EXTI13</td></tr>
+                        <tr><td>WK_UP</td><td>PA0</td><td>输入 + 下拉</td><td>高电平有效</td><td>上升沿触发 EXTI0</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">PB1 → DS0</span>
+                        <span class="chip">PB0 → DS1</span>
+                        <span class="chip">PH3 → KEY0</span>
+                        <span class="chip">PH2 → KEY1</span>
+                        <span class="chip">PC13 → KEY2</span>
+                        <span class="chip">PA0 → WK_UP</span>
+                    </div>
+
+                    <h3>实验现象</h3>
+                    <table class="data">
+                        <tr><th>按键</th><th>相关中断线</th><th>现象</th></tr>
+                        <tr><td>WK_UP（PA0）</td><td>EXTI0</td><td>DS0 与 DS1 互斥点亮：按一次，亮的那颗灭、灭的那颗亮</td></tr>
+                        <tr><td>KEY2（PC13）</td><td>EXTI13</td><td>DS0 翻转一次</td></tr>
+                        <tr><td>KEY1（PH2）</td><td>EXTI2</td><td>DS1 翻转一次</td></tr>
+                        <tr><td>KEY0（PH3）</td><td>EXTI3</td><td>DS0、DS1 同时翻转</td></tr>
+                    </table>
+
+                    <div class="note">本实验的工程里仍然保留了 <code>key.c</code>，但 <code>main.c</code> 与 <code>exti.c</code> 都没有调用 <code>KEY_Init()</code> 或 <code>KEY_Scan()</code>。四个按键的输入模式与上下拉，是在配置 EXTI 的同一次 <code>HAL_GPIO_Init()</code> 中完成的。</div>
+                </section>
+
+                <!-- 02 -->
+                <section class="content-card" id="s02">
+                    <h2>02　工程目录与文件分工</h2>
+                    <div class="sec-sub">外部中断实验新增了 HARDWARE/EXTI，KEY 与 LED 继续提供引脚定义</div>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>作用</th><th>本实验关注点</th></tr>
+                        <tr><td>USER/main.c</td><td>程序入口，按顺序调用各初始化函数</td><td>最后一个初始化是 EXTI_Init()</td></tr>
+                        <tr><td>USER/stm32f4xx_it.c</td><td>Cortex-M4 异常处理（NMI、HardFault、SysTick）</td><td>SysTick_Handler 调用 HAL_IncTick()</td></tr>
+                        <tr><td>USER/system_stm32f4xx.c</td><td>SystemInit()：FPU、向量表基址</td><td>main 之前由启动文件调用</td></tr>
+                        <tr><td>CORE/startup_stm32f429xx.s</td><td>向量表、Reset_Handler、各中断的弱定义</td><td>EXTI0/2/3/15_10 的入口地址</td></tr>
+                        <tr><td>HARDWARE/EXTI/exti.c</td><td>外部中断初始化、4 个中断服务函数、用户回调</td><td>本实验的核心文件</td></tr>
+                        <tr><td>HARDWARE/KEY/key.h</td><td>按键引脚宏与键值定义</td><td>WK_UP / KEY0~KEY2 的读取宏</td></tr>
+                        <tr><td>HARDWARE/LED/led.c</td><td>PB0、PB1 推挽输出初始化</td><td>上电默认输出高，灯灭</td></tr>
+                        <tr><td>SYSTEM/delay</td><td>基于 SysTick 的 us/ms 延时</td><td>回调里的 delay_ms(100) 消抖</td></tr>
+                        <tr><td>SYSTEM/usart</td><td>USART1 初始化与 printf 重定向</td><td>主循环每秒打印 OK</td></tr>
+                        <tr><td>SYSTEM/sys</td><td>位带操作宏（PAin/PBout 等）</td><td>LED0/LED1 通过位带写 ODR</td></tr>
+                        <tr><td>HALLIB</td><td>ST 官方 HAL 驱动</td><td>hal_gpio.c 中的 EXTI 配置与公共中断处理</td></tr>
+                    </table>
+
+                    <div class="note blue">阅读顺序建议：<code>main.c</code> → <code>exti.c</code> 的 <code>EXTI_Init()</code> → <code>stm32f4xx_hal_gpio.c</code> 的 <code>HAL_GPIO_Init()</code> 与 <code>HAL_GPIO_EXTI_IRQHandler()</code> → 回到 <code>exti.c</code> 的回调。这样能把“配置”和“响应”两条线串起来。</div>
+                </section>
+
+                <!-- 03 -->
+                <section class="content-card" id="s03">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电复位到 while(1)，初始化顺序决定了中断能否被正确触发</div>
+
+                    <p>外部中断虽然由按键“随时”触发，但它能被触发的前提是：时钟已经打开、GPIO 已切换为中断模式、SYSCFG 已完成映射、EXTI 已开屏蔽、NVIC 已使能。这些步骤全部在 <code class="inline">main()</code> 的初始化阶段完成，因此仍然要按启动顺序理解代码。</p>
+
+                    <figure class="figure">
+                        <img src="./index17-map/boot-flow.png" alt="STM32F429 从上电复位、Reset_Handler、SystemInit、__main 到 main 初始化与 while(1) 的启动流程图">
+                        <figcaption>图 3-1　上电复位到主循环的启动链路，以及外部中断的异步分支</figcaption>
+                    </figure>
+
+                    <h3>main.c 全文</h3>
+                    <pre class="code">#include "sys.h"
+#include "delay.h"
+#include "usart.h"
+#include "led.h"
+#include "exti.h"
+
+int main(void)
+{
+    HAL_Init();                     <span class="cmt">// 初始化 HAL 库</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// 设置时钟，180MHz</span>
+    delay_init(180);                <span class="cmt">// 初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">// 初始化 USART1</span>
+    LED_Init();                     <span class="cmt">// 初始化 LED</span>
+    EXTI_Init();                    <span class="cmt">// 外部中断初始化</span>
+
+    while(1)
+    {
+        printf("OK\r\n");           <span class="cmt">// 打印 OK，提示程序运行</span>
+        delay_ms(1000);             <span class="cmt">// 每隔 1s 打印一次</span>
+    }
+}</pre>
+
+                    <p>这 6 行初始化并不是随意排序的：</p>
+                    <ol>
+                        <li><code>HAL_Init()</code> 建立 HAL 的时基与优先级分组，之后所有 <code>HAL_Delay</code>、超时判断才有意义；</li>
+                        <li><code>Stm32_Clock_Init()</code> 把系统时钟从复位后的 HSI 16MHz 提升到 180MHz；</li>
+                        <li><code>delay_init(180)</code> 告诉延时函数“1us 需要 180 个 SysTick 计数”；</li>
+                        <li><code>uart_init()</code>、<code>LED_Init()</code> 分别准备串口与指示灯；</li>
+                        <li><code>EXTI_Init()</code> 放在最后，等所有依赖（时钟、GPIO、NVIC 分组）都就绪后再开中断；</li>
+                        <li>进入 <code>while(1)</code> 后主循环只做打印，按键由中断异步处理。</li>
+                    </ol>
+
+                    <div class="note">如果把 <code>EXTI_Init()</code> 提到 <code>Stm32_Clock_Init()</code> 之前，GPIO/SYSCFG 的时钟频率尚未确定，虽然多数情况下仍能工作，但属于依赖未满足的写法，工程上应避免。</div>
+                </section>
+
+                <!-- 04 -->
+                <section class="content-card" id="s04">
+                    <h2>04　启动文件与中断向量表</h2>
+                    <div class="sec-sub">中断服务函数为什么能被自动调用？答案在 0x08000000 开始的向量表</div>
+
+                    <p>Cortex-M4 规定：地址 <code class="inline">0x08000000</code> 存放初始 MSP，<code class="inline">0x08000004</code> 存放复位向量。之后每 4 字节一个异常/中断入口。异常号 n 的入口地址为：</p>
+                    <pre class="code">向量地址 = 0x08000000 + 4 × (16 + n)      <span class="cmt">// 前 16 个是内核异常</span></pre>
+
+                    <table class="data">
+                        <tr><th>中断</th><th>异常号 n</th><th>入口地址</th><th>本实验对应的引脚</th></tr>
+                        <tr><td>EXTI0_IRQHandler</td><td>6</td><td>0x08000058</td><td>PA0 / WK_UP</td></tr>
+                        <tr><td>EXTI2_IRQHandler</td><td>8</td><td>0x08000060</td><td>PH2 / KEY1</td></tr>
+                        <tr><td>EXTI3_IRQHandler</td><td>9</td><td>0x08000064</td><td>PH3 / KEY0</td></tr>
+                        <tr><td>EXTI15_10_IRQHandler</td><td>40</td><td>0x080000E0</td><td>PC13 / KEY2</td></tr>
+                    </table>
+
+                    <p>启动文件中用 <code class="inline">DCD</code> 把这些地址填进向量表，并用 <code class="inline">EXPORT ... [WEAK]</code> 给出弱定义。用户只要在 <code>exti.c</code> 里写出同名函数，链接器就会用强符号覆盖弱符号，向量表自然指向用户的函数。</p>
+
+                    <pre class="code">                DCD     EXTI0_IRQHandler          <span class="cmt">; EXTI Line0</span>
+                DCD     EXTI1_IRQHandler          <span class="cmt">; EXTI Line1</span>
+                DCD     EXTI2_IRQHandler          <span class="cmt">; EXTI Line2</span>
+                DCD     EXTI3_IRQHandler          <span class="cmt">; EXTI Line3</span>
+                ...
+                DCD     EXTI15_10_IRQHandler      <span class="cmt">; External Line[15:10]s</span></pre>
+
+                    <p><code>SystemInit()</code> 中还会执行 <code class="inline">SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET</code>，把向量表基址明确设为 0x08000000。这样即使程序中有 Bootloader 或地址偏移，内核也能找到正确的入口。</p>
+
+                    <div class="note blue">注意：EXTI2 与 EXTI3 是独立的中断号，而 EXTI10~EXTI15 共用一个 <code>EXTI15_10_IRQHandler</code>。所以 KEY2（PC13）的中断里必须通过 <code>GPIO_PIN_13</code> 判断来源，不能想当然地认为“这条中断只属于 PC13”。</div>
+                </section>
+
+                <!-- 05 -->
+                <section class="content-card" id="s05">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">一个发生在 main 之前，一个发生在 main 的第一行</div>
+
+                    <h3>SystemInit()：C 环境准备</h3>
+                    <p><code>SystemInit()</code> 由启动文件的 <code>Reset_Handler</code> 在跳转 <code>__main</code> 之前调用，主要做三件事：</p>
+                    <ul>
+                        <li>使能 FPU：<code>SCB-&gt;CPACR |= (3 &lt;&lt; 20) | (3 &lt;&lt; 22)</code>，允许 CP10/CP11 全访问；</li>
+                        <li>把 RCC 恢复到复位状态（HSI 打开、PLL 关闭等），为后面的自定义时钟配置提供干净起点；</li>
+                        <li>设置向量表基址 <code>SCB-&gt;VTOR</code>。</li>
+                    </ul>
+
+                    <h3>HAL_Init()：HAL 库的运行时基础</h3>
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);  <span class="cmt">// 优先级分组 2</span>
+  HAL_InitTick(TICK_INT_PRIORITY);                      <span class="cmt">// SysTick 1ms，优先级 0x0F</span>
+  HAL_MspInit();                                        <span class="cmt">// 板级底层初始化</span>
+  return HAL_OK;
+}</pre>
+
+                    <table class="data">
+                        <tr><th>动作</th><th>本工程取值</th><th>影响</th></tr>
+                        <tr><td>优先级分组</td><td>NVIC_PRIORITYGROUP_2</td><td>4 位优先级中，高 2 位为抢占、低 2 位为子优先级</td></tr>
+                        <tr><td>HAL 时基</td><td>SysTick，1ms</td><td>HAL_Delay / HAL_GetTick 可用</td></tr>
+                        <tr><td>SysTick 优先级</td><td>0x0F（最低）</td><td>不会打断任何外部中断</td></tr>
+                    </table>
+
+                    <p>分组方式直接决定了第 09 节中 <code class="inline">HAL_NVIC_SetPriority(EXTI0_IRQn, 2, 0)</code> 的含义：抢占优先级 2、子优先级 0。若分组被改成 GROUP_4，则只有抢占没有子优先级，同样的参数会产生完全不同的嵌套行为。</p>
+                </section>
+
+                <!-- 06 -->
+                <section class="content-card" id="s06">
+                    <h2>06　时钟、延时与串口初始化</h2>
+                    <div class="sec-sub">为 EXTI 与主循环准备“时间”和“输出”</div>
+
+                    <h3>时钟：Stm32_Clock_Init(360,25,2,8)</h3>
+                    <p>参数依次为 PLLN、PLLM、PLLP、PLLQ。本工程外部晶振 HSE = 25MHz：</p>
+                    <table class="data">
+                        <tr><th>项目</th><th>计算</th><th>结果</th></tr>
+                        <tr><td>PLL 输入</td><td>25MHz ÷ PLLM(25)</td><td>1MHz</td></tr>
+                        <tr><td>VCO</td><td>1MHz × PLLN(360)</td><td>360MHz</td></tr>
+                        <tr><td>SYSCLK</td><td>360MHz ÷ PLLP(2)</td><td><strong>180MHz</strong></td></tr>
+                        <tr><td>USB/SDIO 时钟</td><td>360MHz ÷ PLLQ(8)</td><td>45MHz</td></tr>
+                        <tr><td>HCLK（AHB）</td><td>SYSCLK ÷ 1</td><td>180MHz</td></tr>
+                        <tr><td>PCLK1（APB1）</td><td>180MHz ÷ 4</td><td>45MHz</td></tr>
+                        <tr><td>PCLK2（APB2）</td><td>180MHz ÷ 2</td><td>90MHz</td></tr>
+                    </table>
+                    <p>配置顺序上，代码先开 Over-Drive、设置电压等级 Scale 1，再把 Flash 等待周期设为 5WS，最后才切换 PLL 并调用 <code>HAL_RCC_ClockConfig()</code>。切换完成后，<code>HAL_RCC_ClockConfig()</code> 会重新调用 <code>HAL_InitTick()</code>，把 SysTick 重装载值改为 180000，保证 1ms 时基不变。</p>
+
+                    <h3>延时：delay_init(180)</h3>
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);  <span class="cmt">// SysTick 时钟 = HCLK</span>
+    fac_us = SYSCLK;                                      <span class="cmt">// 1us 的计数次数 = 180</span>
+}</pre>
+                    <p>本工程 <code>SYSTEM_SUPPORT_OS</code> 为 0，<code>delay_us()</code> 采用轮询 <code>SysTick-&gt;VAL</code> 的方式计数，不依赖 SysTick 中断；<code>delay_ms()</code> 只是把 ms 换算成 us 后调用它。因此第 11 节回调里的 <code>delay_ms(100)</code> 在中断上下文中也能正常工作。</p>
+
+                    <h3>串口：uart_init(115200)</h3>
+                    <p>USART1 使用 PA9（TX）/PA10（RX），复用功能 AF7，波特率 115200。初始化时还设置了 NVIC 优先级 <code>HAL_NVIC_SetPriority(USART1_IRQn, 3, 3)</code> 并调用 <code>HAL_UART_Receive_IT()</code> 开启接收中断。它在本实验里主要用于 <code>printf</code> 输出，属于“低优先级后台任务”。</p>
+
+                    <pre class="code">void LED_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_GPIOB_CLK_ENABLE();            <span class="cmt">// 开启 GPIOB 时钟</span>
+
+    GPIO_Initure.Pin   = GPIO_PIN_0|GPIO_PIN_1;  <span class="cmt">// PB0、PB1</span>
+    GPIO_Initure.Mode  = GPIO_MODE_OUTPUT_PP;    <span class="cmt">// 推挽输出</span>
+    GPIO_Initure.Pull  = GPIO_PULLUP;
+    GPIO_Initure.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOB, &amp;GPIO_Initure);
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, GPIO_PIN_SET);  <span class="cmt">// 默认高电平，灯灭</span>
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
+}</pre>
+                </section>
+
+                <!-- 07 -->
+                <section class="content-card" id="s07">
+                    <h2>07　EXTI 初始化：GPIO 一侧</h2>
+                    <div class="sec-sub">EXTI_Init() 的第一段：开时钟、配引脚、选上下拉与边沿</div>
+
+                    <pre class="code">void EXTI_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();               <span class="cmt">// 开启 GPIOA 时钟</span>
+    __HAL_RCC_GPIOC_CLK_ENABLE();               <span class="cmt">// 开启 GPIOC 时钟</span>
+    __HAL_RCC_GPIOH_CLK_ENABLE();               <span class="cmt">// 开启 GPIOH 时钟</span>
+
+    GPIO_Initure.Pin  = GPIO_PIN_0;             <span class="cmt">// PA0</span>
+    GPIO_Initure.Mode = GPIO_MODE_IT_RISING;    <span class="cmt">// 上升沿触发</span>
+    GPIO_Initure.Pull = GPIO_PULLDOWN;
+    HAL_GPIO_Init(GPIOA, &amp;GPIO_Initure);
+
+    GPIO_Initure.Pin  = GPIO_PIN_13;            <span class="cmt">// PC13</span>
+    GPIO_Initure.Mode = GPIO_MODE_IT_FALLING;   <span class="cmt">// 下降沿触发</span>
+    GPIO_Initure.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(GPIOC, &amp;GPIO_Initure);
+
+    GPIO_Initure.Pin  = GPIO_PIN_2|GPIO_PIN_3;  <span class="cmt">// PH2、PH3</span>
+    HAL_GPIO_Init(GPIOH, &amp;GPIO_Initure);        <span class="cmt">// 沿用 PC13 的 FALLING + PULLUP</span>
+}</pre>
+
+                    <h3>为什么引脚要这样配</h3>
+                    <table class="data">
+                        <tr><th>引脚</th><th>外部电路</th><th>上下拉选择</th><th>触发边沿</th></tr>
+                        <tr><td>PA0 / WK_UP</td><td>按键接 VCC，另一端串电阻到地</td><td>内部下拉，松开时稳定为 0</td><td>按下由 0→1，选上升沿</td></tr>
+                        <tr><td>PC13 / KEY2</td><td>按键接 GND</td><td>内部上拉，松开时稳定为 1</td><td>按下由 1→0，选下降沿</td></tr>
+                        <tr><td>PH2 / KEY1</td><td>按键接 GND</td><td>内部上拉</td><td>下降沿</td></tr>
+                        <tr><td>PH3 / KEY0</td><td>按键接 GND</td><td>内部上拉</td><td>下降沿</td></tr>
+                    </table>
+
+                    <p><code class="inline">GPIO_MODE_IT_RISING</code> 与 <code class="inline">GPIO_MODE_IT_FALLING</code> 并不是普通的输入模式，它们的数值中包含 <code>GPIO_MODE_INPUT</code> 与 <code>EXTI_MODE</code> 标志。HAL 在 <code>HAL_GPIO_Init()</code> 里识别到 <code>EXTI_MODE</code> 后，会顺手完成 SYSCFG 映射、EXTI 屏蔽与边沿选择，因此用户不需要再单独写寄存器。</p>
+
+                    <div class="note">PH2 与 PH3 共用同一份 <code>GPIO_InitTypeDef</code>：结构体里此时仍是 <code>Mode = GPIO_MODE_IT_FALLING</code>、<code>Pull = GPIO_PULLUP</code>，只是把 <code>Pin</code> 改成 <code>GPIO_PIN_2|GPIO_PIN_3</code>。这是嵌入式代码中常见的“复用配置”写法，前提是两次配置的电气属性确实一致。</div>
+                </section>
+
+                <!-- 08 -->
+                <section class="content-card" id="s08">
+                    <h2>08　SYSCFG 映射与 EXTI 寄存器</h2>
+                    <div class="sec-sub">16 条 EXTI 线如何与 4 个不同端口的引脚对应起来</div>
+
+                    <figure class="figure">
+                        <img src="./index17-map/exti-mux.png" alt="PA0、PC13、PH2、PH3 经 SYSCFG_EXTICR 映射到 EXTI0、EXTI13、EXTI2、EXTI3 并连接到对应 NVIC 中断">
+                        <figcaption>图 8-1　四个按键引脚到 EXTI 线、再到 NVIC 中断号的映射关系</figcaption>
+                    </figure>
+
+                    <h3>HAL_GPIO_Init() 内部做了什么</h3>
+                    <pre class="code">if((GPIO_Init-&gt;Mode &amp; EXTI_MODE) == EXTI_MODE)
+{
+    __HAL_RCC_SYSCFG_CLK_ENABLE();                       <span class="cmt">// ① 开 SYSCFG 时钟</span>
+
+    temp  = SYSCFG-&gt;EXTICR[position &gt;&gt; 2];               <span class="cmt">// ② 选择端口</span>
+    temp &amp;= ~(0x0F &lt;&lt; (4 * (position &amp; 0x03)));
+    temp |=  (GPIO_GET_INDEX(GPIOx) &lt;&lt; (4 * (position &amp; 0x03)));
+    SYSCFG-&gt;EXTICR[position &gt;&gt; 2] = temp;
+
+    temp = EXTI-&gt;IMR;                                    <span class="cmt">// ③ 中断屏蔽</span>
+    temp &amp;= ~iocurrent;
+    if((GPIO_Init-&gt;Mode &amp; GPIO_MODE_IT) == GPIO_MODE_IT) temp |= iocurrent;
+    EXTI-&gt;IMR = temp;
+
+    temp = EXTI-&gt;RTSR;                                   <span class="cmt">// ④ 上升沿</span>
+    temp &amp;= ~iocurrent;
+    if((GPIO_Init-&gt;Mode &amp; RISING_EDGE) == RISING_EDGE) temp |= iocurrent;
+    EXTI-&gt;RTSR = temp;
+
+    temp = EXTI-&gt;FTSR;                                   <span class="cmt">// ⑤ 下降沿</span>
+    temp &amp;= ~iocurrent;
+    if((GPIO_Init-&gt;Mode &amp; FALLING_EDGE) == FALLING_EDGE) temp |= iocurrent;
+    EXTI-&gt;FTSR = temp;
+}</pre>
+
+                    <table class="data">
+                        <tr><th>寄存器</th><th>作用</th><th>本实验取值</th></tr>
+                        <tr><td>SYSCFG-&gt;EXTICR[0]</td><td>EXTI0~EXTI3 的端口选择</td><td>bit3:0=0（PA0）、bit11:8=7（PH2）、bit15:12=7（PH3）</td></tr>
+                        <tr><td>SYSCFG-&gt;EXTICR[3]</td><td>EXTI12~EXTI15 的端口选择</td><td>bit7:4=2（PC13）</td></tr>
+                        <tr><td>EXTI-&gt;IMR</td><td>中断屏蔽寄存器，置 1 表示允许产生中断</td><td>bit0、bit2、bit3、bit13 置 1</td></tr>
+                        <tr><td>EXTI-&gt;RTSR</td><td>上升沿触发选择</td><td>仅 bit0（PA0）</td></tr>
+                        <tr><td>EXTI-&gt;FTSR</td><td>下降沿触发选择</td><td>bit2、bit3、bit13</td></tr>
+                        <tr><td>EXTI-&gt;PR</td><td>挂起寄存器，1 表示有事件待处理</td><td>中断中写 1 清除</td></tr>
+                    </table>
+
+                    <p>EXTICR 中用 4 位表示端口编号：PA=0、PB=1、PC=2、PD=3、PE=4、PF=5、PG=6、PH=7。每个寄存器管理 4 条线，线号 <code class="inline">n</code> 对应 <code class="inline">EXTICR[n/4]</code> 的第 <code class="inline">(n%4)*4</code> 位起的 4 位。</p>
+
+                    <div class="note">EXTI0~EXTI15 每条线在同一时刻只能连接一个端口的同号引脚。例如 PA0 占用 EXTI0 后，PB0、PC0 就不能再配置为 EXTI0；否则后配置的会覆盖前面的映射。本实验用的 0、2、3、13 四条线互不冲突。</div>
+
+                    <figure>
+                        <img src="./index17-map/exti-timing.png" alt="按键抖动经 EXTI13 下降沿触发中断，NVIC 响应后翻转 LED0 的完整时序">
+                        <figcaption>图 8-2　按键抖动经 EXTI13 下降沿触发中断，NVIC 响应后翻转 LED0 的完整时序</figcaption>
+                    </figure>
+                </section>
+
+                <!-- 09 -->
+                <section class="content-card" id="s09">
+                    <h2>09　NVIC 优先级与使能</h2>
+                    <div class="sec-sub">EXTI 只是“把事件送到 NVIC”，真正让 CPU 响应的是 NVIC 使能</div>
+
+                    <pre class="code">// 中断线 0 - PA0
+HAL_NVIC_SetPriority(EXTI0_IRQn, 2, 0);       <span class="cmt">// 抢占优先级 2，子优先级 0</span>
+HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+// 中断线 2 - PH2
+HAL_NVIC_SetPriority(EXTI2_IRQn, 2, 1);
+HAL_NVIC_EnableIRQ(EXTI2_IRQn);
+
+// 中断线 3 - PH3
+HAL_NVIC_SetPriority(EXTI3_IRQn, 2, 2);
+HAL_NVIC_EnableIRQ(EXTI3_IRQn);
+
+// 中断线 13 - PC13（与 EXTI10~15 共用入口）
+HAL_NVIC_SetPriority(EXTI15_10_IRQn, 2, 3);
+HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);</pre>
+
+                    <figure class="figure">
+                        <img src="./index17-map/nvic-priority.png" alt="NVIC 优先级分组 2 的位域划分、四个外部中断与串口、SysTick 的优先级对比以及执行时序">
+                        <figcaption>图 9-1　优先级分组、各中断优先级与同抢占级下的排队执行关系</figcaption>
+                    </figure>
+
+                    <p>本工程在 <code>HAL_Init()</code> 中设定 <code class="inline">NVIC_PRIORITYGROUP_2</code>，STM32F429 实现了 4 位优先级，因此分组后：</p>
+                    <ul>
+                        <li>高 2 位（bit7~6）为<strong>抢占优先级</strong>，决定能否打断正在执行的中断；</li>
+                        <li>低 2 位（bit5~4）为<strong>子优先级</strong>，只在多个中断同时挂起时决定谁先执行，不能嵌套；</li>
+                        <li>bit3~0 未实现，读出为 0。</li>
+                    </ul>
+
+                    <p>四个外部中断的抢占优先级都是 2，所以它们之间不会互相打断；子优先级 0→1→2→3 只影响“同时到来”时的排队顺序。USART1 的抢占优先级是 3，SysTick 是 15，都低于外部中断，因此按键中断可以先于串口接收和 HAL 时基得到响应。</p>
+
+                    <div class="note blue">如果希望 KEY0 能打断 KEY2 的处理，需要把它们的抢占优先级设为不同值，例如 KEY0 设为 1、KEY2 设为 2。仅仅调整子优先级是做不到嵌套的。</div>
+                </section>
+
+                <!-- 10 -->
+                <section class="content-card" id="s10">
+                    <h2>10　中断服务函数与公共处理</h2>
+                    <div class="sec-sub">ISR 只做三件事：确认来源、清挂起、调用回调</div>
+
+                    <figure class="figure">
+                        <img src="./index17-map/signal-chain.png" alt="按键动作到 GPIO 采样、SYSCFG 选通、EXTI 边沿检测、NVIC 挂起、CPU 取向量、HAL 公共处理与用户回调的完整信号链">
+                        <figcaption>图 10-1　一次按键从引脚电平变化到用户回调的完整链路</figcaption>
+                    </figure>
+
+                    <h3>exti.c 中的四个中断服务函数</h3>
+                    <pre class="code">void EXTI0_IRQHandler(void)
+{
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);   <span class="cmt">// 调用中断处理公用函数</span>
+}
+
+void EXTI2_IRQHandler(void)
+{
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);
+}
+
+void EXTI3_IRQHandler(void)
+{
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_3);
+}
+
+void EXTI15_10_IRQHandler(void)
+{
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13);  <span class="cmt">// 这条线还包含 EXTI10~EXTI12、14、15</span>
+}</pre>
+
+                    <h3>HAL 的公共处理函数</h3>
+                    <pre class="code">void HAL_GPIO_EXTI_IRQHandler(uint16_t GPIO_Pin)
+{
+    if(__HAL_GPIO_EXTI_GET_IT(GPIO_Pin) != RESET)   <span class="cmt">// 读 EXTI-&gt;PR 判断来源</span>
+    {
+        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_Pin);         <span class="cmt">// 写 1 清除挂起位</span>
+        HAL_GPIO_EXTI_Callback(GPIO_Pin);           <span class="cmt">// 转到用户回调</span>
+    }
+}</pre>
+
+                    <p><code class="inline">__HAL_GPIO_EXTI_GET_IT()</code> 读取 <code>EXTI-&gt;PR</code> 的对应位，<code class="inline">__HAL_GPIO_EXTI_CLEAR_IT()</code> 向该位写 1 清除。清除动作发生在回调之前，这一点很关键：如果在清除后、回调执行期间引脚又发生抖动，PR 会再次置位，中断退出后会立刻重新进入。第 12 节的 100ms 延时就是为了规避这种重复进入。</p>
+
+                    <p><code class="inline">HAL_GPIO_EXTI_Callback()</code> 在 HAL 中是 <code class="inline">__weak</code> 空函数，用户在 <code>exti.c</code> 里重新定义同名函数即可覆盖，不需要修改 HAL 源码。</p>
+
+                    <div class="note">不要在中断服务函数里加入耗时很长的业务。本实验为了教学把消抖和 LED 翻转都放在回调中；实际项目更常见的做法是：回调只置一个标志或把事件放入队列，由主循环完成显示、通信等耗时操作。</div>
+                </section>
+
+                <!-- 11 -->
+                <section class="content-card" id="s11">
+                    <h2>11　回调函数中的业务逻辑</h2>
+                    <div class="sec-sub">按引脚号分流，并用 100ms 延时避开机械抖动</div>
+
+                    <pre class="code">void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    delay_ms(100);                     <span class="cmt">// 消抖：等抖动结束再判断</span>
+
+    switch(GPIO_Pin)
+    {
+        case GPIO_PIN_0:               <span class="cmt">// WK_UP / PA0，上升沿</span>
+            if(WK_UP == 1)
+            {
+                LED1 = !LED1;          <span class="cmt">// 控制 LED0、LED1 互斥点亮</span>
+                LED0 = !LED1;
+            }
+            break;
+
+        case GPIO_PIN_2:               <span class="cmt">// KEY1 / PH2，下降沿</span>
+            if(KEY1 == 0)
+            {
+                LED1 = !LED1;          <span class="cmt">// DS1 翻转</span>
+            }
+            break;
+
+        case GPIO_PIN_3:               <span class="cmt">// KEY0 / PH3，下降沿</span>
+            if(KEY0 == 0)
+            {
+                LED0 = !LED0;          <span class="cmt">// DS0、DS1 同时翻转</span>
+                LED1 = !LED1;
+            }
+            break;
+
+        case GPIO_PIN_13:              <span class="cmt">// KEY2 / PC13，下降沿</span>
+            if(KEY2 == 0)
+            {
+                LED0 = !LED0;          <span class="cmt">// DS0 翻转</span>
+            }
+            break;
+    }
+}</pre>
+
+                    <h3>动作与引脚宏的对应关系</h3>
+                    <table class="data">
+                        <tr><th>回调分支</th><th>电平确认</th><th>执行动作</th><th>最终现象</th></tr>
+                        <tr><td>GPIO_PIN_0</td><td><code>WK_UP == 1</code></td><td>LED1 翻转，再令 LED0 = !LED1</td><td>DS0 / DS1 互斥，始终只有一颗亮</td></tr>
+                        <tr><td>GPIO_PIN_2</td><td><code>KEY1 == 0</code></td><td>LED1 翻转</td><td>DS1 状态改变</td></tr>
+                        <tr><td>GPIO_PIN_3</td><td><code>KEY0 == 0</code></td><td>LED0、LED1 各翻转一次</td><td>DS0、DS1 同时改变</td></tr>
+                        <tr><td>GPIO_PIN_13</td><td><code>KEY2 == 0</code></td><td>LED0 翻转</td><td>DS0 状态改变</td></tr>
+                    </table>
+
+                    <p>引脚读取宏来自 <code>key.h</code>，最终调用 <code>HAL_GPIO_ReadPin()</code>：</p>
+                    <pre class="code">#define KEY0   HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_3)  <span class="cmt">// 低有效</span>
+#define KEY1   HAL_GPIO_ReadPin(GPIOH, GPIO_PIN_2)
+#define KEY2   HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)
+#define WK_UP  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0)  <span class="cmt">// 高有效</span></pre>
+
+                    <p>LED 宏来自 <code>led.h</code>，通过位带直接写 <code>GPIOB-&gt;ODR</code>。由于 LED 是低电平点亮，写 0 亮、写 1 灭：</p>
+                    <pre class="code">#define LED0  PBout(1)   <span class="cmt">// DS0，PB1</span>
+#define LED1  PBout(0)   <span class="cmt">// DS1，PB0</span></pre>
+
+                    <div class="note">WK_UP 分支先翻转 LED1，再让 LED0 取 LED1 的反值，因此无论之前两颗灯是什么状态，执行后一定是一亮一灭。这与实验2 主循环中的写法完全一致，只是从“扫描到再处理”变成了“中断里处理”。</div>
+                </section>
+
+                <!-- 12 -->
+                <section class="content-card" id="s12">
+                    <h2>12　边沿触发与软件消抖</h2>
+                    <div class="sec-sub">上升沿、下降沿与 5~20ms 机械抖动</div>
+
+                    <figure class="figure">
+                        <img src="./index17-map/edge-trigger.png" alt="WK_UP 上升沿触发与 KEY0~KEY2 下降沿触发的波形，以及 100ms 延时消抖示意">
+                        <figcaption>图 12-1　上升沿 / 下降沿触发波形与 100ms 消抖窗口</figcaption>
+                    </figure>
+
+                    <p>EXTI 检测的是“边沿”，不是“电平”。以 KEY0 为例：松开时上拉为高，按下瞬间变为低，下降沿使 <code>EXTI-&gt;PR</code> 的 bit3 置 1；如果 FTSR 的 bit3 已使能、IMR 的 bit3 也已打开，NVIC 就会收到 EXTI3 的请求。WK_UP 相反：下拉为低，按下变高，所以选择上升沿。</p>
+
+                    <table class="data">
+                        <tr><th>按键</th><th>松开电平</th><th>按下电平</th><th>边沿</th><th>触发寄存器位</th></tr>
+                        <tr><td>WK_UP</td><td>0</td><td>1</td><td>上升沿</td><td>RTSR.bit0</td></tr>
+                        <tr><td>KEY0</td><td>1</td><td>0</td><td>下降沿</td><td>FTSR.bit3</td></tr>
+                        <tr><td>KEY1</td><td>1</td><td>0</td><td>下降沿</td><td>FTSR.bit2</td></tr>
+                        <tr><td>KEY2</td><td>1</td><td>0</td><td>下降沿</td><td>FTSR.bit13</td></tr>
+                    </table>
+
+                    <h3>抖动为什么会造成多次中断</h3>
+                    <p>机械触点在闭合瞬间会弹跳，电平在 5~20ms 内反复跳变。每一次“有效边沿”都会让 PR 置位，而 <code>HAL_GPIO_EXTI_IRQHandler()</code> 在回调前就清除了 PR；等回调执行完退出，如果抖动又产生了一个新边沿，CPU 会马上再次进入中断。结果就是按一次键，LED 被翻转多次。</p>
+
+                    <h3>本实验的解决办法</h3>
+                    <ol>
+                        <li>进入回调后先 <code>delay_ms(100)</code>，等抖动完全结束；</li>
+                        <li>再读一次引脚：<code>WK_UP==1</code> 或 <code>KEYx==0</code>，确认按键仍处于按下状态；</li>
+                        <li>只有确认成功才翻转 LED，避免“松手抖动”被当成新的按键。</li>
+                    </ol>
+
+                    <p>这种写法简单直观，但会在中断中阻塞 100ms。若系统还有更紧急的中断，它们会被推迟。工程上更常用的替代方案是：</p>
+                    <ul>
+                        <li>记录时间戳，两次中断间隔小于 20ms 就忽略；</li>
+                        <li>回调只置标志，主循环中做 10ms 定时扫描确认；</li>
+                        <li>使用定时器输入捕获或专用按键扫描任务。</li>
+                    </ul>
+
+                    <div class="note blue">实验2 用 <code>static key_up</code> 标志实现“按一次只响应一次”；本实验没有这个标志，改用“100ms 延时 + 电平复核”来达到同样效果。两种思路可以互相替代。</div>
+                </section>
+
+                <!-- 13 -->
+                <section class="content-card" id="s13">
+                    <h2>13　主循环与实验现象</h2>
+                    <div class="sec-sub">主循环只打印 OK，按键处理完全由中断完成</div>
+
+                    <pre class="code">while(1)
+{
+    printf("OK\r\n");     <span class="cmt">// 通过 USART1 输出</span>
+    delay_ms(1000);       <span class="cmt">// 每秒一次</span>
+}</pre>
+
+                    <p>串口助手设置为 115200、8 位数据、1 位停止、无校验，会每隔 1 秒看到一行 <code class="inline">OK</code>。按键时，主循环并不参与检测：中断抢走 CPU，执行完回调后回到 <code>delay_ms()</code> 的剩余时间继续等待，所以串口的节奏基本不受影响。</p>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>串口表现</th><th>LED 表现</th></tr>
+                        <tr><td>上电</td><td>每秒输出 OK</td><td>DS0、DS1 均灭（PB0/PB1 输出高）</td></tr>
+                        <tr><td>按 KEY2</td><td>OK 继续输出，可能短暂延后</td><td>DS0 翻转</td></tr>
+                        <tr><td>按 KEY1</td><td>同上</td><td>DS1 翻转</td></tr>
+                        <tr><td>按 KEY0</td><td>同上</td><td>DS0、DS1 同时翻转</td></tr>
+                        <tr><td>按 WK_UP</td><td>同上</td><td>DS0/DS1 互斥切换，始终一灭一亮</td></tr>
+                    </table>
+
+                    <div class="sim">
+                        <div class="sim-title">交互演示：点击虚拟按键，观察回调执行后的 LED 状态</div>
+                        <div class="sim-buttons">
+                            <button data-key="wkup">WK_UP（PA0 / 上升沿）</button>
+                            <button data-key="key0">KEY0（PH3 / 下降沿）</button>
+                            <button data-key="key1">KEY1（PH2 / 下降沿）</button>
+                            <button data-key="key2">KEY2（PC13 / 下降沿）</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0（PB1）</div>
+                            <div class="led-item"><span class="led-dot" id="dot1"></span>DS1（PB0）</div>
+                        </div>
+                        <div class="sim-log" id="simLog">最后按键：无　　当前状态：DS0 灭　DS1 灭</div>
+                    </div>
+                </section>
+
+                <!-- 14 -->
+                <section class="content-card" id="s14">
+                    <h2>14　实验总结与常见问题</h2>
+                    <div class="sec-sub">把启动、配置、响应三条线串成一句话</div>
+
+                    <h3>完整流程回顾</h3>
+                    <ol>
+                        <li><strong>启动</strong>：向量表 → Reset_Handler → SystemInit（FPU、VTOR）→ __main（分散加载）→ main；</li>
+                        <li><strong>基础环境</strong>：HAL_Init（分组 2、SysTick 1ms）→ 180MHz 时钟 → delay_init(180) → uart_init(115200) → LED_Init；</li>
+                        <li><strong>GPIO 配置</strong>：开 GPIOA/C/H 时钟，PA0 上升沿下拉、PC13 下降沿上拉、PH2/PH3 沿用下降沿上拉；</li>
+                        <li><strong>EXTI 配置</strong>：HAL_GPIO_Init 内部写 SYSCFG-&gt;EXTICR、EXTI-&gt;IMR、RTSR/FTSR；</li>
+                        <li><strong>NVIC</strong>：四条中断线抢占优先级均为 2，子优先级 0/1/2/3，逐个使能；</li>
+                        <li><strong>响应</strong>：按键边沿 → PR 置位 → NVIC 挂起 → EXTIx_IRQHandler → HAL_GPIO_EXTI_IRQHandler（清 PR）→ HAL_GPIO_EXTI_Callback；</li>
+                        <li><strong>业务</strong>：delay_ms(100) 消抖，复核电平，按引脚号翻转对应 LED；</li>
+                        <li><strong>主循环</strong>：每秒打印 OK，与中断互不阻塞。</li>
+                    </ol>
+
+                    <h3>常见问题</h3>
+                    <table class="data">
+                        <tr><th>现象</th><th>可能原因</th><th>排查方法</th></tr>
+                        <tr><td>按键完全无反应</td><td>NVIC 未使能、IMR 未打开、GPIO/SYSCFG 时钟未开</td><td>在 <code>EXTI_Init()</code> 末尾打断点，检查 <code>EXTI-&gt;IMR</code>、<code>NVIC-&gt;ISER</code></td></tr>
+                        <tr><td>按一次灯闪多次</td><td>机械抖动导致重复进入中断</td><td>确认回调中保留了 <code>delay_ms(100)</code> 与电平复核</td></tr>
+                        <tr><td>中断进不去</td><td>未调用 <code>HAL_NVIC_EnableIRQ()</code>，或中断名拼写与启动文件不一致</td><td>核对 <code>startup_stm32f429xx.s</code> 中的 <code>EXTI15_10_IRQHandler</code> 拼写</td></tr>
+                        <tr><td>WK_UP 与 KEY 行为反向</td><td>上下拉或边沿选错</td><td>PA0 应下拉 + 上升沿；PC13/PH2/PH3 应上拉 + 下降沿</td></tr>
+                        <tr><td>串口输出被拉长</td><td>中断里 delay_ms(100) 阻塞了主循环</td><td>属正常现象；可改用时间戳消抖</td></tr>
+                        <tr><td>程序停在 HardFault</td><td>中断函数名与向量表不匹配，或访问了未开时钟的外设</td><td>检查 <code>SystemInit</code>、时钟使能与中断入口</td></tr>
+                    </table>
+
+                    <div class="note">一句话总结：<strong>启动阶段把“时钟、引脚、映射、屏蔽、NVIC”五件事按顺序做完，运行阶段按键边沿就会自动走到回调函数；回调里先消抖、再判电平，最后翻转 LED。</strong></div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // 目录点击：平滑滚动到对应小节
+    var menuItems = Array.prototype.slice.call(document.querySelectorAll('#menu li'));
+    var scroller = document.getElementById('scroller');
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    // 滚动时自动高亮当前小节
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = 's01';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            setActive(current);
+            ticking = false;
+        });
+    });
+
+    // LED 仿真：与 HAL_GPIO_EXTI_Callback 的分支逻辑一致
+    var led0On = false;
+    var led1On = false;
+    var lastKey = '无';
+
+    function render() {
+        document.getElementById('dot0').classList.toggle('on', led0On);
+        document.getElementById('dot1').classList.toggle('on', led1On);
+        document.getElementById('simLog').textContent =
+            '最后按键：' + lastKey +
+            '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+            '　DS1 ' + (led1On ? '亮' : '灭');
+    }
+
+    var handlers = {
+        wkup: function () { led1On = !led1On; led0On = !led1On; lastKey = 'WK_UP'; },
+        key2: function () { led0On = !led0On; lastKey = 'KEY2'; },
+        key1: function () { led1On = !led1On; lastKey = 'KEY1'; },
+        key0: function () { led0On = !led0On; led1On = !led1On; lastKey = 'KEY0'; }
+    };
+
+    Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+        btn.addEventListener('click', function () {
+            var key = btn.getAttribute('data-key');
+            if (handlers[key]) handlers[key]();
+            render();
+        });
+    });
+
+    render();
+</script>
+</body>
+</html>

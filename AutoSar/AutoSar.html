@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>AutoSarSys</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            background-color: skyblue;
+        }
+
+        .top-section {
+            flex: 1.17;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            background-size: 200% 200%;
+            animation: gradientMove 5s ease infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .top-section::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            transform: translate(-50%, -50%);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+        }
+
+        .title {
+            font-size: clamp(1rem, 5vh, 2.5rem);
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: titleFloat 2s ease-in-out infinite, titleGlow 2s ease-in-out infinite;
+            position: relative;
+            z-index: 1;
+            letter-spacing: 0.3rem;
+            margin: 0 50px;
+        }
+
+        .title-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .recruit {
+            font-size: clamp(14px, 2vh, 20px);
+            color: white;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .side-text {
+            font-size: clamp(14px, 2vh, 20px);
+            color: white;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+            z-index: 1;
+            max-width: 30%;
+            text-align: center;
+            padding: 10px;
+            background: transparent;
+            animation: textFade 3s ease-in-out infinite;
+        }
+
+        .side-text.left {
+            animation-delay: 0s;
+            position: relative;
+            left: -50px;
+        }
+
+        .side-text.right {
+            animation-delay: 1.5s;
+            position: relative;
+            right: -50px;
+        }
+
+        @keyframes textFade {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+
+        @keyframes titleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { 
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 10px rgba(255,255,255,0.5); 
+            }
+            50% { 
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3), 0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.6); 
+            }
+        }
+
+        .carousel-horse {
+            position: absolute;
+            width: 70px;
+            height: 55px;
+            z-index: 2;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .carousel-horse.left {
+            left: 0.3%;
+            animation: runLeft 0.3s steps(2) infinite;
+        }
+
+        .carousel-horse.right {
+            right: 0.3%;
+            animation: runRight 0.3s steps(2) infinite;
+        }
+
+        @keyframes runLeft {
+            0%, 100% { transform: translateY(-50%) translateX(0); }
+            50% { transform: translateY(-50%) translateX(8px); }
+        }
+
+        @keyframes runRight {
+            0%, 100% { transform: translateY(-50%) scaleX(-1) translateX(0); }
+            50% { transform: translateY(-50%) scaleX(-1) translateX(-8px); }
+        }
+
+        @keyframes legFront {
+            0%, 100% { transform: rotate(-25deg); }
+            50% { transform: rotate(25deg); }
+        }
+
+        @keyframes legBack {
+            0%, 100% { transform: rotate(25deg); }
+            50% { transform: rotate(-25deg); }
+        }
+
+        @keyframes wheelSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .carousel-base {
+            position: absolute;
+            bottom: 5px;
+            left: 10%;
+            right: 10%;
+            height: 8px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            border-radius: 4px;
+            z-index: 1;
+        }
+
+        .bottom-section {
+            flex: 10;
+            background-color: #ffffff;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            gap: 2px;
+            padding: 5px;
+        }
+
+        .footer-section {
+            flex: 0 0 30px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+        }
+
+        .footer-item {
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .grid-cell {
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+            font-weight: bold;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .grid-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="top-section">
+        <svg class="carousel-horse left" viewBox="0 0 120 100">
+            <g class="horse-group">
+                <ellipse cx="60" cy="40" rx="35" ry="18" fill="#A0522D"/>
+                <ellipse cx="85" cy="30" rx="12" ry="15" fill="#A0522D"/>
+                <rect x="82" y="12" width="6" height="12" rx="2" fill="#A0522D"/>
+                <circle cx="90" cy="22" r="2.5" fill="black"/>
+                <path d="M42 22 Q38 16 34 22" fill="#A0522D"/>
+                <path d="M50 18 Q45 10 40 18" fill="#A0522D"/>
+                <path d="M55 16 Q50 8 45 16" fill="#A0522D"/>
+                <rect x="38" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 41px 55px; animation: legFront 0.25s ease-in-out infinite;">
+                </rect>
+                <rect x="52" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 55px 55px; animation: legBack 0.25s ease-in-out infinite;">
+                </rect>
+                <rect x="68" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 71px 55px; animation: legFront 0.25s ease-in-out infinite;">
+                </rect>
+                <rect x="82" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 85px 55px; animation: legBack 0.25s ease-in-out infinite;">
+                </rect>
+                <circle cx="72" cy="18" r="6" fill="#FFD700"/>
+                <rect x="68" y="23" width="8" height="16" rx="3" fill="#4169E1"/>
+                <g style="transform-origin: 30px 85px; animation: wheelSpin 0.4s linear infinite;">
+                    <circle cx="30" cy="85" r="12" fill="#654321" stroke="#3d2817" stroke-width="2"/>
+                    <circle cx="30" cy="85" r="3" fill="#3d2817"/>
+                    <line x1="18" y1="85" x2="42" y2="85" stroke="#3d2817" stroke-width="1.5"/>
+                    <line x1="30" y1="73" x2="30" y2="97" stroke="#3d2817" stroke-width="1.5"/>
+                    <line x1="21" y1="76" x2="39" y2="94" stroke="#3d2817" stroke-width="1.5"/>
+                    <line x1="39" y1="76" x2="21" y2="94" stroke="#3d2817" stroke-width="1.5"/>
+                </g>
+            </g>
+        </svg>
+        
+        <svg class="carousel-horse right" viewBox="0 0 120 100">
+            <g class="horse-group">
+                <ellipse cx="60" cy="40" rx="35" ry="18" fill="#A0522D"/>
+                <ellipse cx="85" cy="30" rx="12" ry="15" fill="#A0522D"/>
+                <rect x="82" y="12" width="6" height="12" rx="2" fill="#A0522D"/>
+                <circle cx="90" cy="22" r="2.5" fill="black"/>
+                <path d="M42 22 Q38 16 34 22" fill="#A0522D"/>
+                <path d="M50 18 Q45 10 40 18" fill="#A0522D"/>
+                <path d="M55 16 Q50 8 45 16" fill="#A0522D"/>
+                <rect x="38" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 41px 55px; animation: legFront 0.25s ease-in-out infinite;">
+                </rect>
+                <rect x="52" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 55px 55px; animation: legBack 0.25s ease-in-out infinite;">
+                </rect>
+                <rect x="68" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 71px 55px; animation: legFront 0.25s ease-in-out infinite;">
+                </rect>
+                <rect x="82" y="55" width="6" height="22" rx="3" fill="#8B4513" style="transform-origin: 85px 55px; animation: legBack 0.25s ease-in-out infinite;">
+                </rect>
+                <circle cx="72" cy="18" r="6" fill="#FFD700"/>
+                <rect x="68" y="23" width="8" height="16" rx="3" fill="#4169E1"/>
+                <g style="transform-origin: 30px 85px; animation: wheelSpin 0.4s linear infinite;">
+                    <circle cx="30" cy="85" r="12" fill="#654321" stroke="#3d2817" stroke-width="2"/>
+                    <circle cx="30" cy="85" r="3" fill="#3d2817"/>
+                    <line x1="18" y1="85" x2="42" y2="85" stroke="#3d2817" stroke-width="1.5"/>
+                    <line x1="30" y1="73" x2="30" y2="97" stroke="#3d2817" stroke-width="1.5"/>
+                    <line x1="21" y1="76" x2="39" y2="94" stroke="#3d2817" stroke-width="1.5"/>
+                    <line x1="39" y1="76" x2="21" y2="94" stroke="#3d2817" stroke-width="1.5"/>
+                </g>
+            </g>
+        </svg>
+        
+        <div class="carousel-base"></div>
+        <div class="side-text left">宁可认认真真地做事；绝不麻麻呼呼地将就</div>
+        <div class="title-wrapper">
+            <span class="title">木马人</span>
+            <span class="recruit">招募</span>
+        </div>
+        <div class="side-text right">敢拼敢搏敢牺牲你进来；怕苦怕累怕麻烦请绕开</div>
+    </div>
+    <div class="bottom-section" id="bottomSection"></div>
+    <div class="footer-section">
+        <span class="footer-item">学习</span>
+        <span class="footer-item">创新</span>
+        <span class="footer-item">团结</span>
+        <span class="footer-item">高效</span>
+    </div>
+
+    <script>
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        const bottomSection = document.getElementById('bottomSection');
+        const backgroundStyle = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+
+        for (let i = 1; i <= 60; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            cell.style.background = backgroundStyle;
+
+            if (i === 1) {
+                cell.innerHTML = 'AutoSar<br>开发与调式<br><span style="font-size: 10px; display: block; text-align: right; color: red;">——Based on Trae-CN</span>';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                    window.location.href = 'sub-item/index01.html';
+                });
+            } else if (i === 2) {
+                cell.innerHTML = 'AutoSar<br>介绍和目标';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                    window.location.href = 'sub-item/index02.html';
+                });
+            } else if (i === 3) {
+                cell.innerHTML = 'AutoSar<br>应用层概述(APP)';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                    window.location.href = 'sub-item/index03.html';
+                });
+            } else if (i === 4) {
+                cell.innerHTML = 'AutoSar<br>实时运行环境(RTE)';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                    window.location.href = 'sub-item/index04.html';
+                });
+            } else if (i === 5) {
+                cell.innerHTML = 'AutoSar<br>基础软件层(BSW)';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                    window.location.href = 'sub-item/index05.html';
+                });
+            } else if (i === 6) {
+                cell.innerHTML = 'AutoSar<br>方法论';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                    window.location.href = 'sub-item/index06.html';
+                });
+            } else if (i === 7) {
+                cell.innerHTML = 'AutoSar<br>工具开发与设计示例';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                    window.location.href = 'sub-item/index07.html';
+                });
+            } else if (i === 8) {
+                cell.innerHTML = 'AutoSar实战<br>DaVinci工具链';
+                cell.style.cursor = 'pointer';
+                cell.style.textAlign = 'center';
+                cell.style.flexDirection = 'column';
+                cell.style.lineHeight = '1.4';
+                cell.addEventListener('click', function() {
+                    window.location.href = 'sub-item/index08.html';
+                });
+            } else {
+                cell.textContent = i;
+            }
+
+            bottomSection.appendChild(cell);
+        }
+    </script>
+</body>
+</html>

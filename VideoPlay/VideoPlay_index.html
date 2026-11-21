@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>休闲影院 - 视频播放器</title>
+    <!-- 加载本地flv.js库 -->
+    <script src="./flv.js-1.6.2/package/dist/flv.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            padding: 20px;
+        }
+        
+        .main-wrapper {
+            position: relative;
+            width: 1200px;
+            max-width: 95vw;
+            height: 700px;
+        }
+
+        .playlist-container {
+            position: absolute;
+            left: 0;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            width: 300px;
+            height: 560px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .playlist-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #667eea;
+            text-align: center;
+        }
+        
+        .playlist-items {
+            flex: 1;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 10px;
+        }
+        
+        .playlist-items::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .playlist-items::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        
+        .playlist-items::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 3px;
+        }
+        
+        .playlist-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 13px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+        
+        .playlist-item:hover {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+        
+        .playlist-item.active {
+            background: rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .playlist-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .empty-playlist {
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            padding: 30px 10px;
+            font-size: 13px;
+        }
+        
+        .video-container {
+            position: absolute;
+            left: 350px;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            width: 800px;
+            height: 560px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .video-wrapper {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            width: 760px;
+            height: 460px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+            background: #000;
+        }
+        
+        #audioVisualizer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            z-index: 10;
+        }
+        
+        video:fullscreen,
+        video:-webkit-full-screen,
+        video:-ms-fullscreen {
+            width: 100vw !important;
+            height: 100vh !important;
+            min-width: 100vw !important;
+            min-height: 100vh !important;
+            object-fit: contain !important;
+            background: #000 !important;
+            border-radius: 0 !important;
+        }
+        
+        .progress-container {
+            width: 100%;
+            height: 12.5px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6.25px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 6.25px;
+            width: 0%;
+            transition: width 0.1s linear;
+            position: relative;
+        }
+        
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        
+        .progress-wrapper {
+            position: absolute;
+            left: 20px;
+            top: 470px;
+            width: 760px;
+        }
+
+        .time-display {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 5px;
+        }
+
+        .controls {
+            position: absolute;
+            left: 20px;
+            top: 505px;
+            width: 760px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-group-right {
+            position: absolute;
+            right: 0;
+        }
+        
+        .btn {
+            padding: 10px 18px;
+            font-size: 12px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .btn-load {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 150px;
+        }
+        
+        .btn-play {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+        
+        .btn-speed {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+        }
+        
+        .btn-fullscreen {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-load:hover {
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-play:hover {
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+        }
+        
+        .btn-speed:hover {
+            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.4);
+        }
+        
+        .btn-fullscreen:hover {
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        <div class="playlist-container">
+            <div class="playlist-title">📋 播放列表</div>
+            <div class="playlist-items" id="playlistItems">
+                <div class="empty-playlist">暂无媒体，请点击加载按钮添加</div>
+            </div>
+        </div>
+        
+        <div class="video-container">
+            <div class="video-wrapper">
+                <video id="videoPlayer" disablePictureInPicture preload="auto"></video>
+                <canvas id="audioVisualizer" style="display: none;"></canvas>
+            </div>
+            
+            <div class="progress-wrapper">
+                <div class="time-display">
+                    <span id="currentTime">00:00</span>
+                    <span id="totalTime">00:00</span>
+                </div>
+                <div class="progress-container" id="progressContainer" onclick="seekVideo(event)">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="btn-group">
+                    <label class="btn btn-load" for="videoInput">📂 加载媒体</label>
+                    <input type="file" id="videoInput" accept=".mp4,.webm,.ogg,.mov,.wav,.mp3,.m4a,.aac,.flac,.flv,.avi,.mkv,.wmv,.mpeg" multiple>
+                    <button class="btn btn-play" id="playPauseBtn" onclick="togglePlayPause()">▶</button>
+                    <button class="btn btn-speed" id="speedBtn" onclick="toggleSpeed()">⏩</button>
+                </div>
+                <div class="btn-group btn-group-right">
+                    <button class="btn btn-fullscreen" id="fullscreenBtn" onclick="toggleFullscreen()">⛶</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let video = document.getElementById('videoPlayer');
+        const videoInput = document.getElementById('videoInput');
+        const progressBar = document.getElementById('progressBar');
+        const progressContainer = document.getElementById('progressContainer');
+        const currentTimeDisplay = document.getElementById('currentTime');
+        const totalTimeDisplay = document.getElementById('totalTime');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const speedBtn = document.getElementById('speedBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const playlistItems = document.getElementById('playlistItems');
+        
+        const isLooping = true;
+        
+        let isFullscreen = false;
+        let isSpeedUp = false;
+        const speedSteps = [1.5, 2.0, 2.5, 3.0];
+        let currentSpeedIndex = 0;
+        let playlist = [];
+        let currentIndex = -1;
+        let flvPlayer = null;
+        let loadingTimeout = null;
+        let currentPlayPromise = null; // 跟踪当前播放Promise
+        let isPlaying = false; // 跟踪当前播放状态
+        
+        // 音频可视化相关变量
+        let audioContext = null;
+        let analyser = null;
+        let audioSource = null;
+        let visualizerCanvas = null;
+        let visualizerCtx = null;
+        let animationId = null;
+        let isAudioFile = false;
+        
+        // 初始化音频可视化
+        function initAudioVisualizer() {
+            visualizerCanvas = document.getElementById('audioVisualizer');
+            visualizerCtx = visualizerCanvas.getContext('2d');
+            
+            // 设置canvas尺寸
+            const rect = visualizerCanvas.parentElement.getBoundingClientRect();
+            visualizerCanvas.width = rect.width;
+            visualizerCanvas.height = rect.height;
+        }
+        
+        function createAudioAnalyser() {
+            try {
+                // 如果audioContext还存在，先关闭它
+                if (audioContext) {
+                    try {
+                        audioContext.close();
+                    } catch(e) {}
+                    audioContext = null;
+                }
+                
+                // 创建新的AudioContext
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // 创建新的分析器
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.8;
+                
+                // 创建新的MediaElementSource连接到当前video元素
+                // 这行可能会抛出DOMException如果video已经被连接
+                audioSource = audioContext.createMediaElementSource(video);
+                
+                // 创建增益节点确保声音正常
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = 1.0;
+                
+                // 并行连接：audioSource同时连接到analyser和gainNode
+                audioSource.connect(analyser);
+                audioSource.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                video.volume = 1.0;
+                video.muted = false;
+                return true;
+                
+            } catch(e) {
+                console.error('创建音频分析器失败:', e);
+                // 清理失败的连接
+                audioContext = analyser = audioSource = null;
+                return false;
+            }
+        }
+        
+        // 绘制音频频谱和波形
+        function drawAudioSpectrum() {
+            if (!analyser || !visualizerCtx) {
+                return;
+            }
+            
+            // 确保canvas尺寸正确
+            if (visualizerCanvas.width === 0 || visualizerCanvas.height === 0) {
+                const rect = visualizerCanvas.parentElement.getBoundingClientRect();
+                visualizerCanvas.width = rect.width;
+                visualizerCanvas.height = rect.height;
+            }
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const frequencyData = new Uint8Array(bufferLength);
+            const timeData = new Uint8Array(bufferLength);
+            const { width, height } = visualizerCanvas;
+            
+            // 预计算常量
+            const halfHeight = height * 0.5;
+            const waveAreaHeight = height * 0.4;
+            const waveOffset = height * 0.1;
+            const spectrumAreaHeight = height * 0.4;
+            
+            function draw() {
+                animationId = requestAnimationFrame(draw);
+                
+                if (!analyser || !visualizerCtx) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                    return;
+                }
+                
+                try {
+                    analyser.getByteFrequencyData(frequencyData);
+                    analyser.getByteTimeDomainData(timeData);
+                    
+                    // 清空画布（深色渐变背景）
+                    const bgGradient = visualizerCtx.createLinearGradient(0, 0, 0, height);
+                    bgGradient.addColorStop(0, 'rgba(15, 15, 35, 0.95)');
+                    bgGradient.addColorStop(0.5, 'rgba(25, 25, 60, 0.9)');
+                    bgGradient.addColorStop(1, 'rgba(15, 15, 35, 0.95)');
+                    visualizerCtx.fillStyle = bgGradient;
+                    visualizerCtx.fillRect(0, 0, width, height);
+                    
+                    // 绘制网格线
+                    visualizerCtx.strokeStyle = 'rgba(100, 126, 234, 0.08)';
+                    visualizerCtx.lineWidth = 1;
+                    // 水平网格线
+                    for (let i = 1; i < 4; i++) {
+                        const y = (i * height / 4);
+                        visualizerCtx.beginPath();
+                        visualizerCtx.moveTo(0, y);
+                        visualizerCtx.lineTo(width, y);
+                        visualizerCtx.stroke();
+                    }
+                    // 垂直网格线
+                    for (let i = 1; i < 8; i++) {
+                        const x = (i * width / 8);
+                        visualizerCtx.beginPath();
+                        visualizerCtx.moveTo(x, 0);
+                        visualizerCtx.lineTo(x, height);
+                        visualizerCtx.stroke();
+                    }
+                    
+                    // ========== 绘制波形（上半部分）==========
+                    visualizerCtx.lineWidth = 3;
+                    visualizerCtx.strokeStyle = '#00e5ff';
+                    visualizerCtx.shadowColor = '#00e5ff';
+                    visualizerCtx.shadowBlur = 8;
+                    visualizerCtx.beginPath();
+                    
+                    const sliceWidth = width / bufferLength;
+                    let x = 0;
+                    let prevX = 0;
+                    let prevY = waveOffset + waveAreaHeight / 2;
+                    
+                    for (let i = 0; i < bufferLength; i++) {
+                        const v = timeData[i] / 128.0;
+                        const y = waveOffset + (v * waveAreaHeight / 2);
+                        
+                        if (i === 0) {
+                            visualizerCtx.moveTo(x, y);
+                        } else {
+                            // 使用二次贝塞尔曲线平滑连接
+                            const cpX = (x + prevX) / 2;
+                            visualizerCtx.quadraticCurveTo(prevX, prevY, cpX, (prevY + y) / 2);
+                        }
+                        
+                        prevX = x;
+                        prevY = y;
+                        x += sliceWidth;
+                    }
+                    visualizerCtx.stroke();
+                    visualizerCtx.shadowBlur = 0;
+                    
+                    // 波形平均线
+                    visualizerCtx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
+                    visualizerCtx.lineWidth = 1;
+                    visualizerCtx.setLineDash([5, 5]);
+                    visualizerCtx.beginPath();
+                    visualizerCtx.moveTo(0, waveOffset + waveAreaHeight / 2);
+                    visualizerCtx.lineTo(width, waveOffset + waveAreaHeight / 2);
+                    visualizerCtx.stroke();
+                    visualizerCtx.setLineDash([]);
+                    
+                    // ========== 绘制频谱条（下半部分）==========
+                    const barWidth = (width / bufferLength) * 2.5;
+                    x = 0;
+                    
+                    for (let i = 0; i < bufferLength; i++) {
+                        const barHeight = Math.max((frequencyData[i] / 255) * spectrumAreaHeight, 3);
+                        const barY = halfHeight + spectrumAreaHeight - barHeight;
+                        
+                        // 动态颜色（从青色到紫色渐变）
+                        const hue = 180 + (i / bufferLength) * 120;
+                        const saturation = 80 + (frequencyData[i] / 255) * 20;
+                        const lightness = 50 + (frequencyData[i] / 255) * 15;
+                        
+                        // 创建渐变
+                        const gradient = visualizerCtx.createLinearGradient(0, barY, 0, halfHeight + spectrumAreaHeight);
+                        gradient.addColorStop(0, `hsla(${hue}, ${saturation}%, ${lightness}%, 0.95)`);
+                        gradient.addColorStop(1, `hsla(${hue + 40}, ${saturation}%, ${lightness - 20}%, 0.7)`);
+                        
+                        visualizerCtx.fillStyle = gradient;
+                        
+                        // 绘制圆角矩形
+                        const radius = 2;
+                        visualizerCtx.beginPath();
+                        visualizerCtx.roundRect(x, barY, barWidth - 1.5, barHeight, radius);
+                        visualizerCtx.fill();
+                        
+                        x += barWidth;
+                    }
+                    
+                    // 中心分隔线
+                    visualizerCtx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                    visualizerCtx.lineWidth = 2;
+                    visualizerCtx.beginPath();
+                    visualizerCtx.moveTo(0, halfHeight);
+                    visualizerCtx.lineTo(width, halfHeight);
+                    visualizerCtx.stroke();
+                    
+                } catch(e) {
+                    console.error('❌ 绘制频谱时出错:', e);
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+            }
+            
+            draw();
+        }
+        
+        async function stopAudioVisualizer() {
+            console.log('🔌 开始停止音频可视化');
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            if (audioSource) {
+                try { 
+                    audioSource.disconnect(); 
+                    console.log('🔌 已断开audioSource');
+                } catch(e) {}
+                audioSource = null;
+            }
+            
+            if (analyser) {
+                try { 
+                    analyser.disconnect(); 
+                    console.log('🔌 已断开analyser');
+                } catch(e) {}
+                analyser = null;
+            }
+            
+            // 关闭AudioContext以完全释放video元素（异步操作）
+            if (audioContext) {
+                try {
+                    console.log('🔊 正在关闭AudioContext...');
+                    await audioContext.close();
+                    console.log('🔊 AudioContext已关闭');
+                } catch(e) {}
+                audioContext = null;
+            }
+            
+            if (visualizerCanvas) {
+                visualizerCanvas.style.display = 'none';
+            }
+            
+            console.log('🔌 音频可视化停止完成');
+        }
+        
+        function startAudioVisualizer(skipCreateAnalyser = false) {
+            if (!visualizerCanvas) return;
+            
+            // 确保canvas尺寸正确
+            if (visualizerCanvas.width === 0 || visualizerCanvas.height === 0) {
+                const rect = visualizerCanvas.parentElement.getBoundingClientRect();
+                visualizerCanvas.width = rect.width;
+                visualizerCanvas.height = rect.height;
+            }
+            
+            visualizerCanvas.style.display = 'block';
+            
+            if (skipCreateAnalyser) {
+                if (!animationId) drawDefaultVisualization();
+                return;
+            }
+            
+            // 如果分析器已经存在，直接启动绘制
+            if (analyser && audioContext) {
+                console.log('📊 分析器已存在，直接启动可视化');
+                if (!animationId) drawAudioSpectrum();
+                return;
+            }
+            
+            const success = createAudioAnalyser();
+            if (success) {
+                if (!animationId) drawAudioSpectrum();
+            } else {
+                if (!animationId) drawDefaultVisualization();
+            }
+        }
+        
+        // 绘制默认可视化（当AudioContext不可用时）
+        function drawDefaultVisualization() {
+            animationId = requestAnimationFrame(function draw() {
+                animationId = requestAnimationFrame(draw);
+                
+                if (!visualizerCtx) return;
+                
+                // 清空画布
+                visualizerCtx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                visualizerCtx.fillRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+                
+                // 绘制默认波形（模拟音频数据）
+                const barWidth = visualizerCanvas.width / 32;
+                for (let i = 0; i < 32; i++) {
+                    const height = Math.random() * visualizerCanvas.height * 0.3 + 20;
+                    visualizerCtx.fillStyle = `rgb(${50 + i * 5}, ${150 + i * 3}, 200)`;
+                    visualizerCtx.fillRect(i * barWidth, visualizerCanvas.height - height, barWidth - 2, height);
+                }
+            });
+        }
+        
+        // 检查是否为音频文件
+        function isAudioFileFormat(filename) {
+            const audioExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg', '.wma'];
+            const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
+            return audioExtensions.includes(ext);
+        }
+        
+        // 检查flv.js是否加载成功
+        function checkFlvJs() {
+            if (typeof flvjs !== 'undefined') {
+                console.log('✓ flv.js已成功加载，版本:', flvjs.version);
+                return true;
+            } else {
+                console.error('✗ flv.js未加载，请检查网络连接');
+                return false;
+            }
+        }
+        
+        // 页面加载时检查flv.js和初始化音频可视化
+        window.addEventListener('load', () => {
+            setTimeout(checkFlvJs, 500);
+            // 初始化音频可视化canvas
+            initAudioVisualizer();
+            
+            // 设置视频元素的音频属性
+            video.volume = 1.0; // 最大音量
+            video.muted = false; // 确保不静音
+            console.log('🔊 视频元素音频设置完成: volume=' + video.volume + ', muted=' + video.muted);
+        });
+        
+        document.addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+            if (e.key === 'Escape' && isFullscreen) {
+                e.preventDefault();
+            }
+        });
+        
+        document.addEventListener('wheel', e => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        document.addEventListener('gesturestart', e => e.preventDefault());
+        
+        video.addEventListener('timeupdate', () => {
+            if (video.duration) {
+                progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
+                currentTimeDisplay.textContent = formatTime(video.currentTime);
+            }
+        });
+        
+        video.addEventListener('loadedmetadata', () => {
+            totalTimeDisplay.textContent = formatTime(video.duration);
+        });
+        
+        video.addEventListener('play', () => {
+            isPlaying = true;
+        });
+        
+        video.addEventListener('pause', () => {
+            if (!video.ended) {
+                isPlaying = false;
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+            }
+        });
+        
+        video.addEventListener('ended', () => {
+            isPlaying = false;
+            console.log('🎵 音频播放完成，当前索引: ' + currentIndex + ', 播放列表长度: ' + playlist.length);
+            
+            // 默认循环播放：如果是最后一首，回到第一首；否则播放下一首
+            if (playlist.length > 0) {
+                if (currentIndex >= playlist.length - 1) {
+                    console.log('🔄 已播放到最后一首，回到第一首');
+                    loadVideo(0, true);
+                } else {
+                    console.log('▶️ 播放下一首');
+                    playNextVideo();
+                }
+            }
+        });
+        
+        function seekVideo(event) {
+            if (!video.duration) return;
+            const rect = progressContainer.getBoundingClientRect();
+            video.currentTime = ((event.clientX - rect.left) / rect.width) * video.duration;
+        }
+        
+        videoInput.addEventListener('change', e => {
+            const files = Array.from(e.target.files);
+            if (files.length > 0) {
+                files.forEach(file => {
+                    // 保存原始File对象以便后续处理
+                    const videoItem = {
+                        name: file.name,
+                        url: URL.createObjectURL(file),
+                        file: file // 保存原始File对象
+                    };
+                    playlist.push(videoItem);
+                });
+                renderPlaylist();
+                
+                // 如果是第一次加载，自动播放第一个视频
+                if (currentIndex === -1 && playlist.length > 0) {
+                    currentIndex = 0;
+                    loadVideo(currentIndex, true); // 自动播放
+                } else if (playlist.length > 0) {
+                    // 如果已有播放列表，播放刚添加的视频
+                    currentIndex = playlist.length - 1;
+                    loadVideo(currentIndex, true); // 自动播放
+                }
+            }
+            videoInput.value = '';
+        });
+        
+        function renderPlaylist() {
+            if (playlist.length === 0) {
+                playlistItems.innerHTML = '<div class="empty-playlist">暂无媒体，请点击加载按钮添加</div>';
+                return;
+            }
+            
+            playlistItems.innerHTML = playlist.map((item, index) => `
+                <div class="playlist-item ${index === currentIndex ? 'active' : ''}" 
+                     onclick="playVideoAtIndex(${index})">
+                    ${index + 1}. ${item.name}
+                </div>
+            `).join('');
+        }
+        
+        // 安全播放函数，等待之前的播放操作完成后再执行
+        function safePlay() {
+            // 如果有正在进行的播放操作，先等待它完成
+            if (currentPlayPromise !== null) {
+                currentPlayPromise = currentPlayPromise.then(() => {
+                    return startPlay();
+                });
+            } else {
+                currentPlayPromise = startPlay();
+            }
+            return currentPlayPromise;
+        }
+        
+        async function loadVideo(index, autoPlay = false) {
+            if (index < 0 || index >= playlist.length) return;
+            
+            console.log('🔄 切换音频文件: 从索引 ' + currentIndex + ' 到 ' + index);
+            
+            if (video && !video.paused) {
+                video.pause();
+            }
+            
+            isPlaying = false;
+            playPauseBtn.textContent = '▶';
+            currentPlayPromise = null;
+            
+            if (loadingTimeout) {
+                clearTimeout(loadingTimeout);
+                loadingTimeout = null;
+            }
+            
+            if (flvPlayer) {
+                try {
+                    flvPlayer.pause();
+                    flvPlayer.unbindMediaElement();
+                    flvPlayer.destroy();
+                } catch(e) {}
+                flvPlayer = null;
+            }
+            
+            await stopAudioVisualizer();
+            
+            video.removeEventListener('canplay', loadVideo.canplayHandler);
+            video.removeEventListener('loadedmetadata', loadVideo.loadedmetadataHandler);
+            video.removeEventListener('error', loadVideo.errorHandler);
+            
+            // 强制暂停并重置video元素
+            video.pause();
+            video.currentTime = 0;
+            
+            // 等待video元素完全释放（通过Promise等待emptied事件）
+            await new Promise((resolve) => {
+                const onEmptied = () => {
+                    video.removeEventListener('emptied', onEmptied);
+                    console.log('📹 video元素已清空');
+                    resolve();
+                };
+                
+                video.addEventListener('emptied', onEmptied);
+                
+                setTimeout(() => {
+                    video.removeEventListener('emptied', onEmptied);
+                    console.log('⏰ video清空超时，继续执行');
+                    resolve();
+                }, 500);
+                
+                video.src = '';
+                video.load();
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            currentIndex = index;
+            
+            loadingTimeout = setTimeout(() => {
+                loadingTimeout = null;
+            }, 10000);
+            
+            const videoItem = playlist[currentIndex];
+            const fileName = videoItem.name.toLowerCase();
+            const isFLV = fileName.endsWith('.flv');
+            const isAudioFlag = isAudioFileFormat(videoItem.name);
+            
+            if (isFLV) {
+                loadFLVVideo(videoItem, autoPlay);
+            } else if (isAudioFlag) {
+                loadAudioFile(videoItem, autoPlay);
+            } else {
+                loadRegularVideo(videoItem, autoPlay);
+            }
+            
+            renderPlaylist();
+        }
+        
+        function loadFLVVideo(videoItem, autoPlay) {
+            if (typeof flvjs === 'undefined') {
+                alert('FLV格式播放失败: flv.js库未加载，请刷新页面');
+                return;
+            }
+            
+            if (!flvjs.isSupported()) {
+                alert('您的浏览器不支持FLV格式视频播放');
+                return;
+            }
+            
+            try {
+                const playerConfig = {
+                    type: 'flv',
+                    url: videoItem.url
+                };
+                
+                const flvConfig = {
+                    enableWorker: false,
+                    enableStashBuffer: false
+                };
+                
+                flvPlayer = flvjs.createPlayer(playerConfig, flvConfig);
+                flvPlayer.attachMediaElement(video);
+                
+                flvPlayer.on(flvjs.Events.ERROR, (errType, errDetail) => {
+                });
+                
+                flvPlayer.load();
+                
+                if (autoPlay) {
+                    setTimeout(() => {
+                        currentPlayPromise = startPlay();
+                    }, 300);
+                }
+                
+            } catch(e) {
+                alert('FLV格式播放失败: ' + e.message);
+            }
+        }
+        
+        // 完全重新初始化音频播放器（只针对音频文件）
+        async function reinitializeAudioPlayer() {
+            console.log('🔧 重新初始化音频播放器...');
+            
+            // 停止当前播放
+            if (video && !video.paused) {
+                video.pause();
+            }
+            
+            // 停止可视化（等待完成）
+            await stopAudioVisualizer();
+            
+            // 获取video容器
+            const videoContainer = document.querySelector('.video-wrapper');
+            if (!videoContainer) {
+                console.error('❌ 找不到video容器');
+                return;
+            }
+            
+            // 移除旧的video元素
+            if (video) {
+                video.remove();
+                video = null;
+            }
+            
+            // 创建新的video元素
+            video = document.createElement('video');
+            video.className = 'video';
+            video.controls = false;
+            video.crossOrigin = 'anonymous';
+            
+            // 将新video添加到容器
+            videoContainer.appendChild(video);
+            
+            // 重新绑定事件监听器（这是循环播放生效的关键）
+            bindVideoEventListeners();
+            
+            // 重新初始化可视化canvas
+            if (visualizerCanvas) {
+                visualizerCtx.clearRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+            }
+            
+            // 重新初始化所有音频相关变量
+            audioContext = null;
+            analyser = null;
+            audioSource = null;
+            animationId = null;
+            
+            console.log('✅ 音频播放器重新初始化完成');
+        }
+        
+        // 绑定video元素的事件监听器（不包括loadedmetadata，让loadAudioFile处理）
+        function bindVideoEventListeners() {
+            video.addEventListener('timeupdate', () => {
+                if (video.duration) {
+                    progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
+                    currentTimeDisplay.textContent = formatTime(video.currentTime);
+                }
+            });
+            
+            video.addEventListener('play', () => {
+                isPlaying = true;
+            });
+            
+            video.addEventListener('pause', () => {
+                if (!video.ended) {
+                    isPlaying = false;
+                    if (animationId) {
+                        cancelAnimationFrame(animationId);
+                        animationId = null;
+                    }
+                }
+            });
+            
+            video.addEventListener('ended', () => {
+                isPlaying = false;
+                console.log('🎵 音频播放完成，当前索引: ' + currentIndex + ', 播放列表长度: ' + playlist.length);
+                
+                // 默认循环播放：如果是最后一首，回到第一首；否则播放下一首
+                if (playlist.length > 0) {
+                    if (currentIndex >= playlist.length - 1) {
+                        console.log('🔄 已播放到最后一首，回到第一首');
+                        loadVideo(0, true);
+                    } else {
+                        console.log('▶️ 播放下一首');
+                        playNextVideo();
+                    }
+                }
+            });
+        }
+        
+        async function loadAudioFile(videoItem, autoPlay) {
+            console.log('📥 开始加载音频文件:', videoItem.name);
+            
+            // 完全重新初始化音频播放器（最彻底的方法解决MediaElementSourceNode连接问题）
+            await reinitializeAudioPlayer();
+            
+            console.log('📹 video元素:', video);
+            console.log('🔗 音频URL:', videoItem.url);
+            
+            video.currentTime = 0;
+            video.src = videoItem.url;
+            video.load();
+            isAudioFile = true;
+            video.volume = 1.0;
+            video.muted = false;
+            
+            loadVideo.loadedmetadataHandler = async () => {
+                video.removeEventListener('loadedmetadata', loadVideo.loadedmetadataHandler);
+                video.removeEventListener('canplay', loadVideo.canplayHandler);
+                video.removeEventListener('error', loadVideo.errorHandler);
+                
+                if (loadingTimeout) {
+                    clearTimeout(loadingTimeout);
+                    loadingTimeout = null;
+                }
+                
+                console.log('🎧 音频文件元数据加载完成，duration:', video.duration);
+                console.log('🔊 volume:', video.volume, 'muted:', video.muted);
+                
+                if (visualizerCanvas) {
+                    visualizerCanvas.style.display = 'block';
+                }
+                
+                if (autoPlay) {
+                    try {
+                        console.log('▶️ 准备播放音频...');
+                        // 先启动可视化（创建分析器并连接到video）
+                        startAudioVisualizer();
+                        // 然后播放音频
+                        console.log('🎬 调用video.play()...');
+                        const playPromise = video.play();
+                        console.log('⏳ playPromise:', playPromise);
+                        await playPromise;
+                        isPlaying = true;
+                        playPauseBtn.textContent = '⏸';
+                        console.log('✅ 音频播放成功！');
+                    } catch(e) {
+                        console.error('❌ 音频播放失败:', e.message);
+                        console.error('❌ 错误详情:', e);
+                        startAudioVisualizer(true);
+                    }
+                } else {
+                    console.log('📊 音频已加载，启动默认可视化');
+                    startAudioVisualizer(true);
+                }
+            };
+            
+            loadVideo.canplayHandler = () => {
+                console.log('🔊 canplay事件触发');
+                if (loadVideo.loadedmetadataHandler) {
+                    loadVideo.loadedmetadataHandler();
+                }
+            };
+            
+            loadVideo.errorHandler = () => {
+                if (loadingTimeout) {
+                    clearTimeout(loadingTimeout);
+                    loadingTimeout = null;
+                }
+                const errorMsg = video.error ? 
+                    (video.error.message || '未知错误') : 
+                    '未知错误';
+                console.error('❌ 音频文件加载失败:', errorMsg);
+                alert('音频文件加载失败: ' + errorMsg);
+                
+                video.removeEventListener('loadedmetadata', loadVideo.loadedmetadataHandler);
+                video.removeEventListener('canplay', loadVideo.canplayHandler);
+                video.removeEventListener('error', loadVideo.errorHandler);
+            };
+            
+            console.log('📌 添加事件监听器');
+            video.addEventListener('loadedmetadata', loadVideo.loadedmetadataHandler);
+            video.addEventListener('canplay', loadVideo.canplayHandler);
+            video.addEventListener('error', loadVideo.errorHandler);
+            
+            console.log('✅ loadAudioFile完成');
+        }
+        
+        function loadRegularVideo(videoItem, autoPlay) {
+            console.log('📹 加载普通视频文件:', videoItem.name);
+            
+            video.src = videoItem.url;
+            isAudioFile = false;
+            video.load();
+            
+            if (autoPlay) {
+                loadVideo.canplayHandler = () => {
+                    video.removeEventListener('canplay', loadVideo.canplayHandler);
+                    console.log('▶️ 视频准备好播放');
+                    currentPlayPromise = startPlay();
+                };
+                video.addEventListener('canplay', loadVideo.canplayHandler);
+            }
+        }
+        
+
+        function playVideoAtIndex(index) {
+            loadVideo(index, true);
+        }
+        
+        function playNextVideo() {
+            if (playlist.length === 0) {
+                playPauseBtn.textContent = '▶';
+                return;
+            }
+            const nextIndex = (currentIndex + 1) % playlist.length;
+            loadVideo(nextIndex, true);
+        }
+        
+        function togglePlayPause() {
+            if (!video.src && !flvPlayer) {
+                alert('请先加载视频文件');
+                return;
+            }
+            
+            if (video.ended) {
+                video.currentTime = 0;
+                isPlaying = false;
+            }
+            
+            if (!isPlaying) {
+                currentPlayPromise = startPlay();
+            } else {
+                video.pause();
+                isPlaying = false;
+                playPauseBtn.textContent = '▶';
+            }
+        }
+        
+        function startPlay() {
+            if (isPlaying) {
+                return Promise.resolve();
+            }
+            
+            return video.play().then(() => {
+                isPlaying = true;
+                playPauseBtn.textContent = '⏸';
+                
+                if (isAudioFile) {
+                    // 确保音频可视化在播放后启动
+                    startAudioVisualizer();
+                }
+            }).catch(e => {
+                isPlaying = false;
+                playPauseBtn.textContent = '▶';
+                return Promise.resolve();
+            });
+        }
+        
+        function toggleSpeed() {
+            if (isSpeedUp) {
+                video.playbackRate = 1.0;
+                speedBtn.textContent = '⏩';
+                isSpeedUp = false;
+            } else {
+                video.playbackRate = speedSteps[currentSpeedIndex];
+                currentSpeedIndex = (currentSpeedIndex + 1) % speedSteps.length;
+                speedBtn.textContent = '🐢';
+                isSpeedUp = true;
+            }
+        }
+        
+        function toggleFullscreen() {
+            if (!isFullscreen) {
+                if (video.requestFullscreen) video.requestFullscreen();
+                else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+                else if (video.msRequestFullscreen) video.msRequestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                else if (document.msExitFullscreen) document.msExitFullscreen();
+            }
+        }
+        
+        document.addEventListener('fullscreenchange', () => {
+            isFullscreen = !!document.fullscreenElement;
+        });
+        
+        document.addEventListener('webkitfullscreenchange', () => {
+            isFullscreen = !!document.webkitFullscreenElement;
+        });
+        
+        document.addEventListener('msfullscreenchange', () => {
+            isFullscreen = !!document.msFullscreenElement;
+        });
+        
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '00:00';
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            return hours > 0 
+                ? `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+                : `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+    </script>
+</body>
+</html>

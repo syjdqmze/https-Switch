@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验30 触摸屏实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13px; font-weight: 600; color: #2f7a52; margin-bottom: 6px; }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .tp-pad {
+            position: relative;
+            width: 480px;
+            max-width: 100%;
+            height: 272px;
+            background: #ffffff;
+            border: 1px solid #cfe3f1;
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: crosshair;
+            margin-bottom: 12px;
+            box-shadow: inset 0 0 0 1px #f0f6fb;
+        }
+
+        .tp-pad .hint {
+            position: absolute;
+            left: 12px;
+            top: 10px;
+            font-size: 12px;
+            color: #b6cbdb;
+            pointer-events: none;
+        }
+
+        .tp-pad .rst {
+            position: absolute;
+            right: 0;
+            top: 0;
+            width: 24px;
+            height: 20px;
+            border-left: 1px dashed #e8a33d;
+            border-bottom: 1px dashed #e8a33d;
+            color: #d9b478;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .tp-pad .dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            margin: -4px 0 0 -4px;
+            border-radius: 50%;
+            background: #6AADD4;
+            pointer-events: none;
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验30 触摸屏实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">本实验没有触摸中断：PH7 只配成输入，状态寄存器靠轮询。先看第 07、11 节。</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">先由 LCD ID 判断屏型，再由屏型绑定触摸 IC 的扫描函数，最后在主循环里画线</div>
+
+                    <p>触摸屏实验是这一组实验里分支最多的一课：同一个 <code>main.c</code> 要同时支持 4.3 寸、7 寸、10.1 寸电容屏和电阻屏。真正的“选择”发生在两处——<code>LCD_Init</code> 读出 <code>lcddev.id</code>，<code>TP_Init</code> 再按这个 ID 把 <code>tp_dev.scan</code> 指向不同的驱动函数。理解这条函数指针链，就理解了本实验的启动逻辑。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚 / 参数</th><th>关键配置</th><th>源码证据</th></tr>
+                        <tr><td>电容触摸 IIC</td><td>SCL=PH6、SDA=PI3</td><td>GPIO 模拟，delay_us(2)</td><td><code>HARDWARE/TOUCH/ctiic.c</code></td></tr>
+                        <tr><td>触摸复位 / 中断</td><td>RST=PI8、INT=PH7</td><td>RST 推挽输出，INT 仅输入</td><td><code>gt9147.c</code> · <code>GT9147_Init</code></td></tr>
+                        <tr><td>GT9147 / GT9271</td><td>写 0x28 / 读 0x29</td><td>寄存器 16 位，ID 在 0x8140</td><td><code>gt9147.h</code></td></tr>
+                        <tr><td>FT5206</td><td>写 0x70 / 读 0x71</td><td>状态 0x02，坐标从 0x03 起</td><td><code>ft5206.h</code></td></tr>
+                        <tr><td>LCD 屏型</td><td>PG6 / PI2 / PI7</td><td>三根模式线组合成面板 ID</td><td><code>ltdc.c</code> · <code>LTDC_PanelID_Read</code></td></tr>
+                        <tr><td>电阻屏</td><td>PH6 / PI3 / PI8 / PH7 / PG3</td><td>SPI 读 AD，坐标需校准</td><td><code>touch.c</code> · <code>TP_Init</code> 的 else 分支</td></tr>
+                        <tr><td>校准存储</td><td>24C02，地址 40 起 14 字节</td><td>标记字 0x0A 表示已校准</td><td><code>touch.c</code> · <code>SAVE_ADDR_BASE</code></td></tr>
+                        <tr><td>显示 / 按键</td><td>LCD、KEY0、DS0</td><td>清屏热区、校准触发、心跳</td><td><code>USER/main.c</code></td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">CT_IIC @ PH6/PI3</span>
+                        <span class="chip">GT9147 0x28/0x29</span>
+                        <span class="chip">FT5206 0x70/0x71</span>
+                        <span class="chip">tp_dev.scan</span>
+                        <span class="chip">24C02 @ 40</span>
+                    </div>
+
+                    <div class="note">工程里没有任何触摸中断：<code>GT_INT / FT_INT</code> 只被配置成 PH7 输入，也没有调用 <code>HAL_GPIO_EXTI</code> 或 NVIC 使能；触摸状态完全靠 <code>tp_dev.scan(0)</code> 轮询寄存器。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">启动与显示部分与前几个实验一致，触摸相关代码集中在 TOUCH 与 24CXX 两个目录</div>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>负责什么</th><th>本页看什么</th></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>栈堆、向量表、复位入口</td><td>没有任何触摸中断向量被使用</td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>FPU、RCC 复位、VTOR</td><td><code>SystemInit</code></td></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化、测试分支、主循环</td><td><code>tp_dev.init()</code>、<code>ctp_test</code>/<code>rtp_test</code></td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>异常入口</td><td>仍只有 <code>SysTick_Handler</code></td></tr>
+                        <tr><td><code>HARDWARE/LCD/lcd.c</code></td><td>LCD 初始化、ID 判定</td><td><code>lcddev.id</code>、<code>lcddev.dir</code></td></tr>
+                        <tr><td><code>HARDWARE/LCD/ltdc.c</code></td><td>RGB 屏 ID 读取与 LTDC 配置</td><td><code>LTDC_PanelID_Read</code></td></tr>
+                        <tr><td><code>HARDWARE/TOUCH/touch.c</code></td><td>触摸总入口、校准、参数存取</td><td><code>TP_Init</code>、<code>TP_Adjust</code></td></tr>
+                        <tr><td><code>HARDWARE/TOUCH/ctiic.c</code></td><td>电容屏专用软件 IIC</td><td><code>CT_IIC_Start</code>、<code>CT_IIC_Send_Byte</code></td></tr>
+                        <tr><td><code>HARDWARE/TOUCH/gt9147.c</code>、<code>ft5206.c</code></td><td>两颗电容 IC 的寄存器读写与扫描</td><td><code>GT9147_Scan</code>、<code>FT5206_Scan</code></td></tr>
+                        <tr><td><code>HARDWARE/24CXX/24cxx.c</code></td><td>EEPROM 读写（复用软件 IIC）</td><td><code>AT24CXX_ReadOneByte</code></td></tr>
+                        <tr><td><code>SYSTEM/{sys,delay,usart}</code></td><td>时钟、us 延时、调试串口</td><td>软件 IIC 的节拍来源</td></tr>
+                    </table>
+
+                    <div class="note blue">注意有两套软件 IIC：<code>myiic.c</code>（PH4/PH5，给 24C02 用）和 <code>ctiic.c</code>（PH6/PI3，给电容屏用）。它们互不复用，初始化时机也不同。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">第 11 步读出屏型，第 12 步才可能选对触摸 IC；顺序颠倒会直接绑定错驱动</div>
+
+                    <figure class="figure">
+                        <img src="./index44-map/boot-flow.png" alt="实验30 从上电复位到主循环的 13 个节点">
+                        <figcaption>图 3-1　启动链路上与本实验相关的 13 个节点</figcaption>
+                    </figure>
+
+                    <p><code>main</code> 的调用顺序是：<code>HAL_Init</code> → <code>Stm32_Clock_Init</code> → <code>delay_init</code> → <code>uart_init</code> → <code>LED_Init</code> → <code>KEY_Init</code> → <code>SDRAM_Init</code> → <code>LCD_Init</code> → <code>tp_dev.init()</code>。其中 <code>tp_dev.init</code> 是一个函数指针，在 <code>touch.c</code> 里被赋值为 <code>TP_Init</code>。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：为什么 SDRAM 与 LCD 必须排在触摸之前</div>
+                        <ol>
+                            <li>RGB 屏的显存放在 SDRAM，<code>LCD_Init</code> 会通过 LTDC 把帧缓存地址指过去；SDRAM 没初始化就点屏，屏幕不会亮。</li>
+                            <li><code>TP_Init</code> 的第一行判断就是 <code>lcddev.id</code>，这个值由 <code>LCD_Init</code> 写入；顺序反了只能读到 0，从而错误地落到电阻屏分支。</li>
+                            <li>电阻屏分支还会调用 <code>LCD_Clear</code> 与 <code>TP_Adjust</code> 画校准十字，这些都需要 LCD 已经可用。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">复位入口与前几个实验完全相同；触摸没有属于自己的中断向量</div>
+
+                    <pre class="code">Stack_Size      EQU     0x400;              <span class="cmt">//1KB 栈</span>
+Heap_Size       EQU     0x200;              <span class="cmt">//512B 堆</span>
+
+                DCD     Reset_Handler              ; Reset Handler
+                DCD     NMI_Handler                ; NMI Handler
+                DCD     HardFault_Handler          ; Hard Fault Handler
+                ...
+                DCD     EXTI9_5_IRQHandler         ; EXTI Line 9..5   <span class="cmt">//本实验未使用</span>
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0                         <span class="cmt">//先跑 SystemInit</span>
+                 LDR     R0, =__main
+                 BX      R0                         <span class="cmt">//再进 C 库初始化，最终到 main</span>
+                 ENDP</pre>
+
+                    <p>PH7 作为触摸 INT 引脚，硬件上可以产生 EXTI7 中断，但本工程从未配置它：没有 <code>HAL_NVIC_EnableIRQ</code>，也没有 <code>stm32f4xx_it.c</code> 里的 <code>EXTI9_5_IRQHandler</code> 实现，因此向量表里这一项始终指向默认死循环。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：轮询而不是中断</div>
+                        <ol>
+                            <li><code>GT9147_Init</code> 把 PH7 配成上拉输入，读完 ID 后又改成浮空输入，全程只当普通 IO 用。</li>
+                            <li>触摸是否发生由 <code>GT9147_Scan</code> 读 0x814E 状态寄存器判断，与 INT 引脚电平无关。</li>
+                            <li>因此即使把 INT 脚悬空，扫描照样工作；反过来，只接 INT 不轮询寄存器则什么也读不到。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">SystemInit 建立可控的复位态，HAL_Init 建立 1ms 时基与中断分组</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+    RCC-&gt;CR |= (uint32_t)0x00000001;          <span class="cmt">//开 HSI</span>
+    RCC-&gt;CFGR &amp;= 0xF8FF0000;                  <span class="cmt">//复位 SW / HPRE / PPRE1 / PPRE2</span>
+    RCC-&gt;CR &amp;= 0xFEF6FFFF;                    <span class="cmt">//关 HSE / CSS / PLL</span>
+    RCC-&gt;CR &amp;= 0xFFFBFFFF;                    <span class="cmt">//关 PLLI2S</span>
+    RCC-&gt;BDCR &amp;= 0xFFFFFF80;                  <span class="cmt">//复位 RTC 时钟源</span>
+    SCB-&gt;VTOR = FLASH_BASE;                   <span class="cmt">//向量表指向 0x08000000</span>
+}
+
+HAL_StatusTypeDef HAL_Init(void)
+{
+    HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);   <span class="cmt">//分组 2</span>
+    HAL_InitTick(TICK_INT_PRIORITY);                      <span class="cmt">//TICK_INT_PRIORITY = 0x0F</span>
+    return HAL_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：SysTick 与 delay 是两套时基</div>
+                        <ol>
+                            <li><code>HAL_InitTick</code> 在 HSI 16MHz 下把重装值设为 16000；随后主频改到 180MHz，SysTick 未重配，<code>HAL_Delay</code> 会明显偏慢。</li>
+                            <li><code>delay_us</code>/<code>delay_ms</code> 是 <code>SYSTEM/delay</code> 的轮询实现，<code>fac_us = 180</code>，与本实验的软件 IIC 节拍直接相关。</li>
+                            <li>触摸驱动只用 <code>delay_us</code>/<code>delay_ms</code>，不用 <code>HAL_Delay</code>，所以 IIC 时序不会因 SysTick 偏差而变形。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟、延时与显示前置">
+                    <h2>06　时钟、延时与显示前置</h2>
+                    <div class="sec-sub">180MHz 主频不变，但本实验多了一个隐性依赖：us 级延时必须准</div>
+
+                    <pre class="code">Stm32_Clock_Init(360,25,2,8);   <span class="cmt">//SYSCLK=180M, PCLK1=45M, PCLK2=90M</span>
+delay_init(180);                <span class="cmt">//fac_us = 180</span>
+LED_Init();                     <span class="cmt">//PB0 / PB1</span>
+KEY_Init();                     <span class="cmt">//PA0 / PC13 / PH2 / PH3</span>
+SDRAM_Init();                   <span class="cmt">//FMC Bank5，RGB 屏显存</span>
+LCD_Init();                     <span class="cmt">//先读面板 ID，再选 LTDC 或 FSMC</span>
+tp_dev.init();                  <span class="cmt">//函数指针 → TP_Init</span></pre>
+
+                    <table class="data">
+                        <tr><th>延时</th><th>实现</th><th>在本实验中的用途</th></tr>
+                        <tr><td><code>delay_us(2)</code></td><td>轮询 DWT 计数</td><td>软件 IIC 每个电平变化后的间隔</td></tr>
+                        <tr><td><code>delay_us(30)</code></td><td>轮询</td><td>IIC 起始 / 停止信号的保持时间</td></tr>
+                        <tr><td><code>delay_ms(10)</code></td><td>轮询</td><td>GT9147 复位脉冲宽度</td></tr>
+                        <tr><td><code>delay_ms(5)</code></td><td>轮询</td><td>ctp_test 每帧之间的间隔</td></tr>
+                        <tr><td><code>delay_ms(1500)</code></td><td>轮询</td><td>显示完开机文字后等待，再清屏</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：软件 IIC 对延时的依赖</div>
+                        <ol>
+                            <li>SCL 的高低电平靠 <code>CT_Delay()</code>（内部 <code>delay_us(2)</code>）拉开；延时太短，GT9147 可能采样不到。</li>
+                            <li>延时由 <code>fac_us</code> 决定，<code>delay_init(180)</code> 必须与真实主频一致；若主频改了却忘了改这个参数，IIC 会整体变慢或变快。</li>
+                            <li>软件 IIC 不占硬件外设，任何 GPIO 都能改，这是阿波罗板用 PH6/PI3 的原因。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="LCD ID 读取与屏型判定">
+                    <h2>07　LCD ID 读取与屏型判定</h2>
+                    <div class="sec-sub">先读 RGB 屏的三根模式线；读到 0 才回到 FSMC 读 MCU 屏 ID</div>
+
+                    <figure class="figure">
+                        <img src="./index44-map/panel-detect.png" alt="LCD ID 的三根模式线与触摸 IC 分支对应关系">
+                        <figcaption>图 7-1　LCD ID 到触摸 IC 的完整分支</figcaption>
+                    </figure>
+
+                    <pre class="code">u16 LTDC_PanelID_Read(void)
+{
+    u8 idx=0;
+    ...
+    idx=(u8)HAL_GPIO_ReadPin(GPIOG,GPIO_PIN_6);        <span class="cmt">//M0</span>
+    idx|=(u8)HAL_GPIO_ReadPin(GPIOI,GPIO_PIN_2)&lt;&lt;1;    <span class="cmt">//M1</span>
+    idx|=(u8)HAL_GPIO_ReadPin(GPIOI,GPIO_PIN_7)&lt;&lt;2;    <span class="cmt">//M2</span>
+    switch(idx)
+    {
+        case 0:return 0X4342;    <span class="cmt">//4.3 寸 480×272</span>
+        case 1:return 0X7084;    <span class="cmt">//7 寸 800×480</span>
+        case 2:return 0X7016;    <span class="cmt">//7 寸 1024×600</span>
+        case 3:return 0X7018;    <span class="cmt">//7 寸 1280×800</span>
+        case 4:return 0X8016;    <span class="cmt">//8 寸 1024×600</span>
+        case 5:return 0X1018;    <span class="cmt">//10.1 寸 1280×800</span>
+        default:return 0;
+    }
+}</pre>
+
+                    <p><code>LCD_Init</code> 的处理是：<code>lcddev.id = LTDC_PanelID_Read()</code>，若结果非 0 就走 <code>LTDC_Init</code>（RGB 屏）；若为 0 则走 FSMC 总线读 MCU 屏 ID，这才可能出现 <code>0x5510</code>（4.3 寸 800×480）、<code>0x1963</code>（7 寸）这类值。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：ID 决定的不只是分辨率</div>
+                        <ol>
+                            <li>ID 决定显存位置与刷屏方式：RGB 屏用 LTDC + SDRAM，MCU 屏用 FSMC 直接写屏。</li>
+                            <li>ID 还决定 <code>lcddev.width/height</code>，而触摸坐标的合法性检查（<code>x &lt; lcddev.width</code>）依赖这两个值。</li>
+                            <li>ID 最终决定 <code>TP_Init</code> 走哪条分支；<code>0x7018 / 0x8016</code> 没有对应电容触摸分支，会落到电阻屏。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="触摸初始化分支 TP_Init">
+                    <h2>08　触摸初始化分支 TP_Init</h2>
+                    <div class="sec-sub">四个 if 分支，本质是“给 tp_dev.scan 赋哪个函数指针”</div>
+
+                    <pre class="code">u8 TP_Init(void)
+{
+    if(lcddev.id==0X5510||lcddev.id==0X4342)       <span class="cmt">//4.3 寸 MCU / RGB 屏</span>
+    {
+        if(GT9147_Init()==0) tp_dev.scan=GT9147_Scan;
+        else { OTT2001A_Init(); tp_dev.scan=OTT2001A_Scan; }
+        tp_dev.touchtype|=0X80;                    <span class="cmt">//电容屏</span>
+        tp_dev.touchtype|=lcddev.dir&amp;0X01;         <span class="cmt">//横竖屏</span>
+        return 0;
+    }
+    else if(lcddev.id==0X1963||lcddev.id==0X7084||lcddev.id==0X7016)
+    {
+        FT5206_Init();
+        tp_dev.scan=FT5206_Scan;
+        tp_dev.touchtype|=0X80;
+        tp_dev.touchtype|=lcddev.dir&amp;0X01;
+        return 0;
+    }
+    else if(lcddev.id==0X1018)
+    {
+        GT9271_Init();
+        tp_dev.scan=GT9271_Scan;
+        tp_dev.touchtype|=0X80;
+        tp_dev.touchtype|=lcddev.dir&amp;0X01;
+        return 0;
+    }
+    else
+    {
+        <span class="cmt">//电阻屏：配置 PH6/PI3/PI8/PH7/PG3，初始化 24C02</span>
+        TP_Read_XY(&amp;tp_dev.x[0],&amp;tp_dev.y[0]);
+        AT24CXX_Init();
+        if(TP_Get_Adjdata())return 0;              <span class="cmt">//已有校准值</span>
+        else TP_Adjust();                          <span class="cmt">//首次上电，五点校准</span>
+    }
+    return 0;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：函数指针是整页的主线</div>
+                        <ol>
+                            <li><code>tp_dev</code> 是 <code>touch.c</code> 里的全局结构体，<code>scan</code> 成员的类型是函数指针，主循环只认它。</li>
+                            <li><code>touchtype</code> 的 bit7 表示电容屏，<code>main</code> 用 <code>tp_dev.touchtype&amp;0X80</code> 决定进 <code>ctp_test</code> 还是 <code>rtp_test</code>。</li>
+                            <li>bit0 保存横竖屏方向，扫描时用它决定坐标是否交换；GT9147 分支里还按 <code>0x5510</code>/<code>0x4342</code> 再做一次镜像。</li>
+                            <li>电阻屏分支在初始化阶段就可能进入 <code>TP_Adjust</code>，因此首次上电会先看到校准十字，校准完才进主循环。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="软件 IIC 时序">
+                    <h2>09　软件 IIC 时序</h2>
+                    <div class="sec-sub">起始、地址、16 位寄存器地址、重复起始、读数据——五段构成一次读操作</div>
+
+                    <figure class="figure">
+                        <img src="./index44-map/ctiic-frame.png" alt="电容触摸软件 IIC 读寄存器的五个阶段">
+                        <figcaption>图 9-1　一次读寄存器操作的五个阶段</figcaption>
+                    </figure>
+
+                    <pre class="code">#define CT_IIC_SCL  PHout(6)   <span class="cmt">//SCL = PH6</span>
+#define CT_IIC_SDA  PIout(3)   <span class="cmt">//SDA = PI3</span>
+#define CT_READ_SDA PIin(3)
+
+void CT_IIC_Start(void)
+{
+    CT_SDA_OUT();
+    CT_IIC_SDA=1;
+    CT_IIC_SCL=1;
+    delay_us(30);
+    CT_IIC_SDA=0;              <span class="cmt">//SCL 高时 SDA 下降沿 = 起始</span>
+    CT_Delay();
+    CT_IIC_SCL=0;              <span class="cmt">//钳住总线</span>
+}
+
+u8 CT_IIC_Wait_Ack(void)
+{
+    u8 ucErrTime=0;
+    CT_SDA_IN();
+    CT_IIC_SDA=1;
+    CT_IIC_SCL=1;
+    CT_Delay();
+    while(CT_READ_SDA)
+    {
+        ucErrTime++;
+        if(ucErrTime&gt;250) { CT_IIC_Stop(); return 1; }   <span class="cmt">//无应答，超时退出</span>
+        CT_Delay();
+    }
+    CT_IIC_SCL=0;
+    return 0;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：地址与寄存器宽度的差别</div>
+                        <ol>
+                            <li>GT9147 的写/读命令是 0x28/0x29，寄存器地址 16 位，所以先发 <code>reg&gt;&gt;8</code> 再发 <code>reg&amp;0xFF</code>。</li>
+                            <li>FT5206 的命令是 0x70/0x71，寄存器只有 8 位，只发一个地址字节；同一套 <code>CT_IIC_*</code> 函数被两个驱动共用。</li>
+                            <li>读操作必须先写地址再“重复起始”，否则从机会把后续字节当成写数据；<code>GT9147_RD_Reg</code> 里第二次调用 <code>CT_IIC_Start()</code> 就是重复起始。</li>
+                            <li>最后一个字节回 NACK（<code>CT_IIC_Read_Byte(0)</code>），告诉从机“不要再发了”，随后发停止位。</li>
+                        </ol>
+                    </div>
+
+                    <p>把 <code>CT_IIC_Start</code>、<code>CT_IIC_Send_Byte</code>、<code>CT_IIC_Read_Byte</code> 按调用顺序展开，SCL/SDA 上的电平变化如下图所示：先发地址与 16 位寄存器地址，插入重复起始后再发读地址，末字节回 NACK 并停止。</p>
+
+                    <figure class="figure">
+                        <img src="./index44-map/ctiic-timing.png" alt="电容触摸软件 IIC 一次读寄存器的 SCL/SDA 波形，标注 delay_us(2)、起始前 delay_us(30) 以及 GT9147 与 FT5206 的地址分支">
+                        <figcaption>图 9-2　一次读寄存器的 SCL / SDA 电平与延时构成</figcaption>
+                    </figure>
+
+                    <p>每个字节 8 位，每位含 SCL 低、高、低三段 <code>delay_us(2)</code>，因此单字节约 48 µs；起始前与停止前还各有一次额外的 <code>delay_us(30)</code>，图中单独标注在 START / STOP 段旁。</p>
+                </section>
+
+                <section class="content-card" id="s10" data-title="GT9147 初始化与寄存器">
+                    <h2>10　GT9147 初始化与寄存器</h2>
+                    <div class="sec-sub">复位 → 读 0x8140 产品 ID → 比对 "9147" → 视版本决定是否下发配置</div>
+
+                    <pre class="code">u8 GT9147_Init(void)
+{
+    __HAL_RCC_GPIOH_CLK_ENABLE();
+    __HAL_RCC_GPIOI_CLK_ENABLE();
+
+    <span class="cmt">//PH7 = INT，先上拉输入；PI8 = RST，推挽输出</span>
+    ...
+    CT_IIC_Init();          <span class="cmt">//初始化 PH6 / PI3</span>
+    GT_RST=0;               <span class="cmt">//复位</span>
+    delay_ms(10);
+    GT_RST=1;
+    delay_ms(10);
+    ...
+    delay_ms(100);
+    GT9147_RD_Reg(GT_PID_REG,temp,4);   <span class="cmt">//0x8140，读 4 字节产品 ID</span>
+    temp[4]=0;
+    printf("CTP ID:%s\r\n",temp);
+    if(strcmp((char*)temp,"9147")==0)
+    {
+        temp[0]=0X02;
+        GT9147_WR_Reg(GT_CTRL_REG,temp,1);   <span class="cmt">//软复位</span>
+        GT9147_RD_Reg(GT_CFGS_REG,temp,1);   <span class="cmt">//读配置版本</span>
+        if(temp[0]&lt;0X60)
+        {
+            if(lcddev.id==0X5510)GT9147_Send_Cfg(1);   <span class="cmt">//4.3 寸 MCU 屏更新配置</span>
+        }
+        delay_ms(10);
+        temp[0]=0X00;
+        GT9147_WR_Reg(GT_CTRL_REG,temp,1);   <span class="cmt">//结束复位</span>
+        return 0;
+    }
+    return 1;
+}</pre>
+
+                    <table class="data">
+                        <tr><th>宏</th><th>地址</th><th>用途</th></tr>
+                        <tr><td><code>GT_CTRL_REG</code></td><td>0x8040</td><td>软复位 / 结束复位</td></tr>
+                        <tr><td><code>GT_CFGS_REG</code></td><td>0x8047</td><td>配置表起始，首字节是版本号</td></tr>
+                        <tr><td><code>GT_CHECK_REG</code></td><td>0x80FF</td><td>配置校验和</td></tr>
+                        <tr><td><code>GT_PID_REG</code></td><td>0x8140</td><td>产品 ID，"9147"</td></tr>
+                        <tr><td><code>GT_GSTID_REG</code></td><td>0x814E</td><td>触摸状态：bit7 就绪，低 4 位点数</td></tr>
+                        <tr><td><code>GT_TP1_REG</code>…<code>TP5</code></td><td>0x8150 + 8n</td><td>每点 4 字节：X 低高、Y 低高</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：初始化里的三个等待</div>
+                        <ol>
+                            <li>RST 拉低 10ms 是复位脉宽，拉高后再等 10ms 让芯片启动，随后改 PH7 为浮空输入、再等 100ms 才读 ID。</li>
+                            <li>读 ID 失败（返回 1）时，<code>TP_Init</code> 会改用 OTT2001A 驱动；这说明同一块 4.3 寸屏可能装不同触摸 IC。</li>
+                            <li>配置版本低于 0x60 且是 4.3 寸 MCU 屏时才下发配置表，避免每次上电都写 flash 配置。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="扫描：状态寄存器与坐标">
+                    <h2>11　扫描：状态寄存器与坐标</h2>
+                    <div class="sec-sub">每 10 次轮询读一次 0x814E；点数翻译成 sta 位图，再逐点读 4 字节坐标</div>
+
+                    <figure class="figure">
+                        <img src="./index44-map/tp-scan-flow.png" alt="GT9147_Scan 的判断流程与坐标读取">
+                        <figcaption>图 11-1　GT9147_Scan 的分支与数据流</figcaption>
+                    </figure>
+
+                    <pre class="code">u8 GT9147_Scan(u8 mode)
+{
+    static u8 t=0;
+    t++;
+    if((t%10)==0||t&lt;10)          <span class="cmt">//空闲时每 10 次才读一次</span>
+    {
+        GT9147_RD_Reg(GT_GSTID_REG,&amp;mode,1);   <span class="cmt">//读 0x814E</span>
+        if(mode&amp;0X80&amp;&amp;((mode&amp;0XF)&lt;6))
+        {
+            u8 temp=0;
+            GT9147_WR_Reg(GT_GSTID_REG,&amp;temp,1);  <span class="cmt">//清就绪标志</span>
+        }
+        if((mode&amp;0XF)&amp;&amp;((mode&amp;0XF)&lt;6))
+        {
+            temp=0XFF&lt;&lt;(mode&amp;0XF);
+            tp_dev.sta=(~temp)|TP_PRES_DOWN|TP_CATH_PRES;
+            for(i=0;i&lt;5;i++)
+            {
+                if(tp_dev.sta&amp;(1&lt;&lt;i))
+                {
+                    GT9147_RD_Reg(GT9147_TPX_TBL[i],buf,4);   <span class="cmt">//0x8150+8i</span>
+                    ...
+                }
+            }
+        }
+    }
+    return tp_dev.sta&amp;TP_PRES_DOWN;
+}</pre>
+
+                    <pre class="code"><span class="cmt">//0x5510：4.3 寸 800×480 MCU 屏</span>
+if(tp_dev.touchtype&amp;0X01)          <span class="cmt">//横屏</span>
+{
+    tp_dev.y[i]=((u16)buf[1]&lt;&lt;8)+buf[0];
+    tp_dev.x[i]=800-(((u16)buf[3]&lt;&lt;8)+buf[2]);
+}
+else
+{
+    tp_dev.x[i]=((u16)buf[1]&lt;&lt;8)+buf[0];
+    tp_dev.y[i]=((u16)buf[3]&lt;&lt;8)+buf[2];
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：sta 位图与坐标镜像</div>
+                        <ol>
+                            <li><code>0xFF&lt;&lt;n</code> 把“点数”变成“低 n 位为 0”；取反后低 n 位为 1，正好表示第 0~n-1 个触点有效。<code>|0x80</code> 表示当前按下，<code>|0x40</code> 表示本次扫描出现按下事件。</li>
+                            <li>读状态时如果 bit7 就绪且点数小于 6，必须先写 0 清标志，否则 GT9147 不会更新下一次坐标。</li>
+                            <li><code>0x5510</code> 横屏时 X 需要镜像（800 减原始值），因为屏的排线与触摸 IC 的坐标方向相反；<code>0x4342</code> 则按 272 镜像 Y。</li>
+                            <li>坐标超出 <code>lcddev.width/height</code> 被视为非法数据：有多点则用第二点顶替，否则恢复上一帧的 <code>sta</code>。</li>
+                            <li>检测到有效触摸后 <code>t=0</code>，接下来连续 10 次都会读寄存器，提高跟手性；空闲时每 10 次才读一次以省 CPU。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="电阻屏与 24C02 校准">
+                    <h2>12　电阻屏与 24C02 校准</h2>
+                    <div class="sec-sub">电阻屏没有 ID，只能靠校准把 AD 值映射到屏幕坐标；校准值存 24C02 的 40 起 14 字节</div>
+
+                    <pre class="code"><span class="cmt">//touch.c</span>
+#define SAVE_ADDR_BASE 40    <span class="cmt">//占用 40~53，共 14 字节</span>
+
+void TP_Save_Adjdata(void)
+{
+    int temp;
+    temp=tp_dev.xfac*100000000;
+    AT24CXX_WriteLenByte(SAVE_ADDR_BASE,temp,4);     <span class="cmt">//xfac</span>
+    temp=tp_dev.yfac*100000000;
+    AT24CXX_WriteLenByte(SAVE_ADDR_BASE+4,temp,4);   <span class="cmt">//yfac</span>
+    AT24CXX_WriteLenByte(SAVE_ADDR_BASE+8,tp_dev.xoff,2);   <span class="cmt">//xoff</span>
+    AT24CXX_WriteLenByte(SAVE_ADDR_BASE+10,tp_dev.yoff,2);  <span class="cmt">//yoff</span>
+    AT24CXX_WriteOneByte(SAVE_ADDR_BASE+12,tp_dev.touchtype);
+    temp=0X0A;
+    AT24CXX_WriteOneByte(SAVE_ADDR_BASE+13,temp);    <span class="cmt">//校准标记</span>
+}</pre>
+
+                    <pre class="code">void rtp_test(void)
+{
+    while(1)
+    {
+        key=KEY_Scan(0);
+        tp_dev.scan(0);
+        if(tp_dev.sta&amp;TP_PRES_DOWN)
+        {
+            if(tp_dev.x[0]&gt;(lcddev.width-24)&amp;&amp;tp_dev.y[0]&lt;16)
+                Load_Drow_Dialog();                   <span class="cmt">//右上角清屏</span>
+            else
+                TP_Draw_Big_Point(tp_dev.x[0],tp_dev.y[0],RED);
+        }
+        else delay_ms(10);
+        if(key==KEY0_PRES)
+        {
+            LCD_Clear(WHITE);
+            TP_Adjust();                              <span class="cmt">//五点校准</span>
+            TP_Save_Adjdata();
+            Load_Drow_Dialog();
+        }
+        i++;
+        if(i%20==0)LED0=!LED0;
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：校准参数怎么用</div>
+                        <ol>
+                            <li><code>TP_Read_XY</code> 读到的原始 AD 值经 <code>x = xfac * 原始值 + xoff</code> 变换后才是屏幕坐标；<code>TP_Adjust</code> 用五个十字点解出这四个参数。</li>
+                            <li><code>touchtype</code> 也存进 EEPROM：若它与当前屏方向不符，会交换 <code>CMD_RDX/CMD_RDY</code> 两个控制字，相当于交换 X/Y 通道。</li>
+                            <li>标记字不是 0x0A 就认为没校准过，<code>TP_Init</code> 会直接进入 <code>TP_Adjust</code>；所以第一次上电看到校准界面是正常流程。</li>
+                            <li>电阻屏没有触摸 IC，IIC 引脚 PH6/PI3 此时被复用为 SPI 读 AD 的控制线；这也是 <code>TP_Init</code> 的 else 分支要重新配置这些 GPIO 的原因。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="主循环与现象">
+                    <h2>13　主循环与现象</h2>
+                    <div class="sec-sub">电容屏画彩线、电阻屏画红点；右上角 24×20 区域是软件定义的清屏热区</div>
+
+                    <figure class="figure">
+                        <img src="./index44-map/main-loop.png" alt="实验30 主循环的电容屏与电阻屏两条测试路径">
+                        <figcaption>图 13-1　初始化链与两条互斥的测试路径</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>可观察现象</th><th>对应代码</th></tr>
+                        <tr><td>上电（电容屏）</td><td>显示 Apollo / TOUCH TEST 等 4 行，1.5 秒后清屏并出现 RST 角标</td><td><code>main</code> 中的 <code>LCD_ShowString</code></td></tr>
+                        <tr><td>手指滑动（电容屏）</td><td>沿轨迹画出彩线，不同触点颜色不同</td><td><code>ctp_test</code> · <code>lcd_draw_bline</code></td></tr>
+                        <tr><td>点击右上角</td><td>整屏清空，回到初始界面</td><td><code>x &gt; width-24 &amp;&amp; y &lt; 20</code></td></tr>
+                        <tr><td>上电（电阻屏）</td><td>先出现校准十字（若无校准值），校准后进入画点界面</td><td><code>TP_Adjust</code></td></tr>
+                        <tr><td>按 KEY0（电阻屏）</td><td>清屏并重新进入五点校准，结果写回 24C02</td><td><code>TP_Save_Adjdata</code></td></tr>
+                        <tr><td>空闲</td><td>DS0 闪烁；电阻屏未按下时约每 200ms 一次</td><td><code>i%20</code></td></tr>
+                    </table>
+
+                    <div class="sim">
+                        <div class="sim-title">触摸坐标演示（仅演示逻辑，坐标为模拟值）</div>
+                        <div class="sim-buttons">
+                            <button data-act="key0">按 KEY0（电阻屏校准）</button>
+                            <button data-act="clear">清空轨迹</button>
+                        </div>
+                        <div class="tp-pad" id="tpPad">
+                            <span class="hint">在屏内点击模拟触摸，屏宽 480 × 高 272</span>
+                            <span class="rst">RST</span>
+                        </div>
+                        <div class="sim-log" id="simLog">等待触摸：点击上方白区，观察 tp_dev.x / y 与右上角热区判断</div>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：两条测试路径为什么互斥</div>
+                        <ol>
+                            <li><code>main</code> 末尾只调用一次 <code>ctp_test</code> 或 <code>rtp_test</code>，两者都是死循环，进入后不会再返回。</li>
+                            <li><code>ctp_test</code> 每 5ms 扫一次，<code>i%20</code> 约 100ms 翻转 DS0；<code>rtp_test</code> 在松手时 <code>delay_ms(10)</code>，按下时反而没有延时，心跳会变慢。</li>
+                            <li>清屏热区大小不同：电容屏 y&lt;20，电阻屏 y&lt;16，但都用 <code>lcddev.width-24</code> 作为 X 边界。</li>
+                            <li>按 KEY0 只在电阻屏路径里被处理；电容屏路径不读按键，所以按 KEY0 没有反应是正常的。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="关键逻辑复盘">
+                    <h2>14　关键逻辑复盘</h2>
+                    <div class="sec-sub">一条链路 6 个节点：屏 ID → 触摸 IC → IIC → 状态寄存器 → 坐标换算 → 显示</div>
+
+                    <table class="data">
+                        <tr><th>环节</th><th>本工程实现</th><th>出错时的典型现象</th></tr>
+                        <tr><td>屏 ID</td><td>M0/M1/M2 三线组合，0 时改读 FSMC</td><td>屏能亮但触摸绑错驱动</td></tr>
+                        <tr><td>触摸 IC</td><td>GT9147 / OTT2001A / FT5206 / GT9271</td><td>读 ID 失败，回环到错误的扫描函数</td></tr>
+                        <tr><td>软件 IIC</td><td>PH6/PI3，地址 0x28/0x29 或 0x70/0x71</td><td>CT_IIC_Wait_Ack 超时，初始化返回失败</td></tr>
+                        <tr><td>状态寄存器</td><td>0x814E / 0x02，bit7 就绪</td><td>从不读或忘记清标志，坐标不更新</td></tr>
+                        <tr><td>坐标换算</td><td>横竖屏 + 800/272 镜像</td><td>画出的线与手指方向相反或偏移</td></tr>
+                        <tr><td>显示</td><td>lcd_draw_bline / TP_Draw_Big_Point</td><td>坐标对但屏幕不刷新，查 SDRAM 与 LCD</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：三步定位</div>
+                        <ol>
+                            <li>看串口是否有 <code>CTP ID:9147</code>：没有说明 IIC 或复位有问题，先量 PI8 与 PH6/PI3。</li>
+                            <li>看 <code>tp_dev.touchtype</code> 是否含 0x80：不含说明落到了电阻屏分支，回头查 <code>lcddev.id</code>。</li>
+                            <li>看画线方向：方向反了只改镜像分支或 <code>touchtype</code> bit0，不要动 IIC 与寄存器地址。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s15" data-title="总结与排查">
+                    <h2>15　总结与排查</h2>
+                    <div class="sec-sub">触摸不是“一个外设”，而是屏 ID、触摸 IC、软件 IIC、坐标换算四层叠加</div>
+
+                    <p>从启动视角看，本实验最值得记住的是<strong>两处间接</strong>：<code>LCD_Init</code> 通过三根模式线间接决定 <code>lcddev.id</code>；<code>TP_Init</code> 又通过 <code>lcddev.id</code> 间接决定 <code>tp_dev.scan</code> 指向哪个函数。主循环里看不到任何 IC 名字，只看到 <code>tp_dev.scan(0)</code>——这正是函数指针把差异封装起来的结果。</p>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>优先检查</th><th>依据</th></tr>
+                        <tr><td>屏亮但触摸无反应</td><td>串口 CTP ID、PI8 复位、PH6/PI3 上拉</td><td><code>GT9147_Init</code></td></tr>
+                        <tr><td>ID 读到但不是 9147</td><td>是否 4.3 寸屏装了 OTT2001A</td><td><code>TP_Init</code> 的 else 分支</td></tr>
+                        <tr><td>能读 ID 但坐标不变</td><td>0x814E 是否清标志、t%10 节流</td><td><code>GT9147_Scan</code></td></tr>
+                        <tr><td>坐标方向相反</td><td><code>lcddev.dir</code>、0x5510 的 800 减</td><td>坐标换算分支</td></tr>
+                        <tr><td>只有一半屏幕能点</td><td>坐标是否超出 <code>lcddev.width/height</code></td><td>非法数据判断</td></tr>
+                        <tr><td>电阻屏每次上电都校准</td><td>24C02 是否写入成功、标记字是否 0x0A</td><td><code>TP_Save_Adjdata</code></td></tr>
+                        <tr><td>校准后仍然偏</td><td>五点是否点准、触摸 AD 抖动</td><td><code>TP_Adjust</code></td></tr>
+                    </table>
+
+                    <div class="note">本页结论来自 <code>USER/main.c</code>、<code>USER/system_stm32f4xx.c</code>、<code>USER/stm32f4xx_it.c</code>、<code>CORE/startup_stm32f429xx.s</code>、<code>HARDWARE/LCD/{lcd.c,ltdc.c}</code>、<code>HARDWARE/TOUCH/{touch.c,ctiic.c,gt9147.c,ft5206.c}</code>、<code>HARDWARE/24CXX/24cxx.c</code> 与 <code>SYSTEM/{sys,delay,usart}</code>。工程中未体现触摸中断、DMA 刷屏与多点手势识别，本页不作推测。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-12 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    var pad = document.getElementById('tpPad');
+    var simLog = document.getElementById('simLog');
+
+    if (pad && simLog) {
+        var W = 480;
+        var H = 272;
+        var lastX = -1;
+        var lastY = -1;
+        var dots = [];
+
+        function logTouch(x, y) {
+            if (x > W - 24 && y < 20) {
+                simLog.textContent =
+                    'tp_dev.x = ' + x + '，tp_dev.y = ' + y +
+                    '\n命中右上角热区（x > ' + (W - 24) + ' 且 y < 20）→ Load_Drow_Dialog() 清屏';
+                dots.forEach(function (d) { d.remove(); });
+                dots = [];
+                lastX = -1;
+                lastY = -1;
+                return;
+            }
+            var text = 'tp_dev.x = ' + x + '，tp_dev.y = ' + y + '，sta bit0 有效';
+            if (lastX >= 0) {
+                text += '\nlcd_draw_bline((' + lastX + ',' + lastY + ') → (' + x + ',' + y + '))，2 像素彩线';
+            } else {
+                text += '\n首次触点：lastpos 由 0xFFFF 更新为当前坐标，暂不画线';
+            }
+            simLog.textContent = text;
+            lastX = x;
+            lastY = y;
+        }
+
+        pad.addEventListener('click', function (e) {
+            var rect = pad.getBoundingClientRect();
+            var sx = W / rect.width;
+            var sy = H / rect.height;
+            var x = Math.round((e.clientX - rect.left) * sx);
+            var y = Math.round((e.clientY - rect.top) * sy);
+            x = Math.max(0, Math.min(W - 1, x));
+            y = Math.max(0, Math.min(H - 1, y));
+
+            if (x > W - 24 && y < 20) {
+                logTouch(x, y);
+                return;
+            }
+            var dot = document.createElement('span');
+            dot.className = 'dot';
+            dot.style.left = x + 'px';
+            dot.style.top = y + 'px';
+            pad.appendChild(dot);
+            dots.push(dot);
+            logTouch(x, y);
+        });
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var act = btn.getAttribute('data-act');
+                if (act === 'clear') {
+                    dots.forEach(function (d) { d.remove(); });
+                    dots = [];
+                    lastX = -1;
+                    lastY = -1;
+                    simLog.textContent = '轨迹已清空：相当于 Load_Drow_Dialog() 重新绘制对话框';
+                } else if (act === 'key0') {
+                    simLog.textContent =
+                        'KEY0 只在电阻屏路径中被处理：key == KEY0_PRES → TP_Adjust() → TP_Save_Adjdata()\n' +
+                        '当前为电容屏演示，ctp_test 不读按键，因此这里只说明分支。';
+                }
+            });
+        });
+    }
+</script>
+</body>
+</html>

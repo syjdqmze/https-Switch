@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验29 CAN实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13px; font-weight: 600; color: #2f7a52; margin-bottom: 6px; }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验29 CAN实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">本实验没有 CAN 中断：can.h 里 CAN1_RX0_INT_ENABLE 为 0，接收靠轮询。先看第 08、11 节。</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">用 CAN1 以 500kbps 自发自收：默认回环模式，一块板即可验证整条收发链路</div>
+
+                    <p>CAN 与串口、485 最大的差别在于<strong>位时序是显式配置出来的</strong>：同一套 45MHz 的 APB1 时钟，靠 <code>brp</code>、<code>BS1</code>、<code>BS2</code> 三个参数切出 500kbps。本实验上电先用 <code>CAN_MODE_LOOPBACK</code>，发送的帧在芯片内部直接回到接收端，因此按下 KEY0 就能在屏幕上下两行看到同一组数字；按 WK_UP 切到普通模式后，必须有两块板（或一个 CAN 调试节点）互相回 ACK 才能发送成功。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚 / 参数</th><th>关键配置</th><th>源码证据</th></tr>
+                        <tr><td>CAN1</td><td>PA11=RX、PA12=TX</td><td>AF9、复用推挽、上拉、高速</td><td><code>HARDWARE/CAN/can.c</code> · <code>HAL_CAN_MspInit</code></td></tr>
+                        <tr><td>位时序</td><td>500kbps</td><td>SJW=1TQ、BS1=8TQ、BS2=6TQ、brp=6</td><td><code>main.c</code> · <code>CAN1_Mode_Init</code> 调用</td></tr>
+                        <tr><td>工作模式</td><td>回环 / 普通</td><td>上电回环，WK_UP 切换后重新初始化</td><td><code>main.c</code> 的 <code>mode</code></td></tr>
+                        <tr><td>滤波器</td><td>过滤器 0</td><td>32 位掩码模式，ID 与 MASK 全 0，挂 FIFO0</td><td><code>CAN1_FilerConf</code></td></tr>
+                        <tr><td>发送</td><td>标准帧 0x12</td><td>数据帧、DLC 最大 8、超时 10ms</td><td><code>CAN1_Send_Msg</code></td></tr>
+                        <tr><td>接收</td><td>轮询 FIFO0</td><td><code>CAN1_RX0_INT_ENABLE = 0</code></td><td><code>can.h</code></td></tr>
+                        <tr><td>按键</td><td>KEY0 / WK_UP</td><td>KEY0 发送，WK_UP 切模式</td><td><code>USER/main.c</code></td></tr>
+                        <tr><td>显示 / 调试</td><td>LCD、USART1 115200</td><td>Count、Send Data、Receive Data 三行</td><td><code>main.c</code> / <code>usart.c</code></td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">CAN1 @ APB1 45MHz</span>
+                        <span class="chip">500 kbps</span>
+                        <span class="chip">StdId = 0x12</span>
+                        <span class="chip">FIFO0 轮询</span>
+                        <span class="chip">PA11 / PA12 AF9</span>
+                    </div>
+
+                    <div class="note">本实验没有使用 CAN 中断、DMA，也没有配置 CAN 唤醒或时间触发通信：<code>TTCM</code>、<code>ABOM</code>、<code>AWUM</code> 全部为 <code>DISABLE</code>，<code>NART</code> 为 <code>ENABLE</code>（禁止自动重传）。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">启动与显示部分与前几个实验完全一致，CAN 只多出 can.c / can.h 两个文件</div>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>负责什么</th><th>本页看什么</th></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>栈堆、向量表、复位入口</td><td><code>CAN1_RX0_IRQHandler</code> 的向量位置（本实验未用到）</td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>FPU、RCC 复位、VTOR</td><td><code>SystemInit</code></td></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化、发送缓冲、接收显示</td><td><code>canbuf</code>、<code>cnt</code>、<code>mode</code></td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>异常入口</td><td>仍只有 <code>SysTick_Handler</code></td></tr>
+                        <tr><td><code>HARDWARE/CAN/can.c</code></td><td>CAN1 初始化、滤波器、发送、查询接收</td><td><code>CAN1_Mode_Init</code>、<code>HAL_CAN_MspInit</code></td></tr>
+                        <tr><td><code>HARDWARE/CAN/can.h</code></td><td>中断开关、函数声明</td><td><code>CAN1_RX0_INT_ENABLE</code></td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td>180MHz 时钟树</td><td><code>PCLK1 = 45MHz</code></td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>10ms 主循环节拍</td><td><code>delay_ms(10)</code></td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>USART1 调试口</td><td><code>uart_init(115200)</code></td></tr>
+                        <tr><td><code>HARDWARE/LCD</code>、<code>SDRAM</code>、<code>KEY</code>、<code>LED</code></td><td>显示与交互</td><td>只确认调用顺序</td></tr>
+                    </table>
+
+                    <div class="note blue">CAN 的向量在启动文件里是弱定义：<code>DCD CAN1_RX0_IRQHandler</code>。本工程把 <code>CAN1_RX0_INT_ENABLE</code> 设为 0，因此 <code>can.c</code> 里那段中断服务函数被 <code>#if</code> 整段裁掉，向量最终指向启动文件的默认死循环。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">前 11 步与前面实验相同，第 12 步一次配完 CAN1 的时钟、引脚、位时序与滤波器</div>
+
+                    <figure class="figure">
+                        <img src="./index43-map/boot-flow.png" alt="实验29 从上电复位到主循环的 13 个节点">
+                        <figcaption>图 3-1　启动链路上与本实验相关的 13 个节点</figcaption>
+                    </figure>
+
+                    <p>把 <code>main</code> 里的调用顺序摊开看，CAN 初始化排在最后：<code>HAL_Init</code> → <code>Stm32_Clock_Init</code> → <code>delay_init</code> → <code>uart_init</code> → <code>LED_Init</code> → <code>KEY_Init</code> → <code>SDRAM_Init</code> → <code>LCD_Init</code> → <code>CAN1_Mode_Init</code>。这个顺序不是随意的：CAN 的位时序依赖已经稳定的 PCLK1，而 PCLK1 由 <code>Stm32_Clock_Init</code> 决定；如果先初始化 CAN 再改时钟，波特率就会与设定值不符。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：为什么 CAN 必须最后初始化</div>
+                        <ol>
+                            <li><code>CAN1_Mode_Init</code> 内部把 <code>brp</code> 换算成时间份额，而时间份额的基准是 APB1 时钟；此时 45MHz 必须已经建立。</li>
+                            <li><code>HAL_CAN_Init</code> 会调用 <code>HAL_CAN_MspInit</code>，其中使能 CAN1 与 GPIOA 时钟并配置 PA11/PA12 复用，都是在时钟树稳定之后才有效。</li>
+                            <li>LCD 初始化放在 CAN 之前，是为了让后续的发送/接收结果有地方显示；若屏幕未初始化就发帧，现象只能靠串口或分析仪观察。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">复位后先取栈顶、再取 Reset_Handler；CAN 中断向量虽然存在，但本工程没有启用</div>
+
+                    <pre class="code">Stack_Size      EQU     0x400;              <span class="cmt">//1KB 栈</span>
+Heap_Size       EQU     0x200;              <span class="cmt">//512B 堆</span>
+
+                DCD     Reset_Handler              ; Reset Handler
+                DCD     CAN1_RX0_IRQHandler        ; CAN1 RX0   <span class="cmt">//弱定义，可被 can.c 覆盖</span>
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0                         <span class="cmt">//先跑 SystemInit</span>
+                 LDR     R0, =__main
+                 BX      R0                         <span class="cmt">//再进 C 库初始化，最终到 main</span>
+                 ENDP</pre>
+
+                    <p>向量表的位置由 <code>SystemInit</code> 写入 <code>SCB-&gt;VTOR = FLASH_BASE</code>，因此中断能否进得去，取决于两件事：向量表偏移正确，以及外设的中断使能位真的被打开。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：本实验的 CAN 中断为什么不会发生</div>
+                        <ol>
+                            <li>启动文件里 <code>CAN1_RX0_IRQHandler</code> 只是一个 <code>[WEAK]</code> 符号，默认实现是死循环。</li>
+                            <li><code>can.c</code> 中真正的服务函数被 <code>#if CAN1_RX0_INT_ENABLE</code> 包住，而该宏为 0，编译后不存在强符号。</li>
+                            <li><code>HAL_CAN_MspInit</code> 里使能 <code>CAN_IT_FMP0</code> 与 NVIC 的代码同样在这段条件编译内，所以 FIFO0 挂起中断从未打开。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">SystemInit 只做“回到可控状态”，真正的外设时基由 HAL_Init 建立</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+    RCC-&gt;CR |= (uint32_t)0x00000001;          <span class="cmt">//开 HSI</span>
+    RCC-&gt;CFGR &amp;= 0xF8FF0000;                  <span class="cmt">//复位 SW / HPRE / PPRE1 / PPRE2</span>
+    RCC-&gt;CR &amp;= 0xFEF6FFFF;                    <span class="cmt">//关 HSE / CSS / PLL</span>
+    RCC-&gt;CR &amp;= 0xFFFBFFFF;                    <span class="cmt">//关 PLLI2S</span>
+    RCC-&gt;BDCR &amp;= 0xFFFFFF80;                  <span class="cmt">//复位 RTC 时钟源</span>
+    SCB-&gt;VTOR = FLASH_BASE;                   <span class="cmt">//向量表指向 0x08000000</span>
+}
+
+HAL_StatusTypeDef HAL_Init(void)
+{
+    HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);   <span class="cmt">//分组 2：2 位抢占 + 2 位子优先级</span>
+    HAL_InitTick(TICK_INT_PRIORITY);                      <span class="cmt">//TICK_INT_PRIORITY = 0x0F</span>
+    return HAL_OK;
+}</pre>
+
+                    <p>本工程 <code>HAL_Init</code> 用的分组是 2，而不是很多例程里的分组 4。这一点在只使用 SysTick 时看不出差别，但一旦打开 CAN 这类外设中断，抢占与子优先级的可用位数就按分组 2 来算（抢占 0~3，子优先级 0~3）。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：SysTick 的两套用法</div>
+                        <ol>
+                            <li><code>HAL_InitTick</code> 在 HSI 16MHz 时把重装值配成 16000，随后 <code>Stm32_Clock_Init</code> 把主频改到 180MHz，但并没有重配 SysTick。</li>
+                            <li>因此 <code>HAL_Delay</code> 的实际延时约为设定值的 11 倍；而 <code>delay_us</code>/<code>delay_ms</code> 是轮询计数，<code>fac_us = 180</code> 按新主频计算，仍然准确。</li>
+                            <li>主循环里的 <code>delay_ms(10)</code> 来自 <code>SYSTEM/delay</code>，所以 <code>t==20</code> 的 200ms 节拍是可信的；CAN 发送超时用的是 <code>HAL_CAN_Transmit(..., 10)</code>，走的是 <code>HAL_GetTick</code>，两者不要混为一谈。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟树与 CAN 时钟">
+                    <h2>06　时钟树与 CAN 时钟</h2>
+                    <div class="sec-sub">HSE 25MHz → PLL → SYSCLK 180MHz → PCLK1 45MHz；CAN1 只用 PCLK1</div>
+
+                    <figure class="figure">
+                        <img src="./index43-map/clock-tree.png" alt="Stm32_Clock_Init 的时钟树与 CAN 位时序来源">
+                        <figcaption>图 6-1　时钟树：CAN1 挂在 APB1，位时序按 45MHz 计算</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>节点</th><th>算式</th><th>结果</th><th>与 CAN 的关系</th></tr>
+                        <tr><td>VCO</td><td>25MHz × 360 / 25</td><td>360MHz</td><td>PLL 输入，与 CAN 无直接关系</td></tr>
+                        <tr><td>SYSCLK</td><td>360 / PLLP(2)</td><td>180MHz</td><td>系统主频</td></tr>
+                        <tr><td>HCLK</td><td>180 / AHB 分频 1</td><td>180MHz</td><td>Flash 需 5WS</td></tr>
+                        <tr><td>PCLK1</td><td>180 / APB1 分频 4</td><td>45MHz</td><td><strong>CAN1 的位时序基准</strong></td></tr>
+                        <tr><td>PCLK2</td><td>180 / APB2 分频 2</td><td>90MHz</td><td>USART1、SPI5 所在总线</td></tr>
+                    </table>
+
+                    <pre class="code">Stm32_Clock_Init(360,25,2,8);   <span class="cmt">//VCO=360M, SYSCLK=180M, PCLK1=45M, PCLK2=90M</span>
+delay_init(180);                <span class="cmt">//fac_us 按 180MHz 计算</span>
+uart_init(115200);              <span class="cmt">//USART1 调试口</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：PCLK1 与 CAN 波特率的绑定</div>
+                        <ol>
+                            <li>CAN 的时钟来自 APB1，而 APB1 分频是 4，所以 180MHz 变 45MHz，这一步不能记错。</li>
+                            <li>若把主频改成 168MHz 而 APB1 仍分频 4（42MHz），同样的 <code>brp=6</code> 会得到 466kbps，与对端 500kbps 通信必然出错。</li>
+                            <li>所以“改时钟”与“改波特率”必须成对出现；本工程两者都写死在 <code>main</code> 的开头，属于固定配置。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="CAN1 初始化与引脚">
+                    <h2>07　CAN1 初始化与引脚</h2>
+                    <div class="sec-sub">HAL_CAN_Init 只写参数，真正动硬件的是它回调的 HAL_CAN_MspInit</div>
+
+                    <pre class="code">u8 CAN1_Mode_Init(u32 tsjw,u32 tbs2,u32 tbs1,u16 brp,u32 mode)
+{
+    CAN_FilterConfTypeDef  CAN1_FilerConf;
+
+    CAN1_Handler.Instance=CAN1;
+    CAN1_Handler.pTxMsg=&amp;TxMessage;      <span class="cmt">//发送消息缓冲</span>
+    CAN1_Handler.pRxMsg=&amp;RxMessage;      <span class="cmt">//接收消息缓冲</span>
+    CAN1_Handler.Init.Prescaler=brp;     <span class="cmt">//分频值，写进 BTR 时减 1</span>
+    CAN1_Handler.Init.Mode=mode;         <span class="cmt">//回环 / 普通</span>
+    CAN1_Handler.Init.SJW=tsjw;
+    CAN1_Handler.Init.BS1=tbs1;
+    CAN1_Handler.Init.BS2=tbs2;
+    CAN1_Handler.Init.TTCM=DISABLE;      <span class="cmt">//非时间触发</span>
+    CAN1_Handler.Init.ABOM=DISABLE;      <span class="cmt">//不自动离线恢复</span>
+    CAN1_Handler.Init.AWUM=DISABLE;      <span class="cmt">//睡眠由软件唤醒</span>
+    CAN1_Handler.Init.NART=ENABLE;       <span class="cmt">//禁止报文自动重传</span>
+    CAN1_Handler.Init.RFLM=DISABLE;      <span class="cmt">//新报文覆盖旧报文</span>
+    CAN1_Handler.Init.TXFP=DISABLE;      <span class="cmt">//优先级由 ID 决定</span>
+
+    if(HAL_CAN_Init(&amp;CAN1_Handler)!=HAL_OK) return 1;
+    ...
+    return 0;
+}</pre>
+
+                    <pre class="code">void HAL_CAN_MspInit(CAN_HandleTypeDef* hcan)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+
+    __HAL_RCC_CAN1_CLK_ENABLE();                 <span class="cmt">//CAN1 时钟</span>
+    __HAL_RCC_GPIOA_CLK_ENABLE();                <span class="cmt">//GPIOA 时钟</span>
+
+    GPIO_Initure.Pin=GPIO_PIN_11|GPIO_PIN_12;    <span class="cmt">//PA11=RX, PA12=TX</span>
+    GPIO_Initure.Mode=GPIO_MODE_AF_PP;           <span class="cmt">//复用推挽</span>
+    GPIO_Initure.Pull=GPIO_PULLUP;
+    GPIO_Initure.Speed=GPIO_SPEED_FAST;
+    GPIO_Initure.Alternate=GPIO_AF9_CAN1;        <span class="cmt">//AF9</span>
+    HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：这几个参数决定“能不能通”</div>
+                        <ol>
+                            <li><code>NART=ENABLE</code>：发送失败不自动重传。所以普通模式下没有对端回 ACK 时，<code>HAL_CAN_Transmit</code> 会一直等到 10ms 超时并返回失败，屏幕显示 <code>Failed</code>。</li>
+                            <li><code>ABOM=DISABLE</code>：进入 Bus-Off 后不会自动恢复，需要重新调用 <code>CAN1_Mode_Init</code> 才能继续通信。</li>
+                            <li><code>RFLM=DISABLE</code>：FIFO 满时新帧覆盖旧帧，调试时“少读了一次就丢帧”属于预期行为。</li>
+                            <li>引脚必须成对配置为 AF9；只配 TX 或只配 RX，都会表现为“发送无波形”或“永远收不到”。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="位时序与 500kbps">
+                    <h2>08　位时序与 500kbps</h2>
+                    <div class="sec-sub">1 位 15 个 Tq：SYNC 1 + BS1 8 + BS2 6，分频 6，采样点 60%</div>
+
+                    <figure class="figure">
+                        <img src="./index43-map/can-bit-timing.png" alt="CAN 500kbps 位时序：SYNC、BS1、BS2 与采样点">
+                        <figcaption>图 8-1　一位之内的三段：同步段、时间段 1、时间段 2</figcaption>
+                    </figure>
+
+                    <pre class="code">CAN1_Mode_Init(CAN_SJW_1TQ, CAN_BS2_6TQ, CAN_BS1_8TQ, 6, CAN_MODE_LOOPBACK);
+<span class="cmt">//参数顺序：tsjw, tbs2, tbs1, brp, mode —— 注意 BS2 在 BS1 前面</span></pre>
+
+                    <table class="data">
+                        <tr><th>项</th><th>取值</th><th>说明</th></tr>
+                        <tr><td>SJW</td><td>1 Tq</td><td>重新同步时允许伸缩的时间份额</td></tr>
+                        <tr><td>BS1</td><td>8 Tq</td><td>PROP_SEG + PHASE_SEG1</td></tr>
+                        <tr><td>BS2</td><td>6 Tq</td><td>PHASE_SEG2</td></tr>
+                        <tr><td>一位总长</td><td>1 + 8 + 6 = 15 Tq</td><td>采样点在第 9 个 Tq 结束处</td></tr>
+                        <tr><td>brp</td><td>6</td><td>HAL 写入 BTR 时用 <code>Prescaler - 1</code>，实际分频为 6</td></tr>
+                        <tr><td>波特率</td><td>45MHz / (15 × 6)</td><td>= 500kbps</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：为什么函数里 BS2 写在 BS1 前面</div>
+                        <ol>
+                            <li>函数原型是 <code>(tsjw, tbs2, tbs1, brp, mode)</code>，调用时 <code>CAN_BS2_6TQ</code> 在 <code>CAN_BS1_8TQ</code> 之前，写反会得到 15 Tq 但采样点偏移，短总线可能仍能通，长总线会随机出错。</li>
+                            <li>HAL 的 <code>CAN_Init</code> 里写的是 <code>BTR = Mode | SJW | BS1 | BS2 | (Prescaler - 1)</code>，所以源码注释说“分频系数为 brp+1”指的是寄存器字段。</li>
+                            <li>45MHz / 6 ≈ 7.5MHz 的 Tq 时钟，一位 15 个 Tq ≈ 2μs，正好 500kbps；采样点 9/15 = 60%，符合 CAN 常用的 60%~87.5% 区间偏下限。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="验收滤波器与 FIFO0">
+                    <h2>09　验收滤波器与 FIFO0</h2>
+                    <div class="sec-sub">过滤器 0 的 ID 与 MASK 全为 0，等价于“全部接收”，收到的帧统一进 FIFO0</div>
+
+                    <pre class="code">CAN1_FilerConf.FilterIdHigh=0X0000;          <span class="cmt">//32 位 ID 高段</span>
+CAN1_FilerConf.FilterIdLow=0X0000;
+CAN1_FilerConf.FilterMaskIdHigh=0X0000;      <span class="cmt">//32 位 MASK 全 0</span>
+CAN1_FilerConf.FilterMaskIdLow=0X0000;
+CAN1_FilerConf.FilterFIFOAssignment=CAN_FILTER_FIFO0;
+CAN1_FilerConf.FilterNumber=0;               <span class="cmt">//过滤器 0</span>
+CAN1_FilerConf.FilterMode=CAN_FILTERMODE_IDMASK;
+CAN1_FilerConf.FilterScale=CAN_FILTERSCALE_32BIT;
+CAN1_FilerConf.FilterActivation=ENABLE;
+CAN1_FilerConf.BankNumber=14;                <span class="cmt">//CAN1 从 0 开始，CAN2 从 14 开始</span>
+
+if(HAL_CAN_ConfigFilter(&amp;CAN1_Handler,&amp;CAN1_FilerConf)!=HAL_OK) return 2;</pre>
+
+                    <p>掩码位为 0 表示“该位不关心”，因此 ID 与 MASK 全 0 的含义是<strong>任何标准帧、扩展帧都能通过</strong>。这在小系统里方便调试，但也意味着总线上所有流量都会进 FIFO0；如果后续要过滤，只需要改 <code>FilterId</code> 与 <code>FilterMaskId</code>，不必动发送与接收代码。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：过滤器与接收路径的对应</div>
+                        <ol>
+                            <li>过滤器挂在 FIFO0 上，因此 <code>CAN1_Receive_Msg</code> 里必须用 <code>CAN_FIFO0</code> 取帧；挂错 FIFO 会表现为“发送成功但永远读不到”。</li>
+                            <li>本工程只启用过滤器 0，其余 13 个组未配置；<code>BankNumber=14</code> 是 HAL 要求填写的 CAN1 过滤器组数量，不是“启用 14 个”。</li>
+                            <li>回环模式下发出的帧同样要经过验收滤波器，所以“回环收不到”首先要查滤波器是否被激活。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="发送：CAN1_Send_Msg">
+                    <h2>10　发送：CAN1_Send_Msg</h2>
+                    <div class="sec-sub">固定标准帧 ID 0x12、数据帧、DLC 由调用者给出，超时 10ms</div>
+
+                    <pre class="code">u8 CAN1_Send_Msg(u8* msg,u8 len)
+{
+    u16 i=0;
+    CAN1_Handler.pTxMsg-&gt;StdId=0X12;         <span class="cmt">//标准标识符</span>
+    CAN1_Handler.pTxMsg-&gt;ExtId=0x12;         <span class="cmt">//扩展 ID（本帧不用）</span>
+    CAN1_Handler.pTxMsg-&gt;IDE=CAN_ID_STD;     <span class="cmt">//标准帧</span>
+    CAN1_Handler.pTxMsg-&gt;RTR=CAN_RTR_DATA;   <span class="cmt">//数据帧</span>
+    CAN1_Handler.pTxMsg-&gt;DLC=len;            <span class="cmt">//最大 8</span>
+    for(i=0;i&lt;len;i++)
+        CAN1_Handler.pTxMsg-&gt;Data[i]=msg[i];
+    if(HAL_CAN_Transmit(&amp;CAN1_Handler,10)!=HAL_OK) return 1;   <span class="cmt">//10ms 超时</span>
+    return 0;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：发送成功的条件</div>
+                        <ol>
+                            <li>回环模式：内部自收自发，不需要 ACK，几乎必然返回成功，这是本实验默认能自测的原因。</li>
+                            <li>普通模式：必须至少有一个其他节点在同一总线上回 ACK；否则 <code>NART=ENABLE</code> 让它不重传，10ms 后返回失败。</li>
+                            <li><code>len</code> 由调用者传入 8，若传大于 8 会越界写 <code>Data[8]</code>，源码没有做长度检查。</li>
+                            <li>发送用的是邮箱 0（HAL 内部选空邮箱），连续快速发送时若三个邮箱都满，会等到超时，因此主循环里必须留出间隔。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="接收：查询与中断两种接法">
+                    <h2>11　接收：查询与中断两种接法</h2>
+                    <div class="sec-sub">本工程 CAN1_RX0_INT_ENABLE = 0，走查询；中断分支虽然写了，但被条件编译裁掉</div>
+
+                    <pre class="code">u8 CAN1_Receive_Msg(u8 *buf)
+{
+    u32 i;
+    if(HAL_CAN_Receive(&amp;CAN1_Handler,CAN_FIFO0,0)!=HAL_OK) return 0;  <span class="cmt">//超时 0：没数据立即返回</span>
+    for(i=0;i&lt;CAN1_Handler.pRxMsg-&gt;DLC;i++)
+        buf[i]=CAN1_Handler.pRxMsg-&gt;Data[i];
+    return CAN1_Handler.pRxMsg-&gt;DLC;      <span class="cmt">//返回本帧长度</span>
+}</pre>
+
+                    <pre class="code"><span class="cmt">//can.h</span>
+#define CAN1_RX0_INT_ENABLE     0       <span class="cmt">//0,不使能;1,使能</span>
+
+<span class="cmt">//can.c（仅当上面的宏为 1 才参与编译）</span>
+#if CAN1_RX0_INT_ENABLE
+void CAN1_RX0_IRQHandler(void)
+{
+    HAL_CAN_IRQHandler(&amp;CAN1_Handler);    <span class="cmt">//内部会调用接收并进入回调</span>
+}
+
+void HAL_CAN_RxCpltCallback(CAN_HandleTypeDef* hcan)
+{
+    __HAL_CAN_ENABLE_IT(&amp;CAN1_Handler,CAN_IT_FMP0);   <span class="cmt">//HAL 取帧时关了中断，这里重新打开</span>
+    printf("id:%d\r\n",CAN1_Handler.pRxMsg-&gt;StdId);
+    ...
+}
+#endif</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：查询接收的边界</div>
+                        <ol>
+                            <li>超时参数是 0，函数不会阻塞：FIFO0 空时立刻返回 0，主循环因此能保持 10ms 的节拍。</li>
+                            <li>每轮只取一帧。如果总线上帧率高于主循环轮询频率，未读的帧会留在 FIFO0（深度 3），超出后按 <code>RFLM=DISABLE</code> 覆盖最旧的一帧。</li>
+                            <li>若把宏改成 1，则必须把 <code>CAN1_RX0_IRQHandler</code> 从条件编译里放出来，并保证 <code>HAL_CAN_IRQHandler</code> 能找到句柄；同时 <code>HAL_CAN_Receive_IT</code> 要在初始化后调用一次，否则中断进不来。</li>
+                            <li>本工程没有调用 <code>HAL_CAN_Receive_IT</code>，所以即使把宏打开，也还需要补上这一步——源码里未体现，本页不作推测。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="回环模式与普通模式">
+                    <h2>12　回环模式与普通模式</h2>
+                    <div class="sec-sub">回环在芯片内部把 TX 接回 RX；普通模式必须上真实总线并依靠对端 ACK</div>
+
+                    <figure class="figure">
+                        <img src="./index43-map/can-loopback.png" alt="CAN 回环模式与普通模式的数据通路对比">
+                        <figcaption>图 12-1　两种模式：一块板自测 vs 两块板互连</figcaption>
+                    </figure>
+
+                    <pre class="code">if(key==WKUP_PRES)                 <span class="cmt">//WK_UP 按下，改变 CAN 的工作模式</span>
+{
+    mode=!mode;
+    if(mode==0)  CAN1_Mode_Init(CAN_SJW_1TQ,CAN_BS2_6TQ,CAN_BS1_8TQ,6,CAN_MODE_NORMAL);
+    else if(mode==1) CAN1_Mode_Init(CAN_SJW_1TQ,CAN_BS2_6TQ,CAN_BS1_8TQ,6,CAN_MODE_LOOPBACK);
+    ...
+}</pre>
+
+                    <table class="data">
+                        <tr><th>对比项</th><th>回环模式</th><th>普通模式</th></tr>
+                        <tr><td>宏</td><td><code>CAN_MODE_LOOPBACK</code></td><td><code>CAN_MODE_NORMAL</code></td></tr>
+                        <tr><td>是否需要第二块板</td><td>不需要</td><td>需要（或 CAN 分析仪）</td></tr>
+                        <tr><td>是否驱动 PA12</td><td>不驱动，帧在内部回送</td><td>驱动到收发器，再上 CANH/CANL</td></tr>
+                        <tr><td>发送结果</td><td>必然成功，下一轮即可读到</td><td>无节点回 ACK 时失败</td></tr>
+                        <tr><td>屏幕模式行</td><td><code>LoopBack Mode</code></td><td>源码写作 <code>Nnormal Mode</code>（原文拼写）</td></tr>
+                    </table>
+
+                    <div class="note">切换模式时 <code>CAN1_Mode_Init</code> 会重新走一遍 <code>HAL_CAN_Init</code>：先请求进入初始化（INRQ），等 INAK 置位，再写 BTR 与模式位。因此切换瞬间总线会短暂离线，对端此时发来的帧会丢失。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="主循环与现象">
+                    <h2>13　主循环与现象</h2>
+                    <div class="sec-sub">KEY0 发送、WK_UP 切模式、每轮查 FIFO0；t 数到 20 时翻转 DS0 并刷新 Count</div>
+
+                    <figure class="figure">
+                        <img src="./index43-map/main-loop.png" alt="实验29 主循环的发送、接收、切模式与心跳">
+                        <figcaption>图 13-1　主循环：三块互不干扰的分支 + 200ms 心跳</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>可观察现象</th><th>对应代码</th></tr>
+                        <tr><td>上电</td><td>LCD 显示标题、<code>LoopBack Mode</code>、Count/Send/Receive 三行</td><td><code>main</code> 中的 <code>LCD_ShowString</code></td></tr>
+                        <tr><td>按 KEY0</td><td>Send Data 行显示 8 个递增数字（cnt…cnt+7），右侧显示 <code>OK</code></td><td><code>CAN1_Send_Msg</code></td></tr>
+                        <tr><td>发送后下一轮</td><td>Receive Data 行出现同样的 8 个数字（回环）</td><td><code>CAN1_Receive_Msg</code></td></tr>
+                        <tr><td>按 WK_UP</td><td>模式行在 <code>LoopBack Mode</code> 与 <code>Nnormal Mode</code> 之间切换</td><td><code>mode=!mode</code> 分支</td></tr>
+                        <tr><td>空闲</td><td>Count 每约 200ms 加 1，DS0 同步翻转</td><td><code>t==20</code> 分支</td></tr>
+                        <tr><td>普通模式单板</td><td>按下 KEY0 后显示 <code>Failed</code>，收不到数据</td><td>无 ACK + <code>NART=ENABLE</code></td></tr>
+                    </table>
+
+                    <div class="sim">
+                        <div class="sim-title">收发分支演示（仅演示逻辑，不涉及真实总线）</div>
+                        <div class="sim-buttons">
+                            <button data-key="send">按 KEY0 发送 8 字节</button>
+                            <button data-key="mode">按 WK_UP 切模式</button>
+                            <button data-key="tick">走 20 个 10ms</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0</div>
+                        </div>
+                        <div class="sim-log" id="simLog">等待操作：回环模式下发送后应收到同样的 8 个字节</div>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：现象与分支对应</div>
+                        <ol>
+                            <li>发送与接收各自占一行，接收前先用 <code>LCD_Fill(30,270,160,310,WHITE)</code> 清区，所以新帧比旧帧短时不会留下残影。</li>
+                            <li>回环模式下“发送成功”与“收到自己的帧”是两件事：前者由 <code>HAL_CAN_Transmit</code> 返回，后者要等下一轮 <code>CAN1_Receive_Msg</code>。</li>
+                            <li><code>cnt</code> 只在 <code>t==20</code> 时自增，所以 200ms 内连按 KEY0，发送的数字不变，只有心跳到点后才整体加 1。</li>
+                            <li>普通模式下即使收不到对端，主循环也不会卡死：<code>HAL_CAN_Transmit</code> 最多阻塞 10ms 后返回失败，屏幕显示 <code>Failed</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="关键逻辑复盘">
+                    <h2>14　关键逻辑复盘</h2>
+                    <div class="sec-sub">一条 CAN 链路上有 6 个容易配错的点，按“时钟 → 引脚 → 时序 → 滤波 → 模式 → 收发”顺序排查</div>
+
+                    <table class="data">
+                        <tr><th>环节</th><th>本工程取值</th><th>配错的表现</th></tr>
+                        <tr><td>APB1 时钟</td><td>45MHz</td><td>同样参数得到 466kbps 等错误速率，调试仪大量错误帧</td></tr>
+                        <tr><td>引脚复用</td><td>PA11 / PA12 = AF9</td><td>完全没有差分波形</td></tr>
+                        <tr><td>位时序</td><td>1 + 8 + 6 = 15 Tq，brp=6</td><td>能发但采样点偏移，长线随机出错</td></tr>
+                        <tr><td>滤波器</td><td>过滤器 0，全 0 掩码，FIFO0</td><td>发送 OK 但永远收不到</td></tr>
+                        <tr><td>模式</td><td>回环 / 普通</td><td>单板普通模式必然 Failed</td></tr>
+                        <tr><td>接收方式</td><td>轮询，超时 0</td><td>改成中断却未调用 <code>HAL_CAN_Receive_IT</code>，同样收不到</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：三步定位</div>
+                        <ol>
+                            <li>先看 LCD 与 Count：不刷新说明卡在 LCD/SDRAM 或时钟，与 CAN 无关。</li>
+                            <li>再看回环模式能否自发自收：不能，查滤波器与 <code>CAN_FIFO0</code>；能，说明 MCU 内部链路完好。</li>
+                            <li>最后接第二块板试普通模式：仍 Failed，查 120Ω 终端、CANH/CANL 是否接反、两块板的波特率与采样点是否一致。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s15" data-title="总结与排查">
+                    <h2>15　总结与排查</h2>
+                    <div class="sec-sub">CAN = 时钟 + 位时序 + 滤波器 + 模式；本实验用回环把“外部总线问题”从链路里摘出去</div>
+
+                    <p>从启动角度看，这个实验与前面的 SPI、485 实验共享同一套启动文件、时钟树、延时与串口框架，新增的只有 <code>can.c</code> 这一条支路。它最值得记住的设计是<strong>先用回环验证 MCU 内部</strong>：只要回环能自发自收，就说明时钟、引脚复用、位时序、滤波器、FIFO 取帧这一整条软件链路是通的，剩下的问题一定在收发器、线束或对端节点上。</p>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>优先检查</th><th>依据</th></tr>
+                        <tr><td>LCD 正常但按键无反应</td><td>KEY0 是否 PH3、<code>KEY_Scan(0)</code> 是否被长阻塞拖慢</td><td><code>key.c</code> / <code>main.c</code></td></tr>
+                        <tr><td>回环也收不到</td><td>过滤器是否激活、FIFO 是否 FIFO0、是否只取了一帧</td><td><code>CAN1_FilerConf</code> / <code>CAN1_Receive_Msg</code></td></tr>
+                        <tr><td>普通模式一直 Failed</td><td>是否有第二个节点回 ACK、终端电阻、线序</td><td><code>NART=ENABLE</code></td></tr>
+                        <tr><td>调试仪报错误帧</td><td>波特率 500k、采样点、PCLK1 是否 45MHz</td><td><code>CAN1_Mode_Init</code></td></tr>
+                        <tr><td>偶尔丢帧</td><td>轮询周期与总线帧率、FIFO 深度 3</td><td><code>RFLM=DISABLE</code></td></tr>
+                        <tr><td>Bus-Off 后不自恢复</td><td><code>ABOM</code> 为 DISABLE，需重新初始化</td><td><code>CAN1_Mode_Init</code></td></tr>
+                    </table>
+
+                    <div class="note">本页结论来自 <code>USER/main.c</code>、<code>USER/system_stm32f4xx.c</code>、<code>USER/stm32f4xx_it.c</code>、<code>CORE/startup_stm32f429xx.s</code>、<code>SYSTEM/{sys,delay,usart}</code>、<code>HARDWARE/{CAN,KEY,LED,LCD,SDRAM}</code> 以及 HAL 的 <code>stm32f4xx_hal_can.c</code>。工程中未体现 CAN 中断的实际启用、DMA 收发与总线错误回调，本页不作推测。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-12 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    var dot0 = document.getElementById('dot0');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && simLog) {
+        var cnt = 0;
+        var t = 0;
+        var ledOn = false;
+        var mode = 1;
+        var sent = [];
+        var recv = [];
+        var lastMsg = '';
+
+        function render(extra) {
+            dot0.classList.toggle('on', ledOn);
+            simLog.textContent =
+                '模式：' + (mode === 1 ? 'LoopBack Mode（回环）' : 'Nnormal Mode（普通）') +
+                '　cnt = ' + cnt + '　t = ' + t + ' / 20' +
+                '\n发送缓冲：' + (sent.length ? sent.join(' ') : '—') +
+                '\n接收缓冲：' + (recv.length ? recv.join(' ') : '—') +
+                (lastMsg ? '\n屏幕提示：' + lastMsg : '') +
+                (extra ? '\n' + extra : '');
+        }
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (key === 'send') {
+                    sent = [];
+                    for (var i = 0; i < 8; i++) sent.push(cnt + i);
+                    recv = [];
+                    if (mode === 1) {
+                        recv = sent.slice();
+                        lastMsg = 'OK / 下一轮轮询收到 8 字节';
+                    } else {
+                        lastMsg = 'Failed（无节点回 ACK，NART 禁止重传）';
+                    }
+                    t = 0;
+                    render('KEY0 → CAN1_Send_Msg(buf,8)');
+                } else if (key === 'mode') {
+                    mode = mode === 1 ? 0 : 1;
+                    lastMsg = '';
+                    render('WK_UP → mode 取反 → CAN1_Mode_Init 重新初始化');
+                } else if (key === 'tick') {
+                    t = 20;
+                    ledOn = !ledOn;
+                    cnt++;
+                    t = 0;
+                    render('t == 20 → LED0 翻转、cnt++、刷新 Count');
+                }
+            });
+        });
+
+        render('');
+    }
+</script>
+</body>
+</html>

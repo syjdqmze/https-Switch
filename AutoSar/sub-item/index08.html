@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>DaVinci Developer与Configurator工具使用详解</title>
+    <style>
+        /* 全局重置 */AutoSar/sub-item/index08.html
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+            margin: 0;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background-color: #c5d8e8; border-radius: 3px; }
+        .sidebar-menu::-webkit-scrollbar-track { background-color: transparent; }
+
+        .sidebar-actions {
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid #dce8f2;
+            flex-shrink: 0;
+        }
+
+        .sidebar-actions button {
+            flex: 1;
+            padding: 5px 0;
+            font-size: 12px;
+            border: 1px solid #dce8f2;
+            background: #fff;
+            color: #999;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .sidebar-actions button:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+            background: #e6f7ff;
+        }
+
+        .sidebar-menu > li {
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu > li > .menu-title {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .sidebar-menu > li > .menu-title:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu > li.active > .menu-title {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu > li.active {
+            border-left-color: #1890ff;
+        }
+
+        .sidebar-menu .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-menu .arrow {
+            margin-left: auto;
+            font-size: 10px;
+            transition: transform .25s;
+            color: #999;
+        }
+
+        .sidebar-menu > li.open > .menu-title .arrow {
+            transform: rotate(90deg);
+        }
+
+        .submenu {
+            list-style: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .3s ease;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu > li.open > .submenu {
+            max-height: 800px;
+        }
+
+        .submenu li {
+            padding: 8px 20px 8px 44px;
+            cursor: pointer;
+            color: #999;
+            font-size: 13px;
+            transition: all .2s;
+            border-left: 3px solid transparent;
+            margin-left: 3px;
+        }
+
+        .submenu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .submenu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* 内容小节标题 */
+        .content-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 22px 0 12px 0;
+            padding: 4px 0 4px 12px;
+            border-left: 4px solid #1890ff;
+            background: linear-gradient(90deg, rgba(24,144,255,0.06), transparent);
+        }
+
+        /* 内容图片 */
+        .content-card img {
+            display: block;
+            max-width: 88%;
+            margin: 14px auto;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+        }
+
+        /* 图注 */
+        .img-caption {
+            text-align: center;
+            color: #888;
+            font-size: 13px;
+            margin: 4px auto 18px auto;
+            max-width: 86%;
+            line-height: 1.6;
+        }
+
+        /* 数据表格 */
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0 18px 0;
+            font-size: 13px;
+        }
+
+        .api-table th {
+            background-color: #1890ff;
+            color: #fff;
+            font-weight: 500;
+            padding: 9px 10px;
+            border: 1px solid #d5e3f0;
+            text-align: left;
+        }
+
+        .api-table td {
+            padding: 8px 10px;
+            border: 1px solid #dce8f2;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .api-table tr:nth-child(even) td {
+            background-color: #f7fafd;
+        }
+
+        /* 代码块 */
+        .code-block {
+            background-color: #282c34;
+            color: #abb2bf;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.65;
+            padding: 14px 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 10px 0 16px 0;
+            white-space: pre;
+        }
+
+        .code-block .cm {
+            color: #7f848e;
+        }
+
+        /* 章节小结框 */
+        .summary-box {
+            background: #f2f9f2;
+            border-left: 4px solid #52c41a;
+            border-radius: 0 4px 4px 0;
+            padding: 12px 16px;
+            margin: 18px 0 6px 0;
+            line-height: 1.8;
+        }
+
+        .summary-box .sb-title {
+            font-weight: 600;
+            color: #237804;
+            margin-bottom: 4px;
+        }
+
+        .summary-box p {
+            color: #555;
+            margin-bottom: 4px;
+        }
+
+        /* 界面跳转提示框 */
+        .jump-box {
+            background: #eaf3ff;
+            border-left: 4px solid #1890ff;
+            border-radius: 0 4px 4px 0;
+            padding: 12px 16px;
+            margin: 6px 0 18px 0;
+            line-height: 1.8;
+        }
+
+        .jump-box .jb-title {
+            font-weight: 600;
+            color: #0958a6;
+            margin-bottom: 4px;
+        }
+
+        .jump-box p {
+            color: #555;
+            margin-bottom: 4px;
+        }
+
+        /* 操作步骤列表 */
+        .steps {
+            margin: 8px 0 14px 0;
+            padding-left: 4px;
+            list-style: none;
+        }
+
+        .steps li {
+            color: #555;
+            line-height: 1.85;
+            margin-bottom: 7px;
+            padding-left: 26px;
+            position: relative;
+        }
+
+        .steps li .no {
+            position: absolute;
+            left: 0;
+            top: 3px;
+            width: 19px;
+            height: 19px;
+            border-radius: 50%;
+            background: #1890ff;
+            color: #fff;
+            font-size: 12px;
+            text-align: center;
+            line-height: 19px;
+            font-weight: 600;
+        }
+
+        .steps li b, .content-card p b {
+            color: #333;
+        }
+
+        /* 提示/警告框 */
+        .tip {
+            background: #fffbe6;
+            border: 1px solid #ffe58f;
+            border-radius: 4px;
+            padding: 9px 14px;
+            margin: 10px 0 14px 0;
+            color: #6b5900;
+            line-height: 1.7;
+            font-size: 13px;
+        }
+
+        .warn {
+            background: #fff1f0;
+            border: 1px solid #ffa39e;
+            border-radius: 4px;
+            padding: 9px 14px;
+            margin: 10px 0 14px 0;
+            color: #8c3a2e;
+            line-height: 1.7;
+            font-size: 13px;
+        }
+
+        /* 文内目录 */
+        .toc-card {
+            background: #f7fafd;
+            border: 1px solid #dce8f2;
+            border-radius: 6px;
+            padding: 14px 20px;
+            margin: 12px 0 20px 0;
+        }
+
+        .toc-card .toc-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .toc-card ol {
+            margin-left: 20px;
+            color: #555;
+            line-height: 2;
+        }
+
+        .toc-card a {
+            color: #1890ff;
+            text-decoration: none;
+        }
+
+        .toc-card a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">AutoSar实战：DaVinci工具链操作详解</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <div class="sidebar-actions">
+                    <button id="expandAllBtn">全部展开</button>
+                    <button id="collapseAllBtn">全部收起</button>
+                </div>
+                <ul class="sidebar-menu">
+                    <li class="open" data-target="sec-ch1">
+                        <div class="menu-title"><span class="icon">&#9654;</span>一、工具定位与案例总览<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-1-1">1.1 两个工具的分工与协作</li>
+                            <li data-target="sec-1-2">1.2 案例功能与本篇路线</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch2">
+                        <div class="menu-title"><span class="icon">&#9654;</span>二、第①站：Cfg新建工程<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-2-1">2.1 工程向导四页走</li>
+                            <li data-target="sec-2-2">2.2 Target选择与目录结构</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch3">
+                        <div class="menu-title"><span class="icon">&#9654;</span>三、第②站：跳转Developer<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-3-1">3.1 Open Workspace打开.dcf工作区</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch4">
+                        <div class="menu-title"><span class="icon">&#9654;</span>四、第③④站：Developer建模<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-4-1">4.1 创建类型定义</li>
+                            <li data-target="sec-4-2">4.2 添加Port与属性</li>
+                            <li data-target="sec-4-3">4.3 Composition连线</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch5">
+                        <div class="menu-title"><span class="icon">&#9654;</span>五、第⑤站：映射与Runnable<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-5-1">5.1 IDT与Data Mapping</li>
+                            <li data-target="sec-5-2">5.2 Runnable三要素配置</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch6">
+                        <div class="menu-title"><span class="icon">&#9654;</span>六、第⑥⑦站：同步与DBC<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-6-1">6.1 同步Dev与Cfg工程</li>
+                            <li data-target="sec-6-2">6.2 导入DBC通信矩阵</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch7">
+                        <div class="menu-title"><span class="icon">&#9654;</span>七、第⑧站：Task映射与OS<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-7-1">7.1 创建Task</li>
+                            <li data-target="sec-7-2">7.2 Runnable映射与Position</li>
+                            <li data-target="sec-7-3">7.3 OS自动生成内容</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch8">
+                        <div class="menu-title"><span class="icon">&#9654;</span>八、第⑨⑩站：生成与实现<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-8-1">8.1 启动代码生成</li>
+                            <li data-target="sec-8-2">8.2 填写Component Template</li>
+                            <li data-target="sec-8-3">8.3 编译烧录与验证</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch9">
+                        <div class="menu-title"><span class="icon">&#9654;</span>九、全流程回顾与常见问题<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-9-1">9.1 界面跳转地图与口诀</li>
+                            <li data-target="sec-9-2">9.2 常见问题排查</li>
+                            <li data-target="sec-9-3">9.3 参考来源</li>
+                        </ul>
+                    </li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+                        <h3>DaVinci Developer 与 DaVinci Configurator 使用详解——以左/右门开关控制车内顶灯为例</h3>
+                        <p>本篇以"驾驶员按下左门或右门开关 → 车内顶灯点亮，松开后熄灭"这一功能为例，<strong>手把手走完 DaVinci 工具链的每一站操作</strong>：在哪个工具里点哪个菜单、每个界面里填什么、填完之后如何跳转到下一个界面。主要参考 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.4-实验：配置SWC&amp;RTE（上）》与《7.7-实验：配置SWC&amp;RTE（下）》两篇文章的实验流程，并以 Vector《DaVinci Configurator Pro Step-by-Step》官方手册（STEP1~STEP9）为辅助对照。工具界面示意图依参考文章文字描述绘制。</p>
+
+                        <div class="toc-card">
+                            <div class="toc-title">本篇目录（点击左侧导航菜单亦可跳转）</div>
+                            <ol>
+                                <li><a href="#sec-ch1">一、工具定位与案例总览</a>——两个工具各管什么，案例长什么样</li>
+                                <li><a href="#sec-ch2">二、第①站：Configurator 新建工程</a>——File→New 四页向导</li>
+                                <li><a href="#sec-ch3">三、第②站：跳转到 Developer 打开工程</a>——Open Workspace 打开 .dcf 工作区</li>
+                                <li><a href="#sec-ch4">四、第③④站：Developer 建模</a>——类型定义、添加Port、Composition连线</li>
+                                <li><a href="#sec-ch5">五、第⑤站：数据映射与 Runnable</a>——IDT/Data Mapping/触发与端口访问</li>
+                                <li><a href="#sec-ch6">六、第⑥⑦站：同步工程与导入DBC</a>——回到 Configurator</li>
+                                <li><a href="#sec-ch7">七、第⑧站：Task 映射与 OS 配置</a>——创建Task、映射、Position</li>
+                                <li><a href="#sec-ch8">八、第⑨⑩站：代码生成与应用实现</a>——Generate、填代码、编译烧录</li>
+                                <li><a href="#sec-ch9">九、全流程回顾与常见问题</a>——界面跳转地图、口诀、排错表</li>
+                            </ol>
+                        </div>
+
+                        <!-- ============ 第一章 ============ -->
+                        <h3 id="sec-ch1">一、工具定位与案例总览</h3>
+                        <h4 id="sec-1-1">1.1 两个工具的分工与协作</h4>
+                        <p>Vector 的 DaVinci 工具链由两把工具组成，很多新手第一次打开就蒙：它们长得像，工程还能互相打开，到底谁干谁的活？一句话记住：<strong>DaVinci Developer 画"设计图"（系统级），DaVinci Configurator Pro（下文简称 Cfg）做"施工图"（ECU 级）</strong>。</p>
+                        <table class="api-table">
+                            <tr><th style="width:150px">工具</th><th>职责范围</th><th>操作对象</th><th>典型动作</th></tr>
+                            <tr><td><strong>DaVinci Developer</strong></td><td>系统级设计：数据类型、端口接口、SWC 组件、组件连线、Runnable 与数据映射</td><td>SWC 模型（arxml）</td><td>创建类型、加端口、拉连线、配 Runnable</td></tr>
+                            <tr><td><strong>DaVinci Configurator Pro</strong></td><td>ECU 级配置：BSW 模块、OS/Task、通信栈（Com/PduR/CanIf）、代码生成</td><td>ECU 配置（ECUC）</td><td>新建工程、导入DBC、创建Task、Generate</td></tr>
+                        </table>
+                        <p>两个工具之所以能配合，靠的是两样东西：<strong>（1）.dpa 总工程</strong>——Cfg 新建工程时生成，同时在 Config\Developer\ 下生成 Developer 专用的 .dcf 工作区（Developer 用 File→Open Workspace 打开的就是它）；<strong>（2）arxml 文件</strong>——Developer 侧改动保存后，Cfg 靠同步机制（Synchronize）把 arxml 的变化吸收进配置工程。理解了这一点，后面所有"界面跳转"就都顺理成章了。</p>
+
+                        <h4 id="sec-1-2">1.2 案例功能与本篇路线</h4>
+                        <p>案例需求：左门开关或右门开关按下时车内顶灯点亮；两个开关都断开时顶灯熄灭。功能拆成 4 个 SWC：左门开关SWC（CpSaDoorFrontLeft）、右门开关SWC（CpSaDoorFrontRight）各自发送门状态（DeDoorState，BOOLEAN）；车门灯逻辑SWC（CpApMySwc）读两个门状态、做"或"运算后发送灯状态（DeLightState）；顶灯执行SWC（CpSaInteriorLight）接收灯状态并驱动顶灯。</p>
+                        <img src="index08-map/e8-r01.png" alt="原文应用软件层架构图">
+                        <div class="img-caption">图1-1 案例应用软件层架构（原文配图）：红色虚线框为应用软件层，内含传感器SWC（右门开关、左门开关）、调光控制器SWC 与执行器SWC（左顶灯），各 SWC 通过端口接入下方的虚拟功能总线 VFB（Virtual Function Bus）——开发期由 RTE 把虚拟调用"落地"为真实函数调用（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.4-实验：配置SWC&amp;RTE（上）》）</div>
+                        <img src="index08-map/e8-01.png" alt="案例总览与两工具分工">
+                        <div class="img-caption">图1-2 案例总览：左门开关/右门开关控制车内顶灯的功能拓扑（左侧），以及 DaVinci Developer 与 Configurator 的分工和本篇10站路线（右侧）（依参考文章文字描述绘制）</div>
+                        <p>本篇把全流程拆成 <strong>10 站</strong>（图1-2右侧红字）：第①②站完成两个工具之间的第一次握手；第③④⑤站在 Developer 里建模；第⑥⑦⑧站回到 Configurator 同步、导入DBC、配置OS；第⑨⑩站生成代码、填写应用逻辑并编译验证。每一章末尾都有"界面跳转"提示框，告诉你当前界面完成后如何进入下一站。</p>
+
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>Developer 管系统级建模（类型/端口/SWC/连线/Runnable），Configurator 管 ECU 级配置（BSW/OS/通信/代码生成）；两工具共用一个 .dpa 总工程，靠 arxml 同步数据。案例为左/右门开关经逻辑SWC控制顶灯，共 4 个 SWC、2 类信号（门状态、灯状态）。</p>
+                        </div>
+                        <div class="jump-box">
+                            <div class="jb-title">界面跳转 → 下一站</div>
+                            <p>案例确认无误后，启动 <b>DaVinci Configurator Pro</b>，进入第二章"File→New"新建工程向导（第①站）。</p>
+                        </div>
+
+                        <!-- ============ 第二章 ============ -->
+                        <h3 id="sec-ch2">二、第①站：Configurator 新建工程</h3>
+                        <h4 id="sec-2-1">2.1 工程向导四页走</h4>
+                        <p>一切从 Cfg 开始——先用它建工程，再用 Developer 在工程里建模。启动 DaVinci Configurator Pro 后，点击菜单 <strong>File → New...</strong>，弹出多步式新建工程向导（本实验版本共四页）：</p>
+                        <ol class="steps">
+                            <li><span class="no">1</span><b>Step 1（General Settings）</b>：填写 <b>SIP Location</b>（MICROSAR 软件包安装位置，与购买序列号相关，原文截图打码）、<b>Project Name</b>（本例 Demo1）、<b>Project Folder</b>（本例 C:\AutoSAR_Demo），Author / Version / Description 按需填写；</li>
+                            <li><span class="no">2</span>点击 <b>Next &gt;</b> 进入 Step 2（Project Folder Structure），确认代码与模板的存放路径（Module Files=.\Appl\GenData、Templates=.\Appl\Source、Log=.\Log，见图2-4），保持默认继续；</li>
+                            <li><span class="no">3</span>Step 3（Target）页选择芯片与编译器（见 2.2 节）；</li>
+                            <li><span class="no">4</span>Step 4（DaVinci Developer）页无需修改，直接点 <b>Finish</b> 生成工程。</li>
+                        </ol>
+                        <div class="warn">工程名与路径<strong>不要包含中文和空格</strong>（如 C:\Projects\Demo1），否则后续生成代码、编译时容易报出难以定位的错误。</div>
+                        <img src="index08-map/e8-r02.png" alt="Cfg新建工程向导General Settings真实截图">
+                        <div class="img-caption">图2-1 Cfg 新建工程向导 Step 1（General Settings）真实界面：Project Name=Demo1、Project Folder=C:\AutoSAR_Demo，SIP Location 与序列号相关（原图打码），底部可选在开始菜单创建快捷方式（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.4-实验：配置SWC&amp;RTE（上）》）</div>
+                        <img src="index08-map/e8-r03.png" alt="向导DaVinci Developer页真实截图">
+                        <div class="img-caption">图2-2 向导 Step 4（DaVinci Developer）页真实界面：Location 指向本机 DaVinci Developer 4.0 (SP1) 的 DaVinciDEV.exe，Workspace Path 默认为 .\Config\Developer\Demo1.dcf——这就是下一站 Developer 要打开的工作区（真实截图源自同篇）</div>
+
+                        <h4 id="sec-2-2">2.2 Target 选择与目录结构</h4>
+                        <p><strong>Step 3（Target）页</strong>从下拉框选择 <b>Derivative</b>（芯片型号，决定 MCAL 与外设资源）和 <b>Compiler</b>（编译器，影响生成代码风格），Pin Layout 按硬件原理图选择或保持默认。点击 <b>Finish</b> 后工具生成工程并自动打开，按 <b>Ctrl+S 保存</b>，记下工程路径——下一站 Developer 打开的就是工程内 Config\Developer\ 下自动生成的 .dcf 工作区。生成的目录结构：</p>
+                        <table class="api-table">
+                            <tr><th style="width:190px">目录/文件</th><th>作用</th></tr>
+                            <tr><td>Appl\</td><td>应用层：SWC 代码模板与手写代码（第八章填代码处）</td></tr>
+                            <tr><td>Config\</td><td>配置数据：System\（系统描述 Demo1.arxml）、ApplicationComponents\（SWC模型）、ECUC\（BSW配置）、Developer\、InternalBehavior\ 等</td></tr>
+                            <tr><td><strong>Demo1.dpa</strong></td><td><strong>Cfg 总工程文件</strong>；Config\Developer\ 下的 Demo1.dcf 为 Developer 的工作区，指向同一工程——两把工具的"握手点"</td></tr>
+                            <tr><td>Log\</td><td>工具日志，报错时来这里查原因</td></tr>
+                        </table>
+                        <img src="index08-map/e8-r04.png" alt="向导Target页真实截图">
+                        <div class="img-caption">图2-3 向导 Step 3（Target）页真实界面：Derivative 选择英飞凌 TC265、Compiler 选择 Tasking，Pin Layout 保持 undefined，点击 Finish 生成工程（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.4-实验：配置SWC&amp;RTE（上）》）</div>
+                        <img src="index08-map/e8-r05.png" alt="向导Project Folder Structure页真实截图">
+                        <div class="img-caption">图2-4 向导 Step 2（Project Folder Structure）页真实界面：Module Files=.\Appl\GenData、Templates=.\Appl\Source、Log=.\Log——生成代码与模板的存放路径在此约定（真实截图源自同篇）</div>
+                        <img src="index08-map/e8-r06.png" alt="生成的工程目录真实截图">
+                        <div class="img-caption">图2-5 Finish 后生成的工程目录（资源管理器真实截图）：Appl / Config / DefRestrict / Log 文件夹与 Cfg 总工程 Demo1.dpa（真实截图源自同篇）</div>
+
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>第①站在 Cfg 中完成：File→New 打开四页向导 → General Settings 填 SIP/工程名/路径（禁中文空格）→ Project Folder Structure 确认存放路径 → Target 选芯片与编译器 → Finish 生成工程 → Ctrl+S 保存。工程目录中 Appl\ 放应用代码、Config\ 放配置数据、Log\ 放日志，<b>Demo1.dpa 是 Cfg 总工程</b>（其下 Config\Developer\ 的 Demo1.dcf 为 Dev 工作区）。</p>
+                        </div>
+                        <div class="jump-box">
+                            <div class="jb-title">界面跳转 → 下一站</div>
+                            <p>Cfg 工程已建好并保存。启动 <b>DaVinci Developer</b>，用 <b>File → Open Workspace...</b> 打开工程内 Config\Developer\ 下的 Demo1.dcf 工作区（详见第三章），完成 Cfg → Dev 的第一次跳转。</p>
+                        </div>
+
+                        <!-- ============ 第三章 ============ -->
+                        <h3 id="sec-ch3">三、第②站：跳转到 Developer 打开工程</h3>
+                        <h4 id="sec-3-1">3.1 Open Workspace 打开 .dcf 工作区</h4>
+                        <p>Developer 的入口是"打开工作区"。有两种方法从 Cfg 跳转过来：</p>
+                        <ol class="steps">
+                            <li><span class="no">1</span><b>方法A（标准）</b>：启动 DaVinci Developer → 菜单 <b>File → Open Workspace...</b> → 进入工程目录 Config\Developer\ → 选中 <b>Demo1.dcf</b> 工作区 → 点击"打开"；</li>
+                            <li><span class="no">2</span><b>方法B（快捷）</b>：直接在 Cfg 主界面左上角的 Start Menu 中点击 <b>Configure SWCs</b>，Cfg 会自动拉起 Developer 并打开当前工程（官方手册 STEP5 推荐的切换方式）；</li>
+                            <li><span class="no">3</span>打开成功的标志：左侧 <b>Object Browser</b> 出现工程树（Application Component Types、Data Types、Port Interfaces、Type Mapping Sets 等节点），底部 Action Log 提示 opened workspace successfully。</li>
+                        </ol>
+                        <img src="index08-map/e8-r07.png" alt="Dev打开工程后的真实主界面">
+                        <div class="img-caption">图3-1 DaVinci Developer 打开工程后的真实主界面：标题栏为 C:\AutoSAR_Demo\Config\Developer\Demo1.dcf，左侧 Object Browser 工程树、右侧 Properties 面板、底部 Action Log 显示 Opened workspace '...Demo1.dcf' successfully（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.4-实验：配置SWC&amp;RTE（上）》）</div>
+                        <div class="tip">Cfg 开 .dpa 工程、Dev 开 .dcf 工作区，两者指向同一份工程数据——就是两把工具共同操作的"同一份图纸"。从这一站开始，我们进入 Developer 侧的建模工作（第③④⑤站）。</div>
+
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>第②站完成 Cfg → Dev 的界面跳转：方法A为 Dev 中 File→Open Workspace 手动选 .dcf 工作区；方法B为 Cfg 的 Start Menu 中点 Configure SWCs 一键跳转。打开成功的标志是 Object Browser 出现工程树、Action Log 提示打开成功。</p>
+                        </div>
+                        <div class="jump-box">
+                            <div class="jb-title">界面跳转 → 下一站</div>
+                            <p>当前在 Developer 的主界面。下面在左侧 <b>Object Browser</b> 中开始创建类型定义——见第四章。</p>
+                        </div>
+
+                        <!-- ============ 第四章 ============ -->
+                        <h3 id="sec-ch4">四、第③④站：Developer 建模（类型、端口、连线）</h3>
+                        <h4 id="sec-4-1">4.1 创建类型定义（Object Browser）</h4>
+                        <p>建模第一步是"备料"——创建三类对象：<b>SWC Types（组件类型）</b>、<b>ADT（应用数据类型）</b>、<b>Port Interfaces（端口接口）</b>。全部在左侧 Object Browser（Types 视图）中右键创建，注意观察命名规则（前缀 Ct/Adt/Pi/De 是团队约定的语义标记）：</p>
+                        <table class="api-table">
+                            <tr><th style="width:170px">类别</th><th>创建对象</th><th>关键属性</th></tr>
+                            <tr><td rowspan="4">SWC Types（右键 SWC Types → Create ... Component Type）</td><td>CtCoApplication</td><td>Type: Composition（组合组件，画布容器）</td></tr>
+                            <tr><td>CtApMySwc</td><td>Type: Application；Support Multiple Instantiation: <b>off</b>（不可重用）</td></tr>
+                            <tr><td>CtSaDoor</td><td>Type: SensorActuator；Multiple Instantiation: <b>on</b>（可多实例，左右门共用一个类型）</td></tr>
+                            <tr><td>CtSaInteriorLight</td><td>Type: SensorActuator；Multiple Instantiation: on</td></tr>
+                            <tr><td rowspan="2">ADT（右键 Data Types → 创建 Application Data Type）</td><td>AdtDoorState</td><td>Base Type: BOOLEAN（门状态）</td></tr>
+                            <tr><td>AdtLightState</td><td>Base Type: BOOLEAN（灯状态）</td></tr>
+                            <tr><td rowspan="2">Port Interfaces（右键 Port Interfaces → Create Sender/Receiver Interface）</td><td>PiDoorState</td><td>数据元素 DeDoorState，类型关联 <b>AdtDoorState</b>（创建接口的同时关联 ADT）</td></tr>
+                            <tr><td>PiLightState</td><td>数据元素 DeLightState，类型关联 <b>AdtLightState</b></td></tr>
+                        </table>
+                        <img src="index08-map/e8-r08.png" alt="右键创建Application Data Type真实截图">
+                        <div class="img-caption">图4-1 Object Browser 中右键 Data Types → Application Data Types → New Boolean... 创建 ADT 的真实操作入口（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.4-实验：配置SWC&amp;RTE（上）》）</div>
+                        <img src="index08-map/e8-r09.png" alt="PiDoorState端口接口对话框真实截图">
+                        <div class="img-caption">图4-2 创建 Sender/Receiver Port Interface 的真实对话框：接口 PiDoorState，数据元素 DeDoorState 关联 Data Type=AdtDoorState，Calibration Access 设为 NotAccessible（真实截图源自同篇）</div>
+
+                        <h4 id="sec-4-2">4.2 添加 Port 与属性（Interface Graphic）</h4>
+                        <p>备料完成后给组件"装接口"。以核心组件 CtApMySwc 为例：</p>
+                        <ol class="steps">
+                            <li><span class="no">1</span>双击 <b>CtApMySwc</b> 进入其编辑界面，点击左下角 <b>Interface Graphic</b> 图标（或导航栏 Graphic 选项卡）切换到图形化端口编辑视图；</li>
+                            <li><span class="no">2</span>添加 3 个端口：2 个 <b>Receiver</b> 端口绑定 PiDoorState、1 个 <b>Sender</b> 端口绑定 PiLightState（图中以添加 Sender 为例，其他同理）；</li>
+                            <li><span class="no">3</span>先添加常量定义：<b>CDoorClosed = 0</b>、<b>CLightOff = 0</b>（为常量取个名字而已）；</li>
+                            <li><span class="no">4</span><b>双击端口</b>修改属性：端口改名 PpDoorStateFrontLeft / PpDoorStateFrontRight / PpLightStateFront，Init Value 分别选 CDoorClosed、CDoorClosed、CLightOff。</li>
+                        </ol>
+                        <img src="index08-map/e8-r10.png" alt="Select S/R Port Interface对话框真实截图">
+                        <div class="img-caption">图4-3 添加端口时弹出的 Select Sender/Receiver Port Interface 真实对话框：列表列出已建好的 PiDoorState / PiLightState，此处选择 PiLightState 绑定到新端口（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.4-实验：配置SWC&amp;RTE（上）》）</div>
+                        <img src="index08-map/e8-r13.png" alt="New Numeric Constant对话框真实截图">
+                        <div class="img-caption">图4-4 New Numeric Constant 真实对话框：Name=CLightOff、Value=0，CDoorClosed 同法创建（真实截图源自同篇）</div>
+                        <img src="index08-map/e8-r12.png" alt="Init Value引用常量真实截图">
+                        <div class="img-caption">图4-5 端口 Communication Spec 真实属性页：Init Value 下拉选 Reference，Reference Constant 为 ::DeLightState.InitValue，在 Select Objects 列表中选中常量 CLightOff（/Constants）——原文用红字标注了"切换选项卡/改名/双击/选择初始化值为参考值/选择定义好的常量"等操作要点（真实截图源自同篇）</div>
+                        <img src="index08-map/e8-r11.png" alt="端口改名后的CtApMySwc画布真实截图">
+                        <div class="img-caption">图4-6 端口配置完成后的 CtApMySwc 真实画布：左侧两个门状态端口 PpDoorStateFrontLeft / PpDoorStateFrontRight，右侧灯状态端口 PpLightStateFront（真实截图源自同篇）</div>
+                        <div class="warn">Init Value 必须设置：防止上电瞬间 RTE 传递随机内存值，把顶灯误点亮。常量先建后用——端口属性里直接引用常量名。</div>
+                        <p>随后按同样方法为另外两个 Atomic SWC 建好端口：<b>CtSaDoor</b> 加 1 个 Sender 端口 PpDoorState（绑 PiDoorState，Init Value = CDoorClosed）；<b>CtSaInteriorLight</b> 加 1 个 Receiver 端口 PpLightState（绑 PiLightState，Init Value = CLightOff）。</p>
+
+                        <h4 id="sec-4-3">4.3 Composition 连线（把 SWC 连成系统）</h4>
+                        <ol class="steps">
+                            <li><span class="no">5</span>双击 <b>CtCoApplication</b> 进入 Composition 编辑画布；</li>
+                            <li><span class="no">6</span>把 3 个 Atomic SWC（CtApMySwc、CtSaDoor、CtSaInteriorLight）从 Object Browser <b>拖入画布</b>；</li>
+                            <li><span class="no">7</span>修改实例化后的名字（注意格式是"实例名::类型名"，表示实例继承自类型）：CpApMySwc、CpSaDoorFrontLeft、CpSaDoorFrontRight、CpSaInteriorLight——其中左、右门两个实例都来自 CtSaDoor 类型（多实例化的意义就在此）；</li>
+                            <li><span class="no">8</span>点击<b>连接工具</b>，从发送方 P-Port 拖拽到接收方 R-Port，自动生成 Assembly Connector，共 3 条连线：左门→逻辑、右门→逻辑、逻辑→顶灯。</li>
+                            <li><span class="no">9</span>最后双击 <b>ECU_Composition</b>（它就代表我们的 ECU 本体），把 CtCoApplication 拖入其画布生成组件实例，右键 Properties 将实例名改为 <b>CpCoApplication</b>——Dev 侧建模闭环。</li>
+                        </ol>
+                        <img src="index08-map/e8-r14.png" alt="拖入SWC到Composition画布真实截图">
+                        <div class="img-caption">图4-7 把 CtSaDoor 从 Object Browser 拖入 CtCoApplication 的 Software Design 画布（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.4-实验：配置SWC&amp;RTE（上）》）</div>
+                        <img src="index08-map/e8-r15.png" alt="Component Prototype改名真实截图">
+                        <div class="img-caption">图4-8 Component Prototype（CtCoApplication::CpApMySwc）真实属性对话框与右键菜单：Name 改为 CpApMySwc（真实截图源自同篇）</div>
+                        <img src="index08-map/e8-r16.png" alt="Composition连线完成真实截图">
+                        <div class="img-caption">图4-9 连线完成后的 CtCoApplication 真实画布：端口按接口匹配连线（PpLightStateFront→PpLightState、PpDoorStateFrontLeft/Right→PpDoorState），实例 CpSaDoorFrontLeft / CpSaDoorFrontRight / CpSaInteriorLightFront 清晰可见（真实截图源自同篇）</div>
+                        <img src="index08-map/e8-r17.png" alt="ECU_Composition实例化真实截图">
+                        <div class="img-caption">图4-10 ECU_Composition 画布真实操作：把 CtCoApplication 拖入 ECU_Composition，Component Prototype（ECU_Composition::CtCoApplication）右键 Properties 改名 CpCoApplication（真实截图源自同篇）</div>
+
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>第③④站在 Developer 中完成"备料—装接口—连线"：Object Browser 右键创建 4 个 SWC Type（注意 Application 与 SensorActuator 的多实例化设置差异）、2 个 ADT、2 个 S/R 接口（同时关联 ADT）；Interface Graphic 视图加端口并设置 Init Value（引用常量 CDoorClosed/CLightOff）；Composition 画布拖入实例、改名（Cp 前缀实例继承 Ct 类型）、连线工具生成 3 条 Assembly Connector；最后把 CtCoApplication 实例化进 ECU_Composition（CpCoApplication）。</p>
+                        </div>
+                        <div class="jump-box">
+                            <div class="jb-title">界面跳转 → 下一站</div>
+                            <p>连线完成后回到 Object Browser 界面，继续创建 IDT 与数据映射——仍在 Developer 中（第五章，第⑤站）。</p>
+                        </div>
+
+                        <!-- ============ 第五章 ============ -->
+                        <h3 id="sec-ch5">五、第⑤站：数据映射与 Runnable 配置</h3>
+                        <h4 id="sec-5-1">5.1 创建 IDT 与 Data Mapping Set</h4>
+                        <p>前面建的 ADT 是"面向功能"的类型，代码生成还需要"面向实现"的 IDT（Implementation Data Type），两者靠映射表（Data Mapping）对应起来：</p>
+                        <ol class="steps">
+                            <li><span class="no">1</span>创建两个 IDT：<b>IdtDoorState</b>、<b>IdtLightState</b>，Data Type 均为 BOOLEAN，Compu Method 均为 boolean_CompuMethod（默认的查表方法把 1/0 定义为 TRUE/FALSE；想更可读可自定义计算方法，比如把 1 定义为 DoorOpen、0 定义为 DoorClosed）；</li>
+                            <li><span class="no">2</span>在 Mappings 节点右键 → Create Data Mapping Set，取名 <b>DemoTypeMapping</b>；</li>
+                            <li><span class="no">3</span>在 Data Type Maps 中建立一一对应：AdtDoorState → IdtDoorState、AdtLightState → IdtLightState；</li>
+                            <li><span class="no">4</span>应用映射：在 3 个 Atomic SWC（CtApMySwc、CtSaDoor、CtSaInteriorLight）上<b>右键 → Properties</b>，切换到 <b>Mapping Sets</b> 选项卡，添加 DemoTypeMapping；</li>
+                            <li><span class="no">5</span>点击<b>检查</b>按钮，确认所有端口的数据元素都映射成功——未映射会报错误提示（如 40317 Missing data type mapping，见图5-4）。</li>
+                        </ol>
+                        <img src="index08-map/e8-r18.png" alt="New Type Reference对话框真实截图">
+                        <div class="img-caption">图5-1 New Type Reference 真实对话框：创建 IDT——Name=IdtDoorState、Data Type=boolean、Compu Method=boolean_CompuMethod、Type Emitter=RTE（IdtLightState 同法）（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.4-实验：配置SWC&amp;RTE（上）》）</div>
+                        <img src="index08-map/e8-r19.png" alt="Data Type Maps编辑真实截图">
+                        <div class="img-caption">图5-2 Data Mapping Set（DemoTypeMapping）的 Data Type Maps 真实编辑界面：Add 添加 Data Type Map，把 AdtLightState 映射到 IdtLightState（AdtDoorState→IdtDoorState 同法）（真实截图源自同篇）</div>
+                        <img src="index08-map/e8-r20.png" alt="SWC应用Mapping Set真实截图">
+                        <div class="img-caption">图5-3 在 SWC 的 Properties → Mapping Sets 选项卡点击 Add，Select Objects 真实对话框中选择 DemoTypeMapping（/ComponentTypes/DataTypeMappingSets）——三个 Atomic SWC 均需应用（真实截图源自同篇）</div>
+                        <img src="index08-map/e8-r21.png" alt="映射缺失报错真实截图">
+                        <div class="img-caption">图5-4 点击 Check 后的真实结果：Messages 窗口报 40317 Missing data type mapping——提示仍有端口未完成 ADT→IDT 映射，补全后重新检查即可通过（真实截图源自同篇）</div>
+
+                        <h4 id="sec-5-2">5.2 Runnable 三要素：Name / Trigger / Port Access</h4>
+                        <p>SWC 只是"躯壳"，<b>Runnable（运行实体）才是真正干活的函数</b>。双击 SWC → Internal Behavior → Runnables 添加，每个 Runnable 要配三样东西：</p>
+                        <table class="api-table">
+                            <tr><th>所属SWC</th><th>Runnable 名（=函数名）</th><th>Trigger 触发条件</th><th>Port Access 端口访问</th></tr>
+                            <tr><td>CpApMySwc</td><td>RCtApMySwcCode</td><td>收到 PpDoorStateFrontLeft <b>和</b> PpDoorStateFrontRight 的数据时触发（Data reception received event）</td><td>读 PpDoorStateFrontLeft、PpDoorStateFrontRight；写 PpLightStateFront</td></tr>
+                            <tr><td>CpSaDoorFrontLeft / Right</td><td>RCtSaDoorReadDoor</td><td><b>200ms 周期</b>触发（Periodic）</td><td>写 PpDoorState</td></tr>
+                            <tr><td>CpSaInteriorLight</td><td>RCtSaInteriorLightSwitchLight</td><td>收到 PpLightState 数据时触发</td><td>读 PpLightState（驱动顶灯）</td></tr>
+                        </table>
+                        <p>操作要领：在 Properties 的 <b>Name</b> 里编辑 Runnable 名字——<strong>这个名字就是最终生成的 C 函数名</strong>；切到 <b>Trigger</b> 选项卡配置触发条件；在 <b>Port Access</b> 中通过 New 添加本 Runnable 要读/写的端口访问。注意：Runnable 生成代码只是<b>函数框架</b>，函数体内容需要我们自己填（见 8.2 节）。</p>
+                        <img src="index08-map/e8-r22.png" alt="New Runnable真实截图">
+                        <div class="img-caption">图5-5 Internal Behavior 真实界面：双击 SWC 打开 Software Design，点击 Runnable Entity 面板底部的 New ▼ → Runnable... 新建运行实体（菜单还提供 Server Runnables... / Init Runnable 等类型）（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.7-实验：配置SWC&amp;RTE（下）》）</div>
+                        <img src="index08-map/e8-r23.png" alt="Runnable Properties真实截图">
+                        <div class="img-caption">图5-6 Runnable Properties 真实对话框：Name=RCtApMySwcCode（即最终生成的 C 函数名），Can be invoked concurrently 不勾选，Minimum Start Interval=0 msec（真实截图源自同篇）</div>
+                        <img src="index08-map/e8-r24.png" alt="Trigger数据接收触发真实截图">
+                        <div class="img-caption">图5-7 Trigger 选项卡真实界面：New → On Data Reception...，选择 PpDoorStateFrontRight 的 DeDoorState 作为触发源，生成数据接收事件 DRT_RCtApMySwcCode（左门端口同法再配一条）（真实截图源自同篇）</div>
+                        <img src="index08-map/e8-r25.png" alt="Port Access端口访问真实截图">
+                        <div class="img-caption">图5-8 Port Access 选项卡真实界面：REC_PpDoorStateFrontLeft / REC_PpDoorStateFrontRight（读门状态）已在列，另通过 Port Access Definition 添加对 PpLightStateFront / DeLightState 的 Write (explicit) 写访问（Tx Ack=Polling）（真实截图源自同篇）</div>
+                        <div class="tip">到这里 Developer 侧（第③④⑤站）全部做完。<b>Ctrl+S 保存工程</b>——忘了保存，下一步 Cfg 同步不到任何东西，这是新手最常见的翻车点。</div>
+
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>第⑤站两件事：其一，创建 IDT 并通过 Data Mapping Set（DemoTypeMapping）把 ADT 映射到 IDT，在 SWC Properties→Mapping Sets 中应用并检查；其二，为每个 SWC 配 Runnable，三要素为 Name（=生成的函数名）、Trigger（数据接收触发或 200ms 周期触发）、Port Access（读/写哪些端口）。</p>
+                        </div>
+                        <div class="jump-box">
+                            <div class="jb-title">界面跳转 → 下一站</div>
+                            <p>Dev 中保存工程后，启动/切换回 <b>DaVinci Configurator</b>，File→Open 打开 Demo1.dpa，弹出同步提示框——进入第六章（第⑥站）。</p>
+                        </div>
+
+                        <!-- ============ 第六章 ============ -->
+                        <h3 id="sec-ch6">六、第⑥⑦站：回到 Configurator（同步与DBC）</h3>
+                        <h4 id="sec-6-1">6.1 同步 Dev 与 Cfg 工程</h4>
+                        <ol class="steps">
+                            <li><span class="no">1</span>确认 Dev 中已<b>检查并保存工程</b>（一定要保存）；</li>
+                            <li><span class="no">2</span>打开 Cfg，<b>File → Open → Demo1.dpa</b>；</li>
+                            <li><span class="no">3</span>弹出"DCF workspace or external software component change detected"提示框时，点击 <b>Synchronize configuration now...</b>；</li>
+                            <li><span class="no">4</span>同步完成后，System 下出现 CtCoApplication 及 4 个 SWC 实例——Dev 侧的模型正式进入 Cfg。</li>
+                        </ol>
+                        <p>同步的本质：两工具通过 <b>arxml 文件</b>（Demo1.arxml）交换数据——对话框里显示的就是该文件与工程内版本不一致、要求同步。此后每次在 Dev 改模型，回到 Cfg 都会再次提示同步，这是两工具协作的固定节奏。</p>
+                        <img src="index08-map/e8-r26.png" alt="Cfg同步提示框真实截图">
+                        <div class="img-caption">图6-1 Cfg 打开工程时弹出的真实同步提示框：DCF workspace or external software component change detected，Changed files 列出 ...\ECUProjects\Demo1.arxml——点击 Synchronize configuration now... 立即同步（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.7-实验：配置SWC&amp;RTE（下）》）</div>
+
+                        <h4 id="sec-6-2">6.2 导入 DBC 通信矩阵</h4>
+                        <p>同步后会发现界面里"啥也没有"——<b>这是正常的</b>，因为还没有 DBC 或其他通信矩阵文件（如 arxml 类型，选界面中对应的按钮即可）。以最常用的 DBC 为例：</p>
+                        <ol class="steps">
+                            <li><span class="no">1</span>在 <b>Input Files</b> 视图选择入口：arxml 系统描述选 <b>System Description Files</b> 右侧图标（原文红字提示"如果是arxml文件选这里"），在弹出的 Legacy Files → File selection 对话框中添加自己的 DBC 文件（本例 CAN.dbc）；</li>
+                            <li><span class="no">2</span>点击 <b>Next &gt;</b> 完成向导，列表显示 CAN.dbc [MyECU]，即关联到本 ECU；</li>
+                            <li><span class="no">3</span>点击 <b>Update the configuration now to commit the project modifications.</b> 链接；</li>
+                            <li><span class="no">4</span>在 Update Project 对话框按 Workflow 执行更新（校验→预处理→备份→准备更新数据，耗时较长），完成后 DBC 真正进入配置工程。</li>
+                        </ol>
+                        <div class="tip">更新这一步耗时较长：导入 DBC 的同时，Cfg 会自动帮我们配置 Com / PduR / CanIf 等通信模块的骨架——这就是"工具帮你干活"的部分。若 DBC 与模型端口对不上会报各种问题，参考原文建议：前期先不纠结，留到综合实验统一解决。</div>
+                        <img src="index08-map/e8-r27.png" alt="Legacy Files添加通信文件真实截图">
+                        <div class="img-caption">图6-2 Cfg 添加通信描述文件的真实入口：Input Files → System Description Files 视图（原文红字提示"如果是arxml文件选这里"），右侧弹出 Legacy Files → File selection 对话框用于添加文件（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.7-实验：配置SWC&amp;RTE（下）》）</div>
+                        <img src="index08-map/e8-r28.png" alt="DBC待更新列表真实截图">
+                        <div class="img-caption">图6-3 添加 DBC 后的真实界面：提示 Update the configuration now to commit the project modifications.，列表显示 C:\AutoSAR_Demo\CAN.dbc [MyECU]（真实截图源自同篇）</div>
+                        <img src="index08-map/e8-r29.png" alt="Update Project更新进度真实截图">
+                        <div class="img-caption">图6-4 Update Project 真实对话框：按 Workflow 依次执行 Validate（环境/dpa/SLP conformance/input files 校验）→ File Pre Processing → Creating back up → Prepare DaVinci Developer update data → Prepare System Extract 等步骤，绿色进度条走完即更新成功（真实截图源自同篇）</div>
+
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>第⑥站：Dev 保存 → Cfg 打开同一 .dpa → 在"DCF workspace or external software component change detected"提示框点 Synchronize configuration now...（本质是 arxml 差异同步）。第⑦站：Input Files 中添加 DBC（列表显示 CAN.dbc [MyECU]）后点 Update the configuration now... 更新进工程（Update Project 按 Workflow 执行，耗时较长），Cfg 自动生成通信模块配置。同步前"界面空空"是正常现象。</p>
+                        </div>
+                        <div class="jump-box">
+                            <div class="jb-title">界面跳转 → 下一站</div>
+                            <p>通信骨架就绪后，进入 <b>Os Configuration</b> 视图创建 Task——见第七章（第⑧站）。</p>
+                        </div>
+
+                        <!-- ============ 第七章 ============ -->
+                        <h3 id="sec-ch7">七、第⑧站：Task 映射与 OS 配置</h3>
+                        <h4 id="sec-7-1">7.1 创建 Task</h4>
+                        <p>Runnable 需要在 Task 上运行，先创建两个 Task（Os Configuration 中新建）：</p>
+                        <table class="api-table">
+                            <tr><th>参数</th><th>My_Task</th><th>IO_Task</th><th>含义</th></tr>
+                            <tr><td>Schedule Type</td><td>Non-preemptive</td><td>Non-preemptive</td><td>是否可以被抢占</td></tr>
+                            <tr><td>Priority</td><td>2</td><td>3</td><td>优先级（数值越大越高）</td></tr>
+                            <tr><td>Activation</td><td>2</td><td>1</td><td>任务的最大队列激活请求数</td></tr>
+                            <tr><td>Task Type</td><td>Basic</td><td>Extended</td><td>基础任务 / 扩展任务</td></tr>
+                        </table>
+                        <img src="index08-map/e8-r30.png" alt="OS Configuration新建Task真实截图">
+                        <div class="img-caption">图7-1 Os Configuration 编辑器真实界面：左侧 Configuration Editors 面板（Runtime System 下含 OS Configuration、Task Mapping 等入口），右侧 OS 对象树（OS Cores / OS Applications / Tasks / ISRs / Events / Alarms / Counters 等）——红箭头指向 Tasks 节点与右上角 + 新建按钮（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.7-实验：配置SWC&amp;RTE（下）》）</div>
+                        <img src="index08-map/e8-r31.png" alt="My_Task属性页真实截图">
+                        <div class="img-caption">图7-2 My_Task 真实属性页：Short Name / Task Activation / Task Priority / Task Schedule / Task Stack Size / Task Type 等参数在此设置，底部 Validation 面板为工程一致性校验消息（真实截图源自同篇）</div>
+
+                        <h4 id="sec-7-2">7.2 Runnable 映射到 Task 与 Position</h4>
+                        <p>映射方法很简单：在 Runnable 的 <b>Task 选项卡</b>中选择需要映射的 Task 即可。需要以下配置：</p>
+                        <table class="api-table">
+                            <tr><th>Runnable</th><th>映射 Task</th><th>Position</th></tr>
+                            <tr><td>RCtApMySwcCode</td><td>My_Task</td><td>0</td></tr>
+                            <tr><td>RCtSaInteriorLightSwitchLight</td><td>IO_Task</td><td>2</td></tr>
+                            <tr><td>RCtSaDoorReadDoor（Left &amp; Right 两个实例）</td><td>IO_Task</td><td>0 / 1</td></tr>
+                        </table>
+                        <p><b>Position</b> 可以理解为同一 Task 内的执行顺序（My_Task 和 IO_Task 都要配）——同一任务里谁先跑谁后跑由它决定。</p>
+                        <img src="index08-map/e8-r32.png" alt="Task Mapping编辑器真实截图">
+                        <div class="img-caption">图7-3 Task Mapping 编辑器真实界面：进入 CpApMySwc 的 Task Mapping，提示 2 of 2 function triggers are mapped——RCtApMySwcCode 的两条触发（左/右门数据接收）均已映射到 My_Task（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.7-实验：配置SWC&amp;RTE（下）》）</div>
+                        <img src="index08-map/e8-r33.png" alt="Runnable映射结果列表真实截图">
+                        <div class="img-caption">图7-4 映射结果真实列表：RCtSaDoorReadDoor（200 ms 周期触发，Owner=CpSaDoorFrontLeft / CpSaDoorFrontRight，Position=0/1）、RCtSaInteriorLightSwitchLight（触发条件 PpLightState.DeLightState，Owner=CpSaInteriorLightFront，Position=2）（真实截图源自同篇）</div>
+
+                        <h4 id="sec-7-3">7.3 OS 自动生成的内容</h4>
+                        <p>到这里 OS 的 Task 已配好，剩下 Os Configuration 里的内容可对照 OS 理论章节自行检查。需要说明：<b>System Timer（系统计数器）是系统自动创建的</b>——因为我们在配置 Runnable 时选择了 200ms 周期触发，系统就会自己生成一个 Counter（并自动关联 Alarm），无需手动配置。<strong>DaVinci 会像这样帮我们自动配置很多东西。</strong></p>
+                        <img src="index08-map/e8-r34.png" alt="OS自动生成的SystemTimer真实截图">
+                        <div class="img-caption">图7-5 OS 自动生成的 SystemTimer 计数器真实配置：Counter Type=HARDWARE、Seconds Per Tick=0.001 s、Max Allowed Value=2147483647——由 200ms 周期触发自动创建，无需手动配置（真实截图源自 CSDN 雪云飞星《AutoSAR系列讲解（实践篇）7.7-实验：配置SWC&amp;RTE（下）》）</div>
+
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>第⑧站：Os Configuration 中创建两个非抢占 Task（My_Task 优先级2/Basic、IO_Task 优先级3/Extended）；在 Runnable 的 Task 选项卡完成映射（逻辑SWC→My_Task，其余→IO_Task）；Position 定义同一 Task 内执行顺序；200ms 周期触发使 OS 自动生成 Counter/Alarm，无需手动建。</p>
+                        </div>
+                        <div class="jump-box">
+                            <div class="jb-title">界面跳转 → 下一站</div>
+                            <p>OS 配置完毕，回到 Cfg 主界面点击工具栏 <b>Generate</b> 按钮启动代码生成——见第八章（第⑨站）。</p>
+                        </div>
+
+                        <!-- ============ 第八章 ============ -->
+                        <h3 id="sec-ch8">八、第⑨⑩站：代码生成与应用实现</h3>
+                        <h4 id="sec-8-1">8.1 启动代码生成</h4>
+                        <ol class="steps">
+                            <li><span class="no">1</span>在 Cfg 工具栏点击 <b>Generate</b> 按钮，弹出 Generation dialog（生成对话框）；</li>
+                            <li><span class="no">2</span>开始生成：RTE 代码（Rte.c/Rte.h，把 Developer 里画的连线变成真正的函数调用）与 BSW 配置代码一起产出；</li>
+                            <li><span class="no">3</span>生成完成后，*.c/*.h 存放在 <b>&lt;ProjectFolder&gt;\Appl\GenData\</b> 目录下。</li>
+                        </ol>
+                        <img src="index08-map/e8-13.png" alt="代码生成与组件模板">
+                        <div class="img-caption">图8-1 Cfg 工具栏 Generate 按钮启动代码生成（产物在 Appl\GenData\）；右侧为 SWC Component Template 中的 Runnable 骨架——手写代码必须放在 start/end 注释之间，重新生成时工具会保留该区间内容并自动备份旧模板（依参考文章文字描述绘制）</div>
+
+                        <h4 id="sec-8-2">8.2 填写 Component Template（应用代码）</h4>
+                        <p>生成的 SWC 模板里，每个 Runnable 只是一个空壳函数，逻辑写在 <b>start/end 注释之间</b>。车门灯逻辑 SWC 的核心代码只有三行：</p>
+                        <div class="code-block"><span class="cm">/* 生成于 CtApMySwc.c — 只能在 start/end 注释之间写代码 */</span>
+FUNC(void, CtApMySwc_CODE) RCtApMySwcCode(void)
+{
+    /* ===== start ===== */
+    boolean doorL, doorR;
+    Rte_Read_CpApMySwc_PpDoorStateFrontLeft_DeDoorState(&amp;doorL);
+    Rte_Read_CpApMySwc_PpDoorStateFrontRight_DeDoorState(&amp;doorR);
+    Rte_Write_CpApMySwc_PpLightStateFront_DeLightState(doorL || doorR);
+    /* ===== end ======= */
+}</div>
+                        <p>注意函数名：RTE 生成的 API 把"组件实例名_端口名_数据元素名"拼进了调用名——这正是 4.1 节强调命名规范的原因。门开关 SWC 的 RCtSaDoorReadDoor 中写 doorL = 开关GPIO电平（消抖后），顶灯 SWC 的 RCtSaInteriorLightSwitchLight 中按 lightState 驱动顶灯输出。</p>
+
+                        <h4 id="sec-8-3">8.3 编译烧录与验证</h4>
+                        <ol class="steps">
+                            <li><span class="no">1</span>用向导里选择的编译器（GreenHills/Tasking/GCC）编译整个工程；</li>
+                            <li><span class="no">2</span>官方手册的收尾寄语是——"No error frames? Congratulations, that's it!"（没有错误帧？恭喜，大功告成）；</li>
+                            <li><span class="no">3</span>烧录到真实硬件：按下左门或右门开关 → 顶灯点亮；两个开关都断开 → 顶灯熄灭。</li>
+                        </ol>
+
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>第⑨站：Cfg 工具栏 Generate 生成 RTE 与 BSW 代码到 Appl\GenData\。第⑩站：在生成的 Component Template 的 start/end 注释之间填写应用逻辑（读两个门状态→或运算→写灯状态），编译链接烧录后即可实车验证。至此"建模→配置→映射→生成→实现→验证"全流程闭环。</p>
+                        </div>
+                        <div class="jump-box">
+                            <div class="jb-title">界面跳转 → 收尾</div>
+                            <p>功能验证通过后，建议回到第九章对照"全流程跳转地图"复盘一遍操作路径，并浏览常见问题表，为下次独立建工程做准备。</p>
+                        </div>
+
+                        <!-- ============ 第九章 ============ -->
+                        <h3 id="sec-ch9">九、全流程回顾与常见问题</h3>
+                        <h4 id="sec-9-1">9.1 界面跳转地图与口诀</h4>
+                        <p>把前面八章的"从哪个界面跳到哪个界面"浓缩成一张地图（蓝色=Configurator，绿色=Developer），并在底部给出与参考文章三大步骤的对应口诀：</p>
+                        <img src="index08-map/e8-14.png" alt="全流程界面跳转地图">
+                        <div class="img-caption">图9-1 全流程界面跳转地图：①Cfg新建工程 → ②Dev打开.dcf工作区 → ③类型定义 → ④端口连线 → ⑤映射+Runnable → ⑥Cfg同步 → ⑦导入DBC → ⑧Task/OS → ⑨代码生成 → ⑩编译烧录；虚线为"Dev修改→保存→Cfg再同步"的工程期循环（依参考文章文字描述绘制）</div>
+                        <table class="api-table">
+                            <tr><th>跳转场景</th><th>操作方法</th></tr>
+                            <tr><td>Cfg → Dev</td><td>Dev 中 File→Open Workspace 选工程内 .dcf 工作区；或在 Cfg 的 Start Menu 点 Configure SWCs 一键跳转</td></tr>
+                            <tr><td>Dev → Cfg</td><td>Dev 中 Ctrl+S 保存后，Cfg 中 File→Open 打开同一 .dpa，点 Synchronize configuration now...</td></tr>
+                            <tr><td>模型再次修改（工程期循环）</td><td>Dev 改模型 → 保存 → 回 Cfg 再次同步——开发期内反复进行</td></tr>
+                            <tr><td>建模界面内部切换</td><td>Object Browser（类型树）↔ 双击组件进入编辑器 ↔ Graphic 选项卡（图形化端口）↔ Composition 画布</td></tr>
+                        </table>
+
+                        <h4 id="sec-9-2">9.2 常见问题排查</h4>
+                        <table class="api-table">
+                            <tr><th>问题现象</th><th>可能原因</th><th>排查与解决</th></tr>
+                            <tr><td>Cfg 打开工程后"啥也没有"</td><td>未导入 DBC 等通信矩阵文件</td><td>属正常现象；按 6.2 节导入 DBC 并点 Update 更新进工程</td></tr>
+                            <tr><td>Cfg 中同步不到 Dev 的模型</td><td>Dev 侧忘记保存</td><td>回 Dev 检查并 Ctrl+S 保存，再执行 Synchronize configuration now...</td></tr>
+                            <tr><td>Data Mapping 检查报黄色警告</td><td>某 ADT 未在 Data Type Maps 中对应 IDT</td><td>打开 DemoTypeMapping 补全 ADT→IDT 映射后重新检查</td></tr>
+                            <tr><td>连线拉不出来</td><td>两端接口或数据元素类型不一致</td><td>核对两端绑定的是同一接口（如都是 PiDoorState）且数据元素类型相同</td></tr>
+                            <tr><td>导入 DBC 后报一堆问题</td><td>DBC 与模型端口不匹配</td><td>前期实验先不解决，留到综合实验统一处理（参考原文建议）</td></tr>
+                            <tr><td>重新生成代码后手写逻辑丢失</td><td>代码写在 start/end 注释之外</td><td>应用代码必须写在 Component Template 的 start/end 注释之间，工具会保留该区间</td></tr>
+                            <tr><td>OS 里找不到计数器/警报</td><td>以为要手动建</td><td>200ms 周期触发会让系统自动生成 Counter 并关联 Alarm，检查即可无需新建</td></tr>
+                        </table>
+
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>第九章收束全篇：用"全流程跳转地图"复盘 10 站路线与四处典型跳转（Cfg↔Dev、建模界面内部切换、工程期同步循环）；常见问题表覆盖 7 类高频故障，其中"Dev 忘保存导致同步不到""代码写在 start/end 注释之外"两类最易踩中，建议操作时对照排查表逐项预防。至此，左/右门开关控制顶灯案例已按"第①站~第⑩站"全部走通。</p>
+                        </div>
+
+                        <h4 id="sec-9-3">9.3 参考来源</h4>
+                        <p style="margin-top: 6px; padding-top: 12px; border-top: 1px dashed #dce8f2; color: #999; font-size: 13px;">
+                            主要参考：CSDN 雪云飞星（xyfx_fhw）《AutoSAR系列讲解（实践篇）7.4-实验：配置SWC&amp;RTE（上）》（blog.csdn.net/xyfx_fhw/article/details/102543399）、《AutoSAR系列讲解（实践篇）7.7-实验：配置SWC&amp;RTE（下）》（blog.csdn.net/xyfx_fhw/article/details/102600431）。辅助参考：Vector《DaVinci Configurator Pro Step-by-Step》官方手册（STEP1~STEP9 及 SWC Design/Mappings 概念章节）。图1-2、图8-1、图9-1 为依上述参考文章文字描述绘制的示意图，其余界面配图均为上述博文的真实操作截图；命名（CtApMySwc、CpSaDoorFrontLeft/Right、CpSaInteriorLight、PiDoorState/PiLightState、IdtDoorState/IdtLightState、DemoTypeMapping、RCtApMySwcCode 等）与配置参数（My_Task/IO_Task、200ms 周期等）忠实于参考文章实验设置。
+                        </p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 一级菜单：独立展开/收起 + 跳转章标题 + 高亮（参考index07）
+        document.querySelectorAll('.sidebar-menu > li > .menu-title').forEach(function(title) {
+            title.addEventListener('click', function() {
+                var li = title.parentElement;
+                li.classList.toggle('open');
+
+                // 高亮一级菜单（清除其他高亮）
+                document.querySelectorAll('.submenu li.active').forEach(function(x) {
+                    x.classList.remove('active');
+                });
+                document.querySelectorAll('.sidebar-menu > li.active').forEach(function(x) {
+                    x.classList.remove('active');
+                });
+                li.classList.add('active');
+
+                // 跳转到主体中的一级目录名称（h3）
+                var targetId = li.getAttribute('data-target');
+                var target = targetId ? document.getElementById(targetId) : null;
+                if (target) {
+                    var body = document.querySelector('.content-body');
+                    var top = target.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 8;
+                    body.scrollTo({ top: top, behavior: 'smooth' });
+                }
+            });
+        });
+
+        // 全部展开/收起
+        var expandBtn = document.getElementById('expandAllBtn');
+        var collapseBtn = document.getElementById('collapseAllBtn');
+        if (expandBtn) {
+            expandBtn.addEventListener('click', function() {
+                document.querySelectorAll('.sidebar-menu > li').forEach(function(li) {
+                    li.classList.add('open');
+                });
+            });
+        }
+        if (collapseBtn) {
+            collapseBtn.addEventListener('click', function() {
+                document.querySelectorAll('.sidebar-menu > li').forEach(function(li) {
+                    li.classList.remove('open');
+                });
+            });
+        }
+
+        // 二级菜单：点击跳转 + 双高亮
+        document.querySelectorAll('.submenu li[data-target]').forEach(function(item) {
+            item.addEventListener('click', function() {
+                var target = document.getElementById(item.dataset.target);
+                if (!target) return;
+
+                // 双高亮
+                document.querySelectorAll('.submenu li.active').forEach(function(li) {
+                    li.classList.remove('active');
+                });
+                document.querySelectorAll('.sidebar-menu > li.active').forEach(function(li) {
+                    li.classList.remove('active');
+                });
+                item.classList.add('active');
+                item.closest('.sidebar-menu > li').classList.add('active');
+
+                // 滚动到目标（content-body为滚动容器）
+                var body = document.querySelector('.content-body');
+                var top = target.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 8;
+                body.scrollTo({ top: top, behavior: 'smooth' });
+            });
+        });
+    </script>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验19 ADC实验 · 代码启动过程</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2f7a52;
+            margin-bottom: 6px;
+        }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验19 ADC实验 · 启动过程</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">源码取证：实验19 ADC实验（HAL 库版本）<br>模板：code-boot-summary</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">先确定“用哪个 ADC、哪个引脚、看什么现象”，后面的初始化才有落点</div>
+
+                    <p>本实验用 STM32F429 片内 <strong>ADC1 的通道 5</strong> 采集 PA5 上的模拟电压，配置为 <strong>12 位、单次、软件触发、轮询读取</strong>。主循环每次取 20 次转换的平均值，LCD 同时显示原始码值与换算后的电压；DS0 每轮翻转一次。串口 1 在本实验只承担 <code>printf</code>，不参与数据采集。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>连接 / 参数</th><th>源码位置</th></tr>
+                        <tr><td>ADC1_IN5</td><td>PA5，模拟输入，12 位，量程 0~4095</td><td><code>HARDWARE/ADC/adc.c</code></td></tr>
+                        <tr><td>参考电压</td><td>默认由 P5 跳线接到 3.3V，满量程 3.3V</td><td><code>readme.txt</code></td></tr>
+                        <tr><td>DS0</td><td>PB1（<code>LED0</code>），推挽输出，初始化置高（灭）</td><td><code>HARDWARE/LED/led.c</code></td></tr>
+                        <tr><td>USART1</td><td>PA9 / PA10，115200-8-N-1，供 <code>LCD_Init</code> 内的 <code>printf</code> 使用</td><td><code>SYSTEM/usart/usart.c</code></td></tr>
+                        <tr><td>LCD</td><td>MCU 屏或 RGB 屏，显示码值与电压</td><td><code>HARDWARE/LCD/lcd.c</code></td></tr>
+                        <tr><td>测试接口</td><td>P11 多功能接口的 ADC 即 PA5；默认经跳线帽接 TPAD</td><td><code>readme.txt</code></td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">ADC1_IN5</span>
+                        <span class="chip">12-bit</span>
+                        <span class="chip">0 ~ 4095</span>
+                        <span class="chip">3.3V / 4096</span>
+                        <span class="chip">ADCCLK 22.5MHz</span>
+                        <span class="chip">480 cycles</span>
+                    </div>
+
+                    <div class="note">readme 明确提示：PA5 默认通过 P11 跳线接 TPAD，不拔跳线读到约 3.3V 属正常现象；ADC 输入不得超过 3.3V。另外 <code>LCD_Init</code> 内部会调用 <code>printf</code>，所以 <code>uart_init</code> 必须排在它前面。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">先定位“哪一段代码负责哪一步”，再按启动顺序读</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>负责什么</th><th>本页看什么</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化顺序、LCD 固定字符、主循环采样与显示</td><td>全文与 <code>while(1)</code></td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>向量表、栈堆、<code>Reset_Handler</code></td><td>Stack 0x400 / Heap 0x200</td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td><code>SystemInit</code>：FPU、RCC 复位、VTOR</td><td><code>VECT_TAB_OFFSET 0x00</code></td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td><code>Stm32_Clock_Init</code>：HSE → PLL → 180MHz</td><td>PLL 参数与分频</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>SysTick 轮询延时</td><td><code>fac_us=SYSCLK</code>，不依赖中断</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>USART1 初始化与 <code>fputc</code></td><td>printf 重定向</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>内核异常与 <code>SysTick_Handler</code></td><td>本实验没有 ADC 中断</td></tr>
+                        <tr><td><code>HARDWARE/ADC/adc.c</code></td><td>ADC1 初始化、MSP、单次读取、多次平均</td><td>本页核心</td></tr>
+                        <tr><td><code>HARDWARE/LED/led.c</code></td><td>PB0 / PB1 推挽输出</td><td><code>LED0 = PBout(1)</code></td></tr>
+                        <tr><td><code>HARDWARE/SDRAM/sdram.c</code></td><td>FMC SDRAM 初始化</td><td>RGB 屏显存前提</td></tr>
+                        <tr><td><code>HARDWARE/LCD/lcd.c</code></td><td>读屏 ID、LCD / LTDC、字符与数字显示</td><td><code>LCD_ShowxNum</code></td></tr>
+                        <tr><td><code>HALLIB/.../stm32f4xx_hal_adc.c</code></td><td><code>HAL_ADC_Init</code> / <code>ConfigChannel</code> / <code>Start</code> / <code>Poll</code> / <code>GetValue</code></td><td>只读被调用的函数</td></tr>
+                    </table>
+
+                    <div class="note blue">工程里没有 ADC 中断：<code>stm32f4xx_it.c</code> 未实现 <code>ADC_IRQHandler</code>，启动文件中的同名入口只是弱定义；<code>MY_ADC_Init</code> 也没有调用 <code>HAL_NVIC_EnableIRQ</code>，转换完成完全靠轮询 EOC。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电复位到 while(1)，每一次初始化分别在解决什么问题</div>
+
+                    <figure class="figure">
+                        <img src="./index33-map/boot-flow.png" alt="从上电复位到主循环的 ADC 实验启动流程图">
+                        <figcaption>图 3-1　启动链路总览（12 个步骤）</figcaption>
+                    </figure>
+                    <figure class="figure"><img src="./index33-map/adc-timing.png" alt="ADC 采样与转换时序图"><figcaption>图 3-2　ADC 采样与转换时序（单次转换）</figcaption></figure>
+                    <p>一次转换分两段：先按 <code class="inline">ADC_SAMPLETIME</code> 采样保持，再用 12 个 ADCCLK 完成 12 位逐次逼近，结束后置 EOC。采样时间越长对源阻抗要求越低，但转换更慢；轮询等 EOC 后再读 DR 才能拿到本次结果。</p>
+
+                    <h3>main 函数（原文）</h3>
+                    <pre class="code">int main(void)
+{
+    u16 adcx;            <span class="cmt">//存放 ADC 原始码值（0~4095）</span>
+    float temp;          <span class="cmt">//存放换算后的电压值</span>
+    HAL_Init();                     <span class="cmt">//初始化HAL库</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">//设置时钟,180Mhz</span>
+    delay_init(180);                <span class="cmt">//初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">//初始化USART</span>
+    LED_Init();                     <span class="cmt">//初始化LED</span>
+    KEY_Init();                     <span class="cmt">//初始化按键</span>
+    SDRAM_Init();                   <span class="cmt">//初始化SDRAM</span>
+    LCD_Init();                     <span class="cmt">//初始化LCD</span>
+    MY_ADC_Init();                  <span class="cmt">//初始化ADC1通道5</span>
+
+    POINT_COLOR=RED;                          <span class="cmt">//设置字体颜色为红色</span>
+    LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7"); <span class="cmt">//显示开发板型号</span>
+    LCD_ShowString(30,70,200,16,16,"ADC TEST");          <span class="cmt">//显示实验名称</span>
+    LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");     <span class="cmt">//显示作者标识</span>
+    LCD_ShowString(30,110,200,16,16,"2016/1/13");        <span class="cmt">//显示日期</span>
+    POINT_COLOR=BLUE;<span class="cmt">//设置字体为蓝色</span>
+    LCD_ShowString(30,130,200,16,16,"ADC1_CH5_VAL:"); <span class="cmt">//显示码值标签</span>
+    LCD_ShowString(30,150,200,16,16,"ADC1_CH5_VOL:0.000V");<span class="cmt">//先在固定位置显示小数点</span>
+    while(1)
+    {
+        adcx=Get_Adc_Average(ADC_CHANNEL_5,20);<span class="cmt">//获取通道5的转换值，20次取平均</span>
+        LCD_ShowxNum(134,130,adcx,4,16,0);    <span class="cmt">//显示ADCC采样后的原始值</span>
+        temp=(float)adcx*(3.3/4096);          <span class="cmt">//换算电压，比如3.1111</span>
+        adcx=temp;                            <span class="cmt">//取整数部分（float 隐式转 u16）</span>
+        LCD_ShowxNum(134,150,adcx,1,16,0);    <span class="cmt">//显示整数部分</span>
+        temp-=adcx;                           <span class="cmt">//去掉已显示的整数部分</span>
+        temp*=1000;                           <span class="cmt">//小数部分放大 1000 倍</span>
+        LCD_ShowxNum(150,150,temp,3,16,0X80); <span class="cmt">//显示三位小数，0X80 表示补前导 0</span>
+        LED0=!LED0;                    <span class="cmt">//DS0 翻转，指示主循环在运行</span>
+        delay_ms(250);                 <span class="cmt">//延时 250ms，控制刷新节拍</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：每一行初始化解决什么问题</div>
+                        <ol>
+                            <li><code>HAL_Init()</code>：开 Flash 指令/数据缓存与预取，把中断分组固定为 <code>NVIC_PRIORITYGROUP_2</code>，并按复位后的 HSI 16MHz 建立 1ms SysTick。</li>
+                            <li><code>Stm32_Clock_Init(360,25,2,8)</code>：HSE 25MHz 经 PLL 得到 SYSCLK 180MHz，同时配置 AHB/APB 分频与 Flash 5WS。</li>
+                            <li><code>delay_init(180)</code>：把 <code>fac_us</code> 设为 180，并把 SysTick 时钟源切到 HCLK；不依赖中断，靠轮询 <code>VAL</code> 计数。</li>
+                            <li><code>uart_init(115200)</code>：PA9/PA10 复用 AF7，<code>fputc</code> 重定向，<code>LCD_Init</code> 里的 <code>printf</code> 才能输出。</li>
+                            <li><code>LED_Init()</code>：PB0/PB1 推挽输出并置高，DS0 初始为灭；<code>LED0</code> 实际是 <code>PBout(1)</code>。</li>
+                            <li><code>KEY_Init()</code>：本实验主循环未使用按键，属于例程统一保留。</li>
+                            <li><code>SDRAM_Init()</code>：RGB 屏帧缓存位于外部 SDRAM，必须先让 FMC 控制器工作。</li>
+                            <li><code>LCD_Init()</code>：读屏 ID 后选择 LTDC 或 FMC 屏；其中会 <code>printf</code> 屏 ID，所以串口必须已初始化。</li>
+                            <li><code>MY_ADC_Init()</code>：只配置 ADC1 与 PA5，依赖 GPIOA / ADC1 时钟，放在最后不影响前面外设。</li>
+                            <li><code>while(1)</code>：采样 20 次取平均 → 显示码值 → 换算并显示电压 → 翻转 DS0 → 延时 250ms。</li>
+                        </ol>
+                    </div>
+
+                    <h3>顺序为什么不能随意换</h3>
+                    <ul>
+                        <li><strong>HAL_Init 在时钟切换之前</strong>：它按复位后的 HSI 建立时基；<code>HAL_RCC_ClockConfig</code> 结尾会再次调用 <code>HAL_InitTick(TICK_INT_PRIORITY)</code>，用新的 HCLK 重算 1ms 重装值。</li>
+                        <li><strong>delay_init 在时钟切换之后</strong>：<code>fac_us</code> 直接取 180，若在 16MHz 时调用会得到错误的延时倍乘。</li>
+                        <li><strong>uart_init 在 LCD_Init 之前</strong>：<code>LCD_Init</code> 内的 <code>printf</code> 依赖已初始化的 USART1，否则串口无输出。</li>
+                        <li><strong>SDRAM 在 LCD 之前</strong>：RGB 屏帧缓存依赖 SDRAM 控制器，顺序颠倒会写不进显存。</li>
+                        <li><strong>MY_ADC_Init 可以放最后</strong>：ADC1 与 PA5 不依赖 LCD/SDRAM，只依赖 RCC 与 GPIOA 时钟。</li>
+                    </ul>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">复位后 CPU 从哪里取栈顶、从哪里取第一条指令</div>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>值</th><th>含义 / 来源</th></tr>
+                        <tr><td>Stack_Size</td><td><code>0x400</code>（1KB）</td><td><code>AREA STACK, NOINIT, READWRITE, ALIGN=3</code></td></tr>
+                        <tr><td>Heap_Size</td><td><code>0x200</code>（512B）</td><td><code>__heap_base</code> / <code>__heap_limit</code></td></tr>
+                        <tr><td>向量表第 0 项</td><td><code>__initial_sp</code></td><td>复位时硬件装入 MSP</td></tr>
+                        <tr><td>向量表第 1 项</td><td><code>Reset_Handler</code></td><td>复位后第一条指令入口</td></tr>
+                        <tr><td>VTOR</td><td><code>FLASH_BASE | 0x00</code> = <code>0x08000000</code></td><td><code>system_stm32f4xx.c</code> 中 <code>VECT_TAB_OFFSET 0x00</code></td></tr>
+                        <tr><td>ADC 中断入口</td><td><code>ADC_IRQHandler</code>（WEAK）</td><td>启动文件弱定义，工程未重写、未使能</td></tr>
+                    </table>
+
+                    <pre class="code">Stack_Size      EQU     0x400          <span class="cmt">;栈大小 1KB</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3  <span class="cmt">;定义栈段，未初始化、读写、8 字节对齐</span>
+Stack_Mem       SPACE   Stack_Size                            <span class="cmt">;分配 1KB 栈空间</span>
+__initial_sp                            <span class="cmt">;栈顶地址，复位时装进 MSP</span>
+
+Heap_Size       EQU     0x200          <span class="cmt">;堆大小 512B</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3  <span class="cmt">;定义堆段，未初始化、读写、8 字节对齐</span>
+__heap_base                                            <span class="cmt">;堆起始地址</span>
+Heap_Mem        SPACE   Heap_Size                       <span class="cmt">;分配 512B 堆空间</span>
+__heap_limit                                           <span class="cmt">;堆结束地址</span>
+
+__Vectors       DCD     __initial_sp               <span class="cmt">;第 0 项：初始 MSP</span>
+                DCD     Reset_Handler              <span class="cmt">;第 1 项：复位入口</span>
+                DCD     NMI_Handler                <span class="cmt">;第 2 项：不可屏蔽中断</span>
+                DCD     HardFault_Handler          <span class="cmt">;第 3 项：硬 fault</span>
+                <span class="cmt">;……省略 SysTick 之前的内核异常项，顺序与 CMSIS 固定表一致……</span>
+                DCD     SysTick_Handler            <span class="cmt">;SysTick 异常入口</span>
+                <span class="cmt">;……省略外设中断项，ADC 项如下……</span>
+                DCD     ADC_IRQHandler             <span class="cmt">;ADC1/2/3 共用，弱定义</span>
+
+Reset_Handler    PROC                               <span class="cmt">;复位处理函数开始</span>
+                 EXPORT  Reset_Handler             [WEAK]  <span class="cmt">;导出为弱符号，可被用户覆盖</span>
+        IMPORT  SystemInit                         <span class="cmt">;声明外部符号 SystemInit</span>
+        IMPORT  __main                             <span class="cmt">;声明 C 库入口 __main</span>
+                 LDR     R0, =SystemInit           <span class="cmt">;把 SystemInit 地址装入 R0</span>
+                 BLX     R0                <span class="cmt">;开 FPU、复位 RCC、设置 VTOR</span>
+                 LDR     R0, =__main               <span class="cmt">;把 __main 地址装入 R0</span>
+                 BX      R0                <span class="cmt">;进入 C 库启动，不返回</span>
+                 ENDP                               <span class="cmt">;复位处理函数结束</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：启动文件只做“两跳”，其余交给 C 库</div>
+                        <ol>
+                            <li><code>Reset_Handler</code> 先 <code>BLX SystemInit</code>，再 <code>BX __main</code>；没有手写 <code>.data</code> 复制与 <code>.bss</code> 清零循环。</li>
+                            <li>复制 <code>.data</code>、清零 <code>.bss</code>、初始化堆栈由 C 库 <code>__main</code> 完成，之后才调用 <code>main</code>。</li>
+                            <li>堆只有 512B，工程本身不调用 <code>malloc</code>；ADC 句柄 <code>ADC1_Handler</code> 是全局变量，落在 <code>.bss</code>。</li>
+                            <li><code>ADC1_Handler</code> 无初值，启动后全 0，因此 <code>State == HAL_ADC_STATE_RESET</code>，<code>HAL_ADC_Init</code> 才会调用 <code>HAL_ADC_MspInit</code>。</li>
+                            <li>向量表固定在 Flash 起始 <code>0x08000000</code>，未重定位到 SRAM；启动文件的 <code>ADC_IRQHandler</code> 未被覆盖，因为本实验不用 ADC 中断。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">进入 main 之前，芯片已经被复位到 HSI 16MHz；main 第一行再把 HAL 时基与中断分组立起来</div>
+
+                    <h3>SystemInit：FPU、RCC 复位、VTOR</h3>
+                    <pre class="code">void SystemInit(void)               <span class="cmt">//复位后第一个 C 函数，由 Reset_Handler 调用</span>
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)   <span class="cmt">//若启用了 FPU，则打开 CP10/CP11</span>
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">// CP10/CP11 全访问，开 FPU</span>
+  #endif                            <span class="cmt">//结束 FPU 条件编译</span>
+  RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="cmt">// 打开 HSI</span>
+  RCC-&gt;CFGR = 0x00000000;               <span class="cmt">// 时钟源回 HSI，清全部分频</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="cmt">// 关 HSEON / CSSON / PLLON</span>
+  RCC-&gt;PLLCFGR = 0x24003010;            <span class="cmt">// PLLCFGR 复位值</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;      <span class="cmt">// 清 HSEBYP</span>
+  RCC-&gt;CIR = 0x00000000;                <span class="cmt">// 关所有 RCC 中断</span>
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET; <span class="cmt">// 0x08000000 | 0x00</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：SystemInit 只做"复位+开FPU+定VTOR"三件事</div>
+                        <ol>
+                            <li>FPU 通过 <code>CPACR</code> 的 CP10/CP11 位打开，让单精度浮点指令（如 main 里的 <code>float</code> 运算）能在硬件上执行。</li>
+                            <li>RCC 寄存器全部写回复位值，确保进入 <code>main</code> 时主频是 HSI 16MHz，而不是上一次运行残留的配置。</li>
+                            <li><code>VTOR</code> 指向 <code>0x08000000</code>，中断向量表仍在 Flash 起始，未重定位到 SRAM。</li>
+                            <li>此函数不配置 PLL、不配置 GPIO、不开任何外设时钟；这些都是后面 <code>main</code> 的工作。</li>
+                            <li>因为 <code>RCC-&gt;CFGR=0</code>，此时 SYSCLK=HSI=16MHz，<code>HAL_Init</code> 里的 SysTick 重装值才会算出 16000。</li>
+                        </ol>
+                    </div>
+
+                    <h3>HAL_Init：缓存、优先级分组、1ms 时基</h3>
+                    <pre class="code"><span class="cmt">// 省略三个 #if 条件编译外壳，只保留工程配置下真正被编译的语句</span>
+HAL_StatusTypeDef HAL_Init(void)     <span class="cmt">//HAL 库初始化入口，main 第一行调用</span>
+{
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();  <span class="cmt">//开 Flash 指令缓存，加快取指</span>
+  __HAL_FLASH_DATA_CACHE_ENABLE();         <span class="cmt">//开 Flash 数据缓存，加快常数读取</span>
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();    <span class="cmt">//开 Flash 预取，抵消等待周期</span>
+
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);<span class="cmt">//中断优先级分组2</span>
+  HAL_InitTick(TICK_INT_PRIORITY);   <span class="cmt">//复位后 HSI 16MHz，重装 16000 → 1ms</span>
+  HAL_MspInit();                     <span class="cmt">//弱函数，工程未重写</span>
+  return HAL_OK;                     <span class="cmt">//返回成功状态</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：为什么切到 180MHz 后 1ms 仍然准确</div>
+                        <ol>
+                            <li><code>SystemInit</code> 把 RCC 全部恢复为复位状态，所以进入 <code>main</code> 时实际主频是 HSI 16MHz，不是 180MHz。</li>
+                            <li><code>HAL_InitTick</code> 用 <code>HAL_RCC_GetHCLKFreq()/1000</code> 计算重装值，此刻得到 16000，SysTick 为 1ms。</li>
+                            <li><code>Stm32_Clock_Init</code> 调用 <code>HAL_RCC_ClockConfig</code>，该函数结尾再次执行 <code>HAL_InitTick(TICK_INT_PRIORITY)</code>，重装值变为 180000。</li>
+                            <li><code>HAL_MspInit</code> 在 <code>stm32f4xx_hal.c</code> 中是 <code>__weak</code> 空实现，工程没有覆盖，因此这里不配置任何引脚。</li>
+                            <li><code>NVIC_PRIORITYGROUP_2</code> 表示 2 位抢占优先级、2 位子优先级；后面的 USART1 用 <code>HAL_NVIC_SetPriority(USART1_IRQn,3,3)</code> 正好落在这套分组里。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟 / 延时 / 串口">
+                    <h2>06　时钟 / 延时 / 串口</h2>
+                    <div class="sec-sub">ADC 的输入时钟来自 PCLK2，所以先把整条时钟树算清楚</div>
+
+                    <table class="data">
+                        <tr><th>时钟</th><th>算式</th><th>结果</th></tr>
+                        <tr><td>HSE</td><td>板载晶振</td><td>25 MHz</td></tr>
+                        <tr><td>PLL VCO</td><td>25 × (360 / 25)</td><td>360 MHz</td></tr>
+                        <tr><td>SYSCLK</td><td>360 / PLLP(2)</td><td>180 MHz</td></tr>
+                        <tr><td>HCLK</td><td>180 / AHB(1)</td><td>180 MHz</td></tr>
+                        <tr><td>PCLK1</td><td>180 / APB1(4)</td><td>45 MHz</td></tr>
+                        <tr><td>PCLK2</td><td>180 / APB2(2)</td><td>90 MHz</td></tr>
+                        <tr><td>PLLQ</td><td>360 / 8</td><td>45 MHz（USB/SDIO/RNG）</td></tr>
+                        <tr><td>Flash 等待</td><td><code>FLASH_LATENCY_5</code></td><td>5WS，6 个 CPU 周期</td></tr>
+                        <tr><td>SysTick</td><td>HCLK / 1000 = 180000</td><td>1ms</td></tr>
+                    </table>
+
+                    <pre class="code">__HAL_RCC_PWR_CLK_ENABLE();                      <span class="cmt">//开 PWR 时钟，才能配置电压等级与 Over-Drive</span>
+__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);<span class="cmt">//电压等级 1</span>
+
+RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE;<span class="cmt">//时钟源 HSE</span>
+RCC_OscInitStructure.HSEState=RCC_HSE_ON;        <span class="cmt">//打开外部高速晶振 25MHz</span>
+RCC_OscInitStructure.PLL.PLLState=RCC_PLL_ON;    <span class="cmt">//使能 PLL</span>
+RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE; <span class="cmt">//PLL 输入源选 HSE</span>
+RCC_OscInitStructure.PLL.PLLM=pllm;   <span class="cmt">//25</span>
+RCC_OscInitStructure.PLL.PLLN=plln;   <span class="cmt">//360</span>
+RCC_OscInitStructure.PLL.PLLP=pllp;   <span class="cmt">//2</span>
+RCC_OscInitStructure.PLL.PLLQ=pllq;   <span class="cmt">//8</span>
+ret=HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);    <span class="cmt">//按上述参数配置振荡器与 PLL</span>
+ret=HAL_PWREx_EnableOverDrive();      <span class="cmt">//180MHz 必须开 Over-Drive</span>
+
+RCC_ClkInitStructure.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK; <span class="cmt">//系统时钟源选 PLL</span>
+RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1; <span class="cmt">//AHB 不分频，HCLK=180MHz</span>
+RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4; <span class="cmt">//APB1 4 分频，PCLK1=45MHz</span>
+RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2; <span class="cmt">//APB2 2 分频，PCLK2=90MHz</span>
+ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5); <span class="cmt">//应用时钟配置并设 Flash 5 等待</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：PLL 参数如何算出 180MHz 以及三条总线频率</div>
+                        <ol>
+                            <li>PLL 输入 = HSE 25MHz / PLLM(25) = 1MHz；VCO = 1MHz × PLLN(360) = 360MHz。</li>
+                            <li>SYSCLK = VCO / PLLP(2) = 180MHz；PLLQ = 360 / 8 = 45MHz 供 USB/SDIO/RNG。</li>
+                            <li>HCLK = SYSCLK / AHB(1) = 180MHz；PCLK1 = 180 / APB1(4) = 45MHz；PCLK2 = 180 / APB2(2) = 90MHz。</li>
+                            <li>ADC 挂在 APB2，其输入时钟就是 90MHz 的 PCLK2，再经 ADC 预分频 /4 得到 22.5MHz ADCCLK。</li>
+                            <li>180MHz 必须同时满足电压等级 1、Over-Drive 开启、Flash 5WS，三者缺一都会导致运行不稳定。</li>
+                        </ol>
+                    </div>
+
+                    <h3>延时与串口</h3>
+                    <pre class="code">void delay_init(u8 SYSCLK)            <span class="cmt">//初始化延时函数，传入系统主频 180</span>
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);<span class="cmt">//SysTick 时钟为 HCLK</span>
+    fac_us=SYSCLK;   <span class="cmt">//180：1us 对应 180 个 HCLK</span>
+}
+
+void delay_us(u32 nus)                <span class="cmt">//微秒级延时，nus 为延时微秒数</span>
+{
+    u32 ticks;                        <span class="cmt">//需要计数的总节拍数</span>
+    ticks=nus*fac_us;                 <span class="cmt">//需要的节拍数</span>
+    told=SysTick->VAL;                <span class="cmt">//刚进入时的递减计数器值</span>
+    while(1)                          <span class="cmt">//死循环轮询，直到累计节拍达标</span>
+    {
+        tnow=SysTick->VAL;            <span class="cmt">//读取当前递减计数器值</span>
+        if(tnow!=told)                <span class="cmt">//计数器有变化才累加</span>
+        {
+            if(tnow&lt;told)tcnt+=told-tnow;  <span class="cmt">//正常递减，差值即为经过的节拍</span>
+            else tcnt+=reload-tnow+told;<span class="cmt">//计数器回绕</span>
+            told=tnow;                <span class="cmt">//更新上一次的计数值</span>
+            if(tcnt&gt;=ticks)break;     <span class="cmt">//累计节拍达标，退出循环</span>
+        }
+    }
+}
+
+void delay_ms(u16 nms)                <span class="cmt">//毫秒级延时，nms 为延时毫秒数</span>
+{
+    u32 i;                            <span class="cmt">//循环计数变量</span>
+    for(i=0;i&lt;nms;i++) delay_us(1000);<span class="cmt">//非 OS 版本：循环 1ms</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：时钟、延时、串口三者的依赖</div>
+                        <ol>
+                            <li>PCLK2 = 90MHz 是 ADC 预分频的输入，后面 22.5MHz 的 ADCCLK 完全由这里决定。</li>
+                            <li>180MHz 属于 F429 的高频档，必须同时满足电压等级 1、Over-Drive 打开、Flash 5WS 三个条件，缺一不可。</li>
+                            <li><code>fac_us=180</code> 只在 <code>SYSTEM_SUPPORT_OS=0</code> 的分支里使用；该分支不打开 SysTick 中断，延时是纯轮询。</li>
+                            <li>正因为不依赖中断，<code>delay_us</code> 在任何中断上下文里也能用；代价是延时期间 CPU 空转。</li>
+                            <li>USART1 的 <code>fputc</code> 直接轮询 <code>USART1->SR</code> 的 TXE 位，不发中断；<code>EN_USART1_RX=1</code> 时 MSP 里才会开 RXNE 中断与 NVIC（优先级 3,3）。</li>
+                        </ol>
+                    </div>
+                    <div class="note blue">本实验只用到 <code>printf</code> 输出，没有使用串口接收；<code>USART1_IRQHandler</code> 虽已实现，但主循环不依赖它。</div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="ADC 时钟与分频计算">
+                    <h2>07　ADC 时钟与分频计算</h2>
+                    <div class="sec-sub">ADC1 挂 APB2，ADCCLK 由 ADC 通用预分频器再分一次</div>
+
+                    <figure class="figure">
+                        <img src="./index33-map/adc-clock.png" alt="从 HSE 25MHz 到 ADCCLK 22.5MHz 的时钟链路与算式">
+                        <figcaption>图 7-1　HSE → PLL → PCLK2 → ADCCLK</figcaption>
+                    </figure>
+
+                    <pre class="code">ADC1_Handler.Init.ClockPrescaler=ADC_CLOCK_SYNC_PCLK_DIV4; <span class="cmt">//ADC 预分频选 4 分频</span>
+<span class="cmt">// 原注释：4分频，ADCCLK=PCLK2/4=90/4=22.5MHZ</span>
+
+<span class="cmt">// HALLIB 内 ADC_Init() 真正写寄存器的地方：</span>
+ADC-&gt;CCR &amp;= ~(ADC_CCR_ADCPRE);          <span class="cmt">//先清 ADCPRE 位</span>
+ADC-&gt;CCR |=  hadc-&gt;Init.ClockPrescaler;  <span class="cmt">//ADC_CLOCK_SYNC_PCLK_DIV4 = ADCPRE_0</span></pre>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>数值</th><th>依据</th></tr>
+                        <tr><td>ADC 输入时钟源</td><td>PCLK2</td><td>F429 的 ADC 挂在 APB2</td></tr>
+                        <tr><td>预分频</td><td>/4</td><td><code>ADC_CLOCK_SYNC_PCLK_DIV4</code>，写 <code>ADC-&gt;CCR.ADCPRE=01</code></td></tr>
+                        <tr><td>ADCCLK</td><td>22.5 MHz</td><td>90MHz / 4</td></tr>
+                        <tr><td>上限</td><td>36 MHz</td><td>数据手册 ADCCLK 上限，22.5MHz 合规</td></tr>
+                        <tr><td>共用关系</td><td>ADC1/2/3</td><td><code>ADC-&gt;CCR</code> 是公共寄存器</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：分频系数不能随手改</div>
+                        <ol>
+                            <li><code>ADC-&gt;CCR</code> 是 ADC1/2/3 共用的公共寄存器，改预分频会影响所有 ADC 实例，不是 ADC1 私有。</li>
+                            <li>若把 APB2 分频改成 /4，则 PCLK2=45MHz，再用 /4 得 11.25MHz，转换时间变长但不会超限。</li>
+                            <li>若把 ADC 预分频改成 /2，ADCCLK=45MHz，超过 36MHz 上限，转换结果不可信。</li>
+                            <li>本工程把分频写在结构体里，由 <code>HAL_ADC_Init → ADC_Init</code> 统一落地；<code>Get_Adc</code> 每次只改通道，不再改时钟。</li>
+                            <li>采样时间 480 个 ADCCLK 与 12 位转换的 12 个周期，都以 22.5MHz 为基准计算。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="GPIO 模拟输入配置">
+                    <h2>08　GPIO 模拟输入配置</h2>
+                    <div class="sec-sub">ADC 的引脚配置不在 MY_ADC_Init 里，而在 HAL_ADC_MspInit 回调中</div>
+
+                    <pre class="code">void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)  <span class="cmt">//ADC 底层初始化回调，由 HAL_ADC_Init 调用</span>
+{
+    GPIO_InitTypeDef GPIO_Initure;              <span class="cmt">//GPIO 配置结构体</span>
+    __HAL_RCC_ADC1_CLK_ENABLE();            <span class="cmt">//使能ADC1时钟</span>
+    __HAL_RCC_GPIOA_CLK_ENABLE();           <span class="cmt">//开启GPIOA时钟</span>
+
+    GPIO_Initure.Pin=GPIO_PIN_5;            <span class="cmt">//PA5</span>
+    GPIO_Initure.Mode=GPIO_MODE_ANALOG;     <span class="cmt">//模拟</span>
+    GPIO_Initure.Pull=GPIO_NOPULL;          <span class="cmt">//不带上下拉</span>
+    HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);     <span class="cmt">//把 PA5 配置写入 GPIOA 寄存器</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>字段</th><th>值</th><th>作用</th></tr>
+                        <tr><td>Pin</td><td><code>GPIO_PIN_5</code></td><td>PA5，对应 ADC1_IN5</td></tr>
+                        <tr><td>Mode</td><td><code>GPIO_MODE_ANALOG</code></td><td>断开数字输入缓冲，引脚直连 ADC 采样网络</td></tr>
+                        <tr><td>Pull</td><td><code>GPIO_NOPULL</code></td><td>不接内部上/下拉，避免改变外部被测电压</td></tr>
+                        <tr><td>Speed</td><td>未赋值</td><td>模拟模式不使用输出速度，<code>HAL_GPIO_Init</code> 不会写 OSPEEDR</td></tr>
+                        <tr><td>Alternate</td><td>未赋值</td><td>非复用模式，不需要 AF 编号</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：MSP 回调何时被调用</div>
+                        <ol>
+                            <li><code>HAL_ADC_Init</code> 只在 <code>hadc-&gt;State == HAL_ADC_STATE_RESET</code> 时调用 <code>HAL_ADC_MspInit</code>；<code>ADC1_Handler</code> 是全局零初始化变量，首次必然满足。</li>
+                            <li>MspInit 里同时开了 ADC1 与 GPIOA 时钟，顺序是先 ADC 后 GPIO，二者互不依赖。</li>
+                            <li><code>GPIO_Initure</code> 是局部变量且未清零，<code>Speed</code>/<code>Alternate</code> 是栈上残留值；模拟模式不读这两个字段，所以现象正常，但这是写法上的隐患。</li>
+                            <li><code>GPIO_NOPULL</code> 很关键：若误设上拉，PA5 悬空时会被拉到 3.3V，读数失真。</li>
+                            <li>PA5 与 TPAD 共用 P11 跳线，硬件跳线不拔时读到接近 3.3V 不是软件问题。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="ADC 初始化结构体逐字段">
+                    <h2>09　ADC 初始化结构体逐字段</h2>
+                    <div class="sec-sub">12 个字段决定工作模式，HAL 再把它们翻译成 CR1 / CR2 / SQR1 / CCR</div>
+
+                    <figure class="figure">
+                        <img src="./index33-map/adc-config.png" alt="ADC1 初始化结构体字段与寄存器映射对照图">
+                        <figcaption>图 9-1　ADC1_Handler.Init 字段与寄存器映射</figcaption>
+                    </figure>
+
+                    <pre class="code">ADC_HandleTypeDef ADC1_Handler;<span class="cmt">//全局句柄，零初始化 → State=RESET</span>
+
+void MY_ADC_Init(void)                  <span class="cmt">//ADC1 初始化入口，main 中调用</span>
+{
+    ADC1_Handler.Instance=ADC1;         <span class="cmt">//句柄绑定到 ADC1 外设基地址</span>
+    ADC1_Handler.Init.ClockPrescaler=ADC_CLOCK_SYNC_PCLK_DIV4;   <span class="cmt">//4分频，ADCCLK=22.5MHZ</span>
+    ADC1_Handler.Init.Resolution=ADC_RESOLUTION_12B;             <span class="cmt">//12位模式</span>
+    ADC1_Handler.Init.DataAlign=ADC_DATAALIGN_RIGHT;             <span class="cmt">//右对齐</span>
+    ADC1_Handler.Init.ScanConvMode=DISABLE;                      <span class="cmt">//非扫描模式</span>
+    ADC1_Handler.Init.EOCSelection=DISABLE;                      <span class="cmt">//关闭EOC中断</span>
+    ADC1_Handler.Init.ContinuousConvMode=DISABLE;                <span class="cmt">//关闭连续转换</span>
+    ADC1_Handler.Init.NbrOfConversion=1;                         <span class="cmt">//规则序列只有 1 个转换</span>
+    ADC1_Handler.Init.DiscontinuousConvMode=DISABLE;             <span class="cmt">//禁止不连续采样</span>
+    ADC1_Handler.Init.NbrOfDiscConversion=0;                     <span class="cmt">//不连续通道数 0</span>
+    ADC1_Handler.Init.ExternalTrigConv=ADC_SOFTWARE_START;       <span class="cmt">//软件触发</span>
+    ADC1_Handler.Init.ExternalTrigConvEdge=ADC_EXTERNALTRIGCONVEDGE_NONE;  <span class="cmt">//外部触发边沿禁用，纯软件触发</span>
+    ADC1_Handler.Init.DMAContinuousRequests=DISABLE;             <span class="cmt">//关闭DMA请求</span>
+    HAL_ADC_Init(&amp;ADC1_Handler);                                 <span class="cmt">//初始化</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：MY_ADC_Init 为什么这样配</div>
+                        <ol>
+                            <li><code>ClockPrescaler=DIV4</code>：APB2=90MHz，4 分频后 ADCCLK=22.5MHz，落在 0.6MHz~36MHz 允许范围，兼顾精度与采样速度。</li>
+                            <li><code>ScanConvMode=DISABLE</code> + <code>NbrOfConversion=1</code>：只转 1 个通道，关闭扫描后规则序列只走一次，结构最简单。</li>
+                            <li><code>ContinuousConvMode=DISABLE</code> + <code>ExternalTrigConvEdge=NONE</code>：每次 <code>Get_Adc</code> 只做一次软件触发转换，需要数据时再启动，不连续占用 ADC。</li>
+                            <li><code>EOCSelection=DISABLE</code>：不使用 EOC 中断，改由 <code>HAL_ADC_PollForConversion</code> 轮询，省去中断配置与回调。</li>
+                        </ol>
+                    </div>
+
+                    <pre class="code"><span class="cmt">// 省略 __HAL_LOCK/__HAL_UNLOCK 与 assert_param 参数校验</span>
+HAL_StatusTypeDef HAL_ADC_Init(ADC_HandleTypeDef* hadc)  <span class="cmt">//HAL ADC 初始化入口</span>
+{
+  if(hadc-&gt;State == HAL_ADC_STATE_RESET)  <span class="cmt">//仅首次（State=RESET）才调用 MspInit</span>
+  {
+    hadc-&gt;Lock = HAL_UNLOCKED;            <span class="cmt">//解锁句柄，允许后续操作</span>
+    HAL_ADC_MspInit(hadc);      <span class="cmt">//开 ADC1/GPIOA 时钟并配置 PA5</span>
+  }
+  hadc-&gt;State = HAL_ADC_STATE_BUSY;       <span class="cmt">//标记为忙，防止重入</span>
+  ADC_Init(hadc);               <span class="cmt">//把结构体逐项写进寄存器</span>
+  hadc-&gt;State = HAL_ADC_STATE_READY;      <span class="cmt">//初始化完成，标记就绪</span>
+  return HAL_OK;                          <span class="cmt">//返回成功</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：每个字段为什么这样选</div>
+                        <ol>
+                            <li><code>Resolution=12B</code> 决定码值范围 0~4095；换 10 位/8 位会改变满量程分母，而 main 里的 <code>3.3/4096</code> 没有跟着改，这是换分辨率时最容易漏的地方。</li>
+                            <li><code>DataAlign=RIGHT</code> 让 12 位结果落在 DR 的低 12 位，直接读 <code>DR</code> 即可；左对齐会放大 16 倍。</li>
+                            <li><code>ScanConvMode=DISABLE</code> + <code>NbrOfConversion=1</code>：规则组只转序列 1，配合 <code>SQR1.L=0</code>。</li>
+                            <li><code>ContinuousConvMode=DISABLE</code>：每次 <code>HAL_ADC_Start</code> 的 SWSTART 只触发一轮，转完就停，符合轮询单次读取。</li>
+                            <li><code>EOCSelection=DISABLE</code> 写 <code>CR2.EOCS=0</code>，EOC 在序列结束时置位；本工程没开 EOC 中断，只把它当查询标志。</li>
+                            <li><code>ExternalTrigConv=ADC_SOFTWARE_START</code> 时 <code>ADC_Init</code> 清 <code>EXTSEL</code> 与 <code>EXTEN</code>，之后 <code>HAL_ADC_Start</code> 才能用 SWSTART 启动。</li>
+                            <li><code>NbrOfDiscConversion</code> 仅在 <code>DISCEN=1</code> 时才写 <code>DISCNUM</code>；这里 <code>DISCEN=0</code>，它只是占位值。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="采样时间与转换时序">
+                    <h2>10　采样时间与转换时序</h2>
+                    <div class="sec-sub">480 个周期的采样时间换来稳定的高阻信号，代价是单次约 21.9μs</div>
+
+                    <table class="data">
+                        <tr><th>阶段</th><th>周期数</th><th>@22.5MHz</th><th>来源</th></tr>
+                        <tr><td>采样</td><td>480</td><td>约 21.33 μs</td><td><code>ADC_SAMPLETIME_480CYCLES</code></td></tr>
+                        <tr><td>12 位转换</td><td>12</td><td>约 0.53 μs</td><td>分辨率决定的固定转换周期</td></tr>
+                        <tr><td>单次合计</td><td>492</td><td>约 21.87 μs</td><td>480 + 12</td></tr>
+                        <tr><td>20 次平均</td><td>20 次</td><td>约 100 ms（不含转换）</td><td>每次后有 <code>delay_ms(5)</code></td></tr>
+                        <tr><td>轮询超时</td><td>—</td><td>10 ms</td><td><code>HAL_ADC_PollForConversion(&amp;ADC1_Handler,10)</code></td></tr>
+                    </table>
+
+                    <pre class="code">u16 Get_Adc_Average(u32 ch,u8 times)   <span class="cmt">//对通道 ch 采样 times 次取平均</span>
+{
+    u32 temp_val=0;                     <span class="cmt">//累计采样值，u32 防止溢出</span>
+    u8 t;                               <span class="cmt">//循环计数变量</span>
+    for(t=0;t&lt;times;t++)                <span class="cmt">//循环采样 times 次</span>
+    {
+        temp_val+=Get_Adc(ch);   <span class="cmt">//单次转换，返回 0~4095</span>
+        delay_ms(5);             <span class="cmt">//每次之间停 5ms</span>
+    }
+    return temp_val/times;       <span class="cmt">//整数平均，丢弃余数</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：时间都花在哪、有没有风险</div>
+                        <ol>
+                            <li>采样时间选最长的 480 周期，适合高阻抗信号源；如果被测源阻抗很低，可以改短以提高速度。</li>
+                            <li>转换总时间 492 / 22.5MHz ≈ 21.9μs，远小于轮询超时 10ms，正常情况下不会超时。</li>
+                            <li><code>delay_ms(5)</code> 是轮询式空转，20 次共约 100ms，主循环节拍主要由它和末尾的 250ms 决定。</li>
+                            <li><code>temp_val</code> 是 <code>u32</code>，20 次最大 81900，不会溢出；平均值用整数除法，小数被截掉。</li>
+                            <li>每次 <code>Get_Adc</code> 都重新调用 <code>HAL_ADC_ConfigChannel</code>，通道配置被重复写入；对单通道应用是冗余但安全的。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="单次转换调用链与取值">
+                    <h2>11　单次转换调用链与取值</h2>
+                    <div class="sec-sub">Get_Adc 一次调用经过 4 个 HAL 函数，最后直接读 DR</div>
+
+                    <figure class="figure">
+                        <img src="./index33-map/adc-sample.png" alt="单次 ADC 转换从配置通道到读取 DR 的流程与 SWSTART 时序">
+                        <figcaption>图 11-1　ConfigChannel → Start → EOC → GetValue</figcaption>
+                    </figure>
+
+                    <pre class="code">u16 Get_Adc(u32 ch)                      <span class="cmt">//对通道 ch 做单次转换并返回码值</span>
+{
+    ADC_ChannelConfTypeDef ADC1_ChanConf; <span class="cmt">//ADC 通道配置结构体</span>
+
+    ADC1_ChanConf.Channel=ch;                            <span class="cmt">//ADC_CHANNEL_5</span>
+    ADC1_ChanConf.Rank=1;                                <span class="cmt">//规则序列第 1 个</span>
+    ADC1_ChanConf.SamplingTime=ADC_SAMPLETIME_480CYCLES;  <span class="cmt">//采样 480 周期</span>
+    ADC1_ChanConf.Offset=0;                              <span class="cmt">//转换结果不偏移</span>
+    HAL_ADC_ConfigChannel(&amp;ADC1_Handler,&amp;ADC1_ChanConf);  <span class="cmt">//写 SMPR2 / SQR3</span>
+
+    HAL_ADC_Start(&amp;ADC1_Handler);                        <span class="cmt">//开 ADC 并发 SWSTART</span>
+
+    HAL_ADC_PollForConversion(&amp;ADC1_Handler,10);          <span class="cmt">//轮询 EOC，超时 10ms</span>
+
+    return (u16)HAL_ADC_GetValue(&amp;ADC1_Handler);          <span class="cmt">//读 DR</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：单次转换的四步串行</div>
+                        <ol>
+                            <li><code>ConfigChannel</code> 把通道号、采样时间写进 SMPR2/SQR3，每次都重新配一遍，保证 <code>Get_Adc</code> 可用于任意通道。</li>
+                            <li><code>HAL_ADC_Start</code> 首次会先等 ADC 上电稳定（<code>ADC_STAB_DELAY_US</code> 个循环），之后每次只写 SWSTART 启动转换。</li>
+                            <li><code>PollForConversion(10)</code> 轮询 EOC，超时 10ms 直接返回超时码，避免 ADC 故障卡死主循环。</li>
+                            <li><code>GetValue</code> 读 DR，硬件会自动清 EOC；返回值强转 <code>u16</code>，因为 12 位右对齐数据一定在低 12 位。</li>
+                        </ol>
+                    </div>
+
+                    <pre class="code"><span class="cmt">// HAL_ADC_ConfigChannel（节选）：通道 5 属于 0~9，走 SMPR2</span>
+hadc-&gt;Instance-&gt;SMPR2 &amp;= ~ADC_SMPR2(ADC_SMPR2_SMP0, sConfig-&gt;Channel); <span class="cmt">//清通道 5 的采样时间位</span>
+hadc-&gt;Instance-&gt;SMPR2 |=  ADC_SMPR2(sConfig-&gt;SamplingTime, sConfig-&gt;Channel); <span class="cmt">//写入 480 周期采样时间</span>
+hadc-&gt;Instance-&gt;SQR3 &amp;= ~ADC_SQR3_RK(ADC_SQR3_SQ1, sConfig-&gt;Rank); <span class="cmt">//清规则序列第 1 位</span>
+hadc-&gt;Instance-&gt;SQR3 |=  ADC_SQR3_RK(sConfig-&gt;Channel, sConfig-&gt;Rank); <span class="cmt">//把通道 5 放入序列第 1 位</span>
+
+<span class="cmt">// HAL_ADC_Start（节选）：首次先把 ADON 置 1 并等待稳定</span>
+if((hadc-&gt;Instance-&gt;CR2 &amp; ADC_CR2_ADON) != ADC_CR2_ADON)  <span class="cmt">//若 ADC 尚未使能（ADON=0）</span>
+{
+    __HAL_ADC_ENABLE(hadc);                             <span class="cmt">//置位 CR2.ADON，使能 ADC</span>
+    counter = (ADC_STAB_DELAY_US * (SystemCoreClock / 1000000));  <span class="cmt">//计算稳定延时的循环次数</span>
+    while(counter != 0) counter--;                      <span class="cmt">//空转等待 ADC 上电稳定</span>
+}
+if((hadc-&gt;Instance-&gt;CR2 &amp; ADC_CR2_EXTEN) == RESET)      <span class="cmt">//若 EXTEN=0（软件触发）</span>
+{
+    hadc-&gt;Instance-&gt;CR2 |= (uint32_t)ADC_CR2_SWSTART;  <span class="cmt">//软件启动</span>
+}
+
+<span class="cmt">// HAL_ADC_PollForConversion（节选）：等 EOC 或超时</span>
+while(!(__HAL_ADC_GET_FLAG(hadc, ADC_FLAG_EOC)))        <span class="cmt">//轮询 EOC 标志，未置位则继续等</span>
+{
+    if((HAL_GetTick() - tickstart) &gt; Timeout) return HAL_TIMEOUT;  <span class="cmt">//超过 10ms 则返回超时</span>
+}
+
+<span class="cmt">// HAL_ADC_GetValue：一行返回 DR</span>
+return hadc-&gt;Instance-&gt;DR;</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：每一步改变了哪个硬件状态</div>
+                        <ol>
+                            <li><code>ConfigChannel</code> 写 <code>SMPR2.SMP5=480</code> 与 <code>SQR3.SQ1=5</code>：前者决定采样窗口长度，后者决定规则序列第 1 个转哪个通道。</li>
+                            <li><code>HAL_ADC_Start</code> 首次进入时 <code>ADON=0</code>，先置位并空转等待稳定，再由 <code>EXTEN=0</code> 判断为软件触发并写 <code>SWSTART</code>。</li>
+                            <li>SWSTART 是“写 1 启动”的位，硬件启动后自动清零，所以每次读取都要重新调用 <code>HAL_ADC_Start</code>。</li>
+                            <li><code>ContinuousConvMode=DISABLE</code> 时，一轮转换结束 ADC 停止，不会自动覆盖 DR，读到的就是本次结果。</li>
+                            <li><code>PollForConversion</code> 的返回值没有判断：若超时，<code>Get_Adc</code> 仍会读 DR，可能拿到旧值或 0。</li>
+                            <li><code>GetValue</code> 返回 <code>uint32_t</code>，右对齐 12 位模式下有效位只有低 12 位，强转 <code>u16</code> 不会丢有效数据。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="主循环与现象">
+                    <h2>12　主循环与现象</h2>
+                    <div class="sec-sub">采样、换算、显示、翻转 LED，每轮约 350ms</div>
+
+                    <pre class="code"><span class="cmt">// 省略初始化与 5 行固定字符，只保留主循环</span>
+while(1)                               <span class="cmt">//主循环，不断采样并显示</span>
+{
+    adcx=Get_Adc_Average(ADC_CHANNEL_5,20);<span class="cmt">//20 次平均，约 100ms</span>
+    LCD_ShowxNum(134,130,adcx,4,16,0);    <span class="cmt">//4 位码值，前导空格</span>
+    temp=(float)adcx*(3.3/4096);          <span class="cmt">//码值 → 电压</span>
+    adcx=temp;                            <span class="cmt">//整数部分</span>
+    LCD_ShowxNum(134,150,adcx,1,16,0);    <span class="cmt">//显示 1 位整数</span>
+    temp-=adcx;                           <span class="cmt">//减去整数部分，只留小数</span>
+    temp*=1000;                           <span class="cmt">//小数放大 1000 倍</span>
+    LCD_ShowxNum(150,150,temp,3,16,0X80); <span class="cmt">//3 位小数，补 0</span>
+    LED0=!LED0;                           <span class="cmt">//DS0 翻转</span>
+    delay_ms(250);                        <span class="cmt">//主循环节拍</span>
+}</pre>
+
+                    <figure class="figure">
+                        <img src="./index33-map/voltage-map.png" alt="12 位 ADC 码值与电压的线性换算关系图">
+                        <figcaption>图 12-1　码值 0~4095 与 0~3.3V 的线性关系</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>可观察现象</th><th>源码依据</th></tr>
+                        <tr><td>给 PA5 接 0V</td><td>码值约 0000，电压 0.000V</td><td>线性换算，0×3.3/4096</td></tr>
+                        <tr><td>给 PA5 接 1.65V</td><td>码值约 2048，电压约 1.6xxV</td><td>2048×3.3/4096</td></tr>
+                        <tr><td>给 PA5 接 3.3V</td><td>码值约 4095，电压 3.299V</td><td>满量程 4095×3.3/4096</td></tr>
+                        <tr><td>不拔 P11 跳线</td><td>读数接近 3.3V（接 TPAD）</td><td><code>readme.txt</code> 注意事项 3</td></tr>
+                        <tr><td>主循环运行</td><td>DS0 约每 350ms 翻转一次</td><td>100ms 采样 + 250ms 延时</td></tr>
+                        <tr><td>LCD 刷新</td><td>码值 4 位、电压 1 位整数 + 3 位小数</td><td><code>LCD_ShowxNum</code> 坐标 (134,130)/(134,150)/(150,150)</td></tr>
+                    </table>
+
+                    <div class="sim">
+                        <div class="sim-title">码值换算与 LCD 显示演示（仅演示逻辑，不接硬件）</div>
+                        <div class="sim-buttons">
+                            <button data-code="0">码值 0</button>
+                            <button data-code="1024">码值 1024</button>
+                            <button data-code="2048">码值 2048</button>
+                            <button data-code="3072">码值 3072</button>
+                            <button data-code="4095">码值 4095</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item">ADC 码值
+                                <input type="range" id="codeInput" min="0" max="4095" value="2048" step="1" style="width:240px;">
+                                <span id="codeShow" style="font-family:Consolas,monospace;color:#2f7bb0;">2048</span>
+                            </div>
+                        </div>
+                        <div class="sim-log" id="simLog">ADC1-&gt;DR = 2048　换算电压 ≈ 1.6500 V　LCD 显示：1.650V</div>
+                    </div>
+
+                    <div class="note">演示按源码的 <code>float</code> 运算与 <code>u32</code> 截断复现：先算 <code>code*3.3/4096</code>，取整数部分，再把小数部分乘 1000 后截断。多数码值末位正确，但个别码值会少 1，例如 3072 码理论 2.475V，实际会显示 2.474V；LCD 本身不做四舍五入。</div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：显示格式与换算的边界</div>
+                        <ol>
+                            <li><code>LCD_ShowxNum(134,130,adcx,4,16,0)</code> 的 <code>mode=0</code>：前导 0 用空格填充，所以 12 位码值最多 4 位刚好放得下。</li>
+                            <li>电压整数位只留 1 位，因为量程上限 3.3V；若参考电压改成 5V，这里会显示不下。</li>
+                            <li><code>0X80</code> 让小数部分的前导 0 也显示成字符 0，避免 1.005V 被显示成 1. 5V。</li>
+                            <li><code>temp</code> 是 <code>float</code>，乘 1000 后传给 <code>u32</code> 形参会截断而不是四舍五入，末位可能比理论值少 1。</li>
+                            <li>主循环没有检查 <code>Get_Adc</code> 的失败路径，因为该函数不返回状态；ADC 异常时只能从读数异常判断。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘">
+                    <h2>13　关键逻辑复盘</h2>
+                    <div class="sec-sub">把 12 个步骤串成一条可复查的证据链</div>
+
+                    <table class="data">
+                        <tr><th>#</th><th>环节</th><th>证据（文件 + 函数/宏 + 关键语句）</th></tr>
+                        <tr><td>01</td><td>复位取栈顶与入口</td><td><code>startup_stm32f429xx.s</code>：<code>DCD __initial_sp</code>、<code>DCD Reset_Handler</code></td></tr>
+                        <tr><td>02</td><td>FPU 与 VTOR</td><td><code>system_stm32f4xx.c</code>：<code>SCB-&gt;CPACR</code>、<code>SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET</code></td></tr>
+                        <tr><td>03</td><td>HAL 时基与分组</td><td><code>stm32f4xx_hal.c</code>：<code>NVIC_PRIORITYGROUP_2</code>、<code>HAL_InitTick</code></td></tr>
+                        <tr><td>04</td><td>180MHz 时钟</td><td><code>sys.c</code>：<code>PLLM=25 PLLN=360 PLLP=2</code>、<code>APB2CLKDivider=RCC_HCLK_DIV2</code>、<code>FLASH_LATENCY_5</code></td></tr>
+                        <tr><td>05</td><td>延时倍乘</td><td><code>delay.c</code>：<code>fac_us=SYSCLK</code>（180）、SysTick 时钟源 HCLK</td></tr>
+                        <tr><td>06</td><td>串口与 printf</td><td><code>usart.c</code>：<code>HAL_UART_Init</code>、<code>fputc</code> 轮询 TXE</td></tr>
+                        <tr><td>07</td><td>ADC 时钟</td><td><code>adc.c</code>：<code>ADC_CLOCK_SYNC_PCLK_DIV4</code> → 22.5MHz</td></tr>
+                        <tr><td>08</td><td>PA5 模拟输入</td><td><code>adc.c</code>：<code>GPIO_MODE_ANALOG</code>、<code>GPIO_NOPULL</code></td></tr>
+                        <tr><td>09</td><td>ADC 工作模式</td><td><code>adc.c</code>：12B、右对齐、非扫描、单次、软件触发、DMA 关</td></tr>
+                        <tr><td>10</td><td>通道与采样时间</td><td><code>adc.c</code>：<code>Rank=1</code>、<code>ADC_SAMPLETIME_480CYCLES</code></td></tr>
+                        <tr><td>11</td><td>启动与取值</td><td><code>stm32f4xx_hal_adc.c</code>：<code>SWSTART</code>、轮询 <code>ADC_FLAG_EOC</code>、返回 <code>DR</code></td></tr>
+                        <tr><td>12</td><td>显示与现象</td><td><code>main.c</code>：<code>Get_Adc_Average(ADC_CHANNEL_5,20)</code>、<code>3.3/4096</code>、<code>delay_ms(250)</code></td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：三个“必须同时成立”的条件</div>
+                        <ol>
+                            <li>时钟链必须同时满足：PLL 参数对、APB2 分频对、ADC 预分频对；任意一处改动都要重算 ADCCLK 是否小于 36MHz。</li>
+                            <li>引脚必须同时满足：GPIOA 时钟开、PA5 设为模拟、无上下拉；缺一个都会让读数偏向电源轨或 0。</li>
+                            <li>触发链必须同时满足：<code>EXTSEL/EXTEN</code> 被清为软件触发、<code>CONT=0</code>、每次读取都重新写 <code>SWSTART</code>。</li>
+                            <li>读取链必须同时满足：等 EOC、读 DR、按 12 位右对齐解释；任一处错位都会让码值成倍偏差。</li>
+                            <li>显示链必须同时满足：整数位与小数位坐标不重叠、<code>0X80</code> 补零；否则会出现小数点后缺位。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="总结与排查">
+                    <h2>14　总结与排查</h2>
+                    <div class="sec-sub">现象对不上时，按“时钟 → 引脚 → 模式 → 触发 → 换算”的顺序排查</div>
+
+                    <p>整条链路可以概括为：<strong>启动文件给栈顶和入口 → SystemInit 复位 RCC 并开 FPU → HAL_Init 立时基 → Stm32_Clock_Init 把主频切到 180MHz → delay/uart/LED/LCD 依次就绪 → MY_ADC_Init 配置 ADC1 与 PA5 → 主循环用 SWSTART 单次转换、轮询 EOC、读 DR、换算显示</strong>。ADC 本身不产生中断，也不使用 DMA。</p>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>可能原因</th><th>排查位置</th></tr>
+                        <tr><td>码值恒为 0</td><td>PA5 未接信号、被外部拉低；ADC1 时钟未开</td><td><code>HAL_ADC_MspInit</code> 的 <code>__HAL_RCC_ADC1_CLK_ENABLE</code>、P11 接线</td></tr>
+                        <tr><td>码值恒为 4095</td><td>PA5 悬空且开了上拉；P11 仍接 TPAD</td><td><code>GPIO_NOPULL</code>、跳线帽</td></tr>
+                        <tr><td>读数跳动大</td><td>采样时间偏短、信号源阻抗高、电源噪声</td><td><code>ADC_SAMPLETIME_480CYCLES</code>、模拟地与参考电压</td></tr>
+                        <tr><td>电压显示少 0.001V</td><td><code>float</code> 乘 1000 后被 <code>u32</code> 截断</td><td><code>LCD_ShowxNum(150,150,temp,3,...)</code></td></tr>
+                        <tr><td>LCD 不显示</td><td>未初始化串口，<code>LCD_Init</code> 内 <code>printf</code> 卡住或屏 ID 读取失败</td><td><code>uart_init</code> 是否在 <code>LCD_Init</code> 前、SDRAM 是否初始化</td></tr>
+                        <tr><td>每次读数都超时</td><td>未写 SWSTART、<code>EXTEN</code> 非 0、ADC 未使能</td><td><code>HAL_ADC_Start</code>、<code>CR2.SWSTART/EXTEN</code></td></tr>
+                        <tr><td>换分辨率后电压错</td><td>分母仍写 4096</td><td><code>main.c</code> 的 <code>3.3/4096</code> 与 <code>ADC_RESOLUTION_12B</code> 是否一致</td></tr>
+                        <tr><td>延时不准确</td><td><code>delay_init</code> 传参不是 180，或时钟未切换</td><td><code>delay_init(180)</code> 与 <code>Stm32_Clock_Init</code> 顺序</td></tr>
+                    </table>
+
+                    <div class="note">本页所有结论都来自工程源码；板载 TPAD 的具体电路、P5/P11 跳线的电气连接细节，工程中只有 readme 的文字说明，未在代码中体现。</div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：排查顺序为什么是“时钟优先”</div>
+                        <ol>
+                            <li>先确认 ADCCLK 与主频：时钟错了，采样时间和转换结果都会整体偏移，后面的引脚与换算检查没有意义。</li>
+                            <li>再确认引脚：PA5 是否模拟、是否被跳线接到 TPAD、是否被内部上下拉影响。</li>
+                            <li>再确认模式：分辨率、对齐、扫描、连续、触发五项必须与读取方式匹配。</li>
+                            <li>再确认触发与标志：SWSTART 是否每次写入、EOC 是否等到、是否误开了 DMA 或外部触发。</li>
+                            <li>最后确认换算与显示：分母 4096、整数/小数坐标、补零模式，都是“数值对但显示不对”的常见来源。</li>
+                        </ol>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-10 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示：码值 → 电压 → LCD 显示 =====
+    var codeInput = document.getElementById('codeInput');
+    var codeShow = document.getElementById('codeShow');
+    var simLog = document.getElementById('simLog');
+
+    if (codeInput && codeShow && simLog) {
+        function renderCode() {
+            var code = parseInt(codeInput.value, 10) || 0;
+            // 按源码 float 逐步截断：temp=(float)code*(3.3/4096)
+            var temp = Math.fround(code * Math.fround(3.3 / 4096));
+            var ip = Math.trunc(temp);
+            var frac = Math.trunc(Math.fround(Math.fround(temp - ip) * 1000));
+            codeShow.textContent = code;
+            simLog.textContent =
+                'ADC1->DR = ' + code +
+                '　换算电压 ≈ ' + temp.toFixed(4) + ' V' +
+                '　LCD 显示：' + ip + '.' + ('00' + frac).slice(-3) + 'V';
+        }
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                codeInput.value = btn.getAttribute('data-code');
+                renderCode();
+            });
+        });
+
+        codeInput.addEventListener('input', renderCode);
+        renderCode();
+    }
+</script>
+</body>
+</html>

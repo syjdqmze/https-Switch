@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Sub-Item 管理页面</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+            margin: 0;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background-color: #c5d8e8; border-radius: 3px; }
+        .sidebar-menu::-webkit-scrollbar-track { background-color: transparent; }
+
+        .sidebar-actions {
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid #dce8f2;
+            flex-shrink: 0;
+        }
+
+        .sidebar-actions button {
+            flex: 1;
+            padding: 5px 0;
+            font-size: 12px;
+            border: 1px solid #dce8f2;
+            background: #fff;
+            color: #999;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .sidebar-actions button:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+            background: #e6f7ff;
+        }
+
+        .sidebar-menu > li {
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu > li > .menu-title {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .sidebar-menu > li > .menu-title:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu > li.active > .menu-title {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu > li.active {
+            border-left-color: #1890ff;
+        }
+
+        .sidebar-menu .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-menu .arrow {
+            margin-left: auto;
+            font-size: 10px;
+            transition: transform .25s;
+            color: #999;
+        }
+
+        .sidebar-menu > li.open > .menu-title .arrow {
+            transform: rotate(90deg);
+        }
+
+        .submenu {
+            list-style: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .3s ease;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu > li.open > .submenu {
+            max-height: 800px;
+        }
+
+        .submenu li {
+            padding: 8px 20px 8px 44px;
+            cursor: pointer;
+            color: #999;
+            font-size: 13px;
+            transition: all .2s;
+            border-left: 3px solid transparent;
+            margin-left: 3px;
+        }
+
+        .submenu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .submenu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .content-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1890ff;
+            margin: 18px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #1890ff;
+        }
+
+        .content-card img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 14px auto;
+            border: 1px solid #dce8f2;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .img-caption {
+            text-align: center;
+            font-size: 13px;
+            color: #888;
+            margin-top: -6px;
+            margin-bottom: 16px;
+        }
+
+        .content-card code {
+            background-color: #f0f6fb;
+            border: 1px solid #dce8f2;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 13px;
+            color: #c7254e;
+        }
+
+        /* API 格式代码块 */
+        .code-block {
+            background-color: #f7f9fc;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 10px 0 14px;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #2c3e50;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .code-block .cm {
+            color: #9099a3;
+        }
+
+        /* API 字段说明表格 */
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0 16px;
+            font-size: 13px;
+        }
+
+        .api-table th {
+            background-color: #e6f2fa;
+            color: #2c6e9e;
+            font-weight: 600;
+            padding: 8px 12px;
+            border: 1px solid #c8dcea;
+            text-align: left;
+        }
+
+        .api-table td {
+            padding: 7px 12px;
+            border: 1px solid #dce8f2;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .api-table tr:nth-child(even) td {
+            background-color: #f7fafc;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">AutoSar应用层概述(APPL)</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <div class="sidebar-actions">
+                    <button class="btn-expand-all">全部展开</button>
+                    <button class="btn-collapse-all">全部收起</button>
+                </div>
+                <ul class="sidebar-menu">
+                    <li class="open" data-target="sec-appl">
+                        <div class="menu-title"><span class="icon">&#9654;</span>AppL概述<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-1-1">1.1 AppL 的组成</li>
+                            <li data-target="sec-1-2">1.2 实例：汽车顶灯控制</li>
+                            <li data-target="sec-1-3">1.3 SWC 的通信</li>
+                            <li data-target="sec-1-4">1.4 SWC 的分配</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-swc">
+                        <div class="menu-title"><span class="icon">&#9654;</span>SWC的类型<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-2-1">2.1 原子级 SWC（Atomic SWC）</li>
+                            <li data-target="sec-2-2">2.2 集合级 SWC（Composition SWC）</li>
+                            <li data-target="sec-2-3">2.3 特殊的 SWC</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ports">
+                        <div class="menu-title"><span class="icon">&#9654;</span>Ports接口类型<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-3-1">3.1 接口的分类</li>
+                            <li data-target="sec-3-2">3.2 S/R 接口（Sender/Receiver）</li>
+                            <li data-target="sec-3-3">3.3 C/S 接口（Client/Server）</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-runnable">
+                        <div class="menu-title"><span class="icon">&#9654;</span>Runnables可运行实体<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-4-1">4.1 Runnable 概述</li>
+                            <li data-target="sec-4-2">4.2 工程实际映射</li>
+                        </ul>
+                    </li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+                        <h3 id="sec-appl">一、AppL 概述</h3>
+                        <p>应用软件层（AppL, Application Layer）位于 AutoSAR 架构的最上层，是实现具体车辆功能的地方。本章内容对应 AutoSAR 分层架构中最上面的蓝色区域。</p>
+                        <img src="index03-map/01-appl-position.png" alt="AppL在架构中的位置">
+                        <div class="img-caption">图1-1 本章所讲内容：应用软件层（AppL）在整体架构中的位置</div>
+
+                        <h4 id="sec-1-1">1.1 AppL 的组成</h4>
+                        <p>AppL 中最重要的就是软件组件（SWC），而 SWC 与其他 SWC 通信需要接口，每个 SWC 内部又由可运行实体（Runnable）组成。因此 AppL 主要由三部分构成：</p>
+                        <p><strong>1. 应用软件组件（SWC）</strong>：实现特定功能的软件模块；</p>
+                        <p><strong>2. AutoSAR 接口（Ports）和连接器（Connector）</strong>：SWC 之间或 SWC 与 BSW 之间的通信接口；</p>
+                        <p><strong>3. 可运行实体（Runnable）</strong>：SWC 内部真正执行功能的函数。</p>
+
+                        <h4 id="sec-1-2">1.2 实例：汽车顶灯控制</h4>
+                        <p>以"汽车顶灯控制"为例理解 AppL 的工作方式。车内顶灯一般有三种模式：</p>
+                        <p><strong>1. 常闭模式</strong>　<strong>2. 常开模式</strong>　<strong>3. 随车开关而开关的模式</strong>（开门亮、关门灭）。</p>
+                        <img src="index03-map/02-rooflight-modes.jpg" alt="车顶灯的三种模式">
+                        <div class="img-caption">图1-2 车顶灯的三种模式</div>
+                        <p>将这个功能拆解为 SWC：左右车门开关各对应一个<strong>传感器 SWC</strong>，车灯开关对应一个传感器 SWC；车门开关信号汇总到<strong>车门开关逻辑 SWC</strong>；调光控制器 SWC 综合车门逻辑与车灯开关信号进行决策；最终由左右两个<strong>执行器 SWC</strong> 驱动顶灯。</p>
+                        <img src="index03-map/03-rooflight-swc.png" alt="顶灯控制的SWC分解">
+                        <div class="img-caption">图1-3 顶灯控制功能的 SWC 分解（传感器 SWC / 逻辑 SWC / 执行器 SWC）</div>
+
+                        <h4 id="sec-1-3">1.3 SWC 的通信</h4>
+                        <p>SWC 之间的通信分为两种情形：</p>
+                        <p><strong>片内通信（同一 ECU 内）</strong>：通过 RTE 以全局变量方式传递数据，RTE 负责管理数据的读写，避免多个 SWC 同时访问同一数据时出错。</p>
+                        <p><strong>片外通信（跨 ECU）</strong>：通过虚拟功能总线（VFB, Virtual Function Bus）进行，底层实际走 CAN Bus 等真实总线。对 SWC 而言，无论对方在本 ECU 还是其他 ECU，通信方式完全一致，位置透明。</p>
+                        <img src="index03-map/04-swc-communication.png" alt="SWC通过VFB通信">
+                        <div class="img-caption">图1-4 应用层各 SWC 通过虚拟功能总线（VFB）互相通信</div>
+
+                        <h4 id="sec-1-4">1.4 SWC 的分配</h4>
+                        <p>一个完整功能往往需要多个 SWC 协作，这些 SWC 会被拆分部署到不同的 ECU 中——实际汽车也是这样做的。例如顶灯控制功能中：车门相关的 3 个 SWC 分配到<strong>车门 ECU</strong>，车灯开关、调光控制与顶灯执行器等 4 个 SWC 分配到<strong>车顶灯 ECU</strong>，两个 ECU 之间通过总线（Bus）交换信号。</p>
+                        <img src="index03-map/05-swc-allocation.png" alt="SWC分配到两个ECU">
+                        <div class="img-caption">图1-5 顶灯功能的 7 个 SWC 分配到车门 ECU 与车顶灯 ECU，经 Bus 通信</div>
+
+                        <h3 id="sec-swc">二、SWC 的类型</h3>
+                        <h4 id="sec-2-1">2.1 原子级 SWC（Atomic SWC）</h4>
+                        <p>原子级 SWC 是<strong>不可再拆分</strong>的 SWC，其特点是对应一个 .c 文件，这个 c 文件就是最小单元。有人会问：Runnable 不是比 SWC 更小的单元吗？确实如此，但二者密不可分——把 SWC 看成原子，Runnable 就是其中的电子、质子和中子。因此 SWC 是最小单元，Runnable 是其中的函数，每个 SWC 基本用来实现一个特定的算法。</p>
+                        <img src="index03-map/06-atomic-swc.png" alt="原子级SWC">
+                        <div class="img-caption">图2-1 原子级 SWC（Atomic SWC）：车顶灯 ECU 内的各独立组件</div>
+
+                        <h4 id="sec-2-2">2.2 集合级 SWC（Composition SWC）</h4>
+                        <p>有不可分割的 SWC，就有可分割的 SWC。AutoSAR 规定了集合级 SWC（Composition SWC），它由若干 Atomic SWC 组合而成，就像"分子由很多原子组成"。Composition 本身不实现具体算法，仅用于组织结构、方便管理；内部 SWC 之间的连接线称为连接器（Connector）。</p>
+                        <img src="index03-map/07-composition-swc.png" alt="集合级SWC">
+                        <div class="img-caption">图2-2 集合级 SWC：灯光控制组件 SWC 将传感器、调光控制器等 Atomic SWC 组合在一起</div>
+                        <p>引入 Composition 后，工程文件映射也会发生变化：Composition 会在工程目录中生成对应的文件夹，内部各 Atomic SWC 的 .c/.h 文件归拢其中，而未被组合的 SWC 仍直接位于 1_AppL 目录下。</p>
+                        <img src="index03-map/08-composition-detail.png" alt="无Composition的工程映射">
+                        <div class="img-caption">图2-3 未使用 Composition 时：所有 SWC 文件平铺在 1_AppL 目录</div>
+                        <img src="index03-map/09-composition-mapping.png" alt="Composition的工程映射">
+                        <div class="img-caption">图2-4 使用 Composition 后：被组合的 SWC 归入 Composition 文件夹管理</div>
+
+                        <h4 id="sec-2-3">2.3 特殊的 SWC</h4>
+                        <p>有两个特殊的"SWC"需要说明：<strong>IoHwAb（IO 硬件抽象层）</strong>和 <strong>Cdd（复杂驱动）</strong>。严格来说它们属于 BSW 而非 AppL，但在 DaVinci Developer 中同样可以像 SWC 一样进行配置、添加 Runnable 等操作，因此也可把它们看作特殊的 SWC。传感器/执行器类的 SWC 往往需要通过它们与硬件打交道。</p>
+                        <img src="index03-map/10-special-swc.png" alt="特殊的SWC">
+                        <div class="img-caption">图2-5 特殊的 SWC：BSW 中的 IoHwAb 与 Cdd（红色标注部分）</div>
+
+                        <h3 id="sec-ports">三、Ports 接口类型</h3>
+                        <h4 id="sec-3-1">3.1 接口的分类</h4>
+                        <p>Ports 是 SWC 与 SWC 之间、或 SWC 通过 RTE 与 BSW 之间进行接口（Interface）通信的通道。Ports 主要分为 5 种类型，又可按两个维度归类：</p>
+                        <p><strong>按方向分</strong>：R-Ports（需求接口，接收/调用方）、P-Ports（提供接口，发送/服务方）、PR-Ports（需求且提供接口，仅 AutoSAR 4 中定义）。</p>
+                        <p><strong>按用途分</strong>：Send/Receiver（S/R）接口——用来<strong>传输数据</strong>；Client/Server（C/S）接口——用来<strong>执行操作</strong>。</p>
+                        <img src="index03-map/11-port-types.png" alt="Ports的5种类型">
+                        <div class="img-caption">图3-1 Ports 的 5 种类型及其归类（R-Ports / P-Ports / PR-Ports，S/R 与 C/S）</div>
+                        <p>在代码层面，SWC 不直接访问对方，而是调用 <strong>RTE 生成的标准 API</strong>。RTE API 的命名遵循统一格式：<code>RTE_动作_&lt;端口名&gt;_&lt;对象名&gt;(...)</code>。下面结合顶灯实例，对每种端口类型的接口定义格式逐一说明。</p>
+
+                        <h4 id="sec-3-2">3.2 S/R 接口（Sender/Receiver）</h4>
+                        <p><strong>作用：传输数据。</strong>通过 RTE 传输并管理数据，避免同时调用同一数据时出错。发送方的 Send 口与接收方的 Receive 口对接，支持 1:1 及 1:n（一个发送多个接收）的通信方式，例如顶灯例子中"车门开关"信号可同时发给多个使用方。</p>
+                        <img src="index03-map/12-sr-interface.png" alt="S/R接口">
+                        <div class="img-caption">图3-2 S/R 接口：SWC1 的接收口与发送口分别对接 SWC2、SWC3</div>
+
+                        <p><strong>① S/R 发送接口（Send，属 P-Port）</strong>——发送方通过 <code>RTE_Write</code> 把数据写入 RTE，由 RTE 分发给所有接收方：</p>
+                        <div class="code-block">status = RTE_Write_&lt;P&gt;_&lt;D&gt;(DoorOpen);   <span class="cm">// 通用格式</span>
+status = RTE_Write_DoorSwt_DoorOpen(doorOpen); <span class="cm">// 举例：车门开关SWC发出车门状态</span></div>
+                        <table class="api-table">
+                            <tr><th style="width:32%;">字段</th><th>说明</th></tr>
+                            <tr><td><code>status</code></td><td>返回值，类型为 Std_ReturnType：E_OK（0）表示发送成功，E_NOT_OK（1）表示失败，可用于错误判断</td></tr>
+                            <tr><td><code>RTE_Write</code></td><td>RTE 的"写数据"API 前缀，专用于 S/R 接口的发送方</td></tr>
+                            <tr><td><code>&lt;P&gt;</code></td><td>端口名（Port Name），在 DaVinci 中配置端口时自定义，举例中为 <code>DoorSwt</code></td></tr>
+                            <tr><td><code>&lt;D&gt;</code></td><td>数据元素名（Data Element），即该端口上传输的数据名，举例中为 <code>DoorOpen</code></td></tr>
+                            <tr><td><code>(DoorOpen)</code></td><td>实际要发送的数据值（实参），类型由接口中定义的数据元素决定</td></tr>
+                        </table>
+
+                        <p><strong>② S/R 接收接口（Receiver，属 R-Port）</strong>——接收方通过 <code>RTE_Read</code> 从 RTE 读取最新数据：</p>
+                        <div class="code-block">status = RTE_Read_&lt;P&gt;_&lt;D&gt;(&amp;doorState);   <span class="cm">// 通用格式</span>
+status = RTE_Read_DoorSwt_DoorOpen(&amp;doorState); <span class="cm">// 举例：调光控制SWC读取车门状态</span></div>
+                        <table class="api-table">
+                            <tr><th style="width:32%;">字段</th><th>说明</th></tr>
+                            <tr><td><code>status</code></td><td>返回值：E_OK 表示读到有效数据，E_NOT_OK 表示读取失败</td></tr>
+                            <tr><td><code>RTE_Read</code></td><td>RTE 的"读数据"API 前缀，专用于 S/R 接口的接收方</td></tr>
+                            <tr><td><code>&lt;P&gt;</code> / <code>&lt;D&gt;</code></td><td>端口名与数据元素名，须与发送方配置的接口（Interface）一致，RTE 才能正确配对</td></tr>
+                            <tr><td><code>(&amp;doorState)</code></td><td>传入变量的<strong>地址</strong>，RTE 将读到的数据写入该变量（出参方式返回）</td></tr>
+                        </table>
+
+                        <p><strong>③ S/R 发送且接收接口（Send &amp; Receiver，属 PR-Port）</strong>——同一端口既可发又可收，同时具备上述两组 API：</p>
+                        <div class="code-block">status = RTE_Write_LightSt_LightCmd(lightCmd);  <span class="cm">// 同一端口上发送</span>
+status = RTE_Read_LightSt_LightCmd(&amp;curCmd);      <span class="cm">// 同一端口上接收</span></div>
+                        <p>PR-Ports 仅在 AutoSAR 4 中定义，适用于一个 SWC 既要发布自身状态、又要订阅同类反馈信号的场景（如多个灯光节点互相同步状态）。</p>
+
+                        <h4 id="sec-3-3">3.3 C/S 接口（Client/Server）</h4>
+                        <p><strong>作用：执行操作。</strong>Client 调用 Server 提供的函数（Operation），Server 执行后返回结果。调用方式分<strong>同步</strong>（Client 等待 Server 执行完毕再继续）和<strong>异步</strong>（Client 发出调用后先执行自身逻辑，稍后再取结果）两种；支持 ECU 内部及跨 ECU 调用，一个 Server 可服务多个 Client（1:n）。</p>
+                        <img src="index03-map/13-cs-interface.png" alt="C/S接口">
+                        <div class="img-caption">图3-3 C/S 接口：一个 Server SWC 同时为多个 Client SWC 提供服务</div>
+
+                        <p><strong>① C/S 客户接口（Client，属 R-Port）</strong>——客户方通过 <code>RTE_Call</code> 调用服务方的操作函数：</p>
+                        <div class="code-block">status = RTE_Call_&lt;P&gt;_&lt;O&gt;(brightness);      <span class="cm">// 通用格式</span>
+status = RTE_Call_DimmingSrv_SetBrightness(80); <span class="cm">// 举例：请求调光服务把亮度设为80</span></div>
+                        <table class="api-table">
+                            <tr><th style="width:32%;">字段</th><th>说明</th></tr>
+                            <tr><td><code>status</code></td><td>返回值：同步调用时同时携带服务执行结果；异步调用时仅表示"请求是否发出"</td></tr>
+                            <tr><td><code>RTE_Call</code></td><td>RTE 的"调用操作"API 前缀，专用于 C/S 接口的客户方</td></tr>
+                            <tr><td><code>&lt;P&gt;</code></td><td>端口名，举例中为 <code>DimmingSrv</code>（调光服务端口）</td></tr>
+                            <tr><td><code>&lt;O&gt;</code></td><td>操作名（Operation），即要调用的服务函数名，举例中为 <code>SetBrightness</code></td></tr>
+                            <tr><td><code>(brightness)</code></td><td>传给服务操作的实参，个数与类型由 C/S 接口中该 Operation 的签名决定</td></tr>
+                        </table>
+                        <p>若为<strong>异步调用</strong>，Client 发出 <code>RTE_Call</code> 后立即返回，稍后再通过 <code>status = RTE_Result_&lt;P&gt;_&lt;O&gt;(&amp;result);</code> 取回执行结果，避免长时间阻塞等待。</p>
+
+                        <p><strong>② C/S 服务接口（Server，属 P-Port）</strong>——服务方不调用 API，而是<strong>按接口约定实现对应的 Operation 函数</strong>（即一个 Runnable），由 RTE 在收到 Client 请求时自动路由调用：</p>
+                        <div class="code-block"><span class="cm">// 服务方 SWC 中实现的函数（函数名 = Operation 名）</span>
+void SetBrightness(uint8 level)
+{
+    <span class="cm">// 执行实际的调光操作，如驱动 PWM 输出</span>
+    Pwm_SetDuty(level);
+}</div>
+                        <p>对客户方而言，无需关心该函数跑在哪个 ECU：同 ECU 时 RTE 直接映射为函数调用，跨 ECU 时 RTE 自动经 COM 栈走总线收发，调用格式完全不变——这正是 AutoSAR "位置透明"的体现。</p>
+
+                        <h3 id="sec-runnable">四、Runnables 可运行实体</h3>
+                        <h4 id="sec-4-1">4.1 Runnable 概述</h4>
+                        <p>Runnable 就是 SWC 中的函数。AutoSAR 架构由 DaVinci 软件生成时，Runnable 是<strong>空函数</strong>，需要手动添加代码实现实际功能。一个 SWC 至少包含一个 Runnable，且 Runnable 必须挂载到某个 OS Task 上才会被执行——就像函数放着不被调用就不会起作用一样。</p>
+                        <p>Runnable 可以被多种方式触发：<strong>定时器周期触发</strong>（如每 100ms 一次）、<strong>操作调用触发</strong>（被 C/S 接口调用）、<strong>数据接收触发</strong>（收到某数据时执行）等。</p>
+
+                        <h4 id="sec-4-2">4.2 工程实际映射</h4>
+                        <p>Runnable 与实际工程的映射关系：每个 SWC 对应一对 .c/.h 文件，Runnable 就是 .c 文件中的函数。例如 SWCn.c 中的 Runnable1 每 100ms 触发一次，函数体内通过 <code>status = RTE_Write_&lt;P&gt;_&lt;D&gt;(DoorOpen);</code> 这样的 RTE API 发送数据（即上一节讲的 Send 接口），数据由 RTE 统一管理。</p>
+                        <img src="index03-map/14-runnable-mapping.png" alt="Runnable工程映射">
+                        <div class="img-caption">图4-1 Runnable 与工程文件的映射：SWCn.c 中的函数通过 RTE API 收发数据</div>
+                        <p>需要注意：SWCn.c 文件中并未包含 BSW 的头文件，通过这种方式将 AppL 与 BSW 隔离开。虽然加入必要的 .h 文件后也可以直接调用 BSW 中的函数，但这会破坏分层架构，<strong>不建议这么做</strong>。另外，Runnable 中应尽量使用 RTE 提供的 API 进行通信，而不是直接访问全局变量，以保证数据一致性与架构规范。</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 侧边栏两级菜单交互
+        (function () {
+            'use strict';
+            var topItems = document.querySelectorAll('.sidebar-menu > li');
+            var subItems = document.querySelectorAll('.submenu li');
+
+            function clearActive() {
+                document.querySelectorAll('.sidebar-menu .active').forEach(function (el) {
+                    el.classList.remove('active');
+                });
+            }
+
+            function scrollToTarget(targetId) {
+                if (!targetId) { return; }
+                var target = document.getElementById(targetId);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+
+            // 展开按钮：一键展开所有一级目录
+            var btnExpand = document.querySelector('.btn-expand-all');
+            if (btnExpand) {
+                btnExpand.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    topItems.forEach(function (li) { li.classList.add('open'); });
+                });
+            }
+
+            // 折叠按钮：一键折叠所有一级目录
+            var btnCollapse = document.querySelector('.btn-collapse-all');
+            if (btnCollapse) {
+                btnCollapse.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    topItems.forEach(function (li) { li.classList.remove('open'); });
+                });
+            }
+
+            // 一级目录：点击独立展开/折叠 + 跳转 + 高亮
+            topItems.forEach(function (li) {
+                var title = li.querySelector('.menu-title');
+                if (!title) { return; }
+                title.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    li.classList.toggle('open');
+                    clearActive();
+                    li.classList.add('active');
+                    scrollToTarget(li.getAttribute('data-target'));
+                });
+            });
+
+            // 二级目录：点击跳转 + 高亮自身与父级
+            subItems.forEach(function (li) {
+                li.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    clearActive();
+                    li.classList.add('active');
+                    var parentLi = li.closest('.sidebar-menu > li');
+                    if (parentLi) {
+                        parentLi.classList.add('open');
+                        parentLi.classList.add('active');
+                    }
+                    scrollToTarget(li.getAttribute('data-target'));
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

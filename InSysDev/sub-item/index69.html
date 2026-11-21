@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验55 USB虚拟串口(Slave)实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验55 USB虚拟串口(Slave)实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">先把 PLLQ 算成 8 得到 48MHz，再去查 USB 枚举问题，能省一半时间。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">让 STM32F429 的 OTG_FS 作为设备，被 PC 识别成一个串口，并完成收—回显</div>
+
+                    <p>本实验把 STM32F429 的 USB OTG_FS 配置为<strong>全速设备</strong>，使用 USB CDC（Communication Device Class，通信设备类）的 ACM 子类，也就是常说的“虚拟串口”。STM32 侧只做两件事：把 PC 下发的字节收进缓冲区，遇到回车换行后整帧回显；以及周期性用 <code class="inline">usb_printf</code> 打印本机提示。PC 侧安装 ST 的虚拟串口驱动后，会多出一个 COM 口，用任意串口助手即可收发。</p>
+
+                    <p>与相邻的 USB 实验（index67 读卡器 Slave、index68 声卡 Slave）相比，三者都是<strong>从机（Device）</strong>，区别只在注册的设备类不同：读卡器挂 <code class="inline">USBD_MSC_cb</code>，声卡挂音频类回调，本实验挂 <code class="inline">USBD_CDC_cb</code>。因此启动流程、时钟、中断链路几乎一致，可以互相参照着看。</p>
+
+                    <table class="data">
+                        <tr><th>对比项</th><th>实验55 虚拟串口（本页）</th><th>实验53 / 54</th></tr>
+                        <tr><td>USB 角色</td><td>Device（从机）</td><td>Device（从机）</td></tr>
+                        <tr><td>设备类</td><td>CDC / ACM，接口类 0x02、0x0A</td><td>MSC 0x08 / Audio 0x01</td></tr>
+                        <tr><td>端点数据流</td><td>批量端点 IN/OUT 做数据，控制端点收 line coding</td><td>批量端点读写扇区 / 等时端点送音频</td></tr>
+                        <tr><td>主机侧现象</td><td>出现一个 COM 口</td><td>出现一个磁盘 / 一个声卡</td></tr>
+                    </table>
+
+                    <h3>引脚与片内资源</h3>
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚 / 参数</th><th>说明</th></tr>
+                        <tr><td>USB OTG_FS_DM</td><td>PA11，复用 AF10</td><td>全速差分负端，内部无上下拉</td></tr>
+                        <tr><td>USB OTG_FS_DP</td><td>PA12，复用 AF10</td><td>全速差分正端，设备侧靠它上拉表示接入</td></tr>
+                        <tr><td>USB 时钟</td><td>48MHz，来自 PLLQ</td><td><code>Stm32_Clock_Init(384,25,2,8)</code> 时 USB 时钟 = 384/8 = 48MHz</td></tr>
+                        <tr><td>速率</td><td>全速 12Mbps</td><td>OTG_FS 内核，非高速 480Mbps</td></tr>
+                        <tr><td>调试串口</td><td>USART1：PA9/PA10，115200-8-N-1</td><td>printf 输出枚举与收发日志</td></tr>
+                        <tr><td>状态指示</td><td>DS1 / LED1</td><td>USB 连接建立后点亮</td></tr>
+                        <tr><td>运行指示</td><td>DS0 / LED0</td><td>主循环里每 30 次翻转一次</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">PA11 → OTG_FS_DM</span>
+                        <span class="chip">PA12 → OTG_FS_DP</span>
+                        <span class="chip">AF10 → OTG_FS</span>
+                        <span class="chip">PLLQ=8 → 48MHz</span>
+                        <span class="chip">CDC 类 0x02/0x0A</span>
+                        <span class="chip">OTG_FS_IRQn → 优先级 0,3</span>
+                    </div>
+
+                    <div class="note">本实验的 USB 时钟不是独立晶振，而是 PLL 的 Q 分频输出。<code class="inline">Stm32_Clock_Init</code> 的第 4 个参数一旦不是 8，USB 内核就拿不到准确的 48MHz，PC 侧会表现为“无法识别的设备”或枚举反复失败，而不是报错码。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">先认清哪些文件是“本实验新增”，哪些是公共底座，读代码才不会迷路</div>
+
+                    <p>工程沿用正点原子的分层结构：<code class="inline">USER</code> 放 main 与中断入口，<code class="inline">SYSTEM</code> 是时钟/延时/串口底座，<code class="inline">USB</code> 分设备库与用户应用层，<code class="inline">HARDWARE</code> 是板级外设。虚拟串口的“业务”全部集中在 <code class="inline">USB/USB_APP</code> 下的三个文件里。</p>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本页关注点</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化外设、注册 USB 设备、主循环回显</td><td>初始化顺序、<code>USBD_Init</code> 的 5 个参数、连接状态轮询</td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td><code>SystemInit</code>：开 FPU、复位 RCC、设 <code>SCB-&gt;VTOR</code></td><td>为什么 <code>main</code> 之前就要把向量表指向 Flash</td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td><code>Stm32_Clock_Init</code>：HSE→PLL→192MHz</td><td>PLLM/N/P/Q 四个参数如何落到寄存器</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>SysTick 轮询式 <code>delay_us/delay_ms</code></td><td><code>fac_us</code> 与 192 的关系</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>USART1 初始化、<code>fputc</code> 重定向、接收中断</td><td>printf 为什么能直接出到串口</td></tr>
+                        <tr><td><code>USB/USB_APP/usb_bsp.c</code></td><td>OTG 引脚、时钟、NVIC、us/ms 延时</td><td>PA11/PA12 的 AF 配置与中断优先级</td></tr>
+                        <tr><td><code>USB/USB_APP/usbd_cdc_vcp.c</code></td><td>CDC 类回调：line coding、发送环形缓冲、接收组帧</td><td><code>VCP_DataTx</code> / <code>VCP_DataRx</code></td></tr>
+                        <tr><td><code>USB/USB_APP/usbd_desc.c</code></td><td>设备/配置/字符串描述符集合</td><td>VID/PID、接口类 0x02、端点地址</td></tr>
+                        <tr><td><code>USB/USB_APP/usbd_usr.c</code></td><td>用户回调 + <code>OTG_FS_IRQHandler</code></td><td>连接/断开如何改写 <code>bDeviceState</code></td></tr>
+                        <tr><td><code>USB/STM32_USB_DEVICE_Library</code></td><td>USB 设备协议栈（Core + CDC 类）</td><td>只读被调用函数，不修改</td></tr>
+                        <tr><td><code>HARDWARE/PCF8574</code></td><td>I2C 扩展 IO，板级电源/复位控制</td><td>本实验只做 <code>PCF8574_Init</code></td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>栈堆定义、向量表、<code>Reset_Handler</code></td><td>栈 0x400、堆 0x200、弱符号中断</td></tr>
+                    </table>
+
+                    <div class="note blue">阅读顺序建议：<code>main.c</code> → <code>usb_bsp.c</code> → <code>usbd_usr.c</code> → <code>usbd_cdc_vcp.c</code>。设备库内部的 <code>usbd_core.c</code> 只需在被调用处点进去看状态机，不必逐行通读。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从复位到进入 while(1)，九步初始化一步都不能少，顺序也有讲究</div>
+
+                    <figure class="figure">
+                        <img src="./index69-map/boot-flow.png" alt="STM32F429 上电复位到 USB 虚拟串口主循环的启动流程图">
+                        <figcaption>图 3-1　启动链路总览：复位 → SystemInit → 时钟/延时/串口 → 板级外设 → USBD_Init → 主循环</figcaption>
+                    </figure>
+
+                    <h3>main 函数全文</h3>
+                    <pre class="code">int main(void)
+{
+ 	u16 t;
+	u16 len;
+	u16 times=0;
+	u8 usbstatus=0;
+
+    Stm32_Clock_Init(384,25,2,8);   <span class="cmt">// 设置时钟,192Mhz；PLLQ=8 同时给出 USB 48MHz</span>
+    delay_init(192);                <span class="cmt">// 初始化延时函数，fac_us=192</span>
+    uart_init(115200);              <span class="cmt">// 初始化USART1，printf 走这里</span>
+  	LED_Init();						<span class="cmt">// 初始化与LED连接的硬件接口</span>
+	SDRAM_Init();					<span class="cmt">// 初始化SDRAM（LCD 显存）</span>
+	LCD_Init();						<span class="cmt">// 初始化LCD</span>
+	PCF8574_Init();					<span class="cmt">// 初始化PCF8574扩展IO</span>
+  	POINT_COLOR=RED;
+	LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7");
+	<span class="cmt">// …省略 4 行 LCD 提示字符串（实验标题、日期、ATOM@ALIENTEK）…</span>
+ 	LCD_ShowString(30,130,200,16,16,"USB Connecting...");<span class="cmt">// 提示USB开始连接</span>
+ 	USBD_Init(&amp;USB_OTG_dev,USB_OTG_FS_CORE_ID,&amp;USR_desc,&amp;USBD_CDC_cb,&amp;USR_cb);
+ 	<span class="cmt">// 上电即注册设备：内核句柄 / 内核编号 / 描述符集合 / CDC 类回调 / 用户回调</span>
+ 	while(1)
+	{
+		if(usbstatus!=bDeviceState)<span class="cmt">// USB连接状态发生了改变</span>
+		{
+			usbstatus=bDeviceState;<span class="cmt">// 记录新的状态</span>
+			if(usbstatus==1)
+			{
+				POINT_COLOR=BLUE;
+				LCD_ShowString(30,130,200,16,16,"USB Connected    ");<span class="cmt">// 提示USB连接成功</span>
+				LED1=0;<span class="cmt">// DS1亮</span>
+			}else
+			{
+				POINT_COLOR=RED;
+				LCD_ShowString(30,130,200,16,16,"USB disConnected ");<span class="cmt">// 提示USB断开</span>
+				LED1=1;<span class="cmt">// DS1灭</span>
+			}
+		}
+		if(USB_USART_RX_STA&amp;0x8000)
+		{
+			len=USB_USART_RX_STA&amp;0x3FFF;<span class="cmt">// 得到此次接收到的数据长度</span>
+			usb_printf("\r\n您发送的消息为:%d\r\n\r\n",len);
+			for(t=0;t&lt;len;t++)
+			{
+				VCP_DataTx(USB_USART_RX_BUF[t]);<span class="cmt">// 以字节方式,发送给USB</span>
+			}
+			usb_printf("\r\n\r\n");<span class="cmt">// 插入换行</span>
+			USB_USART_RX_STA=0;
+		}else
+		{
+			times++;
+			if(times%5000==0)
+			{
+				usb_printf("\r\n阿波罗STM32F4/F7开发板USB虚拟串口实验\r\n");
+				usb_printf("正点原子@ALIENTEK\r\n\r\n");
+			}
+			if(times%200==0)usb_printf("请输入数据,以回车键结束\r\n");
+			if(times%30==0)LED0=!LED0;<span class="cmt">// 闪烁LED,提示系统正在运行</span>
+			delay_ms(10);
+		}
+	}
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>时钟必须最先配</strong>：<code>Stm32_Clock_Init</code> 把 HCLK 抬到 192MHz 并让 PLLQ 输出 48MHz，后面 <code>delay_init(192)</code> 的实参、SysTick 的计数倍率、USART 的波特率分频全部依赖这个结果。</li>
+                            <li><strong>延时先于串口</strong>：<code>delay_init</code> 配的是 SysTick，<code>uart_init</code> 内部有等待稳定的过程，也用到 HAL 的时基；先建立时基再开外设是这套工程的固定习惯。</li>
+                            <li><strong>SDRAM/LCD 在 USB 之前</strong>：USB 枚举与数据回调都在中断里跑，若 LCD 初始化放在后面，中断一旦触发就会调 <code>LCD_ShowString</code> 访问未初始化的 FSMC，等于自找 HardFault。</li>
+                            <li><strong><code>USBD_Init</code> 不阻塞</strong>：它只做内核与类注册，真正的枚举由 OTG 中断推进，所以函数返回后主循环立刻开始跑，界面先显示“USB Connecting...”。</li>
+                            <li><strong>连接状态靠轮询 <code>bDeviceState</code></strong>：该变量由 <code>usbd_usr.c</code> 的 <code>USBD_USR_DeviceConfigured</code> / <code>DeviceDisconnected</code> 在中断上下文改写，主循环只读并比较，避免在中断里刷屏。</li>
+                            <li><strong>回显是“整帧”语义</strong>：只有 <code>USB_USART_RX_STA</code> 的 bit15 置位才认为收完一帧，逐字节回显不会触发，这是与“收到什么回什么”的直觉最大的差别。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">栈只有 1KB、堆只有 512B，Reset_Handler 只做三件事，中断全是弱符号</div>
+
+                    <pre class="code">; Amount of memory (in bytes) allocated for Stack
+Stack_Size      EQU     0x400;                <span class="cmt">; 1KB 栈，主栈 MSP 从这里向下生长</span>
+
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp                                  <span class="cmt">; 向量表第 0 项就是它的地址</span>
+
+Heap_Size       EQU     0x200;                <span class="cmt">; 512B 堆，malloc 用</span>
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0                    <span class="cmt">; 先跑 SystemInit（FPU/RCC/VTOR）</span>
+                 LDR     R0, =__main
+                 BX      R0                    <span class="cmt">; 再进 C 库启动：拷贝 .data、清 .bss，最后调 main</span>
+                 ENDP
+
+                DCD     OTG_FS_IRQHandler     ; USB OTG FS
+                EXPORT  OTG_FS_IRQHandler     [WEAK]  <span class="cmt">; 弱定义，C 文件里同名函数即可覆盖</span>
+OTG_FS_IRQHandler
+                 B       .</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>栈 0x400 是硬约束</strong>：USB 中断里会调用 <code>USBD_OTG_ISR_Handler</code>，再往下走描述符解析与用户回调，调用层次深；如果自己往中断里加大量局部数组，1KB 很快就不够，表现为随机 HardFault。</li>
+                            <li><strong>堆 0x200 只够轻量分配</strong>：设备库里有少量 <code>malloc</code> 需求，本实验主要靠静态数组（<code>APP_Rx_Buffer</code> 2048 字节是静态的），所以 512B 够用。</li>
+                            <li><strong><code>Reset_Handler</code> 的顺序不可交换</strong>：<code>SystemInit</code> 必须在 <code>__main</code> 之前，因为 <code>__main</code> 会初始化 RAM 段并最终跳到 <code>main</code>，而 <code>SystemInit</code> 里已经把向量表偏移设好。</li>
+                            <li><strong>弱符号是“可覆盖的默认实现”</strong>：startup 里给每个中断都写了一个 <code>B .</code> 死循环的弱函数，防止未实现时跑飞；<code>usbd_usr.c</code> 里定义了同名的 <code>OTG_FS_IRQHandler</code>，链接时以强符号为准。</li>
+                            <li><strong>向量表偏移在 <code>SystemInit</code> 里设置</strong>：<code>SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET</code>，本工程宏未改，因此就是 0x08000000 起始。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">main 之前开 FPU、复位时钟寄存器；main 第一行建立时基与优先级分组</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+  /* FPU settings ------------------------------------------------------------*/
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">/* CP10/CP11 全权限，否则浮点指令进 UsageFault */</span>
+  #endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="cmt">/* 打开 HSI，保证复位后有时钟可用 */</span>
+  RCC-&gt;CFGR = 0x00000000;               <span class="cmt">/* 清 CFGR：SW=HSI，各分频复位 */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="cmt">/* 关 HSEON/CSSON/PLLON */</span>
+  RCC-&gt;PLLCFGR = 0x24003010;            <span class="cmt">/* PLLCFGR 复位值 */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;      <span class="cmt">/* 清 HSEBYP */</span>
+  RCC-&gt;CIR = 0x00000000;                <span class="cmt">/* 关全部 RCC 中断 */</span>
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET; <span class="cmt">/* 向量表放内部 Flash */</span>
+}</pre>
+
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+   __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();   <span class="cmt">// 指令 Cache</span>
+   __HAL_FLASH_DATA_CACHE_ENABLE();          <span class="cmt">// 数据 Cache</span>
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();      <span class="cmt">// 预取，192MHz 下必需</span>
+
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);<span class="cmt">// 本工程用分组 2：2 位抢占 + 2 位子优先级</span>
+  HAL_InitTick(TICK_INT_PRIORITY);           <span class="cmt">// TICK_INT_PRIORITY=0x0F，1ms 时基</span>
+  HAL_MspInit();                             <span class="cmt">// 板级底层（本工程为空实现）</span>
+  return HAL_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>FPU 必须在这里开</strong>：F429 带单精度 FPU，编译器若生成 <code>VMOV</code> 而 CPACR 没放开 CP10/CP11，第一次浮点运算就进 UsageFault；<code>SystemInit</code> 是唯一早于所有 C 代码的 C 函数。</li>
+                            <li><strong>复位 RCC 是“回到已知态”</strong>：调试器热复位、看门狗复位都不会清 RCC 寄存器，先把 PLL/分频恢复默认，<code>Stm32_Clock_Init</code> 才有确定的起点。</li>
+                            <li><strong>优先级分组是 2 而不是 4</strong>：分组 2 表示 4 位优先级里高 2 位是抢占优先级，所以后面 <code>OTG_FS_IRQn</code> 的 <code>(0,3)</code>、<code>USART1_IRQn</code> 的 <code>(3,3)</code> 才能生效；改成 GROUP_4 会让子优先级失效。</li>
+                            <li><strong>HAL_InitTick 用 SysTick</strong>：它把 <code>SystemCoreClock/1000</code> 写入 LOAD 并开中断，<code>HAL_Delay</code> 与 <code>HAL_GetTick</code> 从此有 1ms 分辨率；而 <code>delay_us</code> 是另一套轮询实现，两者互不干扰。</li>
+                            <li><strong>TICK_INT_PRIORITY=0x0F 是最低优先级</strong>：时基中断可以被 USB、串口打断，避免在中断里等 tick 造成实时性抖动。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟树与 SysTick 时基">
+                    <h2>06　时钟树与 SysTick 时基</h2>
+                    <div class="sec-sub">HSE 25MHz → PLL → 192MHz，同时 PLLQ 必须给出 48MHz 给 USB</div>
+
+                    <pre class="code">void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq)
+{
+    HAL_StatusTypeDef ret = HAL_OK;
+    RCC_OscInitTypeDef RCC_OscInitStructure;
+    RCC_ClkInitTypeDef RCC_ClkInitStructure;
+
+    __HAL_RCC_PWR_CLK_ENABLE();   <span class="cmt">// 使能PWR时钟</span>
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);<span class="cmt">// 电压调节器 Scale1，192MHz 必需</span>
+
+    RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE;<span class="cmt">// 时钟源为HSE</span>
+    RCC_OscInitStructure.HSEState=RCC_HSE_ON;                    <span class="cmt">// 开HSE（板上 25MHz）</span>
+    RCC_OscInitStructure.PLL.PLLState=RCC_PLL_ON;                <span class="cmt">// 开PLL</span>
+    RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;        <span class="cmt">// PLL时钟源选HSE</span>
+    RCC_OscInitStructure.PLL.PLLM=pllm;   <span class="cmt">// 25 → 1MHz 鉴相频率</span>
+    RCC_OscInitStructure.PLL.PLLN=plln;   <span class="cmt">// 1MHz × 384 = 384MHz VCO</span>
+    RCC_OscInitStructure.PLL.PLLP=pllp;   <span class="cmt">// 384 / 2 = 192MHz SYSCLK</span>
+    RCC_OscInitStructure.PLL.PLLQ=pllq;   <span class="cmt">// 384 / 8 = 48MHz 给 USB/SDIO</span>
+    ret=HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+    if(ret!=HAL_OK) while(1);
+
+    ret=HAL_PWREx_EnableOverDrive();      <span class="cmt">// 开Over-Drive，否则 192MHz 不稳</span>
+    if(ret!=HAL_OK) while(1);
+
+    RCC_ClkInitStructure.ClockType=(RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2);
+    RCC_ClkInitStructure.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK;<span class="cmt">// 系统时钟源=PLL</span>
+    RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;  <span class="cmt">// HCLK=192MHz</span>
+    RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;   <span class="cmt">// PCLK1=48MHz</span>
+    RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;   <span class="cmt">// PCLK2=96MHz</span>
+    ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5);<span class="cmt">// 5WS，对应 180~192MHz 档</span>
+    if(ret!=HAL_OK) while(1);
+}</pre>
+
+                    <table class="data">
+                        <tr><th>节点</th><th>算式</th><th>结果</th></tr>
+                        <tr><td>PLL 输入</td><td>HSE 25MHz / PLLM 25</td><td>1MHz</td></tr>
+                        <tr><td>VCO</td><td>1MHz × PLLN 384</td><td>384MHz</td></tr>
+                        <tr><td>SYSCLK</td><td>384MHz / PLLP 2</td><td>192MHz</td></tr>
+                        <tr><td>HCLK / AHB</td><td>192MHz / DIV1</td><td>192MHz</td></tr>
+                        <tr><td>PCLK1 / APB1</td><td>192MHz / DIV4</td><td>48MHz</td></tr>
+                        <tr><td>PCLK2 / APB2</td><td>192MHz / DIV2</td><td>96MHz</td></tr>
+                        <tr><td>USB / SDIO</td><td>384MHz / PLLQ 8</td><td>48MHz</td></tr>
+                    </table>
+
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);<span class="cmt">// SysTick 时钟 = HCLK（非 HCLK/8）</span>
+    fac_us=SYSCLK;                  <span class="cmt">// fac_us=192：1us 需要 192 个 HCLK 节拍</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks;
+    u32 told,tnow,tcnt=0;
+    u32 reload=SysTick->LOAD;       <span class="cmt">// 当前重装值</span>
+    ticks=nus*fac_us;               <span class="cmt">// 需要的节拍数</span>
+    told=SysTick->VAL;              <span class="cmt">// 进入时的递减计数器值</span>
+    while(1)
+    {
+        tnow=SysTick->VAL;
+        if(tnow!=told)
+        {
+            if(tnow&lt;told)tcnt+=told-tnow;<span class="cmt">// 递减计数：正常段</span>
+            else tcnt+=reload-tnow+told;<span class="cmt">// 跨过重装点，补一圈</span>
+            told=tnow;
+            if(tcnt&gt;=ticks)break;<span class="cmt">// 到点退出</span>
+        }
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么是 384/25/2/8</strong>：板上 HSE 是 25MHz，先用 25 分频得到 1MHz 鉴相频率（PLL 推荐范围 1~2MHz，也是唯一能整除得到 48MHz 的整数方案），再 384 倍频、2 分频得 192MHz、8 分频得 48MHz。</li>
+                            <li><strong>PLLQ 直接决定 USB 能否工作</strong>：OTG_FS 要求 48MHz±0.25%，只有 PLLQ=8 满足；改成 7 或 9 后 USB 时钟变成 54.9/42.7MHz，PC 侧必然枚举失败。</li>
+                            <li><strong>FLASH_LATENCY_5 与 OverDrive</strong>：192MHz 属于 F429 的超频档（标称 180MHz），必须同时开 OverDrive 并把 Flash 等待周期设为 5WS，否则取指错误会表现为随机死机。</li>
+                            <li><strong>APB1 不能超过 45MHz</strong>：192/4=48MHz 已经略高于 45MHz 的常规上限，这是正点原子在 192MHz 方案下的既定取舍；若改为 180MHz，PCLK1 是 45MHz。</li>
+                            <li><strong><code>delay_us</code> 是纯轮询</strong>：不依赖中断，因此在中断里也能安全调用；<code>reload</code> 只读一次，若在延时过程中 SysTick 被重新配置，计数会失准，所以不要在 <code>delay_us</code> 期间改 SysTick。</li>
+                            <li><strong>SysTick 与 HAL 时基共用</strong>：<code>delay_init</code> 只改时钟源与倍率，不重装 LOAD；LOAD 由 <code>HAL_InitTick</code> 设为 1ms，因此轮询延时不会打断 HAL 的 tick 计数。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="USB 设备初始化">
+                    <h2>07　USB 设备初始化</h2>
+                    <div class="sec-sub">两脚复用、一路时钟、一个中断，再把手柄挂到设备库上</div>
+
+                    <figure class="figure">
+                        <img src="./index69-map/usb-vcp-init-flow.png" alt="USB 虚拟串口设备初始化链路图：GPIO 复用、中断使能、USBD_Init 注册类回调">
+                        <figcaption>图 7-1　USB 设备初始化链路：从 PA11/PA12 复用到 CDC 类注册完成</figcaption>
+                    </figure>
+
+                    <h3>底层：usb_bsp.c</h3>
+                    <pre class="code">void USB_OTG_BSP_Init(USB_OTG_CORE_HANDLE *pdev)
+{
+    GPIO_InitTypeDef  GPIO_InitStruct;
+    __HAL_RCC_GPIOA_CLK_ENABLE();                   <span class="cmt">// 使能GPIOA时钟</span>
+    __HAL_RCC_USB_OTG_FS_CLK_ENABLE();              <span class="cmt">// 使能OTG FS时钟（48MHz 域）</span>
+
+    GPIO_InitStruct.Pin=GPIO_PIN_11|GPIO_PIN_12;    <span class="cmt">// PA11 DM / PA12 DP</span>
+    GPIO_InitStruct.Mode=GPIO_MODE_AF_PP;           <span class="cmt">// 复用推挽</span>
+    GPIO_InitStruct.Pull=GPIO_NOPULL;               <span class="cmt">// 无上下拉：USB 收发器内部已处理</span>
+    GPIO_InitStruct.Speed=GPIO_SPEED_HIGH;          <span class="cmt">// 高速档，保证 12Mbps 边沿</span>
+    GPIO_InitStruct.Alternate=GPIO_AF10_OTG_FS;     <span class="cmt">// 复用功能 AF10</span>
+    HAL_GPIO_Init(GPIOA, &amp;GPIO_InitStruct);
+}
+
+void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)
+{
+    HAL_NVIC_SetPriority(OTG_FS_IRQn,0,3);          <span class="cmt">// 抢占0，子优先级3：最高抢占级</span>
+    HAL_NVIC_EnableIRQ(OTG_FS_IRQn);                <span class="cmt">// 使能OTG USB FS中断</span>
+}
+
+void USB_OTG_BSP_uDelay (const uint32_t usec){ delay_us(usec); }<span class="cmt">// 官方用 TIM2，本工程复用 delay.c</span>
+void USB_OTG_BSP_mDelay (const uint32_t msec){ delay_ms(msec); }</pre>
+
+                    <h3>上层：main.c 中的注册</h3>
+                    <pre class="code">USBD_Init(&amp;USB_OTG_dev,          <span class="cmt">// USB_OTG_CORE_HANDLE：内核句柄，保存寄存器基址与端点状态</span>
+          USB_OTG_FS_CORE_ID,    <span class="cmt">// 选择 FS 内核（全速）</span>
+          &amp;USR_desc,             <span class="cmt">// 设备/配置/字符串描述符集合（usbd_desc.c）</span>
+          &amp;USBD_CDC_cb,          <span class="cmt">// CDC 类回调：Init/DeInit/Setup/DataIn/DataOut</span>
+          &amp;USR_cb);              <span class="cmt">// 用户回调：Reset/Configured/Suspended/...</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>PA11/PA12 不能再做普通 IO</strong>：一旦设为 <code>GPIO_MODE_AF_PP</code> + <code>AF10</code>，引脚就交给 OTG 内核；此时用万用表量 DP 会看到设备侧上拉（由内核控制），这是 PC 认出“有设备插入”的电气前提。</li>
+                            <li><strong>不要加外部上下拉配置</strong>：<code>GPIO_NOPULL</code> 是刻意的，USB 全速要求 DP 上拉 1.5kΩ 到 3.3V、DM/DP 串联 22Ω，这些都在板级电路上，GPIO 内部上下拉反而破坏阻抗。</li>
+                            <li><strong>中断优先级给到最高抢占级</strong>：USB 是 1ms 一个帧、每帧多个事务的硬实时协议，慢一步就丢包；<code>(0,3)</code> 保证它不被串口、按键打断。</li>
+                            <li><strong><code>USB_OTG_BSP_uDelay</code> 直接复用 <code>delay_us</code></strong>：设备库在复位、设地址等时序里要求 μs 级等待；本工程没有另开 TIM2，说明 <code>delay_us</code> 的精度已足够（192 节拍/μs，误差在协议容忍范围内）。</li>
+                            <li><strong>5 个参数各司其职</strong>：句柄是“状态容器”，CORE_ID 选内核，后三个是“三张表”——描述符表告诉主机我是什么设备，类回调表决定标准请求怎么应答，用户回调表把连接事件抛给应用层。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="USB 批量端点时序与数据流">
+                    <h2>08　USB 批量端点时序与数据流</h2>
+                    <div class="sec-sub">主机每 1ms 发一个 IN 令牌，设备把环形缓冲里的字节搬上空包；OUT 方向按 0x0D 0x0A 组帧</div>
+
+                    <figure class="figure">
+                        <img src="./index69-map/usb-cdc-timing.png" alt="USB 全速批量端点 IN/OUT 事务与 1ms 帧起始的波形时序图">
+                        <figcaption>图 8-1　USB 全速帧与批量事务时序：SOF 每 1ms 一次，IN/OUT 令牌携带数据包与握手包</figcaption>
+                    </figure>
+
+                    <h3>发送：写环形缓冲，由 DataIn 回调搬走</h3>
+                    <pre class="code">uint16_t VCP_DataTx (uint8_t data)
+{
+    APP_Rx_Buffer[APP_Rx_ptr_in]=data;  <span class="cmt">// 写入发送buf（2048 字节静态数组）</span>
+    APP_Rx_ptr_in++;                    <span class="cmt">// 写位置加1</span>
+    if(APP_Rx_ptr_in==APP_RX_DATA_SIZE) <span class="cmt">// 到缓冲区大小，回卷</span>
+    {
+        APP_Rx_ptr_in = 0;
+    }
+    return USBD_OK;
+}</pre>
+
+                    <h3>接收：逐字节判断 0x0D / 0x0A，凑齐一帧才置位</h3>
+                    <pre class="code">uint16_t VCP_DataRx (uint8_t* Buf, uint32_t Len)
+{
+    u8 i;
+    u8 res;
+    for(i=0;i&lt;Len;i++)
+    {
+        res=Buf[i];
+        if((USB_USART_RX_STA&amp;0x8000)==0)        <span class="cmt">// 上一帧未完成才继续收</span>
+        {
+            if(USB_USART_RX_STA&amp;0x4000)         <span class="cmt">// 已经收到 0x0D</span>
+            {
+                if(res!=0x0a)USB_USART_RX_STA=0;<span class="cmt">// 不是 0x0A：判为噪声，重新开始</span>
+                else USB_USART_RX_STA|=0x8000;  <span class="cmt">// 收到 0x0A，整帧完成</span>
+            }else                               <span class="cmt">// 还没收到 0x0D</span>
+            {
+                if(res==0x0d)USB_USART_RX_STA|=0x4000;
+                else
+                {
+                    USB_USART_RX_BUF[USB_USART_RX_STA&amp;0X3FFF]=res;<span class="cmt">// 存入数据区</span>
+                    USB_USART_RX_STA++;
+                    if(USB_USART_RX_STA&gt;(USB_USART_REC_LEN-1))USB_USART_RX_STA=0;<span class="cmt">// 溢出则丢弃重来</span>
+                }
+            }
+        }
+    }
+    return USBD_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>发送是“生产者—消费者”</strong>：<code>VCP_DataTx</code> 只写指针，不碰硬件；真正的打包由 <code>USBD_CDC_DataIn</code> 在中断里比对 <code>APP_Rx_ptr_in/out</code> 后调用 <code>DCD_EP_Tx</code> 完成，因此主循环刷屏不会阻塞。</li>
+                            <li><strong>2048 字节缓冲是速率约束</strong>：<code>usbd_conf.h</code> 的注释给出 <code>APP_RX_DATA_SIZE*8/MAX_BAUDARATE*1000 &gt; CDC_IN_FRAME_INTERVAL*8</code>，按全速 12Mbps 折算，2KB 足以撑过 1ms 的 IN 帧间隔，不会因为主机取数慢而丢字符。</li>
+                            <li><strong>0x4000 与 0x8000 是两级状态</strong>：bit14 记“已见回车”，bit15 记“整帧完成”，bit13~0 存长度；<code>USB_USART_RX_STA</code> 同时充当计数器与标志寄存器，这是正点原子串口实验的通用写法。</li>
+                            <li><strong>只认 CRLF</strong>：串口助手若只发 <code>\n</code>（0x0A）或不发结束符，设备永远不置 bit15，主循环就不会回显——这不是丢数据，而是协议要求未被满足。</li>
+                            <li><strong>溢出保护是“清零重来”</strong>：超过 <code>USB_USART_REC_LEN-1</code>（199）字节即把状态清零，宁可丢整帧也不越界写 <code>USB_USART_RX_BUF</code>，避免踩坏相邻变量。</li>
+                            <li><strong>数据方向决定端点</strong>：设备→PC 走 IN 端点（0x81 类），PC→设备走 OUT 端点（0x01 类），批量传输本身有重传与握手，应用层不需要做校验。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="OTG_FS 中断链路">
+                    <h2>09　OTG_FS 中断链路</h2>
+                    <div class="sec-sub">一个中断入口，统一分发到复位、枚举、类请求、数据收发四类事件</div>
+
+                    <figure class="figure">
+                        <img src="./index69-map/usb-vcp-irq-chain.png" alt="OTG_FS 中断从 NVIC 到 USBD 内核再到 CDC 用户回调的链路图">
+                        <figcaption>图 9-1　OTG_FS 中断链路：ISR → 设备库 → 类回调 / 用户回调</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>触发源</th><th>控制器 / 寄存器</th><th>NVIC 中断号与优先级</th><th>ISR</th><th>用户回调</th></tr>
+                        <tr><td>USB 复位 / 枚举完成</td><td>OTG_FS_GINTSTS.USBRST / ENUMDNE</td><td>OTG_FS_IRQn，抢占 0、子 3</td><td><code>OTG_FS_IRQHandler</code></td><td><code>USBD_USR_DeviceReset</code> / <code>DeviceConfigured</code></td></tr>
+                        <tr><td>SETUP 包到达</td><td>OTG_FS_DOEPINT.SETUP</td><td>同上</td><td>同上</td><td><code>VCP_Ctrl</code>（类请求）</td></tr>
+                        <tr><td>OUT 端点收到数据</td><td>OTG_FS_DOEPINT.XFERCOMPL</td><td>同上</td><td>同上</td><td><code>VCP_DataRx</code></td></tr>
+                        <tr><td>IN 端点发送完成</td><td>OTG_FS_DIEPINT.XFERCOMPL</td><td>同上</td><td>同上</td><td><code>USBD_CDC_DataIn</code>（内部）</td></tr>
+                        <tr><td>挂起 / 唤醒</td><td>OTG_FS_GINTSTS.ESUSP / WKUPINT</td><td>同上</td><td>同上</td><td><code>USBD_USR_DeviceSuspended</code> / <code>Resumed</code></td></tr>
+                    </table>
+
+                    <pre class="code">void OTG_FS_IRQHandler(void)
+{
+  	USBD_OTG_ISR_Handler(&amp;USB_OTG_dev);  <span class="cmt">// 整个 USB 协议栈只有一个中断入口</span>
+}
+
+void USBD_USR_DeviceConfigured (void)
+{
+    bDeviceState=1;                      <span class="cmt">// 配置完成 → 主循环据此点灯/改提示</span>
+	printf("MSC Interface started.\r\n"); <span class="cmt">// 原文如此：CDC 工程也沿用了这句打印</span>
+}
+
+void USBD_USR_DeviceDisconnected (void)
+{
+	bDeviceState=0;                      <span class="cmt">// 拔出后清连接标志</span>
+	printf("USB Device Disconnected.\r\n");
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>只有一个入口</strong>：OTG_FS 把所有端点事件合并成一个中断，设备库用 <code>GINTSTS</code> 逐位判断后分发；因此“中断优先级”只需配一次，不存在每个端点单独配 NVIC 的说法。</li>
+                            <li><strong>ISR 里绝不做耗时操作</strong>：<code>USBD_OTG_ISR_Handler</code> 只搬运数据、改状态机，<code>VCP_DataRx</code> 也只是内存拷贝；回显与 LCD 刷新全部留给主循环。</li>
+                            <li><strong><code>bDeviceState</code> 是中断与主循环的唯一契约</strong>：写方在中断上下文，读方在主循环，单字节写天然原子，不需要临界区；但要求主循环只做“比较—反应”，不要反向写。</li>
+                            <li><strong>挂起不等于拔出</strong>：总线空闲 3ms 进入 Suspend，<code>USBD_USR_DeviceSuspended</code> 也会把 <code>bDeviceState</code> 清 0，此时 DS1 熄灭是正常现象，PC 一发数据就会唤醒。</li>
+                            <li><strong>复位回调先于枚举</strong>：<code>USBD_USR_DeviceReset</code> 带 <code>speed</code> 参数（0 高速 / 1 全速），本实验打印 FS，说明 OTG_FS 内核按全速工作。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="主循环与现象">
+                    <h2>10　主循环与现象</h2>
+                    <div class="sec-sub">主循环只做两件事：跟踪连接状态、把收到的整帧回显</div>
+
+                    <pre class="code">while(1)
+{
+    if(usbstatus!=bDeviceState)            <span class="cmt">// 只在状态变化时刷屏，避免每圈都写 LCD</span>
+    {
+        usbstatus=bDeviceState;
+        if(usbstatus==1)
+        {
+            POINT_COLOR=BLUE;
+            LCD_ShowString(30,130,200,16,16,"USB Connected    ");
+            LED1=0;                        <span class="cmt">// DS1亮：PC 已完成配置</span>
+        }else
+        {
+            POINT_COLOR=RED;
+            LCD_ShowString(30,130,200,16,16,"USB disConnected ");
+            LED1=1;                        <span class="cmt">// DS1灭</span>
+        }
+    }
+    if(USB_USART_RX_STA&amp;0x8000)           <span class="cmt">// 收到一整帧（以 CRLF 结尾）</span>
+    {
+        len=USB_USART_RX_STA&amp;0x3FFF;       <span class="cmt">// 取出长度</span>
+        usb_printf("\r\n您发送的消息为:%d\r\n\r\n",len);
+        for(t=0;t&lt;len;t++)
+        {
+            VCP_DataTx(USB_USART_RX_BUF[t]);<span class="cmt">// 逐字节回灌 IN 缓冲</span>
+        }
+        usb_printf("\r\n\r\n");
+        USB_USART_RX_STA=0;                <span class="cmt">// 清标志，准备下一帧</span>
+    }else
+    {
+        times++;                           <span class="cmt">// 空闲节拍计数，做非阻塞分频</span>
+        if(times%5000==0)
+        {
+            usb_printf("\r\n阿波罗STM32F4/F7开发板USB虚拟串口实验\r\n");
+            usb_printf("正点原子@ALIENTEK\r\n\r\n");
+        }
+        if(times%200==0)usb_printf("请输入数据,以回车键结束\r\n");
+        if(times%30==0)LED0=!LED0;         <span class="cmt">// DS0 闪烁：系统在跑</span>
+        delay_ms(10);                      <span class="cmt">// 10ms 一拍，决定闪烁与提示节奏</span>
+    }
+}</pre>
+
+                    <table class="data">
+                        <tr><th>PC 侧操作</th><th>板上现象</th><th>串口/虚拟串口现象</th></tr>
+                        <tr><td>USB 线插入 PC</td><td>LCD 由 “USB Connecting...” 变 “USB Connected”，DS1 常亮</td><td>设备管理器出现新 COM 口</td></tr>
+                        <tr><td>打开该 COM 口</td><td>DS0 继续 300ms 级闪烁</td><td>无额外输出（打开端口不触发枚举）</td></tr>
+                        <tr><td>发送 <code>abc</code> + 回车</td><td>无变化</td><td>先回 “您发送的消息为:3”，再回 <code>abc</code></td></tr>
+                        <tr><td>发送数据但不发回车</td><td>无变化</td><td>设备不回显（未凑齐 CRLF）</td></tr>
+                        <tr><td>等待约 50s 不发数据</td><td>无变化</td><td>收到“请输入数据,以回车键结束”周期提示</td></tr>
+                        <tr><td>拔出 USB</td><td>LCD 显示 “USB disConnected”，DS1 灭</td><td>COM 口从设备管理器消失</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>状态变化才刷 LCD</strong>：<code>usbstatus</code> 是主循环自己的影子变量，与中断里的 <code>bDeviceState</code> 比较；这既减少 FSMC 写次数，也避免每 10ms 重绘造成闪烁。</li>
+                            <li><strong>回显不会“边收边发”</strong>：收到整帧后一次性 <code>VCP_DataTx</code>，此时 <code>USB_USART_RX_STA</code> 仍是旧值，若期间又来新数据，<code>VCP_DataRx</code> 会因为 bit15 已置位而丢弃——这是“先处理完再收下一帧”的隐式流控。</li>
+                            <li><strong><code>times</code> 是 16 位计数器</strong>：<code>u16</code> 在 10ms 节拍下约 655s 回绕；<code>%5000</code>、<code>%200</code>、<code>%30</code> 三个分频分别对应 50s、2s、300ms，回绕时节奏会短暂错位，不影响功能。</li>
+                            <li><strong>else 分支里才延时</strong>：收帧时不做 <code>delay_ms(10)</code>，等于突发回显优先；代价是回显期间 DS0 暂停闪烁，这是可接受的。</li>
+                            <li><strong>DS1 与 COM 口不是同一件事</strong>：DS1 只看 <code>bDeviceState</code>（配置完成），而 PC 侧 COM 口还依赖 INF 驱动；灯亮但没 COM 口，说明是主机驱动问题而非设备问题。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="USB CDC 描述符与环形缓冲">
+                    <h2>11　USB CDC 描述符与环形缓冲</h2>
+                    <div class="sec-sub">描述符决定“我是什么”，缓冲与 fops 决定“数据怎么进出”</div>
+
+                    <figure class="figure">
+                        <img src="./index69-map/usb-cdc-flow.png" alt="USB CDC 虚拟串口的数据流图：PC 串口助手、批量端点、环形缓冲、主循环回显">
+                        <figcaption>图 11-1　CDC 数据流：OUT 端点 → 组帧缓冲 → 主循环 → IN 环形缓冲 → PC</figcaption>
+                    </figure>
+
+                    <pre class="code">/* usbd_desc.c：设备描述符（节选） */
+__ALIGN_BEGIN uint8_t USBD_DeviceDesc[USB_SIZ_DEVICE_DESC] __ALIGN_END =
+{
+  0x12,                       <span class="cmt">/* bLength：18 字节 */</span>
+  USB_DESC_TYPE_DEVICE,       <span class="cmt">/* bDescriptorType = 0x01 */</span>
+  0x00, 0x02,                 <span class="cmt">/* bcdUSB = 2.00 */</span>
+  0x02,                       <span class="cmt">/* bDeviceClass = CDC */</span>
+  0x00,                       <span class="cmt">/* bDeviceSubClass */</span>
+  0x00,                       <span class="cmt">/* bDeviceProtocol */</span>
+  0x40,                       <span class="cmt">/* bMaxPacketSize0 = 64：EP0 最大包 */</span>
+  /* …VID / PID / bcdDevice / iManufacturer / iProduct / iSerial / bNumConfigurations… */
+};</pre>
+
+                    <pre class="code">/* usbd_cdc_vcp.c：CDC 类回调表 */
+USBD_Class_cb_TypeDef  USBD_CDC_cb =
+{
+    VCP_Init,      <span class="cmt">// 类初始化：准备端点/缓冲</span>
+    VCP_DeInit,    <span class="cmt">// 类反初始化</span>
+    VCP_Ctrl,      <span class="cmt">// 处理 SET_LINE_CODING / GET_LINE_CODING 等类请求</span>
+    VCP_DataTx,    <span class="cmt">// 应用层写 IN 缓冲</span>
+    VCP_DataRx,    <span class="cmt">// OUT 数据到达 → 组帧</span>
+    /* …省略：SOF、GetCfgDesc、GetDeviceQualifierDesc 等成员… */
+};</pre>
+
+                    <pre class="code">/* 描述符集合：告诉设备库三张表在哪 */
+USBD_DEVICE USR_desc =
+{
+  USBD_DeviceDesc,                    <span class="cmt">// 设备描述符</span>
+  USB_SIZ_DEVICE_DESC,
+  USBD_ConfigDesc,                    <span class="cmt">// 配置描述符（含接口/端点）</span>
+  USB_SIZ_CONFIG_DESC,
+  USBD_StringSerial,                  <span class="cmt">// 序列号字符串</span>
+  USBD_StringLangID,                  <span class="cmt">// 语言 ID</span>
+  USBD_Strings,                       <span class="cmt">// 厂商/产品字符串数组</span>
+  USBD_StrDesc                        <span class="cmt">// 字符串描述符缓冲</span>
+};</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>描述符是枚举的“契约文本”</strong>：主机先读 8 字节拿 <code>bMaxPacketSize0</code>，再读全 18 字节，然后读配置描述符；任何长度字段与实际字节数不一致，主机都会停在“未知设备”。</li>
+                            <li><strong>VID/PID 决定驱动匹配</strong>：Windows 靠 VID/PID 找 INF，本工程沿用 ST 的 CDC 示例 ID，所以装 ST 虚拟串口驱动即可；改 ID 却不改 INF，就会变成黄色感叹号。</li>
+                            <li><strong>接口类 0x02 + 子类 0x02 + 协议 0x01 才是 ACM</strong>：设备描述符的 <code>bDeviceClass=0x02</code> 只是声明“这是通信设备”，真正让系统加载 CDC ACM 的是接口描述符里的这三元组。</li>
+                            <li><strong>环形缓冲是单生产者单消费者</strong>：<code>APP_Rx_ptr_in</code> 只在 <code>VCP_DataTx</code>（主循环）改，<code>APP_Rx_ptr_out</code> 只在 <code>USBD_CDC_DataIn</code>（中断）改，因此不需要关中断保护。</li>
+                            <li><strong><code>VCP_Ctrl</code> 的 line coding 只“记录不回用”</strong>：USB 虚拟串口的波特率是名义值，实际传输由 USB 全速帧决定；工程仍把 PC 下发的 7 字节参数解析并 printf 出来，用于验证控制通道是否通。</li>
+                            <li><strong>三个结构体分工</strong>：<code>USBD_DEVICE</code> 管描述符，<code>USBD_Class_cb_TypeDef</code> 管协议行为，<code>USBD_Usr_cb_TypeDef</code> 管应用事件，互不越界。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="串口调试与日志">
+                    <h2>12　串口调试与日志</h2>
+                    <div class="sec-sub">USART1 是“调试口”，虚拟串口是“业务口”，两条通道彼此独立</div>
+
+                    <pre class="code">void uart_init(u32 bound)
+{
+	UART1_Handler.Instance=USART1;					    <span class="cmt">// USART1</span>
+	UART1_Handler.Init.BaudRate=bound;				    <span class="cmt">// 波特率 115200</span>
+	UART1_Handler.Init.WordLength=UART_WORDLENGTH_8B;   <span class="cmt">// 8 位数据</span>
+	UART1_Handler.Init.StopBits=UART_STOPBITS_1;	    <span class="cmt">// 1 位停止</span>
+	UART1_Handler.Init.Parity=UART_PARITY_NONE;		    <span class="cmt">// 无校验</span>
+	UART1_Handler.Init.HwFlowCtl=UART_HWCONTROL_NONE;   <span class="cmt">// 无硬件流控</span>
+	UART1_Handler.Init.Mode=UART_MODE_TX_RX;		    <span class="cmt">// 收发模式</span>
+	HAL_UART_Init(&amp;UART1_Handler);					    <span class="cmt">// 内部会调 HAL_UART_MspInit</span>
+}</pre>
+
+                    <pre class="code">void HAL_UART_MspInit(UART_HandleTypeDef *huart)
+{
+	if(huart-&gt;Instance==USART1)
+	{
+		__HAL_RCC_GPIOA_CLK_ENABLE();			<span class="cmt">// 使能GPIOA时钟</span>
+		__HAL_RCC_USART1_CLK_ENABLE();			<span class="cmt">// 使能USART1时钟</span>
+
+		GPIO_Initure.Pin=GPIO_PIN_9;			<span class="cmt">// PA9 = TX</span>
+		GPIO_Initure.Mode=GPIO_MODE_AF_PP;		<span class="cmt">// 复用推挽</span>
+		GPIO_Initure.Pull=GPIO_PULLUP;			<span class="cmt">// 上拉</span>
+		GPIO_Initure.Speed=GPIO_SPEED_FAST;		<span class="cmt">// 高速</span>
+		GPIO_Initure.Alternate=GPIO_AF7_USART1;	<span class="cmt">// AF7</span>
+		HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+
+		GPIO_Initure.Pin=GPIO_PIN_10;			<span class="cmt">// PA10 = RX</span>
+		HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+		__HAL_UART_DISABLE_IT(huart,UART_IT_TC);
+#if EN_USART1_RX
+		__HAL_UART_ENABLE_IT(huart,UART_IT_RXNE);<span class="cmt">// 开接收中断</span>
+		HAL_NVIC_EnableIRQ(USART1_IRQn);
+		HAL_NVIC_SetPriority(USART1_IRQn,3,3);	<span class="cmt">// 抢占3，子3：低于 USB</span>
+#endif
+	}
+}</pre>
+
+                    <pre class="code">int fputc(int ch, FILE *f)
+{
+	while((USART1-&gt;SR&amp;0X40)==0);  <span class="cmt">// 等 TXE（发送数据寄存器空）</span>
+	USART1-&gt;DR = (u8) ch;         <span class="cmt">// 写 DR，硬件自动移位输出</span>
+	return ch;
+}</pre>
+
+                    <pre class="code">void usb_printf(char* fmt,...)
+{
+	u16 i,j;
+	va_list ap;
+	va_start(ap,fmt);
+	vsprintf((char*)USART_PRINTF_Buffer,fmt,ap);<span class="cmt">// 先格式化到 200 字节缓冲</span>
+	va_end(ap);
+	i=strlen((const char*)USART_PRINTF_Buffer);<span class="cmt">// 本次长度</span>
+	for(j=0;j&lt;i;j++)                          <span class="cmt">// 逐字节写 USB IN 环缓</span>
+	{
+		VCP_DataTx(USART_PRINTF_Buffer[j]);
+	}
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>printf 走 USART1，不经过 USB</strong>：<code>fputc</code> 直接轮询 <code>SR.TXE</code> 后写 <code>DR</code>，因此枚举失败时仍能看到 <code>USBD_USR_DeviceReset</code> 的打印，这是排障的主通道。</li>
+                            <li><strong><code>usb_printf</code> 是另一条通道</strong>：它格式化到静态 <code>USART_PRINTF_Buffer</code>，再逐字节进 USB 环形缓冲，所以 PC 上“虚拟串口”看到的是业务回显，调试串口看到的是协议栈日志。</li>
+                            <li><strong>两者共用 vsprintf</strong>：都受同一份 <code>stdio</code> 支持，<code>%d</code>、<code>%s</code> 行为一致；但 USB 侧一次不要超过 200 字节，否则 <code>USART_PRINTF_Buffer</code> 会截断。</li>
+                            <li><strong>USART 优先级低于 USB</strong>：<code>(3,3)</code> 对 <code>(0,3)</code>，USB 事务永远优先；调试打印量过大时会丢字符，但不会破坏 USB 时序。</li>
+                            <li><strong><code>fputc</code> 是阻塞式</strong>：115200 波特率下 1 字节约 87μs，如果在 USB 中断里 printf，会严重拉长中断；工程里只在初始化与主循环打印，正是这个原因。</li>
+                            <li><strong><code>EN_USART1_RX</code> 控制接收中断是否编译</strong>：本实验不依赖串口收命令，但仍保留接收中断与 <code>USART_RX_STA</code> 组帧逻辑，方便做串口命令行实验。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘与排查">
+                    <h2>13　关键逻辑复盘与排查</h2>
+                    <div class="sec-sub">虚拟串口出问题，九成落在时钟、描述符、驱动、组帧四处</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>原因</th><th>排查</th></tr>
+                        <tr><td>PC 提示“无法识别的 USB 设备”</td><td>PLLQ 不是 8，USB 内核没有 48MHz</td><td>量 PA12 是否有 1.5kΩ 上拉；确认 <code>Stm32_Clock_Init</code> 第 4 参为 8</td></tr>
+                        <tr><td>枚举到一半失败，串口打印复位但无配置完成</td><td>描述符长度字段与实际不符，或 <code>wTotalLength</code> 超缓冲</td><td>看 <code>USBD_USR_DeviceReset</code> 后是否还有 <code>DeviceConfigured</code>；用 USB 抓包核对 18/9 字节</td></tr>
+                        <tr><td>设备管理器有未知设备，装驱动后才有 COM 口</td><td>VID/PID 与 INF 不匹配</td><td>核对 <code>USBD_DeviceDesc</code> 的 idVendor/idProduct，安装对应 ST 虚拟串口驱动</td></tr>
+                        <tr><td>串口能打开但发数据无回显</td><td>未发 0x0D 0x0A，bit15 永不置位</td><td>串口助手勾选“发送新行”；或在 <code>VCP_DataRx</code> 断点看 <code>USB_USART_RX_STA</code></td></tr>
+                        <tr><td>回显只有前半段，后面丢字符</td><td>一次发送超过 199 字节，状态被清零重来</td><td>分包发送；或增大 <code>USB_USART_REC_LEN</code> 并同步缓冲</td></tr>
+                        <tr><td>拔插几次后 PC 不再识别</td><td>只改了 <code>bDeviceState</code>，OTG 内核状态未复位</td><td>断电重插；检查是否有 <code>DeviceDisconnected</code> 打印</td></tr>
+                        <tr><td>DS1 亮但没有 COM 口</td><td>设备侧配置完成，主机侧驱动缺失</td><td>看设备管理器是否有带感叹号的 CDC 设备</td></tr>
+                    </table>
+
+                    <h3>复盘要点</h3>
+                    <ol>
+                        <li><strong>先电源与时钟，再协议</strong>：USB 不工作时，第一件事是确认 48MHz 与 DP 上拉，而不是怀疑描述符；时钟错了，抓包只会看到一堆无法解析的噪声。</li>
+                        <li><strong>中断里只搬数据</strong>：所有 LCD、printf（USART）、长循环都应留在主循环；中断里多做 100μs，就可能在 1ms 帧内丢一个事务。</li>
+                        <li><strong>状态变量是唯一接口</strong>：<code>bDeviceState</code> 与 <code>USB_USART_RX_STA</code> 都是“中断写、主循环读”，理解这一点就不会到处加锁。</li>
+                        <li><strong>“虚拟串口”不是 UART</strong>：波特率、校验位只是记录值，真正的节奏由 USB 主机轮询决定；把 line coding 当成真实串口参数去调，是常见误解。</li>
+                    </ol>
+                </section>
+
+                <section class="content-card" id="s14" data-title="交互演示">
+                    <h2>14　交互演示</h2>
+                    <div class="sec-sub">点击按钮复现源码中的两个状态分支，仅演示逻辑，不涉及真实硬件</div>
+
+                    <div class="sim">
+                        <div class="sim-title">连接建立与整帧接收分支演示</div>
+                        <div class="sim-buttons">
+                            <button data-key="key0">USBD_USR_DeviceConfigured()</button>
+                            <button data-key="key1">VCP_DataRx 收到 0x0D 0x0A</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS1（bDeviceState）</div>
+                            <div class="led-item"><span class="led-dot" id="dot1"></span>DS0（整帧就绪）</div>
+                        </div>
+                        <div class="sim-log" id="simLog">最后按键：无　　当前状态：DS0 灭　DS1 灭</div>
+                    </div>
+
+                    <p>第一个按钮对应 <code>usbd_usr.c</code> 中 <code>USBD_USR_DeviceConfigured</code> 把 <code>bDeviceState</code> 置 1（再点一次模拟断开时清 0）；第二个按钮对应 <code>usbd_cdc_vcp.c</code> 中 <code>VCP_DataRx</code> 见到 0x0D 后见到 0x0A，把 <code>USB_USART_RX_STA</code> 的 bit15 置位。两者都是“置位—复位”的翻转演示，用来观察主循环如何据此点灯与回显。</p>
+
+                    <div class="note">演示的分支必须与源码一一对应；改逻辑时同步改下面 <code>handlers</code>。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+
+<script>
+/* sim-wire：把演示按钮接到日志，分支与正文源码说明一致 */
+(function () {
+    var log = document.getElementById('simLog');
+    if (!log) return;
+    var msgs = {"key0": "USBD_USR_DeviceConfigured()：枚举完成，虚拟串口可收发", "key1": "VCP_DataRx 收到 0x0D 0x0A：回环发回主机，验证 CDC 通路"};
+    Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (b) {
+        b.addEventListener('click', function () {
+            var k = b.getAttribute('data-key') || b.getAttribute('data-act');
+            if (k && msgs[k]) log.textContent = msgs[k];
+        });
+    });
+})();
+</script>
+</body>
+</html>

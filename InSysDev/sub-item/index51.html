@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验37 摄像头实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验37 摄像头实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">先看 03 启动链路，再看 07~11 的 SCCB、DCMI 与双缓冲</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">用 DCMI 接收 OV5640 的 8 位并口数据，RGB565 直接刷屏，JPEG 经串口 2 上传</div>
+
+                    <p>本实验把 OV5640 摄像头模组接在 STM32F429 的 DCMI 接口上：上电后先用 SCCB（类 IIC）读芯片 ID、写寄存器表，把模组配置成 RGB565 或 JPEG 输出；再让 DCMI 以 8 位并口采集，DMA2 Stream1 采用双缓冲把数据搬走。RGB565 模式下一行一行刷到 LTDC 图层，JPEG 模式下一帧一帧拼进 SDRAM 缓存，再通过 USART2（921600）发给上位机。与实验 38 内存管理实验相比，本实验的难点在“引脚复用 + DMA 双缓冲 + 两级中断”而不是算法。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚 / 参数</th><th>说明</th></tr>
+                        <tr><td>DCMI_D0~D7</td><td>PC6、PC7、PC8、PC9、PC11、PB8、PB9、PD3</td><td>8 位并行数据，AF13</td></tr>
+                        <tr><td>DCMI_PCLK</td><td>PA6</td><td>像素时钟，上升沿采样</td></tr>
+                        <tr><td>DCMI_HSYNC / VSYNC</td><td>PB7 / PH8</td><td>行同步 / 场同步，低电平有效</td></tr>
+                        <tr><td>SCCB_SCL / SDA</td><td>PB3 / PB4</td><td>普通推挽 GPIO 模拟时序</td></tr>
+                        <tr><td>DMA2 Stream1</td><td>Channel 1，循环模式，高优先级</td><td>DCMI→内存，双缓冲</td></tr>
+                        <tr><td>JPEG 缓存</td><td><code>0xC0000000+1280*800*2</code>，30MB</td><td>放在 LCD 显存之后的 SDRAM</td></tr>
+                        <tr><td>调试串口</td><td>USART1 115200 / USART2 921600</td><td>日志输出 / JPEG 上传</td></tr>
+                        <tr><td>帧率统计</td><td>TIM3，10kHz 计数，1 秒中断</td><td><code>TIM3_Init(10000-1,9000-1)</code></td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">DCMI 8 位并口</span>
+                        <span class="chip">SCCB 配置</span>
+                        <span class="chip">DMA 双缓冲</span>
+                        <span class="chip">RGB565 / JPEG</span>
+                        <span class="chip">USART2 921600</span>
+                    </div>
+
+                    <div class="note">OV5640 的 PCLK 最高可达 84MHz，而 DCMI 要求 PCLK 不超过 HCLK 的一半。本工程 HCLK=180MHz，所以模组初始化表里把 PCLK 分频设置在安全范围内，改寄存器表时不能随意提高。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">摄像头实验的文件比前几个实验多，先分清“谁配置谁”</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本页关注点</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>入口、模式选择、两种业务循环</td><td><code>jpeg_test()</code> / <code>rgb565_test()</code></td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>向量表、栈堆、复位入口</td><td>初始 MSP、<code>Reset_Handler</code></td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td><code>SystemInit</code></td><td>FPU、VTOR</td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td><code>Stm32_Clock_Init</code></td><td>180MHz 时钟树</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>SysTick 轮询延时</td><td><code>fac_us</code></td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>USART1 与 printf</td><td><code>fputc</code></td></tr>
+                        <tr><td><code>HARDWARE/OV5640/sccb.c</code></td><td>GPIO 模拟 SCCB 时序</td><td><code>SCCB_WR_Byte</code></td></tr>
+                        <tr><td><code>HARDWARE/OV5640/ov5640.c</code></td><td>寄存器表、模式切换、对焦</td><td><code>OV5640_Init</code> / <code>OutSize_Set</code></td></tr>
+                        <tr><td><code>HARDWARE/DCMI/dcmi.c</code></td><td>DCMI 与 DMA 配置、中断</td><td>本页核心：<code>DCMI_DMA_Init</code></td></tr>
+                        <tr><td><code>HARDWARE/LCD/ltdc.c</code></td><td>LTDC 图层与显存</td><td><code>LTDC_Color_Fill</code></td></tr>
+                        <tr><td><code>HARDWARE/SDRAM/sdram.c</code></td><td>FMC 驱动 SDRAM</td><td>显存与 JPEG 缓存的物理基础</td></tr>
+                        <tr><td><code>HARDWARE/TIMER/timer.c</code></td><td>TIM3 帧率统计</td><td>1 秒中断打印帧率</td></tr>
+                        <tr><td><code>HARDWARE/USART2/usart2.c</code></td><td>USART2 只发模式</td><td>JPEG 上传通道</td></tr>
+                    </table>
+
+                    <div class="note blue">调用关系：<code class="inline">main → OV5640_Init → SCCB_Init/SCCB_WR_Reg</code>，<code class="inline">main → DCMI_Init → HAL_DCMI_Init → HAL_DCMI_MspInit</code>。读代码时不要被 HAL 的回调层绕晕，按这三条链分别看即可。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从复位到选择工作模式，顺序里藏着两条硬依赖</div>
+
+                    <figure class="figure">
+                        <img src="./index51-map/boot-flow.png" alt="摄像头实验从上电复位到模式选择的启动流程图">
+                        <figcaption>图 3-1　摄像头实验启动链路总览</figcaption>
+                    </figure>
+
+                    <pre class="code">int main(void)
+{
+    u8 key;
+    u8 t;
+    HAL_Init();                     <span class="cmt">// HAL 时基 + NVIC 分组</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// HSE 25M → SYSCLK 180MHz</span>
+    delay_init(180);                <span class="cmt">// SysTick 延时倍乘数</span>
+    uart_init(115200);              <span class="cmt">// USART1，打印日志</span>
+    usart2_init(921600);            <span class="cmt">// USART2，只发，用于传 JPEG</span>
+    usmart_dev.init(90);            <span class="cmt">// 串口在线调试</span>
+    LED_Init();                     <span class="cmt">// 指示灯</span>
+    KEY_Init();                     <span class="cmt">// 四个按键</span>
+    SDRAM_Init();                   <span class="cmt">// 必须先有 SDRAM，LCD 显存才能用</span>
+    LCD_Init();                     <span class="cmt">// LTDC + 面板初始化</span>
+    TIM3_Init(10000-1,9000-1);      <span class="cmt">// 10kHz 计数，1 秒溢出一次</span>
+
+    POINT_COLOR=RED;
+    LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7");
+    LCD_ShowString(30,70,200,16,16,"OV5640 TEST");
+    LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");
+    LCD_ShowString(30,110,200,16,16,"2016/1/16");
+
+    while(OV5640_Init())             <span class="cmt">// 读 ID 失败就闪屏重试</span>
+    {
+        LCD_ShowString(30,130,240,16,16,"OV5640 ERR");
+        delay_ms(200);
+        LCD_Fill(30,130,239,170,WHITE);
+        delay_ms(200);
+        LED0=!LED0;
+    }
+    LCD_ShowString(30,130,200,16,16,"OV5640 OK");
+
+    while(1)                         <span class="cmt">// 等待用户选择模式</span>
+    {
+        key=KEY_Scan(0);
+        if(key==KEY0_PRES){ovx_mode=0;break;}      <span class="cmt">// RGB565</span>
+        else if(key==KEY1_PRES){ovx_mode=1;break;} <span class="cmt">// JPEG</span>
+        t++;
+        if(t==100)LCD_ShowString(30,150,230,16,16,"KEY0:RGB565  KEY1:JPEG");
+        if(t==200)                                 <span class="cmt">// 闪烁提示</span>
+        {
+            LCD_Fill(30,150,210,150+16,WHITE);
+            t=0;
+            LED0=!LED0;
+        }
+        delay_ms(5);
+    }
+    if(ovx_mode==1)jpeg_test();      <span class="cmt">// 进入对应业务，不再返回</span>
+    else rgb565_test();
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>SDRAM 必须先于 LCD</strong>：LTDC 的显存地址 <code>0xC0000000</code> 位于 SDRAM，FMC 未初始化时写显存会 HardFault；所以顺序固定为 <code>SDRAM_Init()</code> → <code>LCD_Init()</code>。</li>
+                            <li><strong>OV5640 初始化失败不退出</strong>：<code>while(OV5640_Init())</code> 会一直重试并闪 LED，方便排查排线松动或供电问题；<code>OV5640_Init()</code> 返回 1 表示 ID 不匹配。</li>
+                            <li><strong>模式选择放在 while 里</strong>：按键扫描每 5ms 一次，选择后 <code>break</code> 跳出，再调用对应业务函数；业务函数内部又是死循环，所以不会回到这里。</li>
+                            <li><strong>USART2 波特率 921600</strong>：JPEG 一帧几十 KB，115200 太慢；921600 在 PCLK1=45MHz 下误差仍可接受。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">DCMI、DMA2、TIM3 的中断入口都从这张表里来</div>
+
+                    <pre class="code">Stack_Size      EQU     0x400;          <span class="cmt">// 主栈 1KB</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp
+
+Heap_Size       EQU     0x200;          <span class="cmt">// 堆 512B</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit
+
+                AREA    RESET, DATA, READONLY
+                EXPORT  __Vectors
+__Vectors       DCD     __initial_sp               <span class="cmt">// 初始 MSP</span>
+                DCD     Reset_Handler              <span class="cmt">// 复位向量</span>
+                DCD     NMI_Handler
+                DCD     HardFault_Handler
+                <span class="cmt">// ... 省略其他异常 ...</span>
+                DCD     DCMI_IRQHandler            <span class="cmt">// 摄像头帧中断入口</span>
+                DCD     DMA2_Stream1_IRQHandler    <span class="cmt">// DCMI 的 DMA 完成中断</span>
+                DCD     TIM3_IRQHandler            <span class="cmt">// 帧率统计</span>
+
+Reset_Handler   PROC
+                EXPORT  Reset_Handler             [WEAK]
+                IMPORT  SystemInit
+                IMPORT  __main
+                LDR     R0, =SystemInit
+                BLX     R0
+                LDR     R0, =__main
+                BX      R0
+                ENDP</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>向量表顺序不能改</strong>：异常号是芯片固定的，<code>DCMI_IRQHandler</code> 必须放在 DCMI 对应的槽位，写错会导致中断跑到别的函数。</li>
+                            <li><strong>弱符号覆盖</strong>：启动文件里的 <code>DCMI_IRQHandler</code> 是 <code>[WEAK]</code> 定义，<code>dcmi.c</code> 里写了同名函数就自动覆盖，不需要改启动文件。</li>
+                            <li><strong>1KB 栈是否够用</strong>：本实验中断回调里没有大数组，<code>dcmi_line_buf</code> 是全局变量；如果以后在回调里定义大局部数组，必须加大 <code>Stack_Size</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">FPU、向量表、优先级分组与时基</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+#if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2)); <span class="cmt">// 开 FPU（CP10/CP11）</span>
+#endif
+    RCC-&gt;CR |= (uint32_t)0x00000001;             <span class="cmt">// HSION</span>
+    RCC-&gt;CFGR = 0x00000000;                      <span class="cmt">// 时钟配置复位</span>
+    <span class="cmt">// ... 省略 PLL/HSE/CSS 复位 ...</span>
+    SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;    <span class="cmt">// 向量表在 0x08000000</span>
+}
+
+HAL_StatusTypeDef HAL_Init(void)
+{
+    HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4); <span class="cmt">// 4 位抢占</span>
+    HAL_InitTick(TICK_INT_PRIORITY);                    <span class="cmt">// 1ms SysTick</span>
+    return HAL_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>FPU 与 DCMI 无关但必须开</strong>：HAL 的 <code>HAL_RCC_GetSysClockFreq()</code> 等函数内部可能使用浮点，未开 FPU 会进 UsageFault。</li>
+                            <li><strong>优先级分组的影响</strong>：<code>NVIC_PRIORITYGROUP_4</code> 下 <code>HAL_NVIC_SetPriority(DCMI_IRQn,0,0)</code> 的第二个 0 才是有效抢占优先级，第三个 0 被忽略；改成 Group 2 时两者都有效。</li>
+                            <li><strong>HAL 时基与 delay 并存</strong>：SysTick 既产生 1ms 中断给 HAL，也被 <code>delay_us</code> 轮询读取计数值，两者互不冲突，但 <code>HAL_Delay</code> 在中断里调用会死等。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟树与 SysTick 时基">
+                    <h2>06　时钟树与 SysTick 时基</h2>
+                    <div class="sec-sub">DCMI 的 PCLK 采样、TIM3 的 1 秒统计都建立在这套时钟上</div>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>算式</th><th>结果</th></tr>
+                        <tr><td>PLL 输入</td><td>HSE 25MHz / PLLM 25</td><td>1MHz</td></tr>
+                        <tr><td>VCO</td><td>1MHz × PLLN 360</td><td>360MHz</td></tr>
+                        <tr><td>SYSCLK</td><td>360MHz / PLLP 2</td><td>180MHz</td></tr>
+                        <tr><td>HCLK</td><td>SYSCLK / 1</td><td>180MHz</td></tr>
+                        <tr><td>PCLK1</td><td>180MHz / 4</td><td>45MHz</td></tr>
+                        <tr><td>PCLK2</td><td>180MHz / 2</td><td>90MHz</td></tr>
+                        <tr><td>DCMI 时钟</td><td>PCLK2 90MHz（AF13）</td><td>需 ≤ HCLK/2</td></tr>
+                        <tr><td>TIM3 计数</td><td>90MHz / 9000 = 10kHz，计 10000 次</td><td>1 秒中断</td></tr>
+                    </table>
+
+                    <pre class="code">void TIM3_Init(u16 arr,u16 psc)
+{
+    TIM3_Handler.Instance=TIM3;
+    TIM3_Handler.Init.Prescaler=psc;                    <span class="cmt">// 9000-1 → 10kHz</span>
+    TIM3_Handler.Init.CounterMode=TIM_COUNTERMODE_UP;
+    TIM3_Handler.Init.Period=arr;                       <span class="cmt">// 10000-1 → 1s</span>
+    TIM3_Handler.Init.ClockDivision=TIM_CLOCKDIVISION_DIV1;
+    HAL_TIM_Base_Init(&amp;TIM3_Handler);
+    HAL_TIM_Base_Start_IT(&amp;TIM3_Handler);              <span class="cmt">// 开更新中断</span>
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if(htim==(&amp;TIM3_Handler))
+    {
+        printf("frame:%d\r\n",ov_frame);               <span class="cmt">// 1 秒打印一次帧率</span>
+        printf("jpeg_data_len:%d\r\n",jpeg_data_len);
+        ov_frame=0;                                     <span class="cmt">// 计数清零</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>TIM3 挂在 APB1</strong>：APB1 分频系数为 4（≠1），定时器时钟自动 ×2，即 90MHz；<code>9000-1</code> 分频后正好 10kHz。</li>
+                            <li><strong>RGB 模式下关闭 TIM3</strong>：<code>rgb565_test()</code> 里执行 <code>TIM3-&gt;CR1&amp;=~(0x01)</code>，因为每秒 printf 会打断 LTDC 刷屏造成抖动；JPEG 模式则保留统计。</li>
+                            <li><strong>帧率变量 ov_frame</strong>：在 DCMI 帧回调里自增，在 TIM3 回调里读取并清零，两个都是中断，读写顺序天然互斥（同为抢占优先级 0 不会嵌套）。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="SCCB 与 OV5640 初始化">
+                    <h2>07　SCCB 与 OV5640 初始化</h2>
+                    <div class="sec-sub">用两个普通 GPIO 模拟 SCCB，先把芯片 ID 读出来</div>
+
+                    <figure class="figure">
+                        <img src="./index51-map/ov5640-sccb-flow.png" alt="SCCB 读写时序与 OV5640 初始化流程">
+                        <figcaption>图 7-1　SCCB 位时序与 OV5640 初始化步骤</figcaption>
+                    </figure>
+
+                    <pre class="code">void SCCB_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_GPIOB_CLK_ENABLE();           <span class="cmt">// SCCB 用 PB3/PB4</span>
+    GPIO_Initure.Pin=GPIO_PIN_3|GPIO_PIN_4;
+    GPIO_Initure.Mode=GPIO_MODE_OUTPUT_PP;  <span class="cmt">// 推挽输出，软件翻转</span>
+    GPIO_Initure.Pull=GPIO_PULLUP;          <span class="cmt">// 上拉，空闲为高</span>
+    GPIO_Initure.Speed=GPIO_SPEED_FAST;
+    HAL_GPIO_Init(GPIOB,&amp;GPIO_Initure);
+}
+
+u8 SCCB_WR_Byte(u8 dat)
+{
+    u8 j,res;
+    for(j=0;j&lt;8;j++)                        <span class="cmt">// 高位先发</span>
+    {
+        if(dat&amp;0x80)SCCB_SDA=1;
+        else SCCB_SDA=0;
+        dat&lt;&lt;=1;
+        SCCB_Delay();
+        SCCB_SCL=1;                         <span class="cmt">// SCL 高电平期间 SDA 稳定</span>
+        SCCB_Delay();
+        SCCB_SCL=0;
+    }
+    <span class="cmt">// ... 省略第 9 位 ACK 读取 ...</span>
+    return res;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>SCCB 不是标准 IIC</strong>：它没有重复起始位，第 9 位是“自由位”而不是 ACK；所以工程没有用硬件 I2C 外设，而是直接翻转 GPIO。</li>
+                            <li><strong>SCL 高电平采样</strong>：数据必须在 SCL 拉高之前准备好，<code>SCCB_Delay()</code> 保证建立/保持时间，删掉延时会读错寄存器。</li>
+                            <li><strong>ID 校验</strong>：<code>OV5640_Init()</code> 先读 <code>0x300A/0x300B</code> 得到 0x5640，不匹配直接返回 1，避免后面写一堆寄存器却不知道模组根本没接上。</li>
+                            <li><strong>写寄存器表</strong>：<code>ov5640_uxga_init_reg_tbl</code> 是二维数组，<code>sizeof(...)/4</code> 是因为每个元素 2 字节、外层再除 2，循环逐条写入。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="DCMI 接口与 DMA 双缓冲">
+                    <h2>08　DCMI 接口与 DMA 双缓冲</h2>
+                    <div class="sec-sub">8 位并口怎么采、DMA 怎么在“搬 buf0”时“填 buf1”</div>
+
+                    <figure class="figure">
+                        <img src="./index51-map/dcmi-dma-timing.png" alt="DCMI 行同步、像素时钟与 DMA 双缓冲时序">
+                        <figcaption>图 8-1　DCMI 采集与 DMA 双缓冲搬运时序</figcaption>
+                    </figure>
+
+                    <pre class="code">void DCMI_Init(void)
+{
+    DCMI_Handler.Instance=DCMI;
+    DCMI_Handler.Init.SynchroMode=DCMI_SYNCHRO_HARDWARE;    <span class="cmt">// 硬件 HSYNC/VSYNC</span>
+    DCMI_Handler.Init.PCKPolarity=DCMI_PCKPOLARITY_RISING;  <span class="cmt">// PCLK 上升沿采样</span>
+    DCMI_Handler.Init.VSPolarity=DCMI_VSPOLARITY_LOW;       <span class="cmt">// VSYNC 低有效</span>
+    DCMI_Handler.Init.HSPolarity=DCMI_HSPOLARITY_LOW;       <span class="cmt">// HSYNC 低有效</span>
+    DCMI_Handler.Init.CaptureRate=DCMI_CR_ALL_FRAME;        <span class="cmt">// 全帧捕获</span>
+    DCMI_Handler.Init.ExtendedDataMode=DCMI_EXTEND_DATA_8B; <span class="cmt">// 8 位数据</span>
+    HAL_DCMI_Init(&amp;DCMI_Handler);                           <span class="cmt">// 内部会开帧中断</span>
+}
+
+void DCMI_DMA_Init(u32 mem0addr,u32 mem1addr,u16 memsize,u32 memblen,u32 meminc)
+{
+    __HAL_RCC_DMA2_CLK_ENABLE();
+    __HAL_LINKDMA(&amp;DCMI_Handler,DMA_Handle,DMADMCI_Handler); <span class="cmt">// 句柄互链</span>
+    DMADMCI_Handler.Instance=DMA2_Stream1;
+    DMADMCI_Handler.Init.Channel=DMA_CHANNEL_1;
+    DMADMCI_Handler.Init.Direction=DMA_PERIPH_TO_MEMORY;
+    DMADMCI_Handler.Init.PeriphInc=DMA_PINC_DISABLE;        <span class="cmt">// 外设地址固定</span>
+    DMADMCI_Handler.Init.MemInc=meminc;                     <span class="cmt">// 内存递增</span>
+    DMADMCI_Handler.Init.PeriphDataAlignment=DMA_PDATAALIGN_WORD;
+    DMADMCI_Handler.Init.MemDataAlignment=memblen;
+    DMADMCI_Handler.Init.Mode=DMA_CIRCULAR;                 <span class="cmt">// 循环模式</span>
+    DMADMCI_Handler.Init.Priority=DMA_PRIORITY_HIGH;
+    DMADMCI_Handler.Init.FIFOMode=DMA_FIFOMODE_ENABLE;
+    DMADMCI_Handler.Init.FIFOThreshold=DMA_FIFO_THRESHOLD_HALFFULL;
+    DMADMCI_Handler.Init.MemBurst=DMA_MBURST_SINGLE;
+    DMADMCI_Handler.Init.PeriphBurst=DMA_PBURST_SINGLE;
+    HAL_DMA_DeInit(&amp;DMADMCI_Handler);
+    HAL_DMA_Init(&amp;DMADMCI_Handler);
+    __HAL_UNLOCK(&amp;DMADMCI_Handler);                         <span class="cmt">// 关键：先解锁</span>
+
+    if(mem1addr==0)          <span class="cmt">// 单缓冲</span>
+        HAL_DMA_Start(&amp;DMADMCI_Handler,(u32)&amp;DCMI-&gt;DR,mem0addr,memsize);
+    else                     <span class="cmt">// 双缓冲</span>
+    {
+        HAL_DMAEx_MultiBufferStart(&amp;DMADMCI_Handler,(u32)&amp;DCMI-&gt;DR,mem0addr,mem1addr,memsize);
+        __HAL_DMA_ENABLE_IT(&amp;DMADMCI_Handler,DMA_IT_TC);
+        HAL_NVIC_SetPriority(DMA2_Stream1_IRQn,0,0);
+        HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么必须 <code>__HAL_UNLOCK</code></strong>：<code>HAL_DMA_Start/MultiBufferStart</code> 入口会先 <code>__HAL_LOCK</code>，若句柄仍处于锁定态（例如上一次 <code>HAL_DMA_DeInit</code> 后），函数直接返回 HAL_BUSY，DMA 根本没启动。源码注释专门写了这一点。</li>
+                            <li><strong>外设数据宽度 32 位</strong>：DCMI 每次读取 <code>DCMI-&gt;DR</code> 都按字访问，虽然只有低 8 位有效，但这是 DCMI 的硬件要求。</li>
+                            <li><strong>双缓冲的意义</strong>：DMA 填 buf1 时 CPU 可以处理 buf0，避免“搬一半被覆盖”；F429 的 DMA 通过 <code>CR</code> 的 CT 位（bit19）指示当前目标缓冲。</li>
+                            <li><strong>循环模式 + 传输完成中断</strong>：每搬完 <code>memsize</code> 个数据触发一次 TC，回调里切换处理对象；这也是 RGB 模式“一行一次中断”的来源。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="中断链路">
+                    <h2>09　中断链路</h2>
+                    <div class="sec-sub">DCMI 帧中断与 DMA 完成中断，两条链路各管一段</div>
+
+                    <figure class="figure">
+                        <img src="./index51-map/dcmi-irq-chain.png" alt="摄像头实验 DCMI 与 DMA2 中断链路图">
+                        <figcaption>图 9-1　DCMI 帧中断与 DMA 完成中断的链路</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>触发源</th><th>控制器 / 标志</th><th>NVIC</th><th>ISR</th><th>用户回调</th></tr>
+                        <tr><td>一帧采集结束（VSYNC 事件）</td><td>DCMI_SR 的 FNE/VSYNC</td><td>DCMI_IRQn，抢占 0</td><td><code>DCMI_IRQHandler</code></td><td><code>HAL_DCMI_FrameEventCallback</code></td></tr>
+                        <tr><td>DMA 搬运完设定长度</td><td>DMA2 LISR 的 TCIF1_5</td><td>DMA2_Stream1_IRQn，抢占 0</td><td><code>DMA2_Stream1_IRQHandler</code></td><td><code>dcmi_rx_callback</code> 函数指针</td></tr>
+                        <tr><td>TIM3 计数溢出</td><td>TIM3_SR 的 UIF</td><td>TIM3_IRQn，抢占 1</td><td><code>TIM3_IRQHandler</code></td><td><code>HAL_TIM_PeriodElapsedCallback</code></td></tr>
+                    </table>
+
+                    <pre class="code">void DCMI_IRQHandler(void)
+{
+    HAL_DCMI_IRQHandler(&amp;DCMI_Handler);          <span class="cmt">// 统一入口，内部判源</span>
+}
+
+void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
+{
+    jpeg_data_process();                          <span class="cmt">// 换缓冲 / 收尾</span>
+    LED1=!LED1;                                   <span class="cmt">// 帧指示</span>
+    ov_frame++;                                   <span class="cmt">// 帧率计数</span>
+    __HAL_DCMI_ENABLE_IT(&amp;DCMI_Handler,DCMI_IT_FRAME); <span class="cmt">// 必须重新使能</span>
+}
+
+void DMA2_Stream1_IRQHandler(void)
+{
+    if(__HAL_DMA_GET_FLAG(&amp;DMADMCI_Handler,DMA_FLAG_TCIF1_5)!=RESET)
+    {
+        __HAL_DMA_CLEAR_FLAG(&amp;DMADMCI_Handler,DMA_FLAG_TCIF1_5); <span class="cmt">// 清标志</span>
+        dcmi_rx_callback();                                  <span class="cmt">// 函数指针调用</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>帧中断会被 HAL 关闭</strong>：<code>HAL_DCMI_IRQHandler()</code> 处理完帧事件后会关闭 <code>DCMI_IT_FRAME</code>，如果回调里不再使能，就只能采到第一帧——这是本实验最经典的“只显示一帧”问题。</li>
+                            <li><strong>回调用函数指针</strong>：<code>dcmi_rx_callback</code> 在 <code>jpeg_test()</code> 里指向 <code>jpeg_dcmi_rx_callback</code>，在 <code>rgb565_test()</code> 里指向 <code>rgblcd_dcmi_rx_callback</code>，同一套 DMA 中断服务两种业务。</li>
+                            <li><strong>清标志必须在回调前</strong>：先清 TC 标志再处理数据，否则处理期间若又完成一次传输，标志会丢失。</li>
+                            <li><strong>中断里不做耗时操作</strong>：两个回调都只做内存拷贝/置标志，<code>printf</code>、<code>delay</code> 全部放到主循环，否则 PCLK 数据会溢出。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="RGB565 显示通路">
+                    <h2>10　RGB565 显示通路</h2>
+                    <div class="sec-sub">一行一搬，直接刷进 LTDC 图层</div>
+
+                    <figure class="figure">
+                        <img src="./index51-map/dcmi-data-chain.png" alt="OV5640 数据通路：RGB565 直显与 JPEG 缓存">
+                        <figcaption>图 10-1　RGB565 与 JPEG 两条数据通路</figcaption>
+                    </figure>
+
+                    <pre class="code">void DCMI_Start(void)
+{
+    LCD_SetCursor(0,0);
+    LCD_WriteRAM_Prepare();              <span class="cmt">// 准备写 GRAM</span>
+    __HAL_DMA_ENABLE(&amp;DMADMCI_Handler); <span class="cmt">// 先开 DMA</span>
+    DCMI-&gt;CR|=DCMI_CR_CAPTURE;          <span class="cmt">// 再开采集，避免丢首行</span>
+}
+
+void rgblcd_dcmi_rx_callback(void)
+{
+    u16 *pbuf;
+    if(DMADMCI_Handler.Instance-&gt;CR&amp;(1&lt;&lt;19))  <span class="cmt">// CT=1：DMA 正在用 buf1</span>
+        pbuf=(u16*)dcmi_line_buf[0];            <span class="cmt">// 处理 buf0</span>
+    else
+        pbuf=(u16*)dcmi_line_buf[1];
+    LTDC_Color_Fill(0,curline,lcddev.width-1,curline,pbuf); <span class="cmt">// DM2D 刷一行</span>
+    if(curline&lt;lcddev.height)curline++;          <span class="cmt">// 行号递增</span>
+}
+
+void DCMI_Stop(void)
+{
+    DCMI-&gt;CR&amp;=~(DCMI_CR_CAPTURE);       <span class="cmt">// 关采集</span>
+    while(DCMI-&gt;CR&amp;0X01);               <span class="cmt">// 等待当前帧结束</span>
+    __HAL_DMA_DISABLE(&amp;DMADMCI_Handler); <span class="cmt">// 再关 DMA</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>启动顺序</strong>：先使能 DMA 再置 <code>DCMI_CR_CAPTURE</code>，否则 DCMI 已经开始输出而 DMA 还没准备好，第一行会丢。</li>
+                            <li><strong>CT 位判断</strong>：DMA 双缓冲的当前目标缓冲由 <code>CR</code> bit19 指示，回调里读它就知道“哪个 buf 已满、该读哪个”。</li>
+                            <li><strong>行号 curline</strong>：从 <code>yoffset</code> 开始（LCD 高度大于 800 时居中显示），每处理一行加 1，超过屏幕高度后不再增加，画面保持静止。</li>
+                            <li><strong>停止顺序</strong>：先关捕获并等待 <code>CR</code> 的 CAPTURE 位自动清零，再关 DMA；反过来会残留半行数据。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="JPEG 采集与串口上传">
+                    <h2>11　JPEG 采集与串口上传</h2>
+                    <div class="sec-sub">拼接多块行缓存，找 FF D8 / FF D9 得到完整 JPEG</div>
+
+                    <pre class="code">void jpeg_dcmi_rx_callback(void)
+{
+    u16 i;
+    u32 *pbuf;
+    pbuf=jpeg_data_buf+jpeg_data_len;   <span class="cmt">// 追加到有效数据末尾</span>
+    if(DMADMCI_Handler.Instance-&gt;CR&amp;(1&lt;&lt;19))  <span class="cmt">// buf0 已满</span>
+    {
+        for(i=0;i&lt;jpeg_line_size;i++)pbuf[i]=dcmi_line_buf[0][i];
+        jpeg_data_len+=jpeg_line_size;
+    }
+    else
+    {
+        for(i=0;i&lt;jpeg_line_size;i++)pbuf[i]=dcmi_line_buf[1][i];
+        jpeg_data_len+=jpeg_line_size;
+    }
+}
+
+void jpeg_data_process(void)
+{
+    u16 i,rlen;
+    u32 *pbuf;
+    curline=yoffset;
+    if(ovx_mode&amp;0X01)                       <span class="cmt">// 仅 JPEG 模式处理</span>
+    {
+        if(jpeg_data_ok==0)                 <span class="cmt">// 本帧还没收完</span>
+        {
+            __HAL_DMA_DISABLE(&amp;DMADMCI_Handler);
+            rlen=jpeg_line_size-__HAL_DMA_GET_COUNTER(&amp;DMADMCI_Handler); <span class="cmt">// 剩余长度</span>
+            pbuf=jpeg_data_buf+jpeg_data_len;
+            if(DMADMCI_Handler.Instance-&gt;CR&amp;(1&lt;&lt;19))
+                for(i=0;i&lt;rlen;i++)pbuf[i]=dcmi_line_buf[1][i];
+            else
+                for(i=0;i&lt;rlen;i++)pbuf[i]=dcmi_line_buf[0][i];
+            jpeg_data_len+=rlen;
+            jpeg_data_ok=1;                 <span class="cmt">// 通知主循环</span>
+        }
+        if(jpeg_data_ok==2)                 <span class="cmt">// 上一帧已发完</span>
+        {
+            __HAL_DMA_SET_COUNTER(&amp;DMADMCI_Handler,jpeg_line_size);
+            __HAL_DMA_ENABLE(&amp;DMADMCI_Handler);
+            jpeg_data_ok=0;
+            jpeg_data_len=0;
+        }
+    }
+    else
+    {
+        LCD_SetCursor(0,0);
+        LCD_WriteRAM_Prepare();
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么要补“剩余长度”</strong>：VSYNC 到来时 DMA 可能只填了半块缓存，<code>__HAL_DMA_GET_COUNTER</code> 读出还没搬的数量，才能把这一帧尾部完整拼上。</li>
+                            <li><strong>三态标志 jpeg_data_ok</strong>：0=正在收，1=收完待发，2=发完可重开；主循环只处理 1，处理完置 2，帧中断看到 2 才重启 DMA，避免“边发边覆盖”。</li>
+                            <li><strong>缓存地址</strong>：<code>jpeg_data_buf</code> 位于 SDRAM 的 <code>0xC0000000+1280*800*2</code>，即 LCD 显存之后；30MB 容量只能放外部 SDRAM。</li>
+                            <li><strong>JPEG 头尾查找</strong>：主循环遍历缓存找 <code>0xFFD8</code>（SOI）与 <code>0xFFD9</code>（EOI），两者之间才是有效图像，长度 <code>jpglen=i-jpgstart+2</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="主循环与现象">
+                    <h2>12　主循环与现象</h2>
+                    <div class="sec-sub">两个业务循环各自的按键分支与可观察结果</div>
+
+                    <pre class="code">while(1)                                  <span class="cmt">// jpeg_test() 主循环</span>
+{
+    if(jpeg_data_ok==1)                   <span class="cmt">// 收到一整帧</span>
+    {
+        p=(u8*)jpeg_data_buf;
+        printf("jpeg_data_len:%d\r\n",jpeg_data_len*4);
+        <span class="cmt">// ... 查找 FF D8 / FF D9 ...</span>
+        if(jpglen)
+        {
+            p+=jpgstart;
+            for(i=0;i&lt;jpglen;i++)         <span class="cmt">// 逐字节发到 USART2</span>
+            {
+                USART2-&gt;DR=p[i];
+                while((USART2-&gt;SR&amp;0X40)==0); <span class="cmt">// 等 TXE</span>
+                key=KEY_Scan(0);
+                if(key)break;              <span class="cmt">// 按键可中断发送</span>
+            }
+        }
+        <span class="cmt">// ... 按键处理：对比度 / 对焦 / 特效 / 尺寸 ...</span>
+        jpeg_data_ok=2;                   <span class="cmt">// 允许下一帧</span>
+    }
+}
+
+while(1)                                  <span class="cmt">// rgb565_test() 主循环</span>
+{
+    key=KEY_Scan(0);
+    if(key)
+    {
+        if(key!=KEY1_PRES)DCMI_Stop();    <span class="cmt">// 除对焦外先停采集</span>
+        switch(key)
+        {
+            case KEY0_PRES: OV5640_Contrast(++contrast%7); break;
+            case KEY1_PRES: OV5640_Focus_Single();         break;
+            case KEY2_PRES: OV5640_Special_Effects(++effect%7); break;
+            case WKUP_PRES: <span class="cmt">// 1:1 与缩放切换</span>
+                scale=!scale;
+                if(scale==0)
+                {
+                    fac=800/outputheight;
+                    OV5640_OutSize_Set((1280-fac*lcddev.width)/2,
+                                       (800-fac*outputheight)/2,
+                                       lcddev.width,outputheight);
+                }
+                else OV5640_OutSize_Set(4,0,lcddev.width,outputheight);
+                break;
+        }
+        if(key!=KEY1_PRES)
+        {
+            LCD_ShowString(30,50,210,16,16,msgbuf);
+            delay_ms(800);
+            DCMI_Start();                 <span class="cmt">// 重新开采集</span>
+        }
+    }
+    delay_ms(10);
+}</pre>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>可观察现象</th></tr>
+                        <tr><td>上电，串口 1 输出 <code>frame:x</code></td><td>每秒打印一次帧率，LED1 随帧闪烁</td></tr>
+                        <tr><td>KEY0 选择 RGB565</td><td>LCD 实时显示摄像头画面</td></tr>
+                        <tr><td>KEY1 选择 JPEG</td><td>LCD 提示 Sending，上位机收到一张 JPEG</td></tr>
+                        <tr><td>RGB 模式按 KEY0</td><td>对比度变化，字符串显示 Contrast:±n</td></tr>
+                        <tr><td>RGB 模式按 WKUP</td><td>Full Size 1:1 与 Scale 之间切换</td></tr>
+                        <tr><td>JPEG 模式发送中按任意键</td><td>立即停止发送，回到参数调整</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>按键可打断发送</strong>：JPEG 发送循环里每发一个字节扫一次按键，保证大图传输时仍能响应；代价是发送速度略降。</li>
+                            <li><strong>除 KEY1 外都要停采集</strong>：改对比度/特效/尺寸前先 <code>DCMI_Stop()</code>，改完再 <code>DCMI_Start()</code>，否则寄存器在采集过程中被改会导致画面撕裂。</li>
+                            <li><strong>1:1 显示算法</strong>：<code>fac=800/outputheight</code> 是缩放因子，偏移量让 800 行的图像居中落在 1280×800 的屏幕上。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘与排查">
+                    <h2>13　关键逻辑复盘与排查</h2>
+                    <div class="sec-sub">摄像头类问题优先查“供电、排线、时钟极性”</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>原因</th><th>排查</th></tr>
+                        <tr><td>屏显 OV5640 ERR</td><td>ID 读不到：SCCB 线序/上拉/供电</td><td>量 PB3/PB4 波形；确认模组 3.3V 与 PWDN/RESET 电平</td></tr>
+                        <tr><td>只显示第一帧</td><td>回调里没重新使能帧中断</td><td>检查 <code>__HAL_DCMI_ENABLE_IT(DCMI_IT_FRAME)</code></td></tr>
+                        <tr><td>画面花屏/错位</td><td>PCLK/HSYNC/VSYNC 极性错</td><td>用 USMART 调 <code>DCMI_CR_Set()</code> 逐项试</td></tr>
+                        <tr><td>画面抖动</td><td>TIM3 printf 打断刷屏</td><td>RGB 模式已关闭 TIM3，确认 <code>CR1</code> 的 CEN 位</td></tr>
+                        <tr><td>JPEG 上传一半截断</td><td>发送中被覆盖</td><td><code>jpeg_data_ok</code> 状态机是否按 0→1→2 走</td></tr>
+                        <tr><td>DMA 不搬数据</td><td>句柄锁定返回 HAL_BUSY</td><td>确认启动前调用过 <code>__HAL_UNLOCK</code></td></tr>
+                        <tr><td>HardFault</td><td>JPEG 缓存地址越界/未初始化 SDRAM</td><td>确认 <code>SDRAM_Init()</code> 先执行、容量足够</td></tr>
+                    </table>
+
+                    <div class="note">摄像头实验的“花屏”有三分之一是排线接触不良，三分之一是极性配置，剩下才是代码逻辑。先量信号，再改代码。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="交互演示">
+                    <h2>14　交互演示</h2>
+                    <div class="sec-sub">按钮分支对应 main 的模式选择与业务按键，仅演示逻辑</div>
+
+                    <div class="sim">
+                        <div class="sim-title">OV5640 模式选择与功能按键</div>
+                        <div class="sim-buttons">
+                            <button data-act="rgb">KEY0 选择 RGB565</button>
+                            <button data-act="jpeg">KEY1 选择 JPEG</button>
+                            <button data-act="next">切换参数（对比度/特效）</button>
+                            <button data-act="stop">停止采集</button>
+                        </div>
+                        <div class="sim-log" id="simLog">当前状态：等待模式选择</div>
+                    </div>
+
+                    <div class="note blue">演示只反映 <code class="inline">main</code> 的分支判断与 <code class="inline">DCMI_Stop/Start</code> 的调用顺序，真实画面依赖摄像头与 SDRAM。</div>
+
+                    <script>
+                        (function () {
+                            var log = document.getElementById('simLog');
+                            var state = 'wait';
+                            var mode = '';
+                            var param = 0;
+                            var running = false;
+                            function show(msg) {
+                                log.textContent = msg +
+                                    '　模式：' + (mode || '未选择') +
+                                    '　采集：' + (running ? '运行中' : '已停止') +
+                                    '　参数档位：' + param;
+                            }
+                            var acts = {
+                                rgb: function () {
+                                    if (state === 'wait') {
+                                        mode = 'RGB565';
+                                        state = 'run';
+                                        running = true;
+                                        show('main → ovx_mode=0 → rgb565_test()');
+                                    } else {
+                                        show('已进入业务循环，模式不再切换');
+                                    }
+                                },
+                                jpeg: function () {
+                                    if (state === 'wait') {
+                                        mode = 'JPEG';
+                                        state = 'run';
+                                        running = true;
+                                        show('main → ovx_mode=1 → jpeg_test()');
+                                    } else {
+                                        show('已进入业务循环，模式不再切换');
+                                    }
+                                },
+                                next: function () {
+                                    if (!running) { show('采集已停止，先重新开始'); return; }
+                                    param = (param + 1) % 7;
+                                    show('KEY0/KEY2 → 写 OV5640 寄存器（对比度/特效）');
+                                },
+                                stop: function () {
+                                    if (!running) { show('DCMI_Stop() 重复调用无副作用'); return; }
+                                    running = false;
+                                    show('非 KEY1 按键 → DCMI_Stop() → 改参数 → DCMI_Start()');
+                                }
+                            };
+                            Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+                                btn.addEventListener('click', function () {
+                                    var a = btn.getAttribute('data-act');
+                                    if (acts[a]) acts[a]();
+                                });
+                            });
+                        })();
+                    </script>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

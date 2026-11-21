@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验20 内部温度传感器实验 · 代码启动过程</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2f7a52;
+            margin-bottom: 6px;
+        }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .sim-range { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 13px; color: #5a6b78; }
+        .sim-range input[type="range"] { flex: 1; accent-color: #6AADD4; }
+        .sim-range b { font-family: Consolas, monospace; color: #2f7bb0; min-width: 54px; text-align: right; }
+
+        .sim-lcd {
+            font-family: Consolas, monospace;
+            background: #0d2f3a;
+            color: #7ce7b0;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 20px;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        .sim-readout { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+        .sim-cell { background: #fff; border: 1px solid #dce8f2; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #5a6b78; }
+        .sim-cell b { display: block; font-family: Consolas, monospace; color: #2f7bb0; font-size: 15px; margin-top: 3px; }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+            .sim-readout { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验20 内部温度传感器实验 · 启动过程</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">按代码执行顺序编排 · 点击条目跳转</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">用 ADC1 读取芯片内部温度传感器的电压，换算成温度并显示到 LCD</div>
+
+                    <p>本实验不接外部传感器，测量对象是 STM32F429 芯片内部的温度传感器。它输出一个随结温变化的模拟电压，接到 ADC1 的某个内部通道；CPU 先得到 0~4095 的 12 位码值，再按源码里的线性公式换算成温度，最后通过 LCD 显示，并让 DS0 每 250ms 翻转一次。</p>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>工程中的事实</th><th>证据</th></tr>
+                        <tr><td>测量对象</td><td>STM32 内部温度传感器，连接到 ADC1</td><td>readme.txt 第 11~12 行</td></tr>
+                        <tr><td>通道号</td><td>readme 写“ADC1_CH16”，adc.c 注释把通道范围写成 0~16；但 F429 的 HAL 宏实际映射为 <code>ADC_CHANNEL_18</code></td><td>readme 第 11~12 行；adc.c 第 23、58 行；stm32f4xx_hal_adc_ex.h 第 196~199 行；ITEMP.uvprojx 定义 <code>STM32F429xx</code></td></tr>
+                        <tr><td>参考电压</td><td>3.3V（P5 默认连接 3.3V）</td><td>readme.txt 第 20 行；Get_Temprate 中的 3.3</td></tr>
+                        <tr><td>分辨率</td><td>12 位，右对齐，码值 0~4095</td><td>adc.c 第 28~29 行</td></tr>
+                        <tr><td>采样时间</td><td>480 个 ADCCLK</td><td>adc.c 第 66 行</td></tr>
+                        <tr><td>显示与指示</td><td>LCD 显示 xx.xxC；DS0（PB1）250ms 翻转</td><td>main.c 第 41~52 行</td></tr>
+                        <tr><td>串口</td><td>USART1，115200，PA9/PA10</td><td>main.c 第 25 行；readme.txt 第 9 行</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">ADC1_IN18（宏名 TEMPSENSOR）</span>
+                        <span class="chip">VREF = 3.3V</span>
+                        <span class="chip">12-bit Right</span>
+                        <span class="chip">480 cycles</span>
+                        <span class="chip">10 次平均</span>
+                    </div>
+
+                    <div class="note">readme.txt 第 21 行明确说明：内部温度传感器精度不高，而且 MCU 自身发热会让读数比环境温度偏高，因此它适合做趋势观察和芯片结温参考，不适合当外部温度计做绝对测量。</div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：先确定“到底采的是哪个通道”</div>
+                        <ol>
+                            <li>代码里没有直接写 16 或 18，而是写宏 <code class="inline">ADC_CHANNEL_TEMPSENSOR</code>；具体值由 HALLIB 头文件按芯片型号选择。</li>
+                            <li>本工程编译宏是 <code class="inline">STM32F429xx</code>，对应头文件分支把温度传感器定义为 <code class="inline">ADC_CHANNEL_18 | 0x10000000</code>，所以运行时的 SQR3 通道号是 18。</li>
+                            <li>readme 里的“通道 16”对应 F40x/F41x 系列，adc.c 的 0~16 注释也是旧范围；在 F429 上照抄 16 会采到错误通道，读数自然不对。</li>
+                            <li>0x10000000 是 HAL 内部的“区分位”，用于把温度传感器与同通道的 VBAT 分开，不会写进寄存器。</li>
+                            <li>PA5 虽然在 <code class="inline">HAL_ADC_MspInit</code> 里被配成模拟输入，但内部温度传感器不需要外部引脚，这段配置是本系列 ADC 例程共用的残留。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">先认清“谁调用谁”，后面看启动顺序就不会迷路</div>
+
+                    <p>工程分为 USER、CORE、SYSTEM、HARDWARE、HALLIB 五层。温度采集的核心只有 <code class="inline">HARDWARE/ADC/adc.c</code>，其余目录分别负责启动、时钟、延时、串口、显示和外设底层。</p>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本实验用到的关键内容</th></tr>
+                        <tr><td>USER/main.c</td><td>主流程</td><td>初始化顺序、LCD 固定字符、while(1) 显示温度</td></tr>
+                        <tr><td>HARDWARE/ADC/adc.c</td><td>ADC 驱动</td><td>MY_ADC_Init、Get_Adc、Get_Adc_Average、Get_Temprate、HAL_ADC_MspInit</td></tr>
+                        <tr><td>HARDWARE/ADC/adc.h</td><td>驱动声明</td><td>ADC1_Handler 与四个函数原型</td></tr>
+                        <tr><td>HALLIB/.../stm32f4xx_hal_adc.c</td><td>ADC 通用驱动</td><td>HAL_ADC_Init、HAL_ADC_ConfigChannel、HAL_ADC_Start、HAL_ADC_PollForConversion、HAL_ADC_GetValue</td></tr>
+                        <tr><td>HALLIB/.../stm32f4xx_hal_adc_ex.h</td><td>扩展通道定义</td><td><code>ADC_CHANNEL_TEMPSENSOR</code> 按型号映射为 16 或 18</td></tr>
+                        <tr><td>CORE/startup_stm32f429xx.s</td><td>启动文件</td><td>栈/堆大小、向量表、Reset_Handler</td></tr>
+                        <tr><td>USER/system_stm32f4xx.c</td><td>SystemInit</td><td>FPU、RCC 复位、VTOR</td></tr>
+                        <tr><td>SYSTEM/sys/sys.c</td><td>时钟</td><td>Stm32_Clock_Init(360,25,2,8)</td></tr>
+                        <tr><td>SYSTEM/delay/delay.c</td><td>延时</td><td>delay_init、delay_us、delay_ms（非 OS 分支）</td></tr>
+                        <tr><td>SYSTEM/usart/usart.c</td><td>串口</td><td>uart_init、fputc 重定向、USART1 中断</td></tr>
+                        <tr><td>HARDWARE/SDRAM、LCD</td><td>显示</td><td>SDRAM_Init 初始化外部显存（RGB 屏），LCD_Init 初始化面板/接口</td></tr>
+                        <tr><td>HARDWARE/LED、KEY</td><td>板上外设</td><td>DS0=PB1；按键初始化</td></tr>
+                        <tr><td>USER/stm32f4xx_it.c</td><td>异常/中断入口</td><td>只保留 NMI、HardFault、SysTick 等，SysTick 调用 HAL_IncTick</td></tr>
+                    </table>
+
+                    <div class="note blue">本实验没有 ADC 中断回调，也没有 DMA：<code class="inline">stm32f4xx_it.c</code> 中没有 <code class="inline">ADC_IRQHandler</code>，启动文件里对应项只是弱定义。ADC 的 EOC 由 <code class="inline">HAL_ADC_PollForConversion</code> 轮询。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电复位到 while(1)：先建立运行环境，再按依赖顺序初始化外设</div>
+
+                    <p>下图把 <code class="inline">main.c</code> 的调用顺序与启动文件、系统初始化串在一起。编号 01~04 发生在 <code class="inline">main()</code> 之前或入口处，05~12 是 main 内部严格按源码顺序执行的初始化。</p>
+
+                    <figure class="figure">
+                        <img src="./index34-map/boot-flow.png" alt="实验20 从上电复位到主循环的启动流程图">
+                        <figcaption>图 3-1　复位、SystemInit、HAL_Init、时钟与外设初始化，最后进入温度采样循环</figcaption>
+                    </figure>
+                    <figure class="figure"><img src="./index34-map/temp-adc-timing.png" alt="内部温度传感器采样时序图"><figcaption>图 3-2　内部温度传感器采样时序</figcaption></figure>
+                    <p>温度传感器挂在 ADC1 的通道 18，必须先置 TSVREFE 使能，并给足够长的采样时间（常用 480 周期）让 VSENSE 稳定。码值先按 3.3V/4096 换算成电压，再代入温度公式，斜率约 2.5mV/℃、25℃ 时约 0.76V。</p>
+
+                    <h3>main 函数全文</h3>
+                    <pre class="code">#include "sys.h"            <span class="cmt">// 系统头文件：寄存器定义与基础类型</span>
+#include "delay.h"          <span class="cmt">// 延时驱动：delay_init / delay_us / delay_ms</span>
+#include "usart.h"          <span class="cmt">// 串口驱动：uart_init 与 printf 重定向</span>
+#include "led.h"            <span class="cmt">// LED 驱动：LED_Init、LED0/LED1</span>
+#include "key.h"            <span class="cmt">// 按键驱动：KEY_Init</span>
+#include "lcd.h"            <span class="cmt">// LCD 驱动：LCD_Init、LCD_ShowString、LCD_ShowxNum</span>
+#include "sdram.h"          <span class="cmt">// SDRAM 驱动：外部显存初始化</span>
+#include "adc.h"            <span class="cmt">// ADC 驱动：MY_ADC_Init、Get_Temprate</span>
+
+int main(void)              <span class="cmt">// 程序入口：先初始化外设，再进入温度采样循环</span>
+{
+    short temp;                     <span class="cmt">// 温度值扩大 100 倍后放在 short 里</span>
+    HAL_Init();                     <span class="cmt">// 初始化 HAL：Flash 缓存、优先级分组、1ms 时基</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// HSE 25MHz -> SYSCLK 180MHz</span>
+    delay_init(180);                <span class="cmt">// 按 180MHz 计算 fac_us</span>
+    uart_init(115200);              <span class="cmt">// USART1，PA9/PA10，printf 重定向</span>
+    LED_Init();                     <span class="cmt">// DS0=PB1、DS1=PB0</span>
+    KEY_Init();                     <span class="cmt">// 按键 GPIO</span>
+    SDRAM_Init();                   <span class="cmt">// 外部 SDRAM（RGB 屏显存）</span>
+    LCD_Init();                     <span class="cmt">// LCD 面板/接口初始化</span>
+    MY_ADC_Init();                  <span class="cmt">// ADC1：12 位、单次、软件触发</span>
+
+    POINT_COLOR=RED;                <span class="cmt">// 标题文字颜色设为红色</span>
+    LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7"); <span class="cmt">// 显示开发板型号标题</span>
+    LCD_ShowString(30,70,200,16,16,"Temperature TEST"); <span class="cmt">// 显示实验名称</span>
+    LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK"); <span class="cmt">// 显示厂商信息</span>
+    LCD_ShowString(30,110,200,16,16,"2016/1/13"); <span class="cmt">// 显示版本日期</span>
+    POINT_COLOR=BLUE;               <span class="cmt">// 以下温度值用蓝色</span>
+    LCD_ShowString(30,140,200,16,16,"TEMPERATE: 00.00C"); <span class="cmt">// 先画小数点占位</span>
+
+    while(1)                        <span class="cmt">// 主循环：反复采样并显示温度</span>
+    {
+        temp=Get_Temprate();        <span class="cmt">// 10 次平均 -> 码值 -> 温度 x100</span>
+        if(temp&lt;0)                  <span class="cmt">// 判断温度是否为负值</span>
+        {
+            temp=-temp;             <span class="cmt">// 先转成正数，负号单独显示</span>
+            LCD_ShowString(30+10*8,140,16,16,16,"-"); <span class="cmt">// 在符号位画负号</span>
+        }else LCD_ShowString(30+10*8,140,16,16,16," "); <span class="cmt">// 温度非负时符号位留空</span>
+
+        LCD_ShowxNum(30+11*8,140,temp/100,2,16,0);  <span class="cmt">// 整数部分</span>
+        LCD_ShowxNum(30+14*8,140,temp%100,2,16,0);  <span class="cmt">// 两位小数</span>
+
+        LED0=!LED0;                 <span class="cmt">// 每轮翻转 DS0</span>
+        delay_ms(250);              <span class="cmt">// 约 250ms 刷新一次</span>
+    }                               <span class="cmt">// while(1) 循环体结束</span>
+}                                   <span class="cmt">// main 函数结束</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：main 的初始化顺序不是随手排的</div>
+                        <ol>
+                            <li><code class="inline">HAL_Init()</code> 必须最先：它建立 1ms SysTick 时基和中断优先级分组；后面的 HAL 延时、串口、ADC 轮询都依赖这个时基。</li>
+                            <li><code class="inline">Stm32_Clock_Init(360,25,2,8)</code> 把时钟从复位默认的 HSI 切到 HSE+PLL 的 180MHz；HAL_RCC_ClockConfig 内部会重新调用 HAL_InitTick，把 1ms 时基按新 HCLK 校准。</li>
+                            <li><code class="inline">delay_init(180)</code> 必须在时钟切换之后：它把 <code class="inline">fac_us</code> 设为 180，如果先执行，延时会按错误的主频计算。</li>
+                            <li><code class="inline">uart_init(115200)</code> 放在 <code class="inline">LCD_Init()</code> 之前，是 readme.txt 第 19 行的明确要求；不过在本版本 <code class="inline">lcd.c</code> 正文中没有检索到 <code class="inline">printf</code> 调用，仍按 readme 保留该顺序。</li>
+                            <li><code class="inline">SDRAM_Init()</code> 必须在 <code class="inline">LCD_Init()</code> 之前：RGB 屏的显存位于外部 SDRAM，显存没准备好就去初始化屏会花屏或白屏；MCU 屏自带 GRAM，但源码仍保留这个顺序。</li>
+                            <li><code class="inline">MY_ADC_Init()</code> 放在最后：它依赖 RCC 已配置好 ADC 时钟，且只操作 ADC1 和 GPIOA，不会影响前面已经初始化的外设。</li>
+                            <li><code class="inline">short temp</code> 保存的是“温度 ×100”的整数，例如 2543 表示 25.43C；这样 LCD 只显示整数，不需要浮点格式化。</li>
+                            <li>先显示 <code class="inline">"TEMPERATE: 00.00C"</code> 是为了把小数点和 C 固定在屏上，后面只覆盖数字位，避免每轮重画整行造成闪烁。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">复位后 CPU 不直接进 main，而是先取向量表、执行 Reset_Handler</div>
+
+                    <p>启动文件 <code class="inline">CORE/startup_stm32f429xx.s</code> 定义了栈、堆和中断向量表。复位时，Cortex-M4 从地址 0x00000000 取第一个字作为 MSP，第二个字作为 PC，因此向量表的前两项必须依次是 <code class="inline">__initial_sp</code> 和 <code class="inline">Reset_Handler</code>。</p>
+
+                    <pre class="code">Stack_Size      EQU     0x400;          <span class="cmt">; 栈 1KB</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3  <span class="cmt">; 定义栈段，未初始化，读写，8 字节对齐</span>
+Stack_Mem       SPACE   Stack_Size      <span class="cmt">; 分配 1KB 栈空间</span>
+__initial_sp                            <span class="cmt">; 栈顶标号，向量表第一项</span>
+
+Heap_Size       EQU     0x200;          <span class="cmt">; 堆 512B</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3   <span class="cmt">; 定义堆段，未初始化，读写，8 字节对齐</span>
+__heap_base                             <span class="cmt">; 堆起始地址标号</span>
+Heap_Mem        SPACE   Heap_Size       <span class="cmt">; 分配 512B 堆空间</span>
+__heap_limit                            <span class="cmt">; 堆结束地址标号</span>
+
+                AREA    RESET, DATA, READONLY  <span class="cmt">; 定义只读数据段 RESET，存放向量表</span>
+                EXPORT  __Vectors       <span class="cmt">; 导出向量表符号供链接器使用</span>
+__Vectors       DCD     __initial_sp    <span class="cmt">; 第 1 个字：栈顶</span>
+                DCD     Reset_Handler   <span class="cmt">; 第 2 个字：复位入口</span>
+                DCD     NMI_Handler     <span class="cmt">; 第 3 个字：不可屏蔽中断入口</span>
+                DCD     HardFault_Handler  <span class="cmt">; 第 4 个字：硬错误中断入口</span>
+                <span class="cmt">; 省略：其余异常与外设中断向量，共 100 多项</span>
+
+Reset_Handler   PROC                    <span class="cmt">; 复位处理函数开始</span>
+                EXPORT  Reset_Handler [WEAK]  <span class="cmt">; 弱导出，允许用户重写</span>
+                IMPORT  SystemInit      <span class="cmt">; 引入 C 函数 SystemInit</span>
+                IMPORT  __main          <span class="cmt">; 引入 C 库入口 __main</span>
+                LDR     R0, =SystemInit <span class="cmt">; 取 SystemInit 地址到 R0</span>
+                BLX     R0              <span class="cmt">; 先执行 SystemInit</span>
+                LDR     R0, =__main     <span class="cmt">; 取 __main 地址到 R0</span>
+                BX      R0              <span class="cmt">; 再跳到 C 库入口 __main</span>
+                ENDP                    <span class="cmt">; Reset_Handler 函数结束</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：Reset_Handler 只做两件“跳转”</div>
+                        <ol>
+                            <li>栈只有 0x400 字节（1KB），堆 0x200 字节（512B）；本工程没有动态内存和递归深调用，够用，但加大局部数组时要重新评估。</li>
+                            <li><code class="inline">SystemInit</code> 在 <code class="inline">__main</code> 之前执行，此时 .data/.bss 还没有初始化，所以 SystemInit 不能依赖任何全局变量。</li>
+                            <li><code class="inline">__main</code> 是 ARM C 库入口，负责把 .data 从 Flash 复制到 RAM、把 .bss 清零，然后才调用 <code class="inline">main()</code>。</li>
+                            <li><code class="inline">ADC1_Handler</code> 是未显式初始化的全局变量，位于 .bss，进入 main 时所有成员都是 0，因此 <code class="inline">HAL_ADC_Init</code> 看到的状态是 <code class="inline">HAL_ADC_STATE_RESET</code>，会正常调用 <code class="inline">HAL_ADC_MspInit</code>。</li>
+                            <li>向量表默认映射在 Flash 起始地址；SystemInit 末尾把 <code class="inline">SCB-&gt;VTOR</code> 设为 <code class="inline">FLASH_BASE | VECT_TAB_OFFSET</code>，本工程偏移为 0。</li>
+                            <li>启动文件里没有真正的 ADC 中断服务函数，只有弱定义；本实验也不开启 ADC 中断，所以不会进入 <code class="inline">ADC_IRQHandler</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">一个负责“把芯片拉回默认状态”，一个负责“建立 HAL 运行环境”</div>
+
+                    <p><code class="inline">SystemInit</code> 位于 <code class="inline">USER/system_stm32f4xx.c</code>，由 Reset_Handler 调用。它只做 FPU 使能、RCC 复位到 HSI、向量表重定位，不配置 PLL。真正的 180MHz 时钟在 main 里的 <code class="inline">Stm32_Clock_Init</code> 完成。</p>
+
+                    <pre class="code">void SystemInit(void) <span class="cmt">// 复位后最早执行的 C 函数，把芯片拉回默认状态</span>
+{
+  /* FPU settings */
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1) <span class="cmt">// 只有带 FPU 且启用时才编译</span>
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2)); <span class="cmt">// CP10/CP11 全访问</span>
+  #endif <span class="cmt">// 结束 FPU 条件编译</span>
+
+  /* Reset the RCC clock configuration to the default reset state */
+  RCC-&gt;CR |= (uint32_t)0x00000001;       <span class="cmt">// 打开 HSION</span>
+  RCC-&gt;CFGR = 0x00000000;                <span class="cmt">// 清空 CFGR</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;       <span class="cmt">// 关 HSEON/CSSON/PLLON</span>
+  RCC-&gt;PLLCFGR = 0x24003010;             <span class="cmt">// PLLCFGR 复位值</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;       <span class="cmt">// 清 HSEBYP</span>
+  RCC-&gt;CIR = 0x00000000;                 <span class="cmt">// 关闭所有 RCC 中断</span>
+
+  <span class="cmt">// 省略：DATA_IN_ExtSRAM / DATA_IN_ExtSDRAM 条件编译分支</span>
+
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET; <span class="cmt">// 向量表放内部 Flash</span>
+} <span class="cmt">// SystemInit 结束，此时主频仍为 HSI 16MHz</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：SystemInit 结束时主频仍是 HSI 16MHz</div>
+                        <ol>
+                            <li>它把 RCC 恢复到复位默认值，HSI 打开、PLL 关闭，所以离开 SystemInit 时 SYSCLK=16MHz，不是 180MHz。</li>
+                            <li>FPU 的 CP10/CP11 在这里才被允许访问；没有这一步，后续浮点指令可能触发 UsageFault。</li>
+                            <li>RCC 复位期间不要依赖任何外设时钟；本工程在 main 里重新配置，属于“先复位、后重建”的稳妥做法。</li>
+                            <li><code class="inline">SCB-&gt;VTOR</code> 必须在异常发生前设置；本工程偏移为 0，等价于默认映射，但显式写入更清晰。</li>
+                        </ol>
+                    </div>
+
+                    <h3>HAL_Init 做了什么</h3>
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void) <span class="cmt">// HAL 库初始化入口，建立运行时基础环境</span>
+{
+  <span class="cmt">// 省略：函数上方的条件编译与逐段注释</span>
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE(); <span class="cmt">// 指令缓存</span>
+  __HAL_FLASH_DATA_CACHE_ENABLE();        <span class="cmt">// 数据缓存</span>
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();   <span class="cmt">// 预取缓冲</span>
+
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2); <span class="cmt">// 分组 2</span>
+
+  HAL_InitTick(TICK_INT_PRIORITY);        <span class="cmt">// SysTick 1ms，TICK_INT_PRIORITY=15</span>
+
+  HAL_MspInit();                          <span class="cmt">// 弱函数，本工程未重写</span>
+
+  return HAL_OK;                          <span class="cmt">// 初始化成功返回 HAL_OK</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：HAL_Init 的时基是按“当前 HCLK”算的</div>
+                        <ol>
+                            <li>此时时钟仍是 HSI 16MHz，<code class="inline">HAL_InitTick</code> 用 <code class="inline">HAL_RCC_GetHCLKFreq()/1000</code> 得到 16000，SysTick 先按 16MHz 建立 1ms 节拍。</li>
+                            <li>随后 <code class="inline">Stm32_Clock_Init</code> 调用 <code class="inline">HAL_RCC_ClockConfig</code>，该函数会再次调用 <code class="inline">HAL_InitTick</code>，把重装值改成 180000，1ms 仍然是 1ms。</li>
+                            <li>优先级分组 2 表示 2 位抢占优先级、2 位子优先级；USART1 中断用的抢占 3、子优先级 3 在这个分组下是合法值。</li>
+                            <li>Flash 指令缓存、数据缓存、预取缓冲都在 HAL_Init 打开；180MHz 下 Flash 需要 5 个等待周期，这在后面的 <code class="inline">HAL_RCC_ClockConfig(...,FLASH_LATENCY_5)</code> 设置。</li>
+                            <li>工程中没有定义自己的 <code class="inline">HAL_MspInit</code>，因此这里调用的是 HAL 的弱函数空实现，不会配置任何引脚。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟、延时与串口">
+                    <h2>06　时钟、延时与串口</h2>
+                    <div class="sec-sub">180MHz 主频、1ms 时基、115200 串口，是后续 ADC 时序与显示的前提</div>
+
+                    <p><code class="inline">Stm32_Clock_Init</code> 在 <code class="inline">SYSTEM/sys/sys.c</code>，参数依次是 PLLN、PLLM、PLLP、PLLQ。main 传入 360、25、2、8，对应 HSE 25MHz、VCO 360MHz、SYSCLK 180MHz、USB 45MHz。</p>
+
+                    <pre class="code">void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq) <span class="cmt">// 配置 PLL 输出 180MHz 主频，四参数为 N/M/P/Q</span>
+{
+    HAL_StatusTypeDef ret = HAL_OK;  <span class="cmt">// 保存 HAL 返回值，用于错误判断</span>
+    RCC_OscInitTypeDef RCC_OscInitStructure;  <span class="cmt">// 振荡器配置结构体</span>
+    RCC_ClkInitTypeDef RCC_ClkInitStructure;  <span class="cmt">// 总线时钟配置结构体</span>
+
+    __HAL_RCC_PWR_CLK_ENABLE();                     <span class="cmt">// 开 PWR 时钟</span>
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1); <span class="cmt">// 电压级别 1</span>
+
+    RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE;  <span class="cmt">// 选择 HSE 外部高速晶振</span>
+    RCC_OscInitStructure.HSEState=RCC_HSE_ON;        <span class="cmt">// 打开 HSE</span>
+    RCC_OscInitStructure.PLL.PLLState=RCC_PLL_ON;    <span class="cmt">// 打开 PLL</span>
+    RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;  <span class="cmt">// PLL 输入源为 HSE</span>
+    RCC_OscInitStructure.PLL.PLLM=pllm;             <span class="cmt">// 25</span>
+    RCC_OscInitStructure.PLL.PLLN=plln;             <span class="cmt">// 360</span>
+    RCC_OscInitStructure.PLL.PLLP=pllp;             <span class="cmt">// 2</span>
+    RCC_OscInitStructure.PLL.PLLQ=pllq;             <span class="cmt">// 8</span>
+    ret=HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);    <span class="cmt">// 写入振荡器与 PLL 配置</span>
+    if(ret!=HAL_OK) while(1);                        <span class="cmt">// 配置失败则死循环，便于调试</span>
+
+    ret=HAL_PWREx_EnableOverDrive();                 <span class="cmt">// 180MHz 必须开 OverDrive</span>
+    if(ret!=HAL_OK) while(1);                        <span class="cmt">// 失败死循环</span>
+
+    <span class="cmt">// 省略：RCC_ClkInitStructure.ClockType 的赋值</span>
+    RCC_ClkInitStructure.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK;  <span class="cmt">// 系统时钟源选 PLL</span>
+    RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;   <span class="cmt">// HCLK=180MHz</span>
+    RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;    <span class="cmt">// PCLK1=45MHz</span>
+    RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;    <span class="cmt">// PCLK2=90MHz</span>
+    ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5);  <span class="cmt">// 写入总线分频与 Flash 等待周期</span>
+    if(ret!=HAL_OK) while(1);                        <span class="cmt">// 失败死循环</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>时钟</th><th>计算</th><th>结果</th><th>用途</th></tr>
+                        <tr><td>SYSCLK</td><td>25 × 360 / 25 / 2</td><td>180MHz</td><td>CPU 主频</td></tr>
+                        <tr><td>HCLK</td><td>180 / 1</td><td>180MHz</td><td>AHB、SysTick、ADC 预分频输入</td></tr>
+                        <tr><td>PCLK1</td><td>180 / 4</td><td>45MHz</td><td>APB1 外设</td></tr>
+                        <tr><td>PCLK2</td><td>180 / 2</td><td>90MHz</td><td>APB2、ADC 时钟源</td></tr>
+                        <tr><td>USB/SDIO</td><td>360 / 8</td><td>45MHz</td><td>SDIO/RNG；USB 需 48MHz，本配置不满足</td></tr>
+                        <tr><td>ADCCLK</td><td>90 / 4</td><td>22.5MHz</td><td>ADC1/2/3 共用</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：180MHz 不是只改 PLL 就够</div>
+                        <ol>
+                            <li>F429 跑到 180MHz 必须先把调压器设为 Scale 1，再使能 OverDrive；源码在 PLL 配置前后分别做了这两步，缺一可能复位或降频。</li>
+                            <li>PLLQ 决定 USB/SDIO/RNG 时钟，360/8=45MHz；本实验不用 USB，所以 45MHz 可以接受。若要使用 USB，45MHz 不满足 48MHz 要求，必须调整 PLLQ/PLLN。</li>
+                            <li>APB1 最大 45MHz、APB2 最大 90MHz，源码用 /4 和 /2 正好卡在上限，不能随意改成 /1。</li>
+                            <li>Flash 等待周期必须跟着主频走：180MHz 用 <code class="inline">FLASH_LATENCY_5</code>（5WS，6 个 CPU 周期）；等待周期不足会取指错误。</li>
+                        </ol>
+                    </div>
+
+                    <h3>delay_init 与 delay_ms</h3>
+                    <pre class="code"><span class="cmt">// 省略：delay.c 顶部的 SYSTEM_SUPPORT_OS 条件编译与 OS 版延时实现</span>
+void delay_init(u8 SYSCLK) <span class="cmt">// 按当前主频初始化延时参数</span>
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">// SysTick 时钟=HCLK</span>
+    fac_us=SYSCLK;                                      <span class="cmt">// 180，每 us 180 个节拍</span>
+}
+
+void delay_us(u32 nus) <span class="cmt">// 微秒级延时，忙等 SysTick 计数</span>
+{
+    u32 ticks;          <span class="cmt">// 需要递减的总节拍数</span>
+    u32 told,tnow,tcnt=0;  <span class="cmt">// 上一次/当前计数值与已计数累加</span>
+    u32 reload=SysTick-&gt;LOAD;    <span class="cmt">// HAL_InitTick 设好的 1ms 重装值</span>
+    ticks=nus*fac_us;            <span class="cmt">// 需要递减的节拍数</span>
+    told=SysTick-&gt;VAL;           <span class="cmt">// 记录起始计数值</span>
+    while(1)                     <span class="cmt">// 循环轮询直到达到目标节拍数</span>
+    {
+        tnow=SysTick-&gt;VAL;       <span class="cmt">// 读取当前计数值</span>
+        if(tnow!=told)           <span class="cmt">// 计数值变化才累加</span>
+        {
+            if(tnow&lt;told)tcnt+=told-tnow;  <span class="cmt">// 正常递减：差值即经过节拍</span>
+            else tcnt+=reload-tnow+told; <span class="cmt">// 处理计数器回绕</span>
+            told=tnow;                     <span class="cmt">// 更新上一次计数值</span>
+            if(tcnt&gt;=ticks)break;          <span class="cmt">// 达到目标则退出</span>
+        }
+    }
+}
+
+void delay_ms(u16 nms) <span class="cmt">// 毫秒级延时，循环调用 delay_us</span>
+{
+    u32 i;              <span class="cmt">// 循环计数变量</span>
+    for(i=0;i&lt;nms;i++) delay_us(1000); <span class="cmt">// 非 OS：忙等 1000us × nms</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：延时靠轮询 SysTick，不靠中断计数</div>
+                        <ol>
+                            <li>本工程 <code class="inline">SYSTEM_SUPPORT_OS</code> 为 0，走非 OS 分支：<code class="inline">delay_us</code> 直接读 <code class="inline">SysTick-&gt;VAL</code>，不关闭中断，也不依赖 HAL 的 1ms 中断计数。</li>
+                            <li><code class="inline">delay_init</code> 只设置时钟源和 <code class="inline">fac_us</code>，没有重设 LOAD；LOAD 是 HAL_InitTick 在 180MHz 下重算的 180000-1，所以回绕修正的基准是正确的。</li>
+                            <li>如果先 <code class="inline">delay_init(180)</code> 再切时钟，<code class="inline">fac_us</code> 仍可能是 180，但 SysTick 的实际 HCLK 还没切到 180MHz，前一段延时会偏长；因此顺序必须是先切时钟。</li>
+                            <li><code class="inline">delay_ms(250)</code> 在主循环里是纯忙等，CPU 这 250ms 不睡觉；本实验没有低功耗要求，所以可以接受。</li>
+                        </ol>
+                    </div>
+
+                    <h3>uart_init 与 printf 重定向</h3>
+                    <pre class="code"><span class="cmt">// 省略：HAL_UART_MspInit 中的 PA9/PA10、AF7、时钟与 NVIC 配置</span>
+void uart_init(u32 bound) <span class="cmt">// 初始化 USART1，参数为波特率</span>
+{
+    UART1_Handler.Instance=USART1;  <span class="cmt">// 选择 USART1 外设实例</span>
+    UART1_Handler.Init.BaudRate=bound;                  <span class="cmt">// 115200</span>
+    UART1_Handler.Init.WordLength=UART_WORDLENGTH_8B;   <span class="cmt">// 8 位数据位</span>
+    UART1_Handler.Init.StopBits=UART_STOPBITS_1;        <span class="cmt">// 1 位停止位</span>
+    UART1_Handler.Init.Parity=UART_PARITY_NONE;         <span class="cmt">// 无奇偶校验</span>
+    UART1_Handler.Init.HwFlowCtl=UART_HWCONTROL_NONE;   <span class="cmt">// 无硬件流控</span>
+    UART1_Handler.Init.Mode=UART_MODE_TX_RX;            <span class="cmt">// 收发模式</span>
+    HAL_UART_Init(&amp;UART1_Handler);                      <span class="cmt">// 会调用 HAL_UART_MspInit</span>
+}
+
+int fputc(int ch, FILE *f) <span class="cmt">// 重定向 printf 到 USART1，ch 为待发字符</span>
+{
+    while((USART1-&gt;SR&amp;0X40)==0); <span class="cmt">// 等 TXE</span>
+    USART1-&gt;DR = (u8) ch;        <span class="cmt">// 把字符写入数据寄存器发送</span>
+    return ch;                   <span class="cmt">// 返回原字符，符合 fputc 约定</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：串口必须在 LCD 之前初始化</div>
+                        <ol>
+                            <li>readme.txt 第 19 行写明“LCD_Init 里用到 printf，不初始化串口 1 会导致液晶无法显示”；本版本 lcd.c 正文未检索到 printf，但保留该顺序没有副作用。</li>
+                            <li><code class="inline">HAL_UART_MspInit</code> 把 PA9/PA10 配成复用推挽、AF7，并打开 GPIOA 与 USART1 时钟；只调用 <code class="inline">uart_init</code> 就能完成引脚配置。</li>
+                            <li><code class="inline">EN_USART1_RX</code> 打开时还会使能 USART1 接收中断，优先级抢占 3、子优先级 3；本实验主循环不读串口，但中断仍可能进入。</li>
+                            <li><code class="inline">fputc</code> 用轮询 TXE 的方式发送，不依赖 DMA；因此 printf 是阻塞的，不能在中断里大量打印。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="ADC 时钟分频">
+                    <h2>07　ADC 时钟分频</h2>
+                    <div class="sec-sub">PCLK2 90MHz 不能直接给 ADC，必须经 ADCPRE 分频到 22.5MHz</div>
+
+                    <p>ADC1/2/3 共用一个预分频器，分频位在 <code class="inline">ADC-&gt;CCR.ADCPRE</code>。源码选择 <code class="inline">ADC_CLOCK_SYNC_PCLK_DIV4</code>，即 PCLK2 的 4 分频。</p>
+
+                    <figure class="figure">
+                        <img src="./index34-map/adc-clock.png" alt="从 HSE 25MHz 到 ADCCLK 22.5MHz 的时钟链路图">
+                        <figcaption>图 7-1　HSE 25MHz → PLL 180MHz → HCLK 180MHz → PCLK2 90MHz → ADCCLK 22.5MHz</figcaption>
+                    </figure>
+
+                    <pre class="code">ADC1_Handler.Init.ClockPrescaler=ADC_CLOCK_SYNC_PCLK_DIV4; <span class="cmt">// ADC 预分频选 4 分频</span>
+<span class="cmt">// 4 分频，ADCCLK = PCLK2/4 = 90/4 = 22.5MHz</span>
+
+<span class="cmt">// HALLIB 内部：ADC_Init() 把 ClockPrescaler 写进公共寄存器 CCR</span>
+ADC-&gt;CCR &amp;= ~(ADC_CCR_ADCPRE);  <span class="cmt">// 先清零 ADCPRE 位段</span>
+ADC-&gt;CCR |= hadc-&gt;Init.ClockPrescaler;  <span class="cmt">// 再写入分频值到 CCR</span>
+
+<span class="cmt">// 分辨率与对齐也在 ADC_Init() 里写 CR1/CR2</span>
+hadc-&gt;Instance-&gt;CR1 &amp;= ~(ADC_CR1_RES);  <span class="cmt">// 先清零分辨率位</span>
+hadc-&gt;Instance-&gt;CR1 |= hadc-&gt;Init.Resolution;   <span class="cmt">// 12 位</span>
+hadc-&gt;Instance-&gt;CR2 &amp;= ~(ADC_CR2_ALIGN);  <span class="cmt">// 先清零对齐位</span>
+hadc-&gt;Instance-&gt;CR2 |= hadc-&gt;Init.DataAlign;    <span class="cmt">// 右对齐</span>
+<span class="cmt">// 省略：扫描、连续、外部触发、SQR1、DMA、EOCS 等其余寄存器写入</span></pre>
+
+                    <table class="data">
+                        <tr><th>参数</th><th>数值</th><th>计算/说明</th></tr>
+                        <tr><td>ADCCLK</td><td>22.5MHz</td><td>90MHz / 4</td></tr>
+                        <tr><td>F429 ADCCLK 上限</td><td>36MHz</td><td>22.5MHz 合规</td></tr>
+                        <tr><td>采样时间</td><td>480 个 ADCCLK</td><td>480 / 22.5MHz ≈ 21.3us</td></tr>
+                        <tr><td>12 位转换</td><td>12 个 ADCCLK</td><td>12 / 22.5MHz ≈ 0.53us</td></tr>
+                        <tr><td>单次总时间</td><td>约 21.9us</td><td>采样 + 转换</td></tr>
+                        <tr><td>10 次采样</td><td>约 50.2ms</td><td>10 × (21.9us + 5ms)</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：ADC 时钟是“公共”的，不是每个 ADC 一份</div>
+                        <ol>
+                            <li><code class="inline">ADC-&gt;CCR.ADCPRE</code> 同时影响 ADC1、ADC2、ADC3；如果其他实验也初始化 ADC，后写的预分频会覆盖前一个。</li>
+                            <li>22.5MHz 低于 F429 的 36MHz 上限，属于保守配置；提高 ADCCLK 会缩短采样时间，但内部温度传感器源阻抗较高，不建议把 480 周期再调小。</li>
+                            <li>480 个采样周期 + 12 个转换周期 = 492 个 ADCCLK，约 21.87us；这是单次 <code class="inline">Get_Adc</code> 的硬件耗时。</li>
+                            <li>10 次平均每次还 <code class="inline">delay_ms(5)</code>，所以 <code class="inline">Get_Temprate</code> 一次约 50ms；主循环又加 250ms，实际刷新周期约 300ms。</li>
+                            <li>如果 ADCCLK 超过 36MHz，转换结果可能不准甚至挂起；排查时应先量 PCLK2 和 ADCPRE。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="温度传感器使能与通道配置">
+                    <h2>08　温度传感器使能与通道配置</h2>
+                    <div class="sec-sub">TSVREFE 打开传感器，SQR3 选中通道 18，SMPR1 设置 480 周期采样</div>
+
+                    <p><code class="inline">Get_Adc</code> 每次调用都会重新配置通道、启动转换、轮询 EOC、读取 DR。关键不是“配一次就完”，而是每一轮都重写 <code class="inline">SMPR1</code> 与 <code class="inline">SQR3</code>，并再次置 <code class="inline">TSVREFE</code>。</p>
+
+                    <figure class="figure">
+                        <img src="./index34-map/temp-path.png" alt="内部温度传感器经 ADC1_IN18、采样保持、12 位转换到 DR 的数据通路图">
+                        <figcaption>图 8-1　温度传感器 → TSVREFE → CH18 → 采样保持 → 12 位 SAR → DR</figcaption>
+                    </figure>
+
+                    <pre class="code">u16 Get_Adc(u32 ch) <span class="cmt">// 单次采集指定通道 ADC 码值，返回 0~4095</span>
+{
+    ADC_ChannelConfTypeDef ADC1_ChanConf;  <span class="cmt">// 通道配置结构体</span>
+
+    ADC1_ChanConf.Channel=ch;                              <span class="cmt">// 传入 ADC_CHANNEL_TEMPSENSOR</span>
+    ADC1_ChanConf.Rank=1;                                  <span class="cmt">// 规则序列第 1 个</span>
+    ADC1_ChanConf.SamplingTime=ADC_SAMPLETIME_480CYCLES;   <span class="cmt">// 480 个 ADCCLK</span>
+    ADC1_ChanConf.Offset=0;                                <span class="cmt">// 不使用偏移修正</span>
+    HAL_ADC_ConfigChannel(&amp;ADC1_Handler,&amp;ADC1_ChanConf);   <span class="cmt">// 写 SMPR1/SQR3，并置 TSVREFE</span>
+
+    HAL_ADC_Start(&amp;ADC1_Handler);                          <span class="cmt">// ADON + SWSTART</span>
+
+    HAL_ADC_PollForConversion(&amp;ADC1_Handler,10);           <span class="cmt">// 轮询 EOC，超时 10ms</span>
+
+    return (u16)HAL_ADC_GetValue(&amp;ADC1_Handler);           <span class="cmt">// 读 DR，返回 0~4095</span>
+}
+
+<span class="cmt">// HALLIB：F429 的宏定义（stm32f4xx_hal_adc_ex.h 第 196~199 行）</span>
+#define ADC_CHANNEL_DIFFERENCIATION_TEMPSENSOR_VBAT ((uint32_t)0x10000000) <span class="cmt">// 区分位：区分温度传感器与 VBAT</span>
+#define ADC_CHANNEL_TEMPSENSOR ((uint32_t)ADC_CHANNEL_18 | ADC_CHANNEL_DIFFERENCIATION_TEMPSENSOR_VBAT) <span class="cmt">// F429 温度传感器实际为通道 18</span>
+
+<span class="cmt">// HALLIB：HAL_ADC_ConfigChannel 中的关键分支</span>
+<span class="cmt">// 省略：函数开头已声明的 uint32_t counter; 以及锁/参数检查</span>
+if ((hadc-&gt;Instance == ADC1) &amp;&amp; <span class="cmt">// 仅 ADC1 支持内部温度传感器</span>
+    ((sConfig-&gt;Channel == ADC_CHANNEL_TEMPSENSOR) || (sConfig-&gt;Channel == ADC_CHANNEL_VREFINT))) <span class="cmt">// 通道为温度传感器或内部参考电压</span>
+{
+    ADC-&gt;CCR |= ADC_CCR_TSVREFE;       <span class="cmt">// 使能温度传感器和 Vrefint</span>
+
+    if(sConfig-&gt;Channel == ADC_CHANNEL_TEMPSENSOR) <span class="cmt">// 仅温度传感器需要稳定延时</span>
+    {
+        counter = (ADC_TEMPSENSOR_DELAY_US * (SystemCoreClock / 1000000)); <span class="cmt">// 把微秒延时换算成循环次数</span>
+        while(counter != 0) counter--;  <span class="cmt">// 约 10us 稳定时间</span>
+    }
+}</pre>
+
+                    <table class="data">
+                        <tr><th>层面</th><th>readme / adc.c 注释</th><th>F429 实际编译结果</th><th>寄存器落点</th></tr>
+                        <tr><td>通道号</td><td>ADC1_CH16</td><td><code>ADC_CHANNEL_18</code>（带 0x10000000 区分位）</td><td>SQR3.SQ1 = 18</td></tr>
+                        <tr><td>采样时间</td><td>480 周期</td><td>480 周期</td><td>SMPR1.SMP18 = 7（480 周期编码）</td></tr>
+                        <tr><td>传感器使能</td><td>内部温度传感器</td><td>TSVREFE 置 1</td><td>ADC-&gt;CCR.TSVREFE</td></tr>
+                        <tr><td>区分位</td><td>无</td><td>0x10000000，仅 HAL 内部使用</td><td>不写入 CR1/SQRx</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：宏、寄存器、注释三者要对上</div>
+                        <ol>
+                            <li><code class="inline">ADC_CHANNEL_TEMPSENSOR</code> 在 F429 分支是 <code class="inline">ADC_CHANNEL_18 | 0x10000000</code>；<code class="inline">ADC_SQR3_RK</code> 和 <code class="inline">ADC_SMPR1</code> 宏都会先强转 <code class="inline">uint16</code>，所以 0x10000000 被丢弃，真正写进寄存器的是 18。</li>
+                            <li>通道号大于 9，<code class="inline">HAL_ADC_ConfigChannel</code> 走 <code class="inline">SMPR1</code> 分支；通道 18 对应 SMPR1 的 SMP18 位段，而不是 SMPR2。</li>
+                            <li>Rank=1 且 NbrOfConversion=1，所以序列长度寄存器 SQR1.L=0，SQR3.SQ1 写入 18，转换序列只有这一个通道。</li>
+                            <li>TSVREFE 只在 ADC1 且通道为温度传感器或 Vrefint 时置位；它同时打开温度传感器和内部参考电压缓冲，关闭它会读到接近 0 的噪声。</li>
+                            <li>置位 TSVREFE 后 HAL 用 <code class="inline">SystemCoreClock</code> 空转约 10us（<code class="inline">ADC_TEMPSENSOR_DELAY_US</code>），这是传感器从断电到稳定的建立时间。</li>
+                            <li>每次 <code class="inline">Get_Adc</code> 都重新调用 ConfigChannel，所以 TSVREFE、SMPR1、SQR3 每轮都会被重写；这不是多余，而是保证多次调用之间状态一致。</li>
+                            <li><code class="inline">HAL_ADC_MspInit</code> 仍然把 PA5 配成模拟输入，这是从外部 ADC 例程继承的代码；内部通道 18 不经过 PA5，保留它不会影响结果。</li>
+                            <li>如果直接把 16 写死进 SQR3，F429 采到的是另一个内部/外部通道，温度读数会完全失真；应以宏为准。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="初始化结构体与采样时间">
+                    <h2>09　初始化结构体与采样时间</h2>
+                    <div class="sec-sub">MY_ADC_Init 只配置“转换规则”，通道选择留到每次 Get_Adc</div>
+
+                    <p><code class="inline">MY_ADC_Init</code> 配置的是 ADC1 的全局工作模式：12 位、右对齐、非扫描、单次、软件触发、无 DMA。它不指定具体通道，通道由 <code class="inline">Get_Adc</code> 在每次转换前写入。</p>
+
+                    <pre class="code">ADC_HandleTypeDef ADC1_Handler;   <span class="cmt">// 全局句柄，.bss 零初始化</span>
+
+void MY_ADC_Init(void) <span class="cmt">// ADC1 全局初始化：模式、分辨率、触发方式</span>
+{
+    ADC1_Handler.Instance=ADC1;  <span class="cmt">// 绑定 ADC1 外设实例</span>
+    ADC1_Handler.Init.ClockPrescaler=ADC_CLOCK_SYNC_PCLK_DIV4;  <span class="cmt">// 22.5MHz</span>
+    ADC1_Handler.Init.Resolution=ADC_RESOLUTION_12B;            <span class="cmt">// 12 位</span>
+    ADC1_Handler.Init.DataAlign=ADC_DATAALIGN_RIGHT;            <span class="cmt">// 右对齐</span>
+    ADC1_Handler.Init.ScanConvMode=DISABLE;                     <span class="cmt">// 非扫描</span>
+    ADC1_Handler.Init.EOCSelection=DISABLE;                     <span class="cmt">// 序列结束才置 EOC</span>
+    ADC1_Handler.Init.ContinuousConvMode=DISABLE;               <span class="cmt">// 单次</span>
+    ADC1_Handler.Init.NbrOfConversion=1;                        <span class="cmt">// 规则序列 1 个</span>
+    ADC1_Handler.Init.DiscontinuousConvMode=DISABLE;            <span class="cmt">// 非间断模式</span>
+    ADC1_Handler.Init.NbrOfDiscConversion=0;                    <span class="cmt">// 间断数量为 0</span>
+    ADC1_Handler.Init.ExternalTrigConv=ADC_SOFTWARE_START;      <span class="cmt">// 软件触发</span>
+    ADC1_Handler.Init.ExternalTrigConvEdge=ADC_EXTERNALTRIGCONVEDGE_NONE; <span class="cmt">// 无外部触发边沿</span>
+    ADC1_Handler.Init.DMAContinuousRequests=DISABLE;            <span class="cmt">// 不用 DMA</span>
+    HAL_ADC_Init(&amp;ADC1_Handler);                                <span class="cmt">// 写 CCR/CR1/CR2/SQR1，并调用 MspInit</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：初始化只做一次，通道配置每轮都做</div>
+                        <ol>
+                            <li><code class="inline">NbrOfConversion=1</code> 会被 HAL 写进 SQR1.L=0，表示规则序列只有 1 个转换；如果改成 2，就必须同时配置 Rank 2 的通道。</li>
+                            <li><code class="inline">EOCSelection=DISABLE</code> 对应 EOCS=0：EOC 在“整个序列转换完成”后置位。本工程序列只有 1 个通道，所以行为等同于每次转换结束置位。</li>
+                            <li>非扫描 + 单次 + 软件触发 + 无 DMA，决定了每次 <code class="inline">HAL_ADC_Start</code> 只产生一次转换，读完 DR 后必须重新 Start。</li>
+                            <li>12 位右对齐意味着 DR 的低 12 位就是码值，范围 0~4095；如果改成左对齐，<code class="inline">HAL_ADC_GetValue</code> 返回值需要右移 4 位才能套公式。</li>
+                            <li><code class="inline">ADC1_Handler</code> 是零初始化全局变量，<code class="inline">HAL_ADC_Init</code> 会先检查状态；只有状态为 RESET 时才调用 <code class="inline">HAL_ADC_MspInit</code>，所以 ADC1 与 GPIOA 时钟在这里才被打开。</li>
+                            <li>采样时间 480 周期是给高源阻抗的内部温度传感器留足建立时间；如果改成 3 周期，读数会明显偏低且跳动。</li>
+                            <li><code class="inline">HAL_ADC_PollForConversion</code> 的超时 10ms 远大于单次 21.9us；它依赖 <code class="inline">HAL_GetTick</code>，所以 HAL_Init 的 1ms 时基必须正常。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="转换取值与温度换算">
+                    <h2>10　转换取值与温度换算</h2>
+                    <div class="sec-sub">码值 → 电压 → 温度 → 放大 100 倍，四步都写死在 Get_Temprate 里</div>
+
+                    <p><code class="inline">Get_Temprate</code> 先调用 <code class="inline">Get_Adc_Average(ADC_CHANNEL_TEMPSENSOR,10)</code> 得到 10 次平均码值，再按 3.3V 参考电压换成电压，最后用 0.76V 与 0.0025V/C 的线性关系反推温度。</p>
+
+                    <figure class="figure">
+                        <img src="./index34-map/temp-formula.png" alt="ADC 码值经电压、线性公式、放大 100 倍得到温度的计算链图">
+                        <figcaption>图 10-1　码值 → 电压 → 温度 → short 结果，以及两个实际算例</figcaption>
+                    </figure>
+
+                    <pre class="code">short Get_Temprate(void) <span class="cmt">// 读取内部温度传感器，返回温度 ×100 的 short 值</span>
+{
+    u32 adcx;      <span class="cmt">// 存放 ADC 平均码值</span>
+    short result;  <span class="cmt">// 最终结果：温度 ×100</span>
+    double temperate;  <span class="cmt">// 浮点中间变量，存放摄氏温度</span>
+
+    adcx=Get_Adc_Average(ADC_CHANNEL_TEMPSENSOR,10); <span class="cmt">// 10 次平均</span>
+
+    temperate=(float)adcx*(3.3/4096);                <span class="cmt">// 码值 -> 电压</span>
+    temperate=(temperate-0.76)/0.0025 + 25;          <span class="cmt">// 电压 -> 温度</span>
+    result=temperate*=100;                           <span class="cmt">// 放大 100 倍，赋给 short 截断</span>
+
+    return result;  <span class="cmt">// 返回扩大 100 倍的温度值</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>常量</th><th>源码写法</th><th>含义</th><th>工程中的证据</th></tr>
+                        <tr><td>参考电压</td><td>3.3</td><td>ADC 满量程对应 3.3V</td><td>Get_Temprate；readme 第 20 行</td></tr>
+                        <tr><td>满量程分母</td><td>4096</td><td>12 位码值总数</td><td>Get_Temprate</td></tr>
+                        <tr><td>25C 电压</td><td>0.76</td><td>温度传感器在 25C 的典型输出</td><td>Get_Temprate（无 V25 宏）</td></tr>
+                        <tr><td>平均斜率</td><td>0.0025</td><td>2.5mV/C</td><td>Get_Temprate（无 Avg_Slope 宏）</td></tr>
+                    </table>
+
+                    <table class="data">
+                        <tr><th>adcx</th><th>电压 V</th><th>温度 T</th><th>result（short）</th><th>LCD 显示</th></tr>
+                        <tr><td>0</td><td>0.0000V</td><td>-279.00C</td><td>-27900</td><td>-279.00C</td></tr>
+                        <tr><td>866</td><td>0.6977V</td><td>0.08C（约 0C）</td><td>8</td><td>0.08C</td></tr>
+                        <tr><td>943</td><td>0.7597V</td><td>24.90C</td><td>2489</td><td>24.89C</td></tr>
+                        <tr><td>1000</td><td>0.8057V</td><td>43.27C</td><td>4326</td><td>43.26C</td></tr>
+                        <tr><td>1176</td><td>0.9475V</td><td>99.98C（约 100C）</td><td>9998</td><td>99.98C</td></tr>
+                        <tr><td>4095</td><td>3.2992V</td><td>1040.68C</td><td>104068，超出 short</td><td>未定义（代码未做限幅）</td></tr>
+                    </table>
+
+                    <figure class="figure">
+                        <img src="./index34-map/temp-curve.png" alt="温度与传感器输出电压的线性关系图，标注 25 摄氏度 0.76V 与典型 ADC 码值">
+                        <figcaption>图 10-2　温度-电压直线：斜率 2.5mV/C，25C 时 0.76V，对应码值约 943</figcaption>
+                    </figure>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：公式的每一步都在改变量纲</div>
+                        <ol>
+                            <li>1 个 LSB = 3.3V / 4096 = 0.8057mV；943 码约 0.7597V，正好落在 25C 附近，因此 943 是常温下的典型读数。</li>
+                            <li>先减 0.76 再除以 0.0025，相当于以 25C 为原点、按 2.5mV/C 反推；温度升高时传感器电压升高，码值也变大。</li>
+                            <li>代码用 4096 而不是 4095：满量程码 4095 对应 3.2992V，差 0.8mV，对 0.1C 分辨率的影响可以忽略，但要知道这是源码的写法。</li>
+                            <li><code class="inline">result=temperate*=100</code> 先算 <code class="inline">temperate*100</code>，再把 double 赋给 short；C 的浮点转整数是向零截断，不是四舍五入，所以 24.899 会显示 24.89 而不是 24.90。</li>
+                            <li>温度可能为负：0C 对应约 0.6975V，V 低于 0.6975V 时 T 为负；main 里先 <code class="inline">temp=-temp</code>，再单独显示负号，避免 short 取模出现负余数。</li>
+                            <li>short 的范围是 -32768~32767，对应 -327.68C~327.67C；4095 码算出的 1040.68C 已经超出，代码没有限幅，实际不会出现这么高的结温，但做异常注入时要注意。</li>
+                            <li>0.76 与 0.0025 是直接写死的常量，工程里没有 <code class="inline">V25</code> 或 <code class="inline">Avg_Slope</code> 宏；如果换芯片或改用外部传感器，必须同时改这两个值和 3.3V。</li>
+                            <li>内部传感器精度有限，readme 第 21 行提示 MCU 自热会使读数偏高；公式本身不补偿自热，也不做多点校准。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="主循环与现象">
+                    <h2>11　主循环与现象</h2>
+                    <div class="sec-sub">每轮取一次温度、覆盖 LCD 数字、翻转 DS0，再等 250ms</div>
+
+                    <p>主循环没有复杂状态机：取温度、处理负号、显示整数与两位小数、翻转 LED、延时。LCD 上的固定字符串只画一次，循环里只改数字位。</p>
+
+                    <pre class="code">while(1) <span class="cmt">// 主循环：持续采样与显示</span>
+{
+    temp=Get_Temprate();        <span class="cmt">// 约 50ms：10 次采样，每次隔 5ms</span>
+    if(temp&lt;0)                  <span class="cmt">// 判断温度是否为负</span>
+    {
+        temp=-temp;             <span class="cmt">// 取反为正数，便于后续取模</span>
+        LCD_ShowString(30+10*8,140,16,16,16,"-"); <span class="cmt">// 负号</span>
+    }else LCD_ShowString(30+10*8,140,16,16,16," "); <span class="cmt">// 正号位置留空</span>
+
+    LCD_ShowxNum(30+11*8,140,temp/100,2,16,0);   <span class="cmt">// 整数部分，2 位</span>
+    LCD_ShowxNum(30+14*8,140,temp%100,2,16,0);   <span class="cmt">// 小数部分，2 位</span>
+
+    LED0=!LED0;                 <span class="cmt">// DS0 翻转</span>
+    delay_ms(250);              <span class="cmt">// 忙等 250ms</span>
+}</pre>
+
+                    <div class="sim">
+                        <div class="sim-title">温度换算演示：拖动 ADC 码值，按 Get_Temprate 的公式复现显示结果（仅演示逻辑，不模拟 ADC 噪声与校准；范围限制在 LCD 两位整数位可正确显示的温区）</div>
+
+                        <div class="sim-range">
+                            <span>ADC 码值 adcx</span>
+                            <input type="range" id="codeRange" min="742" max="1170" step="1" value="943">
+                            <b id="codeLabel">943</b>
+                        </div>
+
+                        <div class="sim-buttons">
+                            <button data-code="742">742（约 -40C）</button>
+                            <button data-code="866">866（0C）</button>
+                            <button data-code="943">943（约 25C）</button>
+                            <button data-code="1000">1000（约 43C）</button>
+                            <button data-code="1100">1100（约 75C）</button>
+                            <button data-code="1170">1170（约 98C）</button>
+                        </div>
+
+                        <div class="sim-lcd" id="simLcd">TEMPERATE:  24.89C</div>
+
+                        <div class="sim-readout">
+                            <div class="sim-cell">电压 V<b id="simVolt">0.7597 V</b></div>
+                            <div class="sim-cell">温度 T（double）<b id="simTemp">24.8965 C</b></div>
+                            <div class="sim-cell">result（short）<b id="simResult">2489</b></div>
+                            <div class="sim-cell">显示值<b id="simShow">24.89 C</b></div>
+                        </div>
+
+                        <div class="sim-log" id="simLog">按源码：V=adcx*3.3/4096；T=(V-0.76)/0.0025+25；result=T*100 后向零截断。</div>
+                    </div>
+
+                    <table class="data">
+                        <tr><th>观察点</th><th>预期现象</th><th>原因</th></tr>
+                        <tr><td>LCD 第二行</td><td>显示 <code>TEMPERATE: xx.xxC</code></td><td>main 先画固定字符串，再覆盖数字位</td></tr>
+                        <tr><td>数字刷新</td><td>约每 300ms 变一次</td><td>Get_Temprate 约 50ms + delay_ms(250)</td></tr>
+                        <tr><td>DS0</td><td>持续闪烁，周期约 600ms</td><td>每轮 <code>LED0=!LED0</code>，亮灭各 250ms</td></tr>
+                        <tr><td>常温读数</td><td>通常高于环境温度几度</td><td>测的是芯片结温，MCU 自身发热</td></tr>
+                        <tr><td>用手按压芯片</td><td>读数缓慢上升</td><td>结温变化，传感器响应有热惯性</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：显示分支与源码一一对应</div>
+                        <ol>
+                            <li><code class="inline">Get_Temprate</code> 返回的是扩大 100 倍的 short；<code class="inline">temp/100</code> 是整数部分，<code class="inline">temp%100</code> 是两位小数，不需要浮点 printf。</li>
+                            <li><code class="inline">LCD_ShowxNum(...,2,16,0)</code> 的 mode=0 表示“不补 0”：当整数部分小于 10 时，第一位会显示空格；小数部分小于 10 时也会显示空格。因此 0.05C 会显示成 <code> 0. 5C</code>，而不是 <code>00.05C</code>。</li>
+                            <li>负温度时先把 temp 取反，再在固定位置画负号；这样 <code>temp%100</code> 始终是非负数，不会出现负余数导致的乱码。</li>
+                            <li>循环里没有清屏，固定字符串和标签保持不动，只覆盖数字区域，所以不会闪烁。</li>
+                            <li><code class="inline">delay_ms(250)</code> 是忙等，期间 SysTick 中断仍在跑，但主循环不做别的事；因此实际采样周期由 50ms 采样 + 250ms 延时共同决定。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="关键逻辑复盘">
+                    <h2>12　关键逻辑复盘</h2>
+                    <div class="sec-sub">把“顺序依赖”和“寄存器状态”串起来，才能解释为什么每一步都不能省</div>
+
+                    <table class="data">
+                        <tr><th>顺序</th><th>如果做反了/漏了</th><th>对应证据</th></tr>
+                        <tr><td>HAL_Init → 切时钟</td><td>1ms 时基先按 HSI 建立，再由 HAL_RCC_ClockConfig 重算；顺序反了会导致早期延时和超时不准</td><td>stm32f4xx_hal.c HAL_Init；stm32f4xx_hal_rcc.c 第 813 行再次调用 HAL_InitTick</td></tr>
+                        <tr><td>切时钟 → delay_init</td><td>fac_us 与实际 HCLK 不匹配，delay_ms(250) 明显偏长或偏短</td><td>delay.c delay_init</td></tr>
+                        <tr><td>uart_init → LCD_Init</td><td>readme 要求；若 LCD_Init 内部使用 printf，未初始化串口会卡死或白屏</td><td>readme.txt 第 19 行；本版本 lcd.c 未检索到 printf</td></tr>
+                        <tr><td>SDRAM_Init → LCD_Init</td><td>显存未就绪，LCD 花屏、白屏或只显示部分区域</td><td>main.c 第 28~29 行</td></tr>
+                        <tr><td>ADC 时钟 → MY_ADC_Init</td><td>ADC 时钟未开，HAL_ADC_Init 配置无效，转换永远不完成</td><td>HAL_ADC_MspInit 中 <code>__HAL_RCC_ADC1_CLK_ENABLE()</code></td></tr>
+                        <tr><td>ConfigChannel → Start</td><td>SQR3/SMPR1 未写入就启动，采到旧通道或旧采样时间</td><td>adc.c Get_Adc 第 68~70 行</td></tr>
+                        <tr><td>Start → Poll EOC</td><td>未启动就轮询，EOC 永远不置位，10ms 后超时</td><td>HAL_ADC_Start；HAL_ADC_PollForConversion</td></tr>
+                        <tr><td>Poll EOC → GetValue</td><td>EOC 未置位就读 DR，拿到上一次的旧值</td><td>HAL_ADC_GetValue 直接读 DR</td></tr>
+                        <tr><td>TSVREFE → 转换</td><td>传感器未上电，DR 接近 0，温度算成 -279C</td><td>HAL_ADC_ConfigChannel 第 1132~1147 行</td></tr>
+                        <tr><td>3.3V/4096/0.76/0.0025 一致</td><td>任一常量改动都会让温度整体偏移；参考电压不是 3.3V 时公式失效</td><td>Get_Temprate</td></tr>
+                    </table>
+
+                    <h3>三条主线</h3>
+                    <ul>
+                        <li><strong>运行环境线：</strong>Reset_Handler → SystemInit（HSI、FPU、VTOR）→ __main（清 .bss、复制 .data）→ HAL_Init（1ms 时基、优先级分组）→ Stm32_Clock_Init（180MHz）。</li>
+                        <li><strong>显示线：</strong>uart_init → SDRAM_Init（RGB 屏显存）→ LCD_Init（面板/接口）→ 固定字符串 → 循环覆盖数字。</li>
+                        <li><strong>采样线：</strong>MY_ADC_Init（12 位、单次、软件触发）→ Get_Adc（SMPR1/SQR3、TSVREFE、Start、Poll、读 DR）→ 10 次平均 → 线性公式 → short。</li>
+                    </ul>
+
+                    <div class="note blue">最容易踩的坑不是公式，而是“通道号”：readme 写 16、adc.c 注释把范围写到 16，F429 的 HAL 宏却映射到 18。看代码时要以宏和编译宏为准，不要只看注释。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="总结与排查">
+                    <h2>13　总结与排查</h2>
+                    <div class="sec-sub">先确认“有没有采到”，再确认“采得准不准”，最后才怀疑公式</div>
+
+                    <p>本实验的启动链可以概括为：启动文件建立栈和向量表，SystemInit 把芯片拉回 HSI 默认态，main 依次建立 HAL 时基、180MHz 时钟、延时、串口、SDRAM/LCD 和 ADC，最后在 while(1) 里反复执行“配置通道 → 启动 → 等 EOC → 读 DR → 平均 → 换算 → 显示”。</p>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>优先检查</th><th>定位方法</th></tr>
+                        <tr><td>LCD 白屏/无显示</td><td>uart_init 是否在 LCD_Init 前；SDRAM_Init 是否执行；LCD 型号配置</td><td>在 LCD_Init 前后点亮 LED 或打印串口；检查 main 顺序</td></tr>
+                        <tr><td>温度固定 -279.00C</td><td>TSVREFE 是否置位；通道是否真的选到温度传感器</td><td>在 HAL_ADC_ConfigChannel 后读 <code>ADC-&gt;CCR</code> 的 TSVREFE 位；确认 SQR3.SQ1=18</td></tr>
+                        <tr><td>温度明显偏高</td><td>MCU 自热；参考电压是否 3.3V；公式常量是否被改</td><td>对比室温、摸芯片、量 P5 电压；检查 0.76/0.0025</td></tr>
+                        <tr><td>读数跳动大</td><td>采样时间太短；电源噪声；平均次数不足</td><td>保持 480 周期；增加平均次数；检查 3.3V 纹波</td></tr>
+                        <tr><td>偶尔 10ms 超时</td><td>ADCCLK 是否超过 36MHz；ADC 是否真正启动；EOC 标志</td><td>检查 PCLK2/ADCPRE；读 CR2.ADON/SWSTART；读 SR.EOC</td></tr>
+                        <tr><td>负温度显示错位</td><td>负号分支；temp 是否先取反</td><td>构造 temp&lt;0 的码值（小于 866），确认先取反再取模</td></tr>
+                        <tr><td>小数位显示空格</td><td><code>LCD_ShowxNum</code> 的 mode=0 不补 0</td><td>这是源码行为；需要补 0 时把 mode 改成 0x80</td></tr>
+                    </table>
+
+                    <h3>一句话结论</h3>
+                    <ul>
+                        <li>内部温度传感器不是“读一个寄存器就有温度”，而是“ADC 采电压 + 线性反推”，所以 ADC 时钟、通道、采样时间、参考电压缺一不可。</li>
+                        <li>F429 上温度传感器实际走 ADC1 通道 18，readme 的“通道 16”是旧系列写法；以 <code class="inline">ADC_CHANNEL_TEMPSENSOR</code> 宏为准。</li>
+                        <li>代码没有校准和自热补偿，读数只适合观察趋势和结温，不适合替代外部温度传感器。</li>
+                    </ul>
+
+                    <div class="note">如果要把本实验改成“串口打印温度”，只需在 while(1) 里加 <code class="inline">printf("%d.%02dC\r\n", temp/100, temp%100)</code>，但要注意负数的符号处理；不要直接打印 short 原值。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-10 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 温度换算演示：与 Get_Temprate 的公式和显示分支一一对应 =====
+    var codeRange = document.getElementById('codeRange');
+    var codeLabel = document.getElementById('codeLabel');
+    var simLcd = document.getElementById('simLcd');
+    var simVolt = document.getElementById('simVolt');
+    var simTemp = document.getElementById('simTemp');
+    var simResult = document.getElementById('simResult');
+    var simShow = document.getElementById('simShow');
+    var simLog = document.getElementById('simLog');
+
+    function showTwo(n) {
+        return n < 10 ? ' ' + n : '' + n;
+    }
+
+    function renderSim() {
+        var adcx = parseInt(codeRange.value, 10);
+        var v = adcx * (3.3 / 4096);
+        var t = (v - 0.76) / 0.0025 + 25;
+        var result = Math.trunc(t * 100);
+        var neg = result < 0;
+        var abs = Math.abs(result);
+        var intPart = Math.trunc(abs / 100);
+        var decPart = abs % 100;
+
+        codeLabel.textContent = adcx;
+        simVolt.textContent = v.toFixed(4) + ' V';
+        simTemp.textContent = t.toFixed(4) + ' C';
+        simResult.textContent = result;
+        simShow.textContent = (neg ? '-' : '') + intPart + '.' + (decPart < 10 ? '0' + decPart : decPart) + ' C';
+        simLcd.textContent = 'TEMPERATE: ' + (neg ? '-' : ' ') + showTwo(intPart) + '.' + showTwo(decPart) + 'C';
+        simLog.textContent = 'adcx=' + adcx + ' → V=' + v.toFixed(6) + 'V → T=' + t.toFixed(6) + 'C → result=' + result + '（short 截断）→ LCD 覆盖数字位。';
+    }
+
+    if (codeRange && simLcd) {
+        codeRange.addEventListener('input', renderSim);
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                codeRange.value = btn.getAttribute('data-code');
+                renderSim();
+            });
+        });
+        renderSim();
+    }
+</script>
+</body>
+</html>

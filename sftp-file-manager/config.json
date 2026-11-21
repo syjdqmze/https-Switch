@@ -1,0 +1,5 @@
+{
+  "apiHost": "http://www.studytech.cloud:3000",
+  "defaultServerIP": "www.studytech.cloud",
+  "defaultPort": 22
+}

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>控制台</title>
+<style>
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 40px 24px;
+    font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+    color: #e8eefc;
+    background-color: #070b14;
+    background-image:
+      radial-gradient(circle at 82% 12%, rgba(56, 189, 248, 0.18), transparent 42%),
+      radial-gradient(circle at 12% 88%, rgba(129, 90, 246, 0.2), transparent 45%),
+      linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: auto, auto, 44px 44px, 44px 44px;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .entry-btn {
+    min-width: 260px;
+    padding: 22px 40px;
+    border-radius: 14px;
+    border: 1px solid rgba(120, 170, 255, 0.32);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #eef4ff;
+    cursor: pointer;
+    transition: transform 0.18s, box-shadow 0.18s, filter 0.18s, background 0.18s;
+  }
+
+  .entry-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+  }
+
+  .entry-btn:active { transform: translateY(0); }
+
+  .entry-btn.app {
+    background: linear-gradient(120deg, #2f7cf6, #8a5cf6);
+    box-shadow: 0 14px 34px rgba(64, 110, 240, 0.35);
+  }
+
+  .entry-btn.skill {
+    background: linear-gradient(120deg, #0ea5e9, #22c3d6);
+    box-shadow: 0 14px 32px rgba(14, 165, 233, 0.32);
+  }
+
+  .entry-btn.doc {
+    background: linear-gradient(120deg, #10b981, #34d399);
+    box-shadow: 0 14px 32px rgba(16, 185, 129, 0.3);
+  }
+
+  .entry-btn.project {
+    background: linear-gradient(120deg, #f59e0b, #fb923c);
+    box-shadow: 0 14px 32px rgba(245, 158, 11, 0.3);
+  }
+
+  .entry-btn.skill:hover,
+  .entry-btn.doc:hover,
+  .entry-btn.project:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 40px;
+    transform: translate(-50%, 12px);
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid rgba(120, 170, 255, 0.35);
+    background: rgba(18, 30, 50, 0.95);
+    font-size: 14px;
+    color: #dbe8ff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  @media (max-width: 640px) {
+    .row { flex-direction: column; }
+    .entry-btn { width: 100%; max-width: 320px; }
+  }
+</style>
+</head>
+<body>
+  <div class="row">
+    <button type="button" class="entry-btn app" id="appBtn">网页开发</button>
+    <button type="button" class="entry-btn skill" id="skillBtn">SKILL开发</button>
+  </div>
+  <div class="row">
+    <button type="button" class="entry-btn doc" id="docBtn">技术文档</button>
+    <button type="button" class="entry-btn project" id="projectBtn">工程项目</button>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script>
+    document.getElementById("appBtn").addEventListener("click", function () {
+      window.location.href = "AI_APP.html";
+    });
+    document.getElementById("skillBtn").addEventListener("click", function () {
+      window.location.href = "AI_SKILL.html";
+    });
+
+    var toastTimer = null;
+    function showToast(message) {
+      var toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () {
+        toast.classList.remove("show");
+      }, 2000);
+    }
+
+    document.getElementById("docBtn").addEventListener("click", function () {
+      window.location.href = "http://www.studytech.cloud:8080/";
+    });
+    document.getElementById("projectBtn").addEventListener("click", function () {
+      showToast("工程项目功能建设中");
+    });
+  </script>
+</body>
+</html>

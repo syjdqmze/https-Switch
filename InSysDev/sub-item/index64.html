@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验50 手写识别实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验50 手写识别实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">STM32F429IGT6 · 触摸屏校准 · ATKNCR 手写识别</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+<section class="content-card" id="s01" data-title="工程概述与硬件资源">
+                    <h2>01　工程概述与硬件资源</h2>
+                    <div class="sec-sub">把触摸屏上的手写轨迹采样成点阵，交给 ATKNCR 库识别成数字或字母</div>
+
+                    <p>实验50 的输入不再是按键，而是手指在屏幕上的连续轨迹。程序边画边记录坐标，松手约 400ms 后调用 <code class="inline">alientek_ncr()</code>，把最多 200 个轨迹点送进识别库，输出数字、大写字母、小写字母或混合识别的结果。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>配置</th><th>用途</th></tr>
+                        <tr><td>LCD</td><td>RGB565，800×480</td><td>手写区、提示文字、识别结果</td></tr>
+                        <tr><td>触摸屏</td><td>电阻屏（位操作 SPI）或电容屏（I2C）</td><td>采集 x/y 坐标</td></tr>
+                        <tr><td>AT24C02</td><td>I2C，地址 40 起 13 字节</td><td>保存触摸校准参数</td></tr>
+                        <tr><td>ATKNCR</td><td>ATKNCR_M_V2.0.lib（动态内存版）</td><td>数字/字母识别</td></tr>
+                        <tr><td>KEY0</td><td>PE4</td><td>切换识别模式 1~4</td></tr>
+                        <tr><td>KEY2</td><td>PE3</td><td>电阻屏重新校准</td></tr>
+                        <tr><td>USART1</td><td>115200-8-N-1</td><td>打印总点数与识别结果</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">READ_BUF[200]</span>
+                        <span class="chip">atk_ncr_point 4 字节</span>
+                        <span class="chip">最多 6 个候选</span>
+                        <span class="chip">4 种识别模式</span>
+                        <span class="chip">松手 400ms 识别</span>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">三个参与识别的要素</div>
+                        <ol>
+                            <li>轨迹点：只保留 x、y 都发生变化的点，避免原地抖动占满 200 个名额。</li>
+                            <li>模式：1 数字、2 大写、3 小写、4 混合；模式越窄，识别越稳。</li>
+                            <li>候选数：<code class="inline">charnum=6</code>，结果缓冲区至少 7 字节，工程里给了 10 字节。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">识别库不依赖字库，但界面中文提示依赖 SPI FLASH 里的字库；字库缺失时先看到 “Font Error!”。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="启动流程总览">
+                    <h2>02　启动流程总览</h2>
+                    <div class="sec-sub">触摸初始化必须排在 LCD 之后，因为触摸驱动要靠 lcddev.id 判断屏幕型号</div>
+
+                    <pre class="code">int main(void)
+{
+    u8 i=0,tcnt=0,res[10],key;
+    u16 pcnt=0;
+    u8 mode=4;                      <span class="cmt">// 默认混合识别</span>
+    u16 lastpos[2];                 <span class="cmt">// 上一个轨迹点</span>
+
+    HAL_Init();                     <span class="cmt">// 1ms 时基</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// 180MHz</span>
+    delay_init(180);
+    uart_init(115200);
+    LED_Init();
+    KEY_Init();
+    SDRAM_Init();                   <span class="cmt">// 显存</span>
+    LCD_Init();                     <span class="cmt">// 先确定 lcddev.id</span>
+    W25QXX_Init();                  <span class="cmt">// 字库</span>
+    tp_dev.init();                  <span class="cmt">// 触摸初始化，依赖 lcddev.id</span>
+    my_mem_init(SRAMIN);            <span class="cmt">// 识别库用内部 SRAM 池</span>
+    my_mem_init(SRAMEX);
+    my_mem_init(SRAMCCM);
+    alientek_ncr_init();            <span class="cmt">// 必须在内存池之后</span>
+
+    while(font_init())              <span class="cmt">// 字库检查</span>
+    {
+        LCD_ShowString(60,50,200,16,16,"Font Error!");
+        delay_ms(200);
+        LCD_Fill(60,50,240,66,WHITE);
+    }
+    RESTART:
+    /* 绘制标题、手写区边框与模式提示 */
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">初始化顺序的两个硬约束</div>
+                        <ol>
+                            <li><code class="inline">tp_dev.init()</code> 内部读 <code class="inline">lcddev.id</code> 判断 4.3 寸、7 寸或 RGB 屏，所以 LCD 必须已初始化。</li>
+                            <li><code class="inline">alientek_ncr_init()</code> 会从 <code class="inline">SRAMIN</code> 池申请内存，必须在 <code class="inline">my_mem_init(SRAMIN)</code> 之后。</li>
+                            <li>字库检查放在最后，避免中文界面显示为空白时误判为触摸故障。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">原工程在 <code class="inline">RESTART</code> 标签前连续写了两次 <code class="inline">tcnt=100</code>，属于冗余赋值，不影响逻辑。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="状态交互演示">
+                    <h2>03　状态交互演示</h2>
+                    <div class="sec-sub">先看启动链路，再点按钮切换识别模式，观察候选范围如何变化</div>
+
+                    <figure class="figure">
+                        <img src="./index64-map/boot-flow.png" alt="手写识别实验从上电到主循环的启动流程图">
+                        <figcaption>图 3-1　手写识别实验启动链路总览</figcaption>
+                    </figure>
+
+                    <div class="sim">
+                        <div class="sim-title">识别模式与校准演示（对应 KEY0 / KEY2）</div>
+                        <div class="sim-buttons">
+                            <button data-act="mode">KEY0 切换模式</button>
+                            <button data-act="adj">KEY2 重新校准</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="ind0"></span>笔按下</div>
+                            <div class="led-item"><span class="led-dot" id="ind1"></span>识别库就绪</div>
+                        </div>
+                        <div class="sim-log" id="simLog">模式 4：全部识别　轨迹点 0/200　等待手写</div>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">演示与源码的对应关系</div>
+                        <ol>
+                            <li>KEY0：<code class="inline">mode++</code>，超过 4 回到 1，并清空当前手写区。</li>
+                            <li>KEY2：仅电阻屏（<code class="inline">touchtype&amp;0X80==0</code>）有效，调用 <code class="inline">TP_Adjust()</code> 后跳回 RESTART。</li>
+                            <li>模式提示会显示“仅识别数字 / 大写 / 小写 / 全部识别”。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">演示中的轨迹点计数是示意值；真实点数由 <code class="inline">pcnt</code> 累计，超过 200 后不再记录。</div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与复位入口">
+                    <h2>04　启动文件与复位入口</h2>
+                    <div class="sec-sub">识别库是一个静态库，启动流程仍然是标准的 Reset_Handler → SystemInit → main</div>
+
+                    <pre class="code">Stack_Size      EQU     0x800;          <span class="cmt">// 2KB 栈</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp
+
+Heap_Size       EQU     0x200;          <span class="cmt">// 512B 堆，识别库主要用内存池</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit
+
+Reset_Handler   PROC
+                EXPORT  Reset_Handler             [WEAK]
+                IMPORT  SystemInit
+                IMPORT  __main
+                LDR     R0, =SystemInit
+                BLX     R0                      <span class="cmt">// FPU 与时钟复位</span>
+                LDR     R0, =__main
+                BX      R0                      <span class="cmt">// C 库入口</span>
+                ENDP</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">堆与内存池的区别</div>
+                        <ol>
+                            <li>启动文件的 Heap 只有 512B，主要给 C 库的 malloc 用。</li>
+                            <li>识别库通过 <code class="inline">alientek_ncr_malloc()</code> 调用 <code class="inline">mymalloc(SRAMIN,size)</code>，走的是自己的内存池。</li>
+                            <li>所以真正决定识别库能否工作的，是 <code class="inline">my_mem_init(SRAMIN)</code>，不是 Heap_Size。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">若把 <code class="inline">alientek_ncr_malloc</code> 改成标准 <code class="inline">malloc</code>，512B 堆很快就不够，表现为识别时死机或返回空结果。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="系统时钟与 HAL 初始化">
+                    <h2>05　系统时钟与 HAL 初始化</h2>
+                    <div class="sec-sub">触摸读取里的 delay_us 依赖 180MHz 下的 fac_us，时钟不对会读错坐标</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+#if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+  SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2)); <span class="cmt">// 识别库含浮点运算</span>
+#endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;
+  RCC-&gt;CFGR = 0x00000000;
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;
+  RCC-&gt;PLLCFGR = 0x24003010;
+  RCC-&gt;CFGR &amp;= ~RCC_CFGR_SW;
+  RCC-&gt;CIR = 0x00000000;
+}
+
+void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);
+    fac_us=SYSCLK;                    <span class="cmt">// 180 → 1us 计 180 个数</span>
+}</pre>
+
+                    <p><code class="inline">TP_Read_AD()</code> 里用 <code class="inline">delay_us(6)</code> 等 ADS7846 转换完成，用 <code class="inline">delay_us(1)</code> 控制位操作 SPI 的半个时钟。若 <code class="inline">delay_init</code> 传入的频率与实际主频不符，这些微秒延时会被拉长或缩短，坐标就会抖动甚至读不出。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">时钟与触摸精度的关系</div>
+                        <ol>
+                            <li>位操作 SPI 没有硬件时钟，全靠 <code class="inline">delay_us</code> 产生时序。</li>
+                            <li>180MHz 下 fac_us=180，1us 的误差只有几个周期，足够稳定。</li>
+                            <li>若系统跑 168MHz 却仍传 180，延时会偏短，读取可能失败。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">HAL_Init 的 SysTick 是 1ms，不用于位操作 SPI；触摸时序用的是 delay_us 的忙等循环。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="延时、串口与基础驱动">
+                    <h2>06　延时、串口与基础驱动</h2>
+                    <div class="sec-sub">串口只输出两行关键日志：总点数和识别结果</div>
+
+                    <pre class="code">int fputc(int ch, FILE *f)
+{
+    while((USART1-&gt;SR&amp;0X40)==0);   <span class="cmt">// 等 TXE</span>
+    USART1-&gt;DR=(u8)ch;
+    return ch;
+}
+
+printf("总点数:%d\r\n",pcnt);                  <span class="cmt">// 轨迹点数量</span>
+alientek_ncr(READ_BUF,pcnt,6,mode,(char*)res);
+printf("识别结果:%s\r\n",res);                 <span class="cmt">// 最多 6 个候选</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">日志能说明什么</div>
+                        <ol>
+                            <li>总点数太少（例如 2~3 点）：说明笔迹被判定为“点”而不是“线”，识别率会低。</li>
+                            <li>总点数达到 200：说明缓冲区已满，后面的笔画没有被记录。</li>
+                            <li>识别结果为空：模式与书写内容不匹配，或轨迹点顺序异常。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">串口没有接收逻辑，识别模式只能用 KEY0 在现场切换，不能从串口下发命令。</div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="核心外设初始化">
+                    <h2>07　核心外设初始化：触摸屏与校准</h2>
+                    <div class="sec-sub">先按屏幕 ID 选驱动，再读校准值；没有校准值就现场采 4 个角点</div>
+
+                    <figure class="figure">
+                        <img src="./index64-map/touch-init-flow.png" alt="触摸屏识别与校准初始化流程图">
+                        <figcaption>图 7-1　触摸屏识别与校准初始化流程</figcaption>
+                    </figure>
+
+                    <pre class="code">u8 TP_Init(void)
+{
+    if(lcddev.id==0X5510||lcddev.id==0X4342)      <span class="cmt">// 4.3 寸电容 / RGB 屏</span>
+    {
+        if(GT9147_Init()==0) tp_dev.scan=GT9147_Scan;
+        else { OTT2001A_Init(); tp_dev.scan=OTT2001A_Scan; }
+        tp_dev.touchtype|=0X80;                   <span class="cmt">// 标记电容屏</span>
+        return 0;
+    }
+    else if(lcddev.id==0X1963||lcddev.id==0X7084||lcddev.id==0X7016)
+    {
+        FT5206_Init(); tp_dev.scan=FT5206_Scan;
+        tp_dev.touchtype|=0X80;
+        return 0;
+    }
+    else if(lcddev.id==0X1018)
+    {
+        GT9271_Init(); tp_dev.scan=GT9271_Scan;
+        tp_dev.touchtype|=0X80;
+        return 0;
+    }
+    else                                          <span class="cmt">// 电阻屏分支</span>
+    {
+        /* PH6/PI3/PI8 输出，PH7/PG3 输入 */
+        TP_Read_XY(&amp;tp_dev.x[0],&amp;tp_dev.y[0]);
+        AT24CXX_Init();
+        if(TP_Get_Adjdata())return 0;             <span class="cmt">// 已有校准值</span>
+        else
+        {
+            LCD_Clear(WHITE);
+            TP_Adjust();                          <span class="cmt">// 四点校准</span>
+            TP_Save_Adjdata();
+        }
+    }
+    return 1;
+}</pre>
+
+                    <pre class="code">u16 TP_Read_AD(u8 CMD)
+{
+    u8 count=0;
+    u16 Num=0;
+    TCLK=0; TDIN=0; TCS=0;          <span class="cmt">// 选中触摸 IC</span>
+    TP_Write_Byte(CMD);             <span class="cmt">// 发命令字</span>
+    delay_us(6);                    <span class="cmt">// ADS7846 最长转换时间</span>
+    TCLK=0; delay_us(1); TCLK=1;    <span class="cmt">// 清 BUSY</span>
+    delay_us(1); TCLK=0;
+    for(count=0;count&lt;16;count++)   <span class="cmt">// 读 16 位，只有高 12 位有效</span>
+    {
+        Num&lt;&lt;=1;
+        TCLK=0; delay_us(1); TCLK=1;
+        if(DOUT)Num++;
+    }
+    Num&gt;&gt;=4;
+    TCS=1;
+    return Num;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">校准值存在哪</div>
+                        <ol>
+                            <li>AT24C02 的 40~52 字节：xfac、yfac 各 4 字节，xoff、yoff 各 2 字节，touchtype 1 字节。</li>
+                            <li>xfac/yfac 按 ×100000000 存整数，读取时再除回去。</li>
+                            <li><code class="inline">TP_Adjust()</code> 依次在四个角画点，采到后校验对边比例在 0.95~1.05 之间。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">每次坐标读取连续采 5 次，排序后去掉 1 个最小值和 1 个最大值，再取平均，降低抖动。</div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="时序与数据流">
+                    <h2>08　时序与数据流</h2>
+                    <div class="sec-sub">按下时逐点记录，松手后 400ms 才识别，给用户留出“提笔”的停顿</div>
+
+                    <figure class="figure">
+                        <img src="./index64-map/handwriting-rec-timing.png" alt="触摸扫描、轨迹记录与识别触发时序图">
+                        <figcaption>图 8-1　触摸扫描、轨迹记录与识别触发时序</figcaption>
+                    </figure>
+
+                    <pre class="code">tp_dev.scan(0);                         <span class="cmt">// 轮询一次触摸</span>
+if(tp_dev.sta&amp;TP_PRES_DOWN)             <span class="cmt">// 笔按着</span>
+{
+    delay_ms(1);                        <span class="cmt">// 防止重复判定</span>
+    tcnt=0;                             <span class="cmt">// 松手计时清零</span>
+    if(lastpos[0]==0XFFFF)              <span class="cmt">// 第一笔</span>
+    {
+        lastpos[0]=tp_dev.x[0];
+        lastpos[1]=tp_dev.y[0];
+    }
+    lcd_draw_bline(lastpos[0],lastpos[1],
+                   tp_dev.x[0],tp_dev.y[0],2,BLUE);
+    lastpos[0]=tp_dev.x[0];
+    lastpos[1]=tp_dev.y[0];
+    if(pcnt&lt;200)                        <span class="cmt">// 最多 200 点</span>
+    {
+        if((READ_BUF[pcnt-1].y!=tp_dev.y[0])&amp;&amp;
+           (READ_BUF[pcnt-1].x!=tp_dev.x[0]))
+        {
+            READ_BUF[pcnt].x=tp_dev.x[0];
+            READ_BUF[pcnt].y=tp_dev.y[0];
+            pcnt++;
+        }
+    }
+}
+else                                    <span class="cmt">// 笔抬起</span>
+{
+    lastpos[0]=0XFFFF;
+    tcnt++;
+    delay_ms(10);
+    i++;
+    if(tcnt==40)                        <span class="cmt">// 约 400ms</span>
+    {
+        if(pcnt)
+        {
+            printf("总点数:%d\r\n",pcnt);
+            alientek_ncr(READ_BUF,pcnt,6,mode,(char*)res);
+            printf("识别结果:%s\r\n",res);
+            pcnt=0;
+            LCD_ShowString(60+72,90,200,16,16,res);
+        }
+        LCD_Fill(20,115,lcddev.width-20-1,lcddev.height-5-1,WHITE);
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">400ms 是怎么来的</div>
+                        <ol>
+                            <li>松手分支每轮 <code class="inline">delay_ms(10)</code>，<code class="inline">tcnt</code> 每轮加 1。</li>
+                            <li><code class="inline">tcnt==40</code> 即 40 × 10ms = 400ms。</li>
+                            <li>这 400ms 内如果再次落笔，<code class="inline">tcnt</code> 会被清零，不会误识别。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">按住时每轮只延时 1ms，是为了让画线跟手；松手后改成 10ms，减少空转并给识别留出稳定窗口。</div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="中断链路">
+                    <h2>09　中断链路</h2>
+                    <div class="sec-sub">触摸是纯轮询，没有笔中断；中断只来自 SysTick 和串口</div>
+
+                    <figure class="figure">
+                        <img src="./index64-map/handwriting-irq-chain.png" alt="手写识别实验的中断使用情况图">
+                        <figcaption>图 9-1　手写识别实验的中断使用情况</figcaption>
+                    </figure>
+
+                    <pre class="code">u8 TP_Scan(u8 tp)
+{
+    if(PEN==0)                          <span class="cmt">// 笔按下（低电平有效）</span>
+    {
+        if(tp)TP_Read_XY2(&amp;tp_dev.x[0],&amp;tp_dev.y[0]);   <span class="cmt">// 物理坐标</span>
+        else if(TP_Read_XY2(&amp;tp_dev.x[0],&amp;tp_dev.y[0]))
+        {
+            tp_dev.x[0]=tp_dev.xfac*tp_dev.x[0]+tp_dev.xoff; <span class="cmt">// 转屏幕坐标</span>
+            tp_dev.y[0]=tp_dev.yfac*tp_dev.y[0]+tp_dev.yoff;
+        }
+        if((tp_dev.sta&amp;TP_PRES_DOWN)==0)
+        {
+            tp_dev.sta=TP_PRES_DOWN|TP_CATH_PRES;
+            tp_dev.x[4]=tp_dev.x[0];     <span class="cmt">// 记录按下点</span>
+            tp_dev.y[4]=tp_dev.y[0];
+        }
+    }
+    else
+    {
+        if(tp_dev.sta&amp;TP_PRES_DOWN)tp_dev.sta&amp;=~(1&lt;&lt;7); <span class="cmt">// 标记松开</span>
+    }
+    return tp_dev.sta&amp;TP_PRES_DOWN;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">为什么不用中断</div>
+                        <ol>
+                            <li>电阻屏的 PEN 信号会抖动，硬件中断会频繁误触发。</li>
+                            <li>主循环本来就要画线，顺带轮询最省事，也不会丢点。</li>
+                            <li>电容屏驱动虽然走 I2C，但同样是主动扫描，不依赖中断。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">SysTick 只提供 1ms 时基给 <code class="inline">HAL_Delay</code>；USART1 中断虽然使能，但主循环不读接收缓冲。</div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="主循环与现象">
+                    <h2>10　主循环与现象</h2>
+                    <div class="sec-sub">屏幕下方是手写区，写完稍等即出结果；KEY0 换模式，KEY2 重新校准</div>
+
+                    <pre class="code">while(1)
+{
+    key=KEY_Scan(0);
+    if(key==KEY2_PRES&amp;&amp;(tp_dev.touchtype&amp;0X80)==0)
+    {
+        TP_Adjust();                    <span class="cmt">// 仅电阻屏可校准</span>
+        LCD_Clear(WHITE);
+        goto RESTART;                   <span class="cmt">// 重绘界面</span>
+    }
+    if(key==KEY0_PRES)
+    {
+        LCD_Fill(20,115,219,314,WHITE); <span class="cmt">// 清手写区</span>
+        mode++;
+        if(mode&gt;4)mode=1;
+        switch(mode)
+        {
+            case 1: Show_Str(80,207,200,16,"仅识别数字",16,0); break;
+            case 2: Show_Str(64,207,200,16,"仅识别大写字母",16,0); break;
+            case 3: Show_Str(64,207,200,16,"仅识别小写字母",16,0); break;
+            case 4: Show_Str(88,207,200,16,"全部识别",16,0); break;
+        }
+        tcnt=100;
+    }
+    tp_dev.scan(0);
+    /* 按下记录轨迹，松手 400ms 后识别 */
+    if(i==30)
+    {
+        i=0;
+        LED0=!LED0;                     <span class="cmt">// 心跳</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">现象对照</div>
+                        <ol>
+                            <li>蓝色粗线跟随手指，线宽由 <code class="inline">lcd_draw_bline(...,2,BLUE)</code> 决定。</li>
+                            <li>抬手约 0.4s 后，手写区清空，“识别结果”右侧出现字符。</li>
+                            <li>KEY0 切换模式时，手写区中部提示文字同步变化。</li>
+                            <li>KEY2 在校准界面依次点四个角，成功后自动回到主界面。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">写得太快或笔画太短时，采样点可能不足以描述形状；放慢速度、加大笔画更容易识别。</div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="核心数据结构与算法">
+                    <h2>11　核心数据结构与算法</h2>
+                    <div class="sec-sub">轨迹是 4 字节一个点，识别库只关心点的顺序与坐标范围</div>
+
+                    <pre class="code">__packed typedef struct _atk_ncr_point
+{
+    short x;        <span class="cmt">// x 轴坐标</span>
+    short y;        <span class="cmt">// y 轴坐标</span>
+}atk_ncr_point;      <span class="cmt">// 紧凑结构，共 4 字节</span>
+
+atk_ncr_point READ_BUF[200];    <span class="cmt">// 最多 200 个轨迹点</span>
+
+void alientek_ncr(atk_ncr_point *track,int potnum,
+                  int charnum,unsigned char mode,char *result);
+
+<span class="cmt">// 调用：点数组、点数、候选数 6、模式 1~4、结果缓冲</span>
+alientek_ncr(READ_BUF,pcnt,6,mode,(char*)res);</pre>
+
+                    <pre class="code">void gui_fill_circle(u16 x0,u16 y0,u16 r,u16 color)
+{
+    u32 i;
+    u32 imax=((u32)r*707)/1000+1;   <span class="cmt">// √2/2 近似</span>
+    u32 sqmax=(u32)r*(u32)r+(u32)r/2;
+    u32 x=r;
+    gui_draw_hline(x0-r,y0,2*r,color);
+    for(i=1;i&lt;=imax;i++)
+    {
+        if((i*i+x*x)&gt;sqmax)
+        {
+            if(x&gt;imax)
+            {
+                gui_draw_hline(x0-i+1,y0+x,2*(i-1),color);
+                gui_draw_hline(x0-i+1,y0-x,2*(i-1),color);
+            }
+            x--;
+        }
+        gui_draw_hline(x0-x,y0+i,2*x,color);
+        gui_draw_hline(x0-x,y0-i,2*x,color);
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">轨迹记录与画线的约定</div>
+                        <ol>
+                            <li>只有 x 和 y 都变化才记录，避免同一个点重复入数组。</li>
+                            <li><code class="inline">lastpos[0]=0XFFFF</code> 是“抬笔”标志，下一笔重新取起点。</li>
+                            <li>画线用 Bresenham 思路逐点推进，每个点用实心圆加粗，视觉上更连续。</li>
+                            <li>识别库要求至少 2 个不同点，单点或空轨迹不调用。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">识别库内部会做归一化与特征提取，我们只需要保证点顺序正确、坐标在屏幕范围内。</div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="串口调试与日志">
+                    <h2>12　串口调试与日志</h2>
+                    <div class="sec-sub">每次识别只打印两行，足够判断“点够不够、识别对不对”</div>
+
+                    <pre class="code">if(pcnt)
+{
+    printf("总点数:%d\r\n",pcnt);                       <span class="cmt">// 1~200</span>
+    alientek_ncr(READ_BUF,pcnt,6,mode,(char*)res);
+    printf("识别结果:%s\r\n",res);                      <span class="cmt">// 最多 6 个候选</span>
+    pcnt=0;
+    POINT_COLOR=BLUE;
+    LCD_ShowString(60+72,90,200,16,16,res);             <span class="cmt">// 屏幕同步显示</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">日志与现象的对应</div>
+                        <ol>
+                            <li>总点数正常：说明触摸读取、坐标转换、轨迹记录都工作。</li>
+                            <li>总点数偏少：可能手写区外的点被过滤，或 <code class="inline">pcnt</code> 未累加。</li>
+                            <li>识别结果乱码：结果缓冲区太小或 <code class="inline">mode</code> 越界。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">模式 4 的候选范围最大，识别速度略慢；现场演示时先用模式 1 验证数字，再切到模式 4。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="常见问题与排查">
+                    <h2>13　常见问题与排查</h2>
+                    <div class="sec-sub">先分清“触摸读不到”和“识别不准”，两者的排查路径完全不同</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>最可能原因</th><th>排查动作</th></tr>
+                        <tr><td>画不出线</td><td>触摸坐标未校准或 PEN 电平反了</td><td>按 KEY2 重新校准，检查触摸排线</td></tr>
+                        <tr><td>线偏移</td><td>xfac/yfac/xoff/yoff 不对</td><td>清 EEPROM 校准区后重新校准</td></tr>
+                        <tr><td>总点数一直很少</td><td>点被“x、y 都变化”条件过滤</td><td>放慢书写速度</td></tr>
+                        <tr><td>识别无结果</td><td>模式与内容不符</td><td>数字用模式 1，字母用模式 2/3</td></tr>
+                        <tr><td>识别时死机</td><td>SRAMIN 内存池不足</td><td>加大 <code>my_mem_init</code> 的池大小</td></tr>
+                        <tr><td>中文提示空白</td><td>字库未更新</td><td>先跑字库更新例程</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">排查顺序</div>
+                        <ol>
+                            <li>先看串口有没有“总点数”，确认触摸链路通。</li>
+                            <li>再看点数是否随笔画增长，确认记录逻辑通。</li>
+                            <li>最后才调模式与书写方式，判断识别率。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">电容屏不需要 TP_Adjust，KEY2 分支会被 <code class="inline">touchtype&amp;0X80</code> 挡掉；这是源码里的明确判断。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="小结">
+                    <h2>14　小结</h2>
+                    <div class="sec-sub">从“坐标”到“字符”，中间隔着采样、校准、轨迹压缩和模式匹配</div>
+
+                    <p>实验50 把触摸屏从“点按钮的输入设备”变成了“手写板”。真正关键的不是识别库本身，而是前面那套工程处理：按屏幕 ID 选驱动、用四点校准把物理坐标映射到屏幕坐标、按“x/y 都变化”压缩轨迹、松手 400ms 后再识别。</p>
+
+                    <table class="data">
+                        <tr><th>层次</th><th>关键函数 / 数据</th><th>职责</th></tr>
+                        <tr><td>驱动</td><td><code>TP_Init / TP_Scan</code></td><td>识别屏型、读坐标、维护按下状态</td></tr>
+                        <tr><td>校准</td><td><code>TP_Adjust / TP_Save_Adjdata</code></td><td>四点校准并写入 AT24C02</td></tr>
+                        <tr><td>轨迹</td><td><code>READ_BUF / pcnt / lastpos</code></td><td>记录并压缩手写点</td></tr>
+                        <tr><td>识别</td><td><code>alientek_ncr</code></td><td>按模式输出最多 6 个候选</td></tr>
+                        <tr><td>显示</td><td><code>lcd_draw_bline / Show_Str</code></td><td>画粗线、显示结果</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">三个结论</div>
+                        <ol>
+                            <li>触摸初始化依赖 LCD 的型号识别，顺序不能反。</li>
+                            <li>识别库用 SRAMIN 内存池，池必须在 <code class="inline">alientek_ncr_init</code> 之前建立。</li>
+                            <li>识别触发靠软件计时 400ms，不依赖笔中断。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">到这里四个实验串起来：视频播放看“数据流”，FPU 看“算力”，DSP 看“算法库”，手写识别看“人机输入”。</div>
+                </section>
+
+                <script>
+                    (function () {
+                        var names = ['仅识别数字', '仅识别大写字母', '仅识别小写字母', '全部识别'];
+                        var m = 3, pressed = false, ready = true, adj = false;
+                        var log = document.getElementById('simLog');
+                        var i0 = document.getElementById('ind0');
+                        var i1 = document.getElementById('ind1');
+                        function render() {
+                            log.textContent = '模式 ' + (m + 1) + '：' + names[m] +
+                                (adj ? '　校准界面：请依次点四个角' : '　等待手写');
+                            i0.classList.toggle('on', pressed);
+                            i1.classList.toggle('on', ready && !adj);
+                        }
+                        var acts = {
+                            mode: function () { m = (m + 1) % 4; adj = false; },
+                            adj: function () { adj = !adj; pressed = false; }
+                        };
+                        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+                            btn.addEventListener('click', function () {
+                                var a = acts[btn.getAttribute('data-act')];
+                                if (a) a();
+                                render();
+                            });
+                        });
+                        render();
+                    })();
+                </script>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24个方格编号页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        body {
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            padding: 10px;
+        }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 10px;
+            width: 100%;
+            height: 100%;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .grid-item {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: clamp(24px, 5vw, 48px);
+            font-weight: bold;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .grid-item:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .grid-item.welcome {
+            background-image: url('1.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .grid-item.cinema {
+            background-image: url('2.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .grid-item.travel {
+            background-image: url('3.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .grid-item.WebSocket {
+            background-image: url('4.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+            flex-direction: column;
+            line-height: 1.4;
+        }
+        
+        .grid-item.WebSocket .subtitle {
+            font-size: clamp(10px, 1.8vw, 16px);
+            font-weight: normal;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+        
+        .grid-item.sftp {
+            background-image: url('5.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+            flex-direction: column;
+            line-height: 1.4;
+        }
+        
+        .grid-item.sftp .subtitle {
+            font-size: clamp(10px, 1.8vw, 16px);
+            font-weight: normal;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+        
+        .grid-item.camera {
+            background-image: url('6.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .grid-item.fileSys {
+            background-image: url('7.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .grid-item.studentMgmt {
+            background-image: url('8.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .grid-item.voiceGame {
+            background-image: url('9.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .grid-item.smartCar {
+            background-image: url('10.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .grid-item.ivcd {
+            background-image: url('10.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .grid-item.bunnyRun {
+            background-image: url('12.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .grid-item.stockAnalysis {
+            background-image: url('13.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .grid-item.voiceClone {
+            background-image: url('14.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            font-size: clamp(16px, 3vw, 28px);
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-container">
+        <div class="grid-item welcome" onclick="window.open('games/games_index.html','_blank')">游戏世界</div>
+        <div class="grid-item cinema" onclick="window.open('VideoPlay/VideoPlay_index.html','_blank')">休闲影院</div>
+        <div class="grid-item travel" onclick="window.open('navigation/navigation_index.html','_blank')">旅游导航</div>
+        <div class="grid-item WebSocket" onclick="window.open('webSocket/client/public/index.html','_blank')">
+            沟通畅聊
+            <div class="subtitle">基于WebSocket协议通信</div>
+        </div>
+        <div class="grid-item sftp" onclick="window.open('sftp-file-manager/public/index.html','_blank')">
+            无忧传输
+            <div class="subtitle">基于SFTP协议通信</div>
+        </div>
+        <div class="grid-item camera" onclick="window.open('Camera/index.html','_blank')">摄像视频</div>
+        <div class="grid-item fileSys" onclick="window.open('http://www.studytech.cloud:8080','_blank')">文件系统</div>
+        <div class="grid-item studentMgmt" onclick="window.open('Student_Management/index.html','_blank')">学生管理系统</div>
+        <div class="grid-item voiceGame" onclick="window.open('Speaker/index.html','_blank')">声控游戏</div>
+        <div class="grid-item smartCar" onclick="window.open('S-iVCD/index.html','_blank')">智慧车身</div>
+        <div class="grid-item ivcd" onclick="window.open('S-iVCD/index1.html','_blank')">智慧车身</div>
+        <div class="grid-item bunnyRun" onclick="window.open('./Coin/index.html','_blank')">兔子跑酷</div>
+        <div class="grid-item stockAnalysis" onclick="window.open('./vite/index.html','_blank')">股市分析</div>
+        <div class="grid-item voiceClone" onclick="window.open('http://studytech.cloud:8930','_blank')">声音克隆</div>
+        <div class="grid-item">15</div>
+        <div class="grid-item">16</div>
+        <div class="grid-item">17</div>
+        <div class="grid-item">18</div>
+        <div class="grid-item">19</div>
+        <div class="grid-item">20</div>
+        <div class="grid-item">21</div>
+        <div class="grid-item">22</div>
+        <div class="grid-item">23</div>
+        <div class="grid-item">24</div>
+    </div>
+
+    <!-- 背景音乐：闯码头-大哲 -->
+    <audio id="bgMusic" src="闯码头-大哲.mp3" loop preload="auto"></audio>
+    <script>
+        (function () {
+            var bgMusic = document.getElementById('bgMusic');
+            bgMusic.volume = 0.5;
+
+            // 尝试页面加载后自动播放
+            var playPromise = bgMusic.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(function () {
+                    // 浏览器阻止自动播放时，等待用户首次交互后再播放
+                    var startOnInteraction = function () {
+                        bgMusic.play();
+                        document.removeEventListener('click', startOnInteraction);
+                        document.removeEventListener('touchstart', startOnInteraction);
+                        document.removeEventListener('keydown', startOnInteraction);
+                    };
+                    document.addEventListener('click', startOnInteraction);
+                    document.addEventListener('touchstart', startOnInteraction);
+                    document.addEventListener('keydown', startOnInteraction);
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

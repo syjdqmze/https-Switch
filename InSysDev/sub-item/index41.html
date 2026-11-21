@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验27 SPI实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2f7a52;
+            margin-bottom: 6px;
+        }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验27 SPI实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">按 01→14 顺序阅读；代码块均可对照 USER / HARDWARE 下的源文件。</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">用 SPI5 驱动板载 W25Q256，按一下写、按一下读，验证整条“时钟—片选—命令—数据”链路</div>
+
+                    <p>本实验的目标不是点亮某个灯，而是把一颗外部 SPI Flash 完整地用起来：上电先读 ID 确认型号，确认是 W25Q256 后进入 4 字节地址模式；按下 KEY1 把 24 字节字符串写到 32MB 容量的倒数第 100 个字节处，按下 KEY0 再读回来显示在 LCD 上。能否成功，取决于 <strong>SPI5 的时钟、模式、片选和 W25Q256 的 4 字节地址</strong>四件事是否同时正确。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚 / 外设</th><th>关键配置</th><th>源码证据</th></tr>
+                        <tr><td>SPI5 主机</td><td>PF7=SCK、PF8=MISO、PF9=MOSI</td><td>AF5、复用推挽、上拉、快速</td><td><code>HARDWARE/SPI/spi.c</code> · <code>HAL_SPI_MspInit</code></td></tr>
+                        <tr><td>片选</td><td>PF6</td><td>推挽输出、上拉，软件拉低/拉高</td><td><code>HARDWARE/W25QXX/w25qxx.c</code> · <code>W25QXX_Init</code></td></tr>
+                        <tr><td>SPI 模式</td><td>SPI5</td><td>主机、8 位、CPOL=HIGH、CPHA=2EDGE、MSB</td><td><code>spi.c</code> · <code>SPI5_Init</code></td></tr>
+                        <tr><td>波特率</td><td>SPI5（APB2）</td><td>初始化 256 分频，随后改为 2 分频 = 45MHz</td><td><code>spi.c</code> · <code>SPI5_SetSpeed</code></td></tr>
+                        <tr><td>存储芯片</td><td>W25Q256</td><td>32MB，4 字节地址，扇区 4KB、页 256B</td><td><code>USER/main.c</code> · <code>FLASH_SIZE=32*1024*1024</code></td></tr>
+                        <tr><td>按键</td><td>KEY1=PH2 写，KEY0=PH3 读</td><td><code>KEY_Scan(0)</code> 不支持连按</td><td><code>HARDWARE/KEY/key.c</code></td></tr>
+                        <tr><td>显示</td><td>LCD（FSMC 或 RGB）</td><td>标题、提示、读写结果都打在屏上</td><td><code>HARDWARE/LCD/lcd.c</code> · <code>LCD_Init</code></td></tr>
+                        <tr><td>串口</td><td>PA9 / PA10，115200</td><td>printf 重定向，供调试与 <code>LCD_Init</code> 使用</td><td><code>SYSTEM/usart/usart.c</code> · <code>fputc</code></td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">SPI5 @ APB2</span>
+                        <span class="chip">45 MHz</span>
+                        <span class="chip">Mode 3</span>
+                        <span class="chip">CS = PF6</span>
+                        <span class="chip">0xEF18 = W25Q256</span>
+                        <span class="chip">32 MB / 4KB 扇区</span>
+                    </div>
+
+                    <div class="note">实验标题与注释里仍写着“W25Q16/W25Q128”的历史字样，但本工程实际按 <code>W25Q256</code> 判断与寻址：<code>W25QXX_ReadID()!=W25Q256</code> 时程序会停在闪灯等待，说明板上焊的是 32MB 版本。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">先分清“谁配置寄存器、谁只被调用”，读代码时就不会在 HAL 库里迷路</div>
+
+                    <p>工程沿用正点原子标准例程的分层：<code>USER</code> 放 main 与系统文件，<code>CORE</code> 放启动文件与 CMSIS，<code>SYSTEM</code> 放时钟/延时/串口，<code>HARDWARE</code> 放板级驱动，<code>HALLIB</code> 是 ST 的 HAL 库。本实验新增的是 <code>SPI/spi.c</code> 与 <code>W25QXX/w25qxx.c</code>，其余都是前序实验的复用。</p>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>负责什么</th><th>本页看什么</th></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>栈堆、向量表、复位入口</td><td><code>Stack_Size</code>、<code>Reset_Handler</code></td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>FPU、RCC 复位、VTOR</td><td><code>SystemInit</code></td></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化顺序、ID 检查、按键读写</td><td><code>main</code></td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>异常入口</td><td>只有 <code>SysTick_Handler</code></td></tr>
+                        <tr><td><code>HARDWARE/SPI/spi.c</code></td><td>SPI5 参数、GPIO 复用、分频、单字节收发</td><td><code>SPI5_Init</code>、<code>HAL_SPI_MspInit</code>、<code>SPI5_SetSpeed</code></td></tr>
+                        <tr><td><code>HARDWARE/W25QXX/w25qxx.c</code></td><td>片选、读 ID、读/写/擦、4 字节地址</td><td><code>W25QXX_Init</code>、<code>W25QXX_Write</code></td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td>HSE + PLL 到 180MHz</td><td><code>Stm32_Clock_Init</code></td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>SysTick 轮询式 us/ms 延时</td><td><code>delay_init</code>、<code>delay_us</code></td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>USART1 与 printf 重定向</td><td><code>uart_init</code>、<code>fputc</code></td></tr>
+                        <tr><td><code>HARDWARE/LCD</code>、<code>SDRAM</code>、<code>KEY</code>、<code>LED</code></td><td>显示与交互，本实验不修改</td><td>只确认调用顺序与现象</td></tr>
+                        <tr><td><code>HALLIB/.../stm32f4xx_hal_spi.c</code></td><td>HAL SPI 通用实现（只读被调用函数）</td><td><code>HAL_SPI_Init</code>、<code>HAL_SPI_TransmitReceive</code></td></tr>
+                    </table>
+
+                    <div class="note blue">读库文件的边界：只在“被本工程调用到”的位置展开，例如 <code>HAL_SPI_Init</code> 如何回调 <code>HAL_SPI_MspInit</code>、<code>SPI5_SetSpeed</code> 如何直接改 <code>CR1</code> 的 BR[2:0]，不去通读整份 HAL。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电到 while(1) 共 13 个节点，真正决定 SPI 能否工作的是第 05 与第 12 步</div>
+
+                    <figure class="figure">
+                        <img src="./index41-map/boot-flow.png" alt="实验27 从上电复位到主循环的 13 个节点流程图">
+                        <figcaption>图 3-1　启动链路总览：时钟先行，SPI 与片选最后配置</figcaption>
+                    </figure>
+
+                    <h3>main 函数全文</h3>
+                    <pre class="code">const u8 TEXT_Buffer[]={"Apollo STM32F4 SPI TEST"};	<span class="cmt">// 要写入 Flash 的 24 字节字符串</span>
+#define SIZE sizeof(TEXT_Buffer)			<span class="cmt">// 长度由编译器算，避免手写错</span>
+
+int main(void)
+{
+    u8 key;
+    u16 i=0;
+    u8 datatemp[SIZE];				<span class="cmt">// 读回数据的落脚点</span>
+    u32 FLASH_SIZE;
+    HAL_Init();                     <span class="cmt">//初始化HAL库</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">//设置时钟,180Mhz</span>
+    delay_init(180);                <span class="cmt">//初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">//初始化USART</span>
+    LED_Init();                     <span class="cmt">//初始化LED</span>
+    KEY_Init();                     <span class="cmt">//初始化按键</span>
+    SDRAM_Init();                   <span class="cmt">//初始化SDRAM</span>
+    LCD_Init();                     <span class="cmt">//初始化LCD</span>
+    W25QXX_Init();                  <span class="cmt">//W25QXX初始化</span>
+    POINT_COLOR=RED;
+    LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7");
+    LCD_ShowString(30,70,200,16,16,"SPI TEST");
+    LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");
+    LCD_ShowString(30,110,200,16,16,"2016/1/16");
+    LCD_ShowString(30,130,200,16,16,"KEY1:Write  KEY0:Read");
+    while(W25QXX_ReadID()!=W25Q256)		<span class="cmt">// 读不到 W25Q256 就停在这里闪灯</span>
+    {
+        LCD_ShowString(30,150,200,16,16,"W25Q256 Check Failed!");
+        delay_ms(500);
+        LCD_ShowString(30,150,200,16,16,"Please Check!        ");
+        delay_ms(500);
+        LED0=!LED0;                     <span class="cmt">//DS0闪烁</span>
+    }
+    LCD_ShowString(30,150,200,16,16,"W25Q256 Ready!");
+    FLASH_SIZE=32*1024*1024;        <span class="cmt">//FLASH 大小为32M字节</span>
+    POINT_COLOR=BLUE;
+    while(1)
+    {
+        key=KEY_Scan(0);
+        if(key==KEY1_PRES)		<span class="cmt">// KEY1 按下：写入</span>
+        {
+            LCD_Fill(0,170,239,319,WHITE);	<span class="cmt">//清除半屏</span>
+            LCD_ShowString(30,170,200,16,16,"Start Write W25Q256....");
+            W25QXX_Write((u8*)TEXT_Buffer,FLASH_SIZE-100,SIZE);	<span class="cmt">// 从倒数第 100 字节开始写</span>
+            LCD_ShowString(30,170,200,16,16,"W25Q256 Write Finished!");
+        }
+        if(key==KEY0_PRES)		<span class="cmt">// KEY0 按下：读回</span>
+        {
+            LCD_ShowString(30,170,200,16,16,"Start Read W25Q256.... ");
+            W25QXX_Read(datatemp,FLASH_SIZE-100,SIZE);
+            LCD_ShowString(30,170,200,16,16,"The Data Readed Is:   ");
+            LCD_ShowString(30,190,200,16,16,datatemp);	<span class="cmt">// 显示读到的字符串</span>
+        }
+        i++;
+        delay_ms(10);
+        if(i==20)			<span class="cmt">// 约 200ms 一次心跳</span>
+        {
+            LED0=!LED0;			<span class="cmt">//提示系统正在运行</span>
+            i=0;
+        }
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：初始化顺序不是随便排的</div>
+                        <ol>
+                            <li><code>HAL_Init()</code> 先建立 1ms 时基与优先级分组（本工程重写为分组 2），后面 <code>HAL_Delay</code> 与 <code>HAL_SPI_TransmitReceive</code> 的超时判断才有基准。</li>
+                            <li><code>Stm32_Clock_Init(360,25,2,8)</code> 把 HSI 切到 HSE+PLL 的 180MHz；<code>delay_init(180)</code> 的实参必须与之一致，否则 <code>fac_us</code> 算错，所有 <code>delay_ms</code> 都偏。</li>
+                            <li><code>uart_init(115200)</code> 必须早于 <code>LCD_Init()</code>：LCD 驱动内部用 <code>printf</code> 输出调试信息，而 <code>fputc</code> 直接写 <code>USART1-&gt;DR</code>，串口没初始化就会卡在等待发送标志。</li>
+                            <li><code>W25QXX_Init()</code> 放在 LCD 之后、ID 检查之前：它同时完成 PF6 片选、SPI5 参数、45MHz 分频和 4 字节地址模式，缺任何一步后面的读写都会失败。</li>
+                            <li>主循环先用 <code>while(W25QXX_ReadID()!=W25Q256)</code> 做硬件自检，再进入按键分支；这个顺序保证“按 KEY1 写”时芯片一定是可用的。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">复位后 CPU 从向量表取 MSP 与 PC；本工程没有自定义汇编，也没有 VTOR 偏移</div>
+
+                    <p><code>CORE/startup_stm32f429xx.s</code> 是 MDK 版启动文件。它先把栈设为 <code>0x400</code>（1KB）、堆设为 <code>0x200</code>（512B），再把 <code>__initial_sp</code> 放在 <code>__Vectors</code> 的第一个字、<code>Reset_Handler</code> 放在第二个字。复位时 Cortex-M4 硬件自动把这两个值装入 MSP 和 PC，不需要任何 C 代码参与。</p>
+
+                    <pre class="code">Stack_Size      EQU     0x400;			<span class="cmt">; 栈 1024 字节</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp					<span class="cmt">; 栈顶，向量表第 0 项</span>
+
+Heap_Size       EQU     0x200;			<span class="cmt">; 堆 512 字节，本工程几乎不用 malloc</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit
+
+                AREA    RESET, DATA, READONLY
+                EXPORT  __Vectors
+__Vectors       DCD     __initial_sp		<span class="cmt">; Top of Stack</span>
+                DCD     Reset_Handler		<span class="cmt">; Reset Handler</span>
+                <span class="cmt">; ……其余异常与中断向量省略</span>
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0			<span class="cmt">; 先跑 SystemInit</span>
+                 LDR     R0, =__main
+                 BX      R0			<span class="cmt">; 再进 C 库初始化并调用 main</span>
+                 ENDP</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：三段式复位入口</div>
+                        <ol>
+                            <li>硬件取向量：<code>__initial_sp</code> → MSP，<code>Reset_Handler</code> → PC，此时还没有任何栈变量。</li>
+                            <li><code>BLX SystemInit</code> 只做芯片级最小配置（FPU、RCC 复位、VTOR），不配时钟树，所以此刻主频仍是 HSI 16MHz。</li>
+                            <li><code>BX __main</code> 交给 C 库：拷贝 <code>.data</code>、清零 <code>.bss</code>，最后才跳进 <code>main()</code>；因此 main 里的全局变量已经是确定值。</li>
+                            <li>启动文件把所有中断入口都写成 <code>[WEAK]</code> 的 <code>B .</code> 死循环，C 文件里定义同名函数即可覆盖，这是后面 <code>SysTick_Handler</code> 能生效的原因。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">SystemInit 只把芯片恢复到“能安全跑 C 代码”的状态，时钟与 HAL 时基是两步分开做的</div>
+
+                    <h3>SystemInit：开 FPU、RCC 回默认、设 VTOR</h3>
+                    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">// CP10/CP11 全访问，浮点指令可用</span>
+  #endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;		<span class="cmt">// 打开 HSI</span>
+  RCC-&gt;CFGR = 0x00000000;			<span class="cmt">// 时钟树全部回到不分频</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;		<span class="cmt">// 关 HSEON / CSSON / PLLON</span>
+  RCC-&gt;PLLCFGR = 0x24003010;			<span class="cmt">// PLL 寄存器回默认</span>
+  RCC-&gt;CIR = 0x00000000;			<span class="cmt">// 关所有 RCC 中断</span>
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;	<span class="cmt">// 向量表固定在 0x08000000</span>
+}</pre>
+
+                    <h3>HAL_Init：时基与优先级分组</h3>
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();	<span class="cmt">// 指令缓存</span>
+  __HAL_FLASH_DATA_CACHE_ENABLE();		<span class="cmt">// 数据缓存</span>
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();	<span class="cmt">// 预取</span>
+
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);	<span class="cmt">// 中断优先级分组2</span>
+  HAL_InitTick(TICK_INT_PRIORITY);		<span class="cmt">// TICK_INT_PRIORITY = 0x0F</span>
+  HAL_MspInit();
+  return HAL_OK;
+}
+
+__weak HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
+{
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);	<span class="cmt">// 1ms 重装值</span>
+  HAL_NVIC_SetPriority(SysTick_IRQn, TickPriority ,0);
+  return HAL_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：SysTick 的重装值被改了两次</div>
+                        <ol>
+                            <li><code>HAL_Init()</code> 执行时主频还是 HSI 16MHz，<code>HAL_RCC_GetHCLKFreq()/1000 = 16000</code>，SysTick 每 1ms 中断一次。</li>
+                            <li>随后 <code>Stm32_Clock_Init</code> 把 HCLK 提到 180MHz，但 SysTick 的 <code>LOAD</code> 仍是 16000，于是中断间隔变成 16000/180MHz ≈ 88.9µs，<code>HAL_Delay(1)</code> 实际只有约 62µs。</li>
+                            <li><code>delay_init(180)</code> 只把时钟源设为 HCLK、把 <code>fac_us</code> 设为 180，并未重写 <code>LOAD</code>；所以本工程的 <code>delay_ms</code> 是“读 SysTick 计数自己算时间”，不依赖中断，仍然是准的。</li>
+                            <li>结论：这套例程里 <code>HAL_Delay</code> 不宜用于精确计时；需要毫秒级等待时统一用 <code>delay_ms</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟、延时与串口">
+                    <h2>06　时钟、延时与串口</h2>
+                    <div class="sec-sub">HSE 25MHz 经 PLL 到 180MHz；SPI5 在 APB2 上，分频 2 得 45MHz</div>
+
+                    <figure class="figure">
+                        <img src="./index41-map/clock-tree.png" alt="Stm32_Clock_Init 的时钟树与 SPI5 波特率推导">
+                        <figcaption>图 6-1　时钟树：SYSCLK 180MHz、PCLK1 45MHz、PCLK2 90MHz</figcaption>
+                    </figure>
+
+                    <pre class="code">__HAL_RCC_PWR_CLK_ENABLE();				<span class="cmt">// 使能 PWR 时钟</span>
+__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);	<span class="cmt">// 调压器 Scale1</span>
+
+RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE;
+RCC_OscInitStructure.HSEState=RCC_HSE_ON;			<span class="cmt">// 打开 25MHz 晶振</span>
+RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;
+RCC_OscInitStructure.PLL.PLLM=pllm;	<span class="cmt">// 25 分频 → 1MHz 参考</span>
+RCC_OscInitStructure.PLL.PLLN=plln;	<span class="cmt">// ×360 → VCO 360MHz</span>
+RCC_OscInitStructure.PLL.PLLP=pllp;	<span class="cmt">// /2 → SYSCLK 180MHz</span>
+RCC_OscInitStructure.PLL.PLLQ=pllq;	<span class="cmt">// /8 → 45MHz 给 USB/SDIO</span>
+ret=HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+if(ret!=HAL_OK) while(1);
+
+ret=HAL_PWREx_EnableOverDrive();	<span class="cmt">// 180MHz 必须开 Over-Drive</span>
+if(ret!=HAL_OK) while(1);
+
+RCC_ClkInitStructure.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK;
+RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;	<span class="cmt">// HCLK 180MHz</span>
+RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;	<span class="cmt">// PCLK1 45MHz</span>
+RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;	<span class="cmt">// PCLK2 90MHz</span>
+ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5);	<span class="cmt">// 5WS</span></pre>
+
+                    <h3>延时与 printf 重定向</h3>
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);	<span class="cmt">// SysTick 计数时钟 = HCLK</span>
+    fac_us=SYSCLK;					<span class="cmt">// 180 → 1us 需要 180 个计数</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks=nus*fac_us;				<span class="cmt">// 需要的节拍数</span>
+    ...
+    if(tcnt&gt;=ticks)break;				<span class="cmt">// 数够就退出，纯轮询</span>
+}
+
+int fputc(int ch, FILE *f)
+{
+    while((USART1-&gt;SR&amp;0X40)==0);			<span class="cmt">// 等 TXE 置位</span>
+    USART1-&gt;DR = (u8) ch;				<span class="cmt">// 写数据寄存器</span>
+    return ch;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：数字要对得上</div>
+                        <ol>
+                            <li>VCO = 25MHz ÷ PLLM(25) × PLLN(360) = 360MHz；SYSCLK = 360 ÷ PLLP(2) = 180MHz。</li>
+                            <li>HCLK = 180 ÷ 1 = 180MHz；PCLK1 = 180 ÷ 4 = 45MHz；PCLK2 = 180 ÷ 2 = 90MHz。</li>
+                            <li>Flash 在 180MHz 下必须 <code>FLASH_LATENCY_5</code>（5 个等待周期，即 6 个 CPU 周期），写少了会取指错乱。</li>
+                            <li>SPI5 挂在 APB2，<code>SPI5_SetSpeed(SPI_BAUDRATEPRESCALER_2)</code> 得到 90 ÷ 2 = 45MHz，与注释“设置为45M时钟”一致。</li>
+                            <li><code>delay_us</code> 依赖 <code>fac_us=180</code>；如果改了主频却忘了改 <code>delay_init</code> 的实参，所有延时按比例偏。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="SPI5 的引脚、时钟与模式">
+                    <h2>07　SPI5 的引脚、时钟与模式</h2>
+                    <div class="sec-sub">PF7/PF8/PF9 复用为 AF5；NSS 用软件，片选交给 PF6 普通 GPIO</div>
+
+                    <pre class="code">void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
+{
+    __HAL_RCC_GPIOF_CLK_ENABLE();       <span class="cmt">//使能GPIOF时钟</span>
+    __HAL_RCC_SPI5_CLK_ENABLE();        <span class="cmt">//使能SPI5时钟</span>
+
+    GPIO_Initure.Pin=GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9;	<span class="cmt">// SCK / MISO / MOSI</span>
+    GPIO_Initure.Mode=GPIO_MODE_AF_PP;              <span class="cmt">//复用推挽输出</span>
+    GPIO_Initure.Pull=GPIO_PULLUP;                  <span class="cmt">//上拉</span>
+    GPIO_Initure.Speed=GPIO_SPEED_FAST;             <span class="cmt">//快速</span>
+    GPIO_Initure.Alternate=GPIO_AF5_SPI5;           <span class="cmt">//复用为SPI5</span>
+    HAL_GPIO_Init(GPIOF,&amp;GPIO_Initure);
+}
+
+void SPI5_Init(void)
+{
+    SPI5_Handler.Instance=SPI5;
+    SPI5_Handler.Init.Mode=SPI_MODE_MASTER;			<span class="cmt">// 主机模式</span>
+    SPI5_Handler.Init.Direction=SPI_DIRECTION_2LINES;		<span class="cmt">// 全双工双线</span>
+    SPI5_Handler.Init.DataSize=SPI_DATASIZE_8BIT;		<span class="cmt">// 8 位帧</span>
+    SPI5_Handler.Init.CLKPolarity=SPI_POLARITY_HIGH;		<span class="cmt">// 空闲高</span>
+    SPI5_Handler.Init.CLKPhase=SPI_PHASE_2EDGE;			<span class="cmt">// 第二个边沿采样</span>
+    SPI5_Handler.Init.NSS=SPI_NSS_SOFT;				<span class="cmt">// 软件 NSS</span>
+    SPI5_Handler.Init.BaudRatePrescaler=SPI_BAUDRATEPRESCALER_256;	<span class="cmt">// 初始化先慢速</span>
+    SPI5_Handler.Init.FirstBit=SPI_FIRSTBIT_MSB;		<span class="cmt">// MSB 先行</span>
+    HAL_SPI_Init(&amp;SPI5_Handler);
+    __HAL_SPI_ENABLE(&amp;SPI5_Handler);				<span class="cmt">// 使能 SPI5</span>
+    SPI5_ReadWriteByte(0Xff);					<span class="cmt">// 启动传输</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：为什么 NSS 必须用软件</div>
+                        <ol>
+                            <li>W25Q256 的片选需要在“发命令—发地址—收发数据”整段保持低电平，中途不能抬高；硬件 NSS 会在每个字节后释放，导致命令被打断。</li>
+                            <li>因此 <code>SPI_NSS_SOFT</code> 把 NSS 交给内部 SSI 位控制，真正的 /CS 是普通 GPIO <code>PF6</code>，由 <code>W25QXX_CS=0/1</code> 在驱动里成对操作。</li>
+                            <li>PF6 在 <code>W25QXX_Init</code> 中单独配置为推挽输出 + 上拉，并在 SPI 初始化前先写 1，保证上电瞬间芯片不被误选中。</li>
+                            <li>初始化用 256 分频只是“先能通信”，<code>W25QXX_Init</code> 紧接着调用 <code>SPI5_SetSpeed(SPI_BAUDRATEPRESCALER_2)</code> 才切到 45MHz。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="SPI 时序与 45MHz 波特率">
+                    <h2>08　SPI 时序与 45MHz 波特率</h2>
+                    <div class="sec-sub">CPOL=1、CPHA=1（2EDGE）就是常说的 Mode 3：空闲高，上升沿采样</div>
+
+                    <figure class="figure">
+                        <img src="./index41-map/spi-timing.png" alt="SPI 模式 3 的 CS、SCLK、MOSI 时序与采样点">
+                        <figcaption>图 8-1　Mode 3 时序：下降沿换数据，上升沿采样</figcaption>
+                    </figure>
+
+                    <h3>写 CR1 的 BR[2:0] 改分频</h3>
+                    <pre class="code">void SPI5_SetSpeed(u8 SPI_BaudRatePrescaler)
+{
+    assert_param(IS_SPI_BAUDRATE_PRESCALER(SPI_BaudRatePrescaler));
+    __HAL_SPI_DISABLE(&amp;SPI5_Handler);			<span class="cmt">// 改分频前必须先关 SPI</span>
+    SPI5_Handler.Instance-&gt;CR1&amp;=0XFFC7;			<span class="cmt">// 位 3-5 清零</span>
+    SPI5_Handler.Instance-&gt;CR1|=SPI_BaudRatePrescaler;	<span class="cmt">// 写入新的分频</span>
+    __HAL_SPI_ENABLE(&amp;SPI5_Handler);			<span class="cmt">// 重新使能</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>环节</th><th>公式 / 取值</th><th>源码证据</th></tr>
+                        <tr><td>SPI5 输入时钟</td><td>PCLK2 = 90MHz</td><td><code>sys.c</code> · <code>APB2CLKDivider=RCC_HCLK_DIV2</code></td></tr>
+                        <tr><td>分频系数</td><td><code>SPI_BAUDRATEPRESCALER_2</code></td><td><code>w25qxx.c</code> · <code>SPI5_SetSpeed</code></td></tr>
+                        <tr><td>SCK 频率</td><td>90MHz ÷ 2 = 45MHz</td><td><code>spi.c</code> 注释“设置为45M时钟”</td></tr>
+                        <tr><td>单字节耗时</td><td>8 ÷ 45MHz ≈ 178ns</td><td>由 8 位帧结构推得</td></tr>
+                        <tr><td>4KB 扇区读</td><td>约 4096 × 178ns ≈ 0.73ms</td><td>不含命令与片选开销</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：模式与分频必须成对正确</div>
+                        <ol>
+                            <li>W25Q 系列支持 Mode 0 与 Mode 3；本工程选 Mode 3（CPOL=HIGH、CPHA=2EDGE），所以空闲时 SCK 为高，第一个边沿（下降沿）输出数据，第二个边沿（上升沿）采样。</li>
+                            <li>如果误改成 Mode 0，SCK 空闲为低、第一个上升沿就采样，此时从机数据还没准备好，读 ID 会得到 0xFFFF 或 0x0000。</li>
+                            <li><code>SPI5_SetSpeed</code> 必须先 <code>__HAL_SPI_DISABLE</code> 再改 <code>CR1</code>，SPI 使能状态下 BR 位是只读的。</li>
+                            <li>45MHz 已接近 W25Q256 在 3.3V 下的上限（约 104MHz），实际能否稳定还取决于 PCB 走线与杜邦线长度；读 ID 失败时先把分频改成 4 或 8 排查。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="W25Q256 的 ID 与 4 字节地址">
+                    <h2>09　W25Q256 的 ID 与 4 字节地址</h2>
+                    <div class="sec-sub">0x90 命令读回 0xEF18；容量超过 16MB 后，地址必须从 3 字节改成 4 字节</div>
+
+                    <figure class="figure">
+                        <img src="./index41-map/w25qxx-access.png" alt="W25Q256 读 ID 命令序列与写扇区流程">
+                        <figcaption>图 9-1　读 ID 的 8 个字节与写扇区的三条分支</figcaption>
+                    </figure>
+
+                    <pre class="code">void W25QXX_Init(void)
+{
+    __HAL_RCC_GPIOF_CLK_ENABLE();
+    GPIO_Initure.Pin=GPIO_PIN_6;            <span class="cmt">//PF6 片选</span>
+    GPIO_Initure.Mode=GPIO_MODE_OUTPUT_PP;  <span class="cmt">//推挽输出</span>
+    GPIO_Initure.Pull=GPIO_PULLUP;
+    GPIO_Initure.Speed=GPIO_SPEED_FAST;
+    HAL_GPIO_Init(GPIOF,&amp;GPIO_Initure);
+
+    W25QXX_CS=1;                            <span class="cmt">//SPI FLASH不选中</span>
+    SPI5_Init();                            <span class="cmt">//初始化SPI</span>
+    SPI5_SetSpeed(SPI_BAUDRATEPRESCALER_2); <span class="cmt">//设置为45M时钟,高速模式</span>
+    W25QXX_TYPE=W25QXX_ReadID();            <span class="cmt">//读取FLASH ID</span>
+    if(W25QXX_TYPE==W25Q256)
+    {
+        temp=W25QXX_ReadSR(3);              <span class="cmt">//读状态寄存器 3 的 ADS 位</span>
+        if((temp&amp;0X01)==0)                  <span class="cmt">//不是 4 字节地址模式</span>
+        {
+            W25QXX_CS=0;
+            SPI5_ReadWriteByte(W25X_Enable4ByteAddr);	<span class="cmt">//发 0xB7 进入 4 字节模式</span>
+            W25QXX_CS=1;
+        }
+    }
+}
+
+u16 W25QXX_ReadID(void)
+{
+    u16 Temp = 0;
+    W25QXX_CS=0;
+    SPI5_ReadWriteByte(0x90);		<span class="cmt">// 读 ID 命令</span>
+    SPI5_ReadWriteByte(0x00);		<span class="cmt">// 3 个哑字节</span>
+    SPI5_ReadWriteByte(0x00);
+    SPI5_ReadWriteByte(0x00);
+    Temp|=SPI5_ReadWriteByte(0xFF)&lt;&lt;8;	<span class="cmt">// 厂商 ID 0xEF</span>
+    Temp|=SPI5_ReadWriteByte(0xFF);	<span class="cmt">// 容量 ID 0x18</span>
+    W25QXX_CS=1;
+    return Temp;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：为什么一定要进 4 字节地址</div>
+                        <ol>
+                            <li>W25Q256 容量 32MB = 0x02000000，已经超过 24 位地址能表示的 16MB，常规 3 字节地址会回绕。</li>
+                            <li>状态寄存器 3 的 bit0 是 ADS（Address Mode）：0=3 字节，1=4 字节。初始化读一次，若为 0 就发 <code>W25X_Enable4ByteAddr</code>（0xB7）切换。</li>
+                            <li>切换后所有读/写/擦命令都要先发地址高 8 位，代码里用 <code>if(W25QXX_TYPE==W25Q256)</code> 分支处理，读、写、擦三处都做了同样判断。</li>
+                            <li>读 ID 的返回值是 16 位：高字节厂商 <code>0xEF</code>（Winbond），低字节容量 <code>0x18</code>，合起来 <code>0xEF18</code> 才等于 <code>W25Q256</code> 宏。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="读、写、擦的扇区算法">
+                    <h2>10　读、写、擦的扇区算法</h2>
+                    <div class="sec-sub">NOR Flash 只能把 1 写成 0，所以“改几个字节”必须先读整扇区、擦除、再整体写回</div>
+
+                    <pre class="code">void W25QXX_Write(u8* pBuffer,u32 WriteAddr,u16 NumByteToWrite)
+{
+    W25QXX_BUF=W25QXX_BUFFER;
+    secpos=WriteAddr/4096;	<span class="cmt">//扇区地址</span>
+    secoff=WriteAddr%4096;	<span class="cmt">//在扇区内的偏移</span>
+    secremain=4096-secoff;	<span class="cmt">//扇区剩余空间大小</span>
+    if(NumByteToWrite&lt;=secremain)secremain=NumByteToWrite;
+    while(1)
+    {
+        W25QXX_Read(W25QXX_BUF,secpos*4096,4096);	<span class="cmt">//读出整个扇区</span>
+        for(i=0;i&lt;secremain;i++)			<span class="cmt">//校验数据</span>
+        {
+            if(W25QXX_BUF[secoff+i]!=0XFF)break;	<span class="cmt">//需要擦除</span>
+        }
+        if(i&lt;secremain)				<span class="cmt">//需要擦除</span>
+        {
+            W25QXX_Erase_Sector(secpos);		<span class="cmt">//擦除这个扇区</span>
+            for(i=0;i&lt;secremain;i++)		<span class="cmt">//把新数据填进缓存</span>
+            {
+                W25QXX_BUF[i+secoff]=pBuffer[i];
+            }
+            W25QXX_Write_NoCheck(W25QXX_BUF,secpos*4096,4096);	<span class="cmt">//写入整个扇区</span>
+        }else W25QXX_Write_NoCheck(pBuffer,WriteAddr,secremain);	<span class="cmt">//已是 0xFF，直接写</span>
+        if(NumByteToWrite==secremain)break;		<span class="cmt">//写入结束</span>
+        else
+        {
+            secpos++;				<span class="cmt">//下一个扇区</span>
+            secoff=0;
+            pBuffer+=secremain;
+            WriteAddr+=secremain;
+            NumByteToWrite-=secremain;
+            if(NumByteToWrite&gt;4096)secremain=4096;
+            else secremain=NumByteToWrite;
+        }
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：写一次要动四次总线</div>
+                        <ol>
+                            <li>读整扇区：<code>W25QXX_Read(...,secpos*4096,4096)</code>，4KB 先落到 <code>W25QXX_BUFFER</code>（工程内的全局缓存区）。</li>
+                            <li>判空：从目标偏移开始逐字节看是否 0xFF；全 0xFF 说明这块是擦过的，可以跳过擦除。</li>
+                            <li>擦除：<code>W25QXX_Erase_Sector</code> 发 0x20 + 4 字节地址，最少耗时 150ms，之后必须 <code>W25QXX_Wait_Busy</code>。</li>
+                            <li>回填：把新数据覆盖到缓存对应偏移，再把 4KB 整体写回；否则同扇区其它字节会被擦成 0xFF。</li>
+                            <li>跨扇区时 <code>secremain</code> 逐段递减、指针与地址同步前移，靠 while 循环分多次完成，不需要调用者自己拆包。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="中断链路与轮询超时">
+                    <h2>11　中断链路与轮询超时</h2>
+                    <div class="sec-sub">本实验没有任何 SPI 中断：查询标志位 + 超时兜底，整条链路只有一个 SysTick 异常</div>
+
+                    <table class="data">
+                        <tr><th>环节</th><th>本工程实际情况</th><th>源码证据</th></tr>
+                        <tr><td>触发源</td><td>无（主机主动发时钟）</td><td><code>SPI5_ReadWriteByte</code> 在 <code>main</code> 上下文调用</td></tr>
+                        <tr><td>控制器</td><td>SPI5 的 TXE/RXNE 只作为轮询标志</td><td><code>HAL_SPI_TransmitReceive</code> 内部查 <code>SR</code></td></tr>
+                        <tr><td>NVIC</td><td>未使能 SPI5 中断</td><td><code>HAL_SPI_MspInit</code> 无 <code>HAL_NVIC_EnableIRQ</code></td></tr>
+                        <tr><td>ISR</td><td>仅 <code>SysTick_Handler</code></td><td><code>USER/stm32f4xx_it.c</code></td></tr>
+                        <tr><td>用户回调</td><td><code>HAL_IncTick()</code> 累加 <code>uwTick</code></td><td><code>stm32f4xx_it.c</code> · <code>SysTick_Handler</code></td></tr>
+                    </table>
+
+                    <pre class="code">u8 SPI5_ReadWriteByte(u8 TxData)
+{
+    u8 retry=0;
+    while((SPI5-&gt;SR&amp;1&lt;&lt;1)==0)		<span class="cmt">// 等发送缓冲区空 TXE</span>
+    {
+        retry++;
+        if(retry&gt;200)return 0;		<span class="cmt">// 超时保护，防止死等</span>
+    }
+    SPI5-&gt;DR=TxData;			<span class="cmt">// 写数据寄存器，时钟随即产生</span>
+    retry=0;
+    while((SPI5-&gt;SR&amp;1&lt;&lt;0)==0)		<span class="cmt">// 等接收缓冲区非空 RXNE</span>
+    {
+        retry++;
+        if(retry&gt;200)return 0;
+    }
+    return SPI5-&gt;DR;			<span class="cmt">// 读走数据，同时清 RXNE</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：查询式 SPI 的边界</div>
+                        <ol>
+                            <li>SPI 是主机驱动的同步总线，发一个字节就自动收一个字节，所以读函数本质是“写 0xFF 换回数据”。</li>
+                            <li><code>retry</code> 上限 200 是软件兜底：若 SPI5 时钟没使能或引脚复用错，程序不会永久卡死，而是返回 0，表现为读 ID 得到 0x0000。</li>
+                            <li>整个过程没有关中断，也没有临界区；<code>SysTick</code> 仍每 88.9µs 打断一次，但因为不参与 SPI 时序，不影响通信。</li>
+                            <li>代价是 CPU 全程忙等：45MHz 下读 4KB 约 0.73ms，CPU 这段时间做不了别的事；若要提速应改 DMA，本工程未体现。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="主循环与现象">
+                    <h2>12　主循环与现象</h2>
+                    <div class="sec-sub">两路按键分支 + 200ms 心跳；每一步都能在 LCD 与 DS0 上看到结果</div>
+
+                    <figure class="figure">
+                        <img src="./index41-map/main-loop.png" alt="实验27 主循环的按键分支与心跳流程">
+                        <figcaption>图 12-1　主循环：KEY1 写、KEY0 读、i==20 翻转 DS0</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>可观察现象</th><th>对应代码</th></tr>
+                        <tr><td>上电且芯片正常</td><td>LCD 显示 <code>W25Q256 Ready!</code>，DS0 常亮/常灭不再闪错</td><td><code>while(W25QXX_ReadID()!=W25Q256)</code> 之后的提示</td></tr>
+                        <tr><td>芯片异常或未焊</td><td><code>W25Q256 Check Failed!</code> 与 <code>Please Check!</code> 交替，DS0 500ms 闪</td><td>ID 检查循环</td></tr>
+                        <tr><td>按 KEY1（PH2）</td><td>先显示 <code>Start Write...</code>，约几十毫秒后变 <code>Write Finished!</code></td><td><code>W25QXX_Write((u8*)TEXT_Buffer,FLASH_SIZE-100,SIZE)</code></td></tr>
+                        <tr><td>按 KEY0（PH3）</td><td>显示 <code>The Data Readed Is:</code> 与字符串 <code>Apollo STM32F4 SPI TEST</code></td><td><code>W25QXX_Read(datatemp,...)</code></td></tr>
+                        <tr><td>空闲</td><td>DS0 每约 200ms 翻转一次</td><td><code>i==20</code> + <code>delay_ms(10)</code></td></tr>
+                    </table>
+
+                    <div class="sim">
+                        <div class="sim-title">主循环分支演示（仅演示逻辑，不涉及真实硬件）</div>
+                        <div class="sim-buttons">
+                            <button data-key="key1">KEY1 写入</button>
+                            <button data-key="key0">KEY0 读取</button>
+                            <button data-key="tick">走 20 个 10ms</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0</div>
+                            <div class="led-item"><span class="led-dot" id="dot1"></span>DS1</div>
+                        </div>
+                        <div class="sim-log" id="simLog">等待操作：KEY1 写 Flash，KEY0 读 Flash</div>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：现象与分支一一对应</div>
+                        <ol>
+                            <li>KEY1 分支先 <code>LCD_Fill(0,170,239,319,WHITE)</code> 清掉下半屏，再显示两行提示；写完立刻改成 Finished，所以屏幕上只会看到最终结果。</li>
+                            <li>KEY0 分支把 <code>datatemp</code> 直接当字符串传给 <code>LCD_ShowString</code>，因此写入内容必须自带结束符；<code>TEXT_Buffer</code> 是字符串常量，末尾天然有 <code>\0</code>。</li>
+                            <li>两个 <code>if</code> 是并列关系而不是 <code>else if</code>：<code>KEY_Scan</code> 一次只返回一个键值，实际不会同时进入。</li>
+                            <li>心跳计数与按键无关，任何一次循环都会 <code>i++</code> 并 <code>delay_ms(10)</code>，所以 DS0 闪频稳定在 5Hz 左右，可用来判断程序没有卡死。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘">
+                    <h2>13　关键逻辑复盘</h2>
+                    <div class="sec-sub">把“时钟—引脚—模式—片选—地址—扇区”串成一条因果链</div>
+
+                    <table class="data">
+                        <tr><th>层级</th><th>本工程的取值</th><th>如果错了会怎样</th></tr>
+                        <tr><td>系统时钟</td><td>HSE 25M × 360 / 25 / 2 = 180MHz</td><td>SPI 分频基准错，45MHz 变成别的值；Flash 等待周期不足会跑飞</td></tr>
+                        <tr><td>SPI 引脚</td><td>PF7/8/9 复用 AF5</td><td>SCK/MISO/MOSI 不出波形，读 ID 恒为 0xFFFF</td></tr>
+                        <tr><td>SPI 模式</td><td>Mode 3（CPOL=1, CPHA=2EDGE）</td><td>采样边沿错位，命令被从机误读</td></tr>
+                        <tr><td>片选</td><td>PF6 软件控制，低有效</td><td>命令不完整或多颗器件同时响应</td></tr>
+                        <tr><td>地址模式</td><td>0xB7 切 4 字节</td><td>超过 16MB 的地址回绕，读写错位</td></tr>
+                        <tr><td>写算法</td><td>读 4KB → 判 0xFF → 擦 → 回填 → 整体写</td><td>直接写会把同扇区其它数据擦成 0xFF</td></tr>
+                        <tr><td>时基</td><td><code>fac_us=180</code> 轮询延时</td><td>擦除等待不足，BUSY 期间发命令被忽略</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：排错顺序</div>
+                        <ol>
+                            <li>先看 LCD 是否停在 <code>W25Q256 Check Failed!</code>：是，则问题在 SPI5 或片选；否，则硬件链路已通。</li>
+                            <li>读 ID 恒为 0xFFFF：多为 MISO 没数据（芯片没供电/没选中）；恒为 0x0000：多为 SCK 没出来（SPI 未使能/引脚复用错）。</li>
+                            <li>ID 正确但写后读不一致：检查是否漏发 0xB7、写前是否 <code>W25QXX_Write_Enable</code>、每页是否等 BUSY。</li>
+                            <li>只有第一个字节对、后面全 0xFF：典型的跨页写未拆包；本工程由 <code>W25QXX_Write</code> 的 while 循环负责拆扇区，<code>Write_Page</code> 负责拆 256 字节页。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="总结与排查">
+                    <h2>14　总结与排查</h2>
+                    <div class="sec-sub">一句话概括：SPI5 用 Mode 3 在 45MHz 下按 4 字节地址访问 W25Q256，写操作必须先擦后写</div>
+
+                    <p>这个实验的价值在于把“片上外设配置”与“片外器件协议”连了起来：<code>Stm32_Clock_Init</code> 决定 SPI5 的输入频率，<code>SPI5_Init</code> 决定时序模式，<code>W25QXX_Init</code> 决定片选与地址宽度，<code>W25QXX_Write</code> 决定数据完整性。四层任何一层出错，现象都表现为“读不到 ID”或“写进去读不出”，因此排查必须按层缩小范围，而不是盲目改代码。</p>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>优先检查</th><th>依据</th></tr>
+                        <tr><td>LCD 停在 Check Failed</td><td>PF6 是否为高、SPI5 时钟是否使能、PF7/8/9 是否 AF5</td><td><code>W25QXX_Init</code> / <code>HAL_SPI_MspInit</code></td></tr>
+                        <tr><td>读 ID 得 0xEF17 / 0xEF16</td><td>板上芯片不是 W25Q256，容量宏与地址模式要同步改</td><td><code>W25QXX_TYPE</code> 判断</td></tr>
+                        <tr><td>写完成但读回为空</td><td>是否进入 4 字节地址模式、写入地址是否超出容量</td><td>状态寄存器 3 的 ADS 位</td></tr>
+                        <tr><td>写后同扇区其它数据丢失</td><td>写算法是否先读 4KB 再回填</td><td><code>W25QXX_Write</code></td></tr>
+                        <tr><td>偶发失败、手碰杜邦线就好</td><td>45MHz 下信号完整性不足，降分频到 4/8 验证</td><td><code>SPI5_SetSpeed</code></td></tr>
+                    </table>
+
+                    <div class="note">本页所有结论均来自工程文件：<code>USER/main.c</code>、<code>USER/system_stm32f4xx.c</code>、<code>USER/stm32f4xx_it.c</code>、<code>CORE/startup_stm32f429xx.s</code>、<code>SYSTEM/{sys,delay,usart}</code>、<code>HARDWARE/{SPI,W25QXX,KEY,LED,LCD,SDRAM}</code>。工程中未体现的内容（如 DMA 传输、SPI 中断、文件系统）本页不作推测。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-12 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var tickCount = 0;
+        var last = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            simLog.textContent =
+                '最后操作：' + last +
+                '\nDS0：' + (led0On ? '亮' : '灭') +
+                '　心跳计数 i = ' + tickCount + ' / 20';
+        }
+
+        var handlers = {
+            key1: function () {
+                last = 'KEY1 写入';
+                simLog.textContent = 'LCD_Fill 清屏 → W25QXX_Write(32MB-100, 24B) → 显示 Write Finished!';
+                setTimeout(render, 0);
+            },
+            key0: function () {
+                last = 'KEY0 读取';
+                simLog.textContent = 'W25QXX_Read(32MB-100, 24B) → 显示 Apollo STM32F4 SPI TEST';
+                setTimeout(render, 0);
+            },
+            tick: function () {
+                var rounds = 0;
+                while (tickCount < 20) {
+                    tickCount++;
+                    if (tickCount === 20) {
+                        led0On = !led0On;
+                        rounds++;
+                        tickCount = 0;
+                        break;
+                    }
+                    rounds++;
+                }
+                last = '走 ' + rounds + ' 个 10ms';
+                render();
+            }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

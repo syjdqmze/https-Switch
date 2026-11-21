@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Sub-Item 管理页面</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+            margin: 0;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background-color: #c5d8e8; border-radius: 3px; }
+        .sidebar-menu::-webkit-scrollbar-track { background-color: transparent; }
+
+        .sidebar-actions {
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid #dce8f2;
+            flex-shrink: 0;
+        }
+
+        .sidebar-actions button {
+            flex: 1;
+            padding: 5px 0;
+            font-size: 12px;
+            border: 1px solid #dce8f2;
+            background: #fff;
+            color: #999;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .sidebar-actions button:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+            background: #e6f7ff;
+        }
+
+        .sidebar-menu > li {
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu > li > .menu-title {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .sidebar-menu > li > .menu-title:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu > li.active > .menu-title {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu > li.active {
+            border-left-color: #1890ff;
+        }
+
+        .sidebar-menu .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-menu .arrow {
+            margin-left: auto;
+            font-size: 10px;
+            transition: transform .25s;
+            color: #999;
+        }
+
+        .sidebar-menu > li.open > .menu-title .arrow {
+            transform: rotate(90deg);
+        }
+
+        .submenu {
+            list-style: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .3s ease;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu > li.open > .submenu {
+            max-height: 800px;
+        }
+
+        .submenu li {
+            padding: 8px 20px 8px 44px;
+            cursor: pointer;
+            color: #999;
+            font-size: 13px;
+            transition: all .2s;
+            border-left: 3px solid transparent;
+            margin-left: 3px;
+        }
+
+        .submenu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .submenu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* 内容小节标题 */
+        .content-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 22px 0 12px 0;
+            padding: 4px 0 4px 12px;
+            border-left: 4px solid #1890ff;
+            background: linear-gradient(90deg, rgba(24,144,255,0.06), transparent);
+        }
+
+        /* 内容图片 */
+        .content-card img {
+            display: block;
+            max-width: 88%;
+            margin: 14px auto;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+        }
+
+        /* 图注 */
+        .img-caption {
+            text-align: center;
+            color: #888;
+            font-size: 13px;
+            margin: 4px auto 18px auto;
+            max-width: 86%;
+            line-height: 1.6;
+        }
+
+        /* 数据表格 */
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0 18px 0;
+            font-size: 13px;
+        }
+
+        .api-table th {
+            background-color: #1890ff;
+            color: #fff;
+            font-weight: 500;
+            padding: 9px 10px;
+            border: 1px solid #d5e3f0;
+            text-align: left;
+        }
+
+        .api-table td {
+            padding: 8px 10px;
+            border: 1px solid #dce8f2;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .api-table tr:nth-child(even) td {
+            background-color: #f7fafd;
+        }
+
+        /* 代码块 */
+        .code-block {
+            background-color: #282c34;
+            color: #abb2bf;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.65;
+            padding: 14px 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 10px 0 16px 0;
+            white-space: pre;
+        }
+
+        .code-block .cm {
+            color: #7f848e;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">AutoSar实战：车顶灯功能开发全流程</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <div class="sidebar-actions">
+                    <button id="expandAllBtn">全部展开</button>
+                    <button id="collapseAllBtn">全部收起</button>
+                </div>
+                <ul class="sidebar-menu">
+                    <li class="open" data-target="sec-ch1">
+                        <div class="menu-title"><span class="icon">&#9654;</span>案例需求与系统设计<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-1-1">1.1 功能需求描述</li>
+                            <li data-target="sec-1-2">1.2 SWC划分与系统架构</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch2">
+                        <div class="menu-title"><span class="icon">&#9654;</span>系统建模（Developer）<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-2-1">2.1 建模操作步骤</li>
+                            <li data-target="sec-2-2">2.2 系统描述文件</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch3">
+                        <div class="menu-title"><span class="icon">&#9654;</span>ECU配置（Configurator）<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-3-1">3.1 工程创建与输入导入</li>
+                            <li data-target="sec-3-2">3.2 EcuM与Os配置</li>
+                            <li data-target="sec-3-3">3.3 通信栈配置</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch4">
+                        <div class="menu-title"><span class="icon">&#9654;</span>RTE生成与应用层代码<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-4-1">4.1 RTE生成原理</li>
+                            <li data-target="sec-4-2">4.2 Runnable与OS任务映射</li>
+                            <li data-target="sec-4-3">4.3 车顶灯应用代码实现</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch5">
+                        <div class="menu-title"><span class="icon">&#9654;</span>集成编译与总线验证<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-5-1">5.1 编译链接与烧录</li>
+                            <li data-target="sec-5-2">5.2 总线验证与自动化测试</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ch6">
+                        <div class="menu-title"><span class="icon">&#9654;</span>常见问题与最佳实践<span class="arrow">&#9654;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-6-1">6.1 常见问题排查</li>
+                            <li data-target="sec-6-2">6.2 最佳实践建议</li>
+                        </ul>
+                    </li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+                        <h3>AutoSar实战：以车顶灯功能为例的开发全流程</h3>
+                        <p>本篇以车顶灯控制功能为例（承接<a href="index06.html">方法论篇</a>中图1-1的 7 个 SWC 划分），完整走通从需求设计、DaVinci Developer 系统建模、DaVinci Configurator BSW 配置、RTE 生成、应用层代码填充，到编译烧录与总线验证的全流程。每一步给出工具配置方法示意与关键配置代码。</p>
+
+                        <!-- ============ 第一章 ============ -->
+                        <h3 id="sec-ch1">一、案例需求与系统设计</h3>
+                        <h4 id="sec-1-1">1.1 功能需求描述</h4>
+                        <p>需求：驾驶员按下左/右车门上的门开关时，对应侧车内顶灯点亮；开关松开后顶灯半亮（延时调光）；总开关关闭时全部熄灭。该功能横跨两颗 ECU——门开关信号在车门 ECU 采集，顶灯驱动在车顶灯 ECU 执行，两者通过 CAN 总线通信。</p>
+                        <table class="api-table">
+                            <tr><th>条目</th><th>内容</th></tr>
+                            <tr><td>输入</td><td>左/右车门开关状态（车门 ECU 的 GPIO/ADC 采集，经消抖）</td></tr>
+                            <tr><td>输出</td><td>左/右顶灯驱动（车顶灯 ECU 输出调光 PWM）</td></tr>
+                            <tr><td>跨ECU通信</td><td>车灯命令 lampCmd（uint8：0=关灯 1=左灯全亮 2=左灯半亮 3=右灯全亮 4=右灯半亮），CAN 报文 ID=0x201，周期 20ms，500kbps</td></tr>
+                            <tr><td>时序要求</td><td>从开关动作到顶灯响应 ≤ 100ms（含消抖与总线传输）</td></tr>
+                        </table>
+
+                        <h4 id="sec-1-2">1.2 SWC 划分与系统架构</h4>
+                        <p>按"高内聚低耦合"原则，把功能拆解为 7 个 SWC（详见方法论篇图1-1）：车门 ECU 侧为传感器SWC（左/右门开关）与车门开关逻辑SWC；车顶灯 ECU 侧为调光控制器SWC、执行器SWC（左/右顶灯）与传感器SWC（车灯总开关）。本篇聚焦核心链路：<strong>车门开关逻辑SWC（DoorSwitchLogic）→ 车灯命令 → 调光控制器SWC（RoofLampCtrl）</strong>这条跨 ECU 的 S/R 通信。</p>
+                        <img src="index07-map/d7-01.png" alt="车顶灯SWC划分">
+                        <div class="img-caption">图1-1 车顶灯例子的 SWC 划分（此图未画出 ECU 边界）：传感器SWC（右门开关、左门开关）、车门开关逻辑SWC、调光控制器SWC、执行器SWC（右顶灯、左顶灯）、传感器SWC（车灯开关），共 7 个 SWC 及其端口连接关系（承自方法论篇图1-1）</div>
+
+                        <!-- ============ 第二章 ============ -->
+                        <h3 id="sec-ch2">二、系统建模（Developer）</h3>
+                        <h4 id="sec-2-1">2.1 建模操作步骤</h4>
+                        <p>打开 DaVinci Developer，像画电路图一样设计软件"蓝图"。此阶段不写任何 C 代码，也不关心组件部署在哪颗 MCU 上。动手建模前，先确认本章的输入内容与前置条件是否齐备：</p>
+                        <table class="api-table">
+                            <tr><th>类别</th><th>条目</th><th>内容说明</th></tr>
+                            <tr><td rowspan="3"><strong>输入内容</strong></td><td>功能需求</td><td>1.1 节的需求描述与时序要求（开关动作→顶灯响应 ≤ 100ms），决定接口数据定义与后续触发周期</td></tr>
+                            <tr><td>SWC 划分方案</td><td>1.2 节确定的 7 个 SWC 清单及端口连接关系（评审通过），本篇重点为 DoorSwitchLogic → RoofLampCtrl 跨 ECU 链路</td></tr>
+                            <tr><td>通信参数约定</td><td>跨 ECU 通信定义：CAN 报文 ID=0x201、周期 20ms、500kbps，lampCmd 取值表（0=关灯 1~4=左/右灯全亮/半亮）</td></tr>
+                            <tr><td rowspan="4"><strong>前置条件</strong></td><td>工具环境</td><td>DaVinci Developer 已安装并加载有效许可证（如提示无许可证，需运行 Vector License Client 加载）</td></tr>
+                            <tr><td>规范版本</td><td>工具的 AUTOSAR 模板版本与目标平台一致（本例为 Classic Platform），避免后续 Configurator 导入 arxml 时报版本不匹配</td></tr>
+                            <tr><td>命名规范</td><td>团队已约定端口前缀（pp = provided、r = required）及接口/数据元素命名规则，建模全程统一遵守</td></tr>
+                            <tr><td>角色分工</td><td>SWC 划分方案已由系统架构师评审确认，建模工程师熟悉 DaVinci Developer 基本操作（新建组件、接口、端口、连线、导出）</td></tr>
+                        </table>
+                        <p>输入与条件齐备后，按以下步骤操作：</p>
+                        <p><strong>（1）创建 SWC</strong>：菜单 File → New → Software Component（或在 Project Explorer 的 Components 节点右键创建），DoorSwitchLogic、RoofLampCtrl 组件类型选 Application Component（应用逻辑组件），并按 1.2 节清单补齐其余 5 个传感器/执行器组件；命名采用"功能语义 + 大驼峰"风格，组件 UUID 由工具自动生成，导出 arxml 时作为唯一标识。</p>
+                        <p><strong>（2）定义 S/R 接口</strong>：在 Interfaces 根节点右键 → Create Sender/Receiver Interface，创建 <strong>LampCmd_I</strong>；选中接口后添加数据元素 lampCmd，并在属性面板设置关键属性：</p>
+                        <table class="api-table">
+                            <tr><th>属性</th><th>设置值</th><th>说明</th></tr>
+                            <tr><td>数据类型</td><td>uint8</td><td>1 字节，取值 0~4（0=关灯，1~4=左/右灯全亮/半亮）</td></tr>
+                            <tr><td>初始值 Init Value</td><td>0</td><td>0=关灯，防止上电读到随机值误点亮顶灯</td></tr>
+                            <tr><td>传输模式</td><td>非排队（Last is Best）</td><td>周期 20ms 覆盖式更新，接收端始终读到最新命令</td></tr>
+                        </table>
+                        <p><strong>（3）添加端口</strong>：选中 SWC 右键 → Add Port → Sender/Receiver Port，绑定到 LampCmd_I。本篇核心链路只有两个端口：</p>
+                        <table class="api-table">
+                            <tr><th>端口名</th><th>所属 SWC</th><th>端口类型</th><th>通信方向</th><th>绑定接口</th></tr>
+                            <tr><td>ppLampCmd</td><td>DoorSwitchLogic</td><td>P-Port（provided）</td><td>Sender（发送）</td><td>LampCmd_I</td></tr>
+                            <tr><td>rLampCmd</td><td>RoofLampCtrl</td><td>R-Port（required）</td><td>Receiver（接收）</td><td>LampCmd_I</td></tr>
+                        </table>
+                        <p><strong>（4）连线建立 Assembly Connector</strong>：在 Composition Editor 画布中，从 DoorSwitchLogic 的 ppLampCmd 拖拽到 RoofLampCtrl 的 rLampCmd，工具校验两端绑定接口完全一致后自动生成连线；若连线失败，多半是端口绑定了不同接口或数据元素类型不一致。本例的连线描述的是跨 ECU 的"逻辑数据流"，物理传输路径（CAN 报文打包与收发）由第三章通信栈配置落地。</p>
+                        <p><strong>（5）导出 system.arxml</strong>：先运行模型校验（Validate），确认无未绑定端口的悬空 SWC、无不一致连线，再 File → Export 导出 system.arxml；导出路径避免中文与空格，与 3.1 节 Configurator 工程创建要求保持一致。</p>
+                        <p><strong>（6）命名规范检查</strong>：逐项核对三处命名——SWC 名、端口名（pp/r 前缀与端口方向对应）、数据元素名。这些名字会被 RTE 原样编进生成的 API（见 4.1 节 Rte_Write_DoorSwitchLogic_ppLampCmd_lampCmd），建模阶段的拼写错误会一路带到应用代码的调用处，集成时才暴露，排查代价高。</p>
+                        <p><strong>（7）定义 Runnable 与触发事件</strong>：在 SWC 的 Internal Behavior 中创建运行实体（如 DoorSwitchLogic_Main、RoofLampCtrl_Main），触发方式为周期型（20ms，与通信周期一致）。Runnable 此刻只是"函数模板"，真正挂载到哪个 OS 任务由 4.2 节的映射步骤完成。</p>
+                        <img src="index07-map/d7-02.png" alt="DaVinci Developer建模示意">
+                        <div class="img-caption">图2-1 DaVinci Developer 车顶灯案例 SWC 建模示意（依参考文章文字描述绘制）：左侧 Project Explorer 树中创建 SWC 与接口，中间画布完成 ppLampCmd→rLampCmd 的端口连线，右侧属性面板设置数据元素类型与周期，最终导出 system.arxml</div>
+
+                        <h4 id="sec-2-2">2.2 系统描述文件</h4>
+                        <p>导出的 system.arxml 是 AUTOSAR 的通用描述语言（XML 格式的"系统说明书"），记录所有组件、接口、端口及连接关系，是后续所有工具的"共同语言"。车灯命令接口的片段如下：</p>
+                        <div class="code-block">&lt;!-- SR接口定义：车灯命令 --&gt;
+&lt;SR-INTERFACE UUID="..."&gt;
+  &lt;SHORT-NAME&gt;LampCmd_I&lt;/SHORT-NAME&gt;
+  &lt;DATA-ELEMENTS&gt;
+    &lt;VARIABLE-DATA-PROTOTYPE&gt;
+      &lt;SHORT-NAME&gt;lampCmd&lt;/SHORT-NAME&gt;
+      &lt;TYPE-TREF DEST="APPLICATION-PRIMITIVE-DATA-TYPE"&gt;uint8&lt;/TYPE-TREF&gt;
+      &lt;INIT-VALUE&gt;&lt;VT&gt;0&lt;/VT&gt;&lt;/INIT-VALUE&gt;  <span class="cm">&lt;!-- 初始值0=关灯，防止上电随机值 --&gt;</span>
+    &lt;/VARIABLE-DATA-PROTOTYPE&gt;
+  &lt;/DATA-ELEMENTS&gt;
+&lt;/SR-INTERFACE&gt;
+
+<span class="cm">&lt;!-- DoorSwitchLogic 的发送端口（P-Port） --&gt;</span>
+&lt;PORT-PROTOTYPE&gt;
+  &lt;SHORT-NAME&gt;ppLampCmd&lt;/SHORT-NAME&gt;
+  &lt;PROVIDED-INTERFACE-TREF DEST="SENDER-RECEIVER-INTERFACE"&gt;/Interfaces/LampCmd_I&lt;/PROVIDED-INTERFACE-TREF&gt;
+&lt;/PORT-PROTOTYPE&gt;</div>
+                        <p>注意命名规范：pp = providing port（发送端口），r = receiving/required port（接收端口）。虽然只是字符串，但如果拼错或语义混乱，后面集成一定会出问题。</p>
+
+                        <!-- ============ 第三章 ============ -->
+                        <h3 id="sec-ch3">三、ECU配置（Configurator）</h3>
+                        <h4 id="sec-3-1">3.1 工程创建与输入导入</h4>
+                        <p>DaVinci Developer 画"设计图"，DaVinci Configurator Pro（DCP）做"施工图"——把抽象的软件架构映射到具体 ECU 硬件上。工程创建三步：</p>
+                        <p>（1）<strong>新建工程</strong>：File → New → Project，选择 AUTOSAR ECU Project 模板，工程名 RoofLampECU，安装路径不要有中文或空格；</p>
+                        <p>（2）<strong>导入输入文件</strong>：File → Import 导入 Developer 导出的 system.arxml（含车顶灯 SWC）、AUTOSAR BSW 包（MICROSAR，由芯片厂商或 Vector 提供）、MCU 数据库（描述 CAN 控制器数量、内存映射等外设资源），通信矩阵 .dbc 可选导入；</p>
+                        <p>（3）<strong>设置 ECU 信息</strong>：ECU 名称、供应商 ID 等；启动时若提示 "No license for AUTOSAR Explorer2" 则是许可证未加载，需运行 Vector License Client。</p>
+                        <img src="index07-map/d7-03.png" alt="Configurator工程创建与导入">
+                        <div class="img-caption">图3-1 DaVinci Configurator Pro 工程创建与输入导入示意（依参考文章文字描述绘制）：新建工程 → 导入 system.arxml/BSW包/MCU数据库 → 设置 ECU 信息；导入后 EcuC 中出现全部待配置 BSW 模块，System 中自动解析出本 ECU 包含的 SWC</div>
+                        <p>导入完成后，Project Explorer 中的 EcuC 是核心配置节点，所有 BSW 模块配置都在其下以容器（ECUC Container）、参数（ECUC Parameter）、引用（ECUC Reference）三种元素展开。配置工作的本质，就是生成和编辑 ECU 配置描述文件（.ecuc）。</p>
+
+                        <h4 id="sec-3-2">3.2 EcuM 与 Os 配置</h4>
+                        <p><strong>EcuM（ECU状态管理器）</strong>负责上电、下电、睡眠与唤醒。在 EcuC → EcuM 下右键创建 EcuMGeneral 容器，配置默认关机目标与复位原因；若需睡眠功能，还要配置唤醒源（CAN 总线唤醒、KL15 等）：</p>
+                        <div class="code-block">&lt;!-- EcuM 通用配置容器（arxml表示，帮助理解结构） --&gt;
+&lt;ECUC-CONTAINER-VALUE&gt;
+  &lt;SHORT-NAME&gt;EcuMGeneral&lt;/SHORT-NAME&gt;
+  &lt;DEFINITION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF"&gt;/AUTOSAR/EcuM/EcuMGeneral&lt;/DEFINITION-REF&gt;
+  &lt;PARAMETER-VALUES&gt;
+    &lt;ECUC-NUMERICAL-PARAM-VALUE&gt;
+      &lt;DEFINITION-REF DEST="ECUC-INTEGER-PARAM-DEF"&gt;.../EcuMDefaultShutdownTarget&lt;/DEFINITION-REF&gt;
+      &lt;VALUE&gt;ECUM_STATE_SLEEP&lt;/VALUE&gt;  <span class="cm">&lt;!-- 默认关机目标：睡眠 --&gt;</span>
+    &lt;/ECUC-NUMERICAL-PARAM-VALUE&gt;
+  &lt;/PARAMETER-VALUES&gt;
+&lt;/ECUC-CONTAINER-VALUE&gt;</div>
+                        <p><strong>Os（操作系统）</strong>是静态配置的，需配置应用、任务、计数器与警报。车顶灯 ECU 创建 OsApplication "App1"；任务 Task_20ms（优先级 10，完全抢占，Autostart=true，函数体 Task_20ms_Func）；计数器 SystemCounter（1ms 一个 tick）；警报 Alarm_20ms 关联 SystemCounter、周期 20、激活 Task_20ms——这样警报每 20ms 到期一次就触发一次车灯命令的发送：</p>
+                        <div class="code-block">&lt;!-- OsTask 配置片段 --&gt;
+&lt;ECUC-CONTAINER-VALUE&gt;
+  &lt;SHORT-NAME&gt;Task_20ms&lt;/SHORT-NAME&gt;
+  &lt;DEFINITION-REF DEST="ECUC-PARAM-CONF-CONTAINER-DEF"&gt;/AUTOSAR/Os/OsTask&lt;/DEFINITION-REF&gt;
+  &lt;PARAMETER-VALUES&gt;
+    &lt;ECUC-NUMERICAL-PARAM-VALUE&gt;
+      &lt;DEFINITION-REF ...&gt;.../OsTask/Priority&lt;/DEFINITION-REF&gt;
+      &lt;VALUE&gt;10&lt;/VALUE&gt;  <span class="cm">&lt;!-- 优先级10，AUTOSAR Os中优先级唯一 --&gt;</span>
+    &lt;/ECUC-NUMERICAL-PARAM-VALUE&gt;
+    &lt;ECUC-TEXTUAL-PARAM-VALUE&gt;
+      &lt;DEFINITION-REF ...&gt;.../OsTask/TaskBody&lt;/DEFINITION-REF&gt;
+      &lt;VALUE&gt;Task_20ms_Func&lt;/VALUE&gt;  <span class="cm">&lt;!-- 关联的C函数名，应用层实现 --&gt;</span>
+    &lt;/ECUC-TEXTUAL-PARAM-VALUE&gt;
+  &lt;/PARAMETER-VALUES&gt;
+&lt;/ECUC-CONTAINER-VALUE&gt;</div>
+                        <p>任务堆栈 StackSize 需按函数调用深度与局部变量估算并留余量：过小会溢出，过大会浪费内存。</p>
+
+                        <h4 id="sec-3-3">3.3 通信栈配置</h4>
+                        <p>通信栈自上而下为 Com → PduR → CanIf → Can，把 lampCmd 信号从应用层一路送到 CAN 总线：</p>
+                        <img src="index07-map/d7-04.png" alt="通信栈配置示意">
+                        <div class="img-caption">图3-2 DaVinci Configurator Pro 车顶灯 ECU 通信栈配置示意（依参考文章文字描述绘制）：左侧 EcuC 配置树自上而下 Com/PduR/CanIf/Can，中间为发送链路，右侧为关键参数（波特率 500kbps、CanId 0x201、周期 20ms）——IPdu 触发引用必须关联到 CanIfHthId，引用链断裂是发送失败的常见原因</div>
+                        <p>（1）<strong>Can 模块（硬件层）</strong>：创建 CanController_0，CanControllerBaudRate=500000（500kbps），位时间片参数（PropSeg/Seg1/Seg2）按 MCU 时钟由工具自动推荐；创建发送硬件对象 HTH_0（TRANSMIT，CanId=0x201）。</p>
+                        <p>（2）<strong>CanIf 模块（接口层）</strong>：创建 CanIfCtrlCfg 引用 CanController_0；创建 CanIfHthCfg 引用 HTH_0 并分配 CanIfHthId=0。车门 ECU 对称配置为接收（HRH + RECEIVE IPdu）。</p>
+                        <p>（3）<strong>Com 模块（通信层）</strong>：创建信号 ComSignal_LampCmd（uint8，BitPosition=0，Size=8，InitValue=0）；创建 PDU ComIPdu_RoofLamp01（DLC=8，周期 20ms），把信号映射进 PDU，并将 IPdu 触发引用关联到 CanIfHthId 0。</p>
+                        <p>（4）<strong>PduR 模块</strong>：路由表中添加"Com 发送 IPdu → CanIf"表项。</p>
+                        <p>点击 Generate Code 后，工具生成符合 AUTOSAR 规范的 BSW 配置代码（字段顺序、内存对齐都不用操心），例如 CAN 控制器配置：</p>
+                        <div class="code-block"><span class="cm">/* 自动生成的 CAN 控制器配置（片段） */</span>
+const Can_ControllerConfigType CanControllerConfigSet[] = {
+    {
+        .CanControllerId = CanConf_CanController_CAN1,
+        .CanControllerBaseAddress = (Can_RegType*)(&amp;CAN1),
+        .CanControllerDefaultBaudrate = &amp;CanBaudrateConfigSet[0], <span class="cm">/* 500kbps */</span>
+        .CanWakeupSource = CAN_WU_SRC_CAN1,
+        .CanControllerActivation = TRUE
+    }
+};</div>
+                        <p>更换 MCU 平台时，只需切换硬件描述文件，大部分配置可复用，大幅提升移植效率。通信矩阵复杂时，可从 .dbc 直接 Database Import，工具自动生成 Com/PduR 配置骨架，避免逐条手建。</p>
+
+                        <!-- ============ 第四章 ============ -->
+                        <h3 id="sec-ch4">四、RTE生成与应用层代码</h3>
+                        <h4 id="sec-4-1">4.1 RTE 生成原理</h4>
+                        <p>RTE 是 AUTOSAR 架构中最关键的"粘合剂"——它把 Developer 里画的"连线"变成真正的函数调用。应用层不直接调 Can_Write()，而是调 RTE 生成的包装函数：</p>
+                        <img src="index07-map/d7-05.png" alt="RTE生成与代码集成">
+                        <div class="img-caption">图4-1 RTE 生成与代码集成示意（依参考文章文字描述绘制）：RTE Generator 按端口连接生成 Rte.c/Rte.h 包装函数与 BSW 配置代码；应用层只调 RTE API、不知道 CAN 的存在，BSW 完成通信细节，RTE 把两者粘起来</div>
+                        <div class="code-block"><span class="cm">/* RTE Generator 自动生成的包装函数（示意） */</span>
+Std_ReturnType Rte_Write_DoorSwitchLogic_ppLampCmd_lampCmd(uint8 lampCmd)
+{
+    return Com_SendSignal(ComConf_ComSignal_LampCmd, &amp;lampCmd);
+}
+
+<span class="cm">/* 接收侧（车顶灯ECU）生成的读取函数 */</span>
+Std_ReturnType Rte_Read_RoofLampCtrl_rLampCmd_lampCmd(uint8 *lampCmd)
+{
+    return Com_ReceiveSignal(ComConf_ComSignal_LampCmd, lampCmd);
+}</div>
+                        <p>RTE 带来四大好处：<strong>通信透明</strong>（应用层不关心数据走 CAN/LIN 还是以太网）、<strong>位置无关</strong>（SWC 挪到另一颗 ECU，应用 API 不变）、<strong>调度解耦</strong>（触发条件定时/事件可改，不影响其他模块）、<strong>便于测试</strong>（仿真环境可模拟信号收发，无需真实硬件）。有了 RTE，应用代码几乎可以"一次编写，到处部署"。</p>
+
+                        <h4 id="sec-4-2">4.2 Runnable 与 OS 任务映射</h4>
+                        <p>SWC 内部逻辑封装在 Runnable（运行实体）中，但 Runnable 必须 mapping（映射）到 OS 任务才能被调度——未映射的 Runnable 只是普通函数，Configurator 还会报错。映射通用规则：同类型/同周期的 Runnable 归并到同一任务，优先级匹配，多核时负载均衡。两颗 ECU 的 Runnable 映射关系：</p>
+                        <table class="api-table">
+                            <tr><th>Runnable</th><th>所属SWC</th><th>映射任务</th><th>触发方式</th></tr>
+                            <tr><td>DoorSwitchLogic_Main</td><td>DoorSwitchLogic</td><td>Task_20ms（车门ECU）</td><td>20ms 周期</td></tr>
+                            <tr><td>RoofLampCtrl_Main</td><td>RoofLampCtrl</td><td>Task_20ms（车顶灯ECU）</td><td>20ms 周期</td></tr>
+                        </table>
+                        <p>主函数与 OS 调度框架：</p>
+                        <div class="code-block"><span class="cm">/* main.c — ECU启动与调度框架 */</span>
+int main(void)
+{
+    EcuM_Init();          <span class="cm">/* EcuM完成上电初始化，最终启动OS */</span>
+    while(1)
+    {
+        Os_Dispatch();    <span class="cm">/* 触发周期性任务 */</span>
+    }
+}
+
+<span class="cm">/* Task_20ms.c — 20ms任务骨架（由OsAlarm_20ms周期激活） */</span>
+TASK(Task_20ms)
+{
+    DoorSwitchLogic_Main();   <span class="cm">/* runnable映射进任务 */</span>
+    Com_MainFunction();       <span class="cm">/* Com主函数：打包发送/超时监控 */</span>
+    TerminateTask();
+}</div>
+
+                        <h4 id="sec-4-3">4.3 车顶灯应用代码实现</h4>
+                        <p><strong>车门 ECU 侧</strong>——DoorSwitchLogic 的 runnable：读取左右门开关（经去抖），计算车灯命令并经 RTE 发送：</p>
+                        <div class="code-block"><span class="cm">/* DoorSwitchLogic.c — 车门开关逻辑SWC（车门ECU，手写代码） */</span>
+#include "Rte_DoorSwitchLogic.h"
+
+<span class="cm">/* 开关消抖：连续N次采样一致才确认状态变化 */</span>
+#define DEBOUNCE_CNT  3U
+
+<span class="cm">/* 每个开关的消抖/状态记忆（左、右各一份） */</span>
+typedef struct {
+    uint8 stable;   <span class="cm">/* 消抖后的稳定状态 */</span>
+    uint8 cnt;      <span class="cm">/* 连续不一致计数 */</span>
+    boolean wasOn;  <span class="cm">/* 上一周期是否按下（用于识别"松开"沿） */</span>
+} SwDebState_t;
+
+static SwDebState_t debL = {0U, 0U, FALSE};
+static SwDebState_t debR = {0U, 0U, FALSE};
+
+static uint8 Debounce(uint8 raw, uint8 *stable, uint8 *cnt)
+{
+    if (raw != *stable) {
+        if (++(*cnt) &gt;= DEBOUNCE_CNT) {   <span class="cm">/* 连续3次一致 → 确认 */</span>
+            *stable = raw;
+            *cnt = 0U;
+        }
+    } else {
+        *cnt = 0U;
+    }
+    return *stable;
+}
+
+<span class="cm">/* runnable：20ms周期调用（映射到Task_20ms） */</span>
+FUNC(void, DoorSwitchLogic_CODE) DoorSwitchLogic_Main(void)
+{
+    uint8 stL, stR;
+    uint8 rL, rR;
+    uint8 lampCmd;
+
+    <span class="cm">/* 1. 经RTE读取两个门开关SWC的数据（R-Port，S/R接口直接读） */</span>
+    (void)Rte_Read_DoorSwitchLogic_rDoorStL_state(&amp;stL);
+    (void)Rte_Read_DoorSwitchLogic_rDoorStR_state(&amp;stR);
+
+    <span class="cm">/* 2. 软件消抖 */</span>
+    rL = Debounce(stL, &amp;debL.stable, &amp;debL.cnt);
+    rR = Debounce(stR, &amp;debR.stable, &amp;debR.cnt);
+
+    <span class="cm">/* 3. 逻辑：按下→全亮；由按下变松开→半亮；无动作→维持关灯 */</span>
+    if      (rL == 1U) { lampCmd = 1U; debL.wasOn = TRUE; }
+    else if (debL.wasOn)               { lampCmd = 2U; debL.wasOn = FALSE; }
+    else if (rR == 1U) { lampCmd = 3U; debR.wasOn = TRUE; }
+    else if (debR.wasOn)               { lampCmd = 4U; debR.wasOn = FALSE; }
+    else               { lampCmd = 0U; }
+
+    <span class="cm">/* 4. 经RTE发送（应用层不知道数据将走CAN总线） */</span>
+    (void)Rte_Write_DoorSwitchLogic_ppLampCmd_lampCmd(lampCmd);
+}</div>
+                        <p><strong>车顶灯 ECU 侧</strong>——RoofLampCtrl 的 runnable：接收车灯命令，计算调光占空比并驱动顶灯：</p>
+                        <div class="code-block"><span class="cm">/* RoofLampCtrl.c — 调光控制器SWC（车顶灯ECU，手写代码） */</span>
+#include "Rte_RoofLampCtrl.h"
+
+<span class="cm">/* 命令值 → PWM占空比（按MCAL Pwm规范：0x8000=100%，0x4000=50%，0x0000=0%） */</span>
+static uint16 CmdToDuty(uint8 cmd)
+{
+    switch (cmd) {
+        case 1U: return 0x8000U;  <span class="cm">/* 左灯全亮（100%） */</span>
+        case 2U: return 0x4000U;  <span class="cm">/* 左灯半亮（50%） */</span>
+        case 3U: return 0x8000U;  <span class="cm">/* 右灯全亮（100%） */</span>
+        case 4U: return 0x4000U;  <span class="cm">/* 右灯半亮（50%） */</span>
+        default: return 0x0000U;  <span class="cm">/* 关灯 */</span>
+    }
+}
+
+<span class="cm">/* runnable：20ms周期调用 */</span>
+FUNC(void, RoofLampCtrl_CODE) RoofLampCtrl_Main(void)
+{
+    uint8 lampCmd = 0U;
+    uint16 duty;
+
+    <span class="cm">/* 1. 经RTE接收车门ECU发来的命令（跨ECU：RTE→Com→PduR→CanIf→Can） */</span>
+    (void)Rte_Read_RoofLampCtrl_rLampCmd_lampCmd(&amp;lampCmd);
+
+    <span class="cm">/* 2. 命令译码 → 占空比 */</span>
+    duty = CmdToDuty(lampCmd);
+
+    <span class="cm">/* 3. 按左/右方向分别写MCAL的Pwm通道（IoHwAb封装后调用） */</span>
+    if (lampCmd == 1U || lampCmd == 2U) {
+        IoHwAb_Pwm_SetDuty(PWM_CH_LAMP_L, duty);   <span class="cm">/* 左顶灯 */</span>
+        IoHwAb_Pwm_SetDuty(PWM_CH_LAMP_R, 0x0000U);
+    } else if (lampCmd == 3U || lampCmd == 4U) {
+        IoHwAb_Pwm_SetDuty(PWM_CH_LAMP_L, 0x0000U);
+        IoHwAb_Pwm_SetDuty(PWM_CH_LAMP_R, duty);   <span class="cm">/* 右顶灯 */</span>
+    } else {
+        IoHwAb_Pwm_SetDuty(PWM_CH_LAMP_L, 0x0000U);
+        IoHwAb_Pwm_SetDuty(PWM_CH_LAMP_R, 0x0000U);
+    }
+}</div>
+                        <p>说明：lampCmd 初始值在 arxml 中定义为 0，DaVinci 生成代码时会自动初始化缓冲区，避免上电瞬间 RTE 传递随机内存值；车门 ECU 与车顶灯 ECU 的代码可完全并行开发——这正是 RTE"位置无关"带来的好处。</p>
+
+                        <!-- ============ 第五章 ============ -->
+                        <h3 id="sec-ch5">五、集成编译与总线验证</h3>
+                        <h4 id="sec-5-1">5.1 编译链接与烧录</h4>
+                        <p>将生成的所有代码（Rte.c/Rte.h、Com.c、Can.c、Os.c 等配置代码）与应用层手写代码合并，在 IDE 中添加源文件并将生成目录加入编译器包含路径（Include Paths），随后编译、烧录：</p>
+                        <p>（1）使用 Tasking 或 GCC 编译整个工程，生成 .hex/.elf 可执行文件；</p>
+                        <p>（2）烧录进 MCU（车门 ECU 与车顶灯 ECU 各一份）；</p>
+                        <p>（3）上电后 EcuM_Init 完成模块初始化（顺序由 BswM 决定：先 Mcu、Can，再 Com、Dcm，防止 CAN 控制器未就绪导致通信失败），StartOS 后任务开始周期调度。</p>
+
+                        <h4 id="sec-5-2">5.2 总线验证与自动化测试</h4>
+                        <p>打开 CANalyzer（或 CANoe），通过 VN16xx 接口卡接入 CAN 总线，加载 DBC/ARXML 后自动解析报文。拨动车门开关，应能捕获到周期 20ms 的 0x201 报文，且数据随开关状态变化：</p>
+                        <img src="index07-map/d7-06.png" alt="总线验证示意">
+                        <div class="img-caption">图5-1 CANoe/CANalyzer 总线验证示意（依参考文章文字描述绘制）：Trace 窗口中 0x201 报文以 20ms 周期连续发送，数据首字节 lampCmd 随开关动作在 0~4 之间变化；右侧为验证步骤与 CAPL 自动化测试片段</div>
+                        <p>CANoe 不只是"抓包工具"，还可以构建虚拟验证环境：模拟缺失 ECU 的行为、注入错误帧测试容错机制、统计总线负载率等 KPI，并可用 CAPL 脚本做自动化测试：</p>
+                        <div class="code-block"><span class="cm">/* CAPL自动化测试：校验lampCmd在5秒内按规则更新 */</span>
+testcase Check_LampCmd_Update()
+{
+    long startTime;
+    int  lastCmd;
+    startTime = timeNow();
+    lastCmd = -1;
+
+    while ((timeNow() - startTime) &lt; 5000)   <span class="cm">/* 监听5秒 */</span>
+    {
+        if (this.lampCmd != lastCmd &amp;&amp; this.lampCmd &gt;= 0 &amp;&amp; this.lampCmd &lt;= 4)
+        {
+            passTest("lampCmd updated: %d -&gt; %d", lastCmd, this.lampCmd);
+            lastCmd = this.lampCmd;
+        }
+        testWaitForTimeout(10);   <span class="cm">/* 避免CPU占用过高 */</span>
+    }
+    if (lastCmd == -1)
+    {
+        failTest("No valid lampCmd received within 5 seconds");
+    }
+}</div>
+                        <p>至此，"建模 → 配置 → 生成 → 验证"的闭环完成：车顶灯功能从一份需求变成了总线上真实可测的报文。</p>
+
+                        <!-- ============ 第六章 ============ -->
+                        <h3 id="sec-ch6">六、常见问题与最佳实践</h3>
+                        <h4 id="sec-6-1">6.1 常见问题排查</h4>
+                        <p>新手用 DaVinci 工具链最容易踩以下几类"雷"：</p>
+                        <table class="api-table">
+                            <tr><th>问题现象</th><th>可能原因</th><th>排查与解决</th></tr>
+                            <tr><td>DCP 无法加载 Developer 导出的 arxml</td><td>工具版本不匹配（如 Developer 用 AUTOSAR 4.4、DCP 只支持 4.3）</td><td>统一工具版本，或导出时选择向下兼容模式</td></tr>
+                            <tr><td>代码编译通过，但信号没发出来</td><td>Com 未启用周期发送；Runnable 未映射到任务；IPdu 未关联 CanIfHth；CAN 控制器未激活</td><td>用 DCP 的 Dependency Check / Validate 查缺失依赖；按 Com IPdu → CanIf Hth → Can HOH → CanController 逐层检查</td></tr>
+                            <tr><td>总线负载过高</td><td>信号频繁发送且未合理打包</td><td>合并低优先级信号到同一 PDU；调整非关键信号周期（如 10ms→50ms）；用 Com SignalGroup 减少调度开销</td></tr>
+                            <tr><td>上电瞬间收到随机值</td><td>信号未定义初始值</td><td>在 arxml 中明确 INIT-VALUE（如 lampCmd=0），生成代码自动初始化缓冲区</td></tr>
+                            <tr><td>接收方解析数据错乱</td><td>浮点数直接上总线，字节序/精度不一致</td><td>统一整型 + 缩放因子（factor=0.1），在模型中标注转换规则</td></tr>
+                            <tr><td>Os 任务不执行</td><td>Alarm 周期或 Counter 基准错；优先级冲突；堆栈溢出；未 StartOS</td><td>核对 TicksPerBase 与 CycleTime；检查优先级唯一性；增大栈或用调试器观测；确认 StartOS 已调用</td></tr>
+                            <tr><td>提示 "No license for AUTOSAR Explorer2"</td><td>许可证未加载或过期</td><td>检查 Vector License Client 运行状态，确认许可证文件含所需特性</td></tr>
+                        </table>
+
+                        <h4 id="sec-6-2">6.2 最佳实践建议</h4>
+                        <p>（1）<strong>arxml 管理策略</strong>：按"整车 → 域控制器 → 单 ECU"分层管理；工程文件（.dpa）与应用代码纳入 Git 等版本控制，重大变更前备份并导出 .arxml 基线；</p>
+                        <p>（2）<strong>善用工具校验</strong>：生成代码前务必 Validate，解决所有 error 与 warning（警告也可能隐含问题）；DCP 内置 Rule Checker 能自动检测参数越界、依赖缺失；</p>
+                        <p>（3）<strong>信号布局优化</strong>：高频信号尽量放 PDU 前部减少位填充影响；相关信号（如车速+转速）打包同一帧保证时间一致性；用 Update-Bit 机制避免误判无效更新；</p>
+                        <p>（4）<strong>启动时序控制</strong>：用 BswM 配置模块初始化顺序——先 Mcu、Can，再 Com、Dcm，防止因 CAN 控制器未就绪导致通信失败；</p>
+                        <p>（5）<strong>模块裁剪</strong>：低端 ECU 不必启用全套 BSW，关闭非必要模块（如 FIM）可节省 ROM 15KB 以上；</p>
+                        <p>（6）<strong>命名规范</strong>：建立统一命名规范（如 模块名_功能_索引：CanIfCtrlCfg_CAN0、ComSignal_LampCmd），系统架构师（Developer）与 BSW 工程师（Configurator）明确 arxml 交换流程与版本对应关系。</p>
+                        <p style="margin-top: 18px; padding-top: 12px; border-top: 1px dashed #dce8f2; color: #999; font-size: 13px;">
+                            参考来源：CSDN《新手入门必看：Vector工具链基础操作与AUTOSAR关联》（weixin_42599908）、《AUTOSAR开发实战：手把手教你用DaVinci工具链配置ECU基础软件》（weixin_33859231）、《全面讲解Vector工具链在AUTOSAR通信矩阵生成中的作用》（weixin_31659095）；辅助参考：《(二)DaVinci Developer AutoSAR工具 SWC Component 中Port口配置方法》（weixin_42602687）、《[AUTOSAR OS] 1 AUTOSAR操作系统的基础工程（上）》（RomanticRealist）、《[AutoSar]基础部分 RTE 08 runnable mapping》（weixin_42447823）、《DaVinci工具链之DaVinci Configurator工程创建》（qq_40242571）。工具界面示意图依上述文章文字描述绘制，代码为按原文整理的示例片段。
+                        </p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 一级菜单：独立展开/收起 + 跳转章标题 + 高亮（参考index06）
+        document.querySelectorAll('.sidebar-menu > li > .menu-title').forEach(function(title) {
+            title.addEventListener('click', function() {
+                var li = title.parentElement;
+                li.classList.toggle('open');
+
+                // 高亮一级菜单（清除其他高亮）
+                document.querySelectorAll('.submenu li.active').forEach(function(x) {
+                    x.classList.remove('active');
+                });
+                document.querySelectorAll('.sidebar-menu > li.active').forEach(function(x) {
+                    x.classList.remove('active');
+                });
+                li.classList.add('active');
+
+                // 跳转到主体中的一级目录名称（h3）
+                var targetId = li.getAttribute('data-target');
+                var target = targetId ? document.getElementById(targetId) : null;
+                if (target) {
+                    var body = document.querySelector('.content-body');
+                    var top = target.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 8;
+                    body.scrollTo({ top: top, behavior: 'smooth' });
+                }
+            });
+        });
+
+        // 全部展开/收起
+        var expandBtn = document.getElementById('expandAllBtn');
+        var collapseBtn = document.getElementById('collapseAllBtn');
+        if (expandBtn) {
+            expandBtn.addEventListener('click', function() {
+                document.querySelectorAll('.sidebar-menu > li').forEach(function(li) {
+                    li.classList.add('open');
+                });
+            });
+        }
+        if (collapseBtn) {
+            collapseBtn.addEventListener('click', function() {
+                document.querySelectorAll('.sidebar-menu > li').forEach(function(li) {
+                    li.classList.remove('open');
+                });
+            });
+        }
+
+        // 二级菜单：点击跳转 + 双高亮
+        document.querySelectorAll('.submenu li[data-target]').forEach(function(item) {
+            item.addEventListener('click', function() {
+                var target = document.getElementById(item.dataset.target);
+                if (!target) return;
+
+                // 双高亮
+                document.querySelectorAll('.submenu li.active').forEach(function(li) {
+                    li.classList.remove('active');
+                });
+                document.querySelectorAll('.sidebar-menu > li.active').forEach(function(li) {
+                    li.classList.remove('active');
+                });
+                item.classList.add('active');
+                item.closest('.sidebar-menu > li').classList.add('active');
+
+                // 滚动到目标（content-body为滚动容器）
+                var body = document.querySelector('.content-body');
+                var top = target.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop - 8;
+                body.scrollTo({ top: top, behavior: 'smooth' });
+            });
+        });
+    </script>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

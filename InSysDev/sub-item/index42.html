@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验28 485实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13px; font-weight: 600; color: #2f7a52; margin-bottom: 6px; }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验28 485实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">RS485 的方向脚不在 MCU 上，而在 PCF8574 的 P6；阅读时先看第 08、09 节。</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">用 USART2 + 半双工收发器 + PCF8574 方向控制，做一次“自发自收”的 485 通信</div>
+
+                    <p>RS485 与普通串口最大的差别是<strong>半双工</strong>：同一对差分线上，同一时刻只能有一个方向在驱动。开发板把收发器的 RE/DE 并在一起，接到 PCF8574 的 P6，因此“切方向”本质上是一次 IIC 写操作，而不是拉一个 GPIO。本实验按下 KEY0 发送 5 个递增字节，随后立即查询是否收到数据；只要总线上有另一个节点（或调试助手）回发，就能在 LCD 上看到收到的字节。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚 / 器件</th><th>关键配置</th><th>源码证据</th></tr>
+                        <tr><td>USART2</td><td>PA2=TX、PA3=RX</td><td>AF7、复用推挽、上拉、高速</td><td><code>HARDWARE/RS485/rs485.c</code> · <code>RS485_Init</code></td></tr>
+                        <tr><td>串口参数</td><td>9600-8-N-1</td><td>无硬件流控，收发模式</td><td><code>USART2_RS485Handler.Init</code></td></tr>
+                        <tr><td>方向控制</td><td>PCF8574 的 P6</td><td><code>RS485_RE_IO = 6</code>，1=发送，0=接收</td><td><code>HARDWARE/PCF8574/pcf8574.h</code></td></tr>
+                        <tr><td>IIC 总线</td><td>PH4=SCL、PH5=SDA</td><td>GPIO 推挽模拟，上拉，半周期约 4µs</td><td><code>HARDWARE/IIC/myiic.c</code> · <code>IIC_Init</code></td></tr>
+                        <tr><td>PCF8574 地址</td><td>0x40（已左移）</td><td>写 0x40，读 0x41</td><td><code>PCF8574_ADDR</code></td></tr>
+                        <tr><td>接收中断</td><td>USART2_IRQn</td><td>抢占 3、子优先级 3，<code>EN_USART2_RX=1</code></td><td><code>RS485_Init</code> 末尾</td></tr>
+                        <tr><td>按键</td><td>KEY0=PH3</td><td>按下触发一次发送</td><td><code>USER/main.c</code></td></tr>
+                        <tr><td>显示 / 调试</td><td>LCD、USART1 115200</td><td>Count、Send Data、Receive Data 三行</td><td><code>main.c</code> / <code>usart.c</code></td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">USART2 @ APB1</span>
+                        <span class="chip">9600 8-N-1</span>
+                        <span class="chip">PCF8574 P6 = RE/DE</span>
+                        <span class="chip">IIC @ PH4/PH5</span>
+                        <span class="chip">RX 缓冲 64B</span>
+                    </div>
+
+                    <div class="note">本实验没有用到 RS485 的硬件自动流向控制（如 USART 的 DE 引脚），也没有用到 DMA。方向切换完全由软件在 <code>RS485_Send_Data</code> 里成对调用 <code>RS485_TX_Set</code> 完成。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">比 SPI 实验多两层依赖：USART2 驱动依赖 PCF8574，PCF8574 又依赖软件 IIC</div>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>负责什么</th><th>本页看什么</th></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>栈堆、向量表、复位入口</td><td><code>USART2_IRQHandler</code> 的向量位置</td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>FPU、RCC 复位、VTOR</td><td><code>SystemInit</code></td></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化、发送缓冲、接收显示</td><td><code>main</code> 的 <code>cnt</code> 与 <code>rs485buf</code></td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>异常入口</td><td>仍只有 <code>SysTick_Handler</code></td></tr>
+                        <tr><td><code>HARDWARE/RS485/rs485.c</code></td><td>USART2、方向切换、中断接收、查询接收</td><td><code>RS485_Init</code>、<code>USART2_IRQHandler</code></td></tr>
+                        <tr><td><code>HARDWARE/PCF8574/pcf8574.c</code></td><td>8 位 IO 扩展、位操作</td><td><code>PCF8574_WriteBit</code></td></tr>
+                        <tr><td><code>HARDWARE/IIC/myiic.c</code></td><td>GPIO 模拟 IIC 时序</td><td><code>IIC_Init</code>、<code>IIC_Start</code>、<code>IIC_Wait_Ack</code></td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td>180MHz 时钟树</td><td><code>PCLK1 = 45MHz</code></td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>IIC 的 µs 级延时、接收判帧的 ms 延时</td><td><code>delay_us(4)</code>、<code>delay_ms(10)</code></td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>USART1 调试口</td><td><code>uart_init(115200)</code></td></tr>
+                        <tr><td><code>HARDWARE/LCD</code>、<code>SDRAM</code>、<code>KEY</code>、<code>LED</code></td><td>显示与交互</td><td>只确认调用顺序</td></tr>
+                    </table>
+
+                    <div class="note blue">共用中断入口：<code>USART2_IRQHandler</code> 并没有写在 <code>stm32f4xx_it.c</code> 里，而是定义在 <code>rs485.c</code>。启动文件的向量表里这个位置是弱定义，链接器会用 <code>rs485.c</code> 的同名强符号覆盖它——这也是为什么“在 it.c 里找不到串口 2 的中断函数”并不代表没有中断。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">前 11 步与 SPI 实验相同，第 12 步把 IIC、PCF8574、USART2 与 NVIC 一次配完</div>
+
+                    <figure class="figure">
+                        <img src="./index42-map/boot-flow.png" alt="实验28 从上电复位到主循环的流程图">
+                        <figcaption>图 3-1　启动链路：RS485_Init 是唯一新增节点</figcaption>
+                    </figure>
+
+                    <pre class="code">int main(void)
+{
+    u8 key;
+    u8 i=0,t=0;
+    u8 cnt=0;
+    u8 rs485buf[5];					<span class="cmt">// 发送/接收共用的 5 字节缓冲</span>
+    HAL_Init();                     <span class="cmt">//初始化HAL库</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">//设置时钟,180Mhz</span>
+    delay_init(180);                <span class="cmt">//初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">//初始化USART1（调试口）</span>
+    LED_Init();                     <span class="cmt">//初始化LED</span>
+    KEY_Init();                     <span class="cmt">//初始化按键</span>
+    SDRAM_Init();                   <span class="cmt">//初始化SDRAM</span>
+    LCD_Init();                     <span class="cmt">//初始化LCD</span>
+    RS485_Init(9600);               <span class="cmt">//初始化RS485（内部先 PCF8574，再 USART2）</span>
+    POINT_COLOR=RED;
+    LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7");
+    LCD_ShowString(30,70,200,16,16,"RS485 TEST");
+    LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");
+    LCD_ShowString(30,110,200,16,16,"2016/1/16");
+    LCD_ShowString(30,130,200,16,16,"KEY0:Send");   <span class="cmt">//显示提示信息</span>
+    POINT_COLOR=BLUE;
+    LCD_ShowString(30,150,200,16,16,"Count:");
+    LCD_ShowString(30,170,200,16,16,"Send Data:");
+    LCD_ShowString(30,210,200,16,16,"Receive Data:");
+
+    while(1)
+    {
+        key=KEY_Scan(0);
+        if(key==KEY0_PRES)			<span class="cmt">//KEY0按下,发送一次数据</span>
+        {
+            for(i=0;i&lt;5;i++)
+            {
+                rs485buf[i]=cnt+i;			<span class="cmt">//填充发送缓冲区</span>
+                LCD_ShowxNum(30+i*32,190,rs485buf[i],3,16,0X80);
+            }
+            RS485_Send_Data(rs485buf,5);		<span class="cmt">//发送5个字节</span>
+        }
+        RS485_Receive_Data(rs485buf,&amp;key);
+        if(key)					<span class="cmt">//接收到有数据</span>
+        {
+            if(key&gt;5)key=5;			<span class="cmt">//最大显示 5 个</span>
+            for(i=0;i&lt;key;i++)LCD_ShowxNum(30+i*32,230,rs485buf[i],3,16,0X80);
+        }
+        t++;
+        delay_ms(10);
+        if(t==20)
+        {
+            LED0=!LED0;				<span class="cmt">//提示系统正在运行</span>
+            t=0;
+            cnt++;
+            LCD_ShowxNum(30+48,150,cnt,3,16,0X80);
+        }
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：为什么 RS485_Init 必须放在 LCD 之后</div>
+                        <ol>
+                            <li><code>RS485_Init</code> 内部第一步是 <code>PCF8574_Init</code>，它调用 <code>IIC_Init</code> 并做一次 IIC 探测；IIC 的 <code>delay_us</code> 依赖 <code>delay_init</code> 已经设好的 <code>fac_us</code>，所以必须排在 <code>delay_init</code> 之后。</li>
+                            <li>USART2 的波特率由 <code>HAL_UART_Init</code> 根据 <code>PCLK1</code> 计算，必须等 <code>Stm32_Clock_Init</code> 把 APB1 切到 45MHz 之后再初始化，否则 BRR 按 HSI 算，9600 会变成别的值。</li>
+                            <li>把它放在 LCD 之后只是习惯：LCD 初始化最慢，若 485 有问题可以先把屏幕跑起来，便于显示错误。</li>
+                            <li>主循环里发送与接收复用同一个 <code>rs485buf</code>：发送函数返回后 <code>RS485_RX_CNT=0</code>，接收函数再把新数据覆盖进来，不存在同时读写。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">USART2 的中断向量在启动文件里已经排好位置，C 文件只需同名实现</div>
+
+                    <p>启动文件为每个异常/中断预留了一个 4 字节的表项，初值都是 <code>[WEAK]</code> 的默认处理函数。<code>USART2_IRQHandler</code> 在向量表中的位置由芯片型号决定（STM32F429 的 USART2 中断号是 38），用户只需在任意 C 文件里定义同名函数，链接阶段就会覆盖弱符号。</p>
+
+                    <pre class="code">Stack_Size      EQU     0x400;			<span class="cmt">; 栈 1KB</span>
+Heap_Size       EQU     0x200;			<span class="cmt">; 堆 512B</span>
+
+                AREA    RESET, DATA, READONLY
+                EXPORT  __Vectors
+__Vectors       DCD     __initial_sp		<span class="cmt">; 栈顶</span>
+                DCD     Reset_Handler		<span class="cmt">; 复位入口</span>
+                <span class="cmt">; ……外部中断向量省略</span>
+                DCD     USART2_IRQHandler	<span class="cmt">; 串口2 中断入口（弱定义）</span>
+
+Reset_Handler    PROC
+                 LDR     R0, =SystemInit
+                 BLX     R0
+                 LDR     R0, =__main
+                 BX      R0
+                 ENDP
+
+                EXPORT  USART2_IRQHandler        [WEAK]
+USART2_IRQHandler
+                B       .			<span class="cmt">; 默认死循环，等待用户覆盖</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：中断函数的“两个名字”</div>
+                        <ol>
+                            <li>启动文件里的名字必须与 CMSIS 头文件里 <code>USART2_IRQn</code> 对应的向量名完全一致，大小写敏感。</li>
+                            <li>用户函数不要加 <code>static</code>，否则链接器看不到，弱定义仍然生效，中断一来就停在 <code>B .</code>。</li>
+                            <li>本工程把函数放在 <code>rs485.c</code> 而不是 <code>stm32f4xx_it.c</code>，属于“按驱动归位”的写法；只要名字对，位置不影响。</li>
+                            <li>栈只有 1KB：中断里不要放大的局部数组，本工程只用了 1 字节 <code>res</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">与 SPI 实验完全一致：SystemInit 只做芯片级复位，HAL_Init 建立 1ms 时基与分组 2</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+  SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));	<span class="cmt">// 使能 FPU</span>
+  RCC-&gt;CR |= (uint32_t)0x00000001;			<span class="cmt">// 打开 HSI</span>
+  RCC-&gt;CFGR = 0x00000000;				<span class="cmt">// 时钟树回默认</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;			<span class="cmt">// 关 HSEON/PLLON</span>
+  RCC-&gt;PLLCFGR = 0x24003010;
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;		<span class="cmt">// 向量表基址</span>
+}
+
+HAL_StatusTypeDef HAL_Init(void)
+{
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
+  __HAL_FLASH_DATA_CACHE_ENABLE();
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);	<span class="cmt">// 分组2：2 位抢占 + 2 位子优先级</span>
+  HAL_InitTick(TICK_INT_PRIORITY);			<span class="cmt">// 0x0F</span>
+  HAL_MspInit();
+  return HAL_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：分组 2 决定了 3,3 的含义</div>
+                        <ol>
+                            <li><code>NVIC_PRIORITYGROUP_2</code> 表示 4 位优先级里高 2 位是抢占优先级、低 2 位是子优先级。</li>
+                            <li>所以 <code>HAL_NVIC_SetPriority(USART2_IRQn,3,3)</code> 合法：抢占 3（最低一档）、子优先级 3（同抢占级里最低）。</li>
+                            <li>若改成分组 4（全抢占），子优先级参数会失效，<code>3,3</code> 被解释成抢占 3、子 0，行为与预期不同。</li>
+                            <li>SysTick 的优先级是 0x0F，同样落在最低档，不会抢占串口中断。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟、延时与串口">
+                    <h2>06　时钟、延时与串口</h2>
+                    <div class="sec-sub">USART2 在 APB1 上，45MHz 是 9600 波特率的计算基准</div>
+
+                    <figure class="figure">
+                        <img src="./index42-map/clock-tree.png" alt="RS485 实验的时钟树与 USART2 波特率推导">
+                        <figcaption>图 6-1　时钟树：PCLK1 45MHz 供 USART2，PCLK2 90MHz 供 USART1</figcaption>
+                    </figure>
+
+                    <pre class="code">RCC_OscInitStructure.PLL.PLLM=25;	<span class="cmt">// 25MHz / 25 = 1MHz</span>
+RCC_OscInitStructure.PLL.PLLN=360;	<span class="cmt">// ×360 = 360MHz VCO</span>
+RCC_OscInitStructure.PLL.PLLP=2;	<span class="cmt">// /2 = 180MHz SYSCLK</span>
+RCC_OscInitStructure.PLL.PLLQ=8;	<span class="cmt">// /8 = 45MHz</span>
+...
+RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;	<span class="cmt">// PCLK1 = 45MHz</span>
+RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;	<span class="cmt">// PCLK2 = 90MHz</span>
+ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5);</pre>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>取值 / 公式</th><th>说明</th></tr>
+                        <tr><td>USART2 时钟源</td><td>PCLK1 = 45MHz</td><td>USART2 挂在 APB1</td></tr>
+                        <tr><td>USARTDIV</td><td>45,000,000 ÷ (16 × 9600) ≈ 292.97</td><td>HAL 自动算 BRR</td></tr>
+                        <tr><td>每字节耗时</td><td>10 位 ÷ 9600 ≈ 1.04ms</td><td>1 起始 + 8 数据 + 1 停止</td></tr>
+                        <tr><td>5 字节发送</td><td>约 5.2ms</td><td><code>HAL_UART_Transmit</code> 阻塞</td></tr>
+                        <tr><td>IIC 半周期</td><td><code>delay_us(4)</code></td><td>SCL 约 125kHz</td></tr>
+                        <tr><td>接收判帧</td><td><code>delay_ms(10)</code></td><td>10ms 内计数不变即认为收完</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：两个“9600”必须分清</div>
+                        <ol>
+                            <li><code>uart_init(115200)</code> 配的是 USART1 调试口，与 485 无关；<code>RS485_Init(9600)</code> 才是总线波特率。</li>
+                            <li>USART2 的 BRR 由 HAL 依据 <code>HAL_RCC_GetPCLK1Freq()</code> 计算；若时钟树改了 APB1 分频而忘记改回来，9600 会实际变成别的速率。</li>
+                            <li><code>delay_init(180)</code> 的 180 与 HCLK 对应，IIC 的 4µs 与判帧的 10ms 都建立在它正确的前提上。</li>
+                            <li>RS485 总线两端需要 120Ω 终端电阻；波特率越高、线越长，对终端匹配越敏感。本实验 9600 属于低速，容错较高。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="USART2 的引脚与 9600 配置">
+                    <h2>07　USART2 的引脚与 9600 配置</h2>
+                    <div class="sec-sub">PA2/PA3 复用 AF7；先 PCF8574 再 USART2，最后开 NVIC</div>
+
+                    <pre class="code">void RS485_Init(u32 bound)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+
+    PCF8574_Init();					<span class="cmt">//初始化PCF8574，用于控制RE脚</span>
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();			<span class="cmt">//使能GPIOA时钟</span>
+    __HAL_RCC_USART2_CLK_ENABLE();			<span class="cmt">//使能USART2时钟</span>
+
+    GPIO_Initure.Pin=GPIO_PIN_2|GPIO_PIN_3;		<span class="cmt">//PA2,3</span>
+    GPIO_Initure.Mode=GPIO_MODE_AF_PP;			<span class="cmt">//复用推挽输出</span>
+    GPIO_Initure.Pull=GPIO_PULLUP;			<span class="cmt">//上拉</span>
+    GPIO_Initure.Speed=GPIO_SPEED_HIGH;			<span class="cmt">//高速</span>
+    GPIO_Initure.Alternate=GPIO_AF7_USART2;		<span class="cmt">//复用为USART2</span>
+    HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);			<span class="cmt">//初始化PA2,3</span>
+
+    USART2_RS485Handler.Instance=USART2;
+    USART2_RS485Handler.Init.BaudRate=bound;		<span class="cmt">//9600</span>
+    USART2_RS485Handler.Init.WordLength=UART_WORDLENGTH_8B;
+    USART2_RS485Handler.Init.StopBits=UART_STOPBITS_1;
+    USART2_RS485Handler.Init.Parity=UART_PARITY_NONE;
+    USART2_RS485Handler.Init.HwFlowCtl=UART_HWCONTROL_NONE;
+    USART2_RS485Handler.Init.Mode=UART_MODE_TX_RX;
+    HAL_UART_Init(&amp;USART2_RS485Handler);
+
+    __HAL_UART_DISABLE_IT(&amp;USART2_RS485Handler,UART_IT_TC);	<span class="cmt">//关发送完成中断</span>
+#if EN_USART2_RX
+    __HAL_UART_ENABLE_IT(&amp;USART2_RS485Handler,UART_IT_RXNE);	<span class="cmt">//开启接收中断</span>
+    HAL_NVIC_EnableIRQ(USART2_IRQn);
+    HAL_NVIC_SetPriority(USART2_IRQn,3,3);			<span class="cmt">//抢占3，子优先级3</span>
+#endif
+    RS485_TX_Set(0);					<span class="cmt">//默认接收模式</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：PA2/PA3 与方向脚的配合</div>
+                        <ol>
+                            <li>PA2 是 USART2_TX，PA3 是 USART2_RX；AF7 是 F429 上 USART2 的固定复用编号，写错成 AF8 就没有波形。</li>
+                            <li>上拉很重要：总线空闲时 RX 保持高电平（UART 空闲态），若浮空会不断触发噪声帧。</li>
+                            <li>初始化末尾先 <code>RS485_TX_Set(0)</code> 回到接收，保证上电后不会占着总线。</li>
+                            <li>只开 RXNE、不开 TC：发送完成由阻塞式 <code>HAL_UART_Transmit</code> 自己等，避免多一次中断。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="PCF8574 与软件 IIC">
+                    <h2>08　PCF8574 与软件 IIC</h2>
+                    <div class="sec-sub">8 位准双向 IO 扩展；写一位要先读回整个字节，再整字节写回</div>
+
+                    <figure class="figure">
+                        <img src="./index42-map/iic-frame.png" alt="PCF8574 写字节的 IIC 帧与位操作流程">
+                        <figcaption>图 8-1　IIC 帧结构与 <code>PCF8574_WriteBit</code> 的读—改—写</figcaption>
+                    </figure>
+
+                    <pre class="code">void IIC_Init(void)
+{
+    __HAL_RCC_GPIOH_CLK_ENABLE();		<span class="cmt">//使能GPIOH时钟</span>
+    GPIO_Initure.Pin=GPIO_PIN_4|GPIO_PIN_5;	<span class="cmt">//PH4=SCL, PH5=SDA</span>
+    GPIO_Initure.Mode=GPIO_MODE_OUTPUT_PP;	<span class="cmt">//推挽输出</span>
+    GPIO_Initure.Pull=GPIO_PULLUP;
+    GPIO_Initure.Speed=GPIO_SPEED_FAST;
+    HAL_GPIO_Init(GPIOH,&amp;GPIO_Initure);
+    IIC_SDA=1;
+    IIC_SCL=1;
+}
+
+void PCF8574_WriteOneByte(u8 DataToWrite)
+{
+    IIC_Start();
+    IIC_Send_Byte(PCF8574_ADDR|0X00);	<span class="cmt">//0x40，写</span>
+    IIC_Wait_Ack();
+    IIC_Send_Byte(DataToWrite);		<span class="cmt">//8 位输出锁存</span>
+    IIC_Wait_Ack();
+    IIC_Stop();
+    delay_ms(10);			<span class="cmt">//给 PCF8574 更新时间</span>
+}
+
+void PCF8574_WriteBit(u8 bit,u8 sta)
+{
+    u8 data;
+    data=PCF8574_ReadOneByte();		<span class="cmt">//先读出原来的设置</span>
+    if(sta==0)data&amp;=~(1&lt;&lt;bit);
+    else data|=1&lt;&lt;bit;
+    PCF8574_WriteOneByte(data);		<span class="cmt">//写入新的数据</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：为什么必须是“读—改—写”</div>
+                        <ol>
+                            <li>PCF8574 没有“置位/复位某一位”的命令，只能整字节写；直接写 <code>0x40</code> 会把其它 7 位一起改掉。</li>
+                            <li>先 <code>PCF8574_ReadOneByte()</code> 读回当前锁存值（读地址 0x41），再改 bit6，最后整字节写回，才能保持别的外设状态。</li>
+                            <li>IIC 是软件模拟：<code>IIC_Start</code> 里 SCL 高时 SDA 由高变低，<code>IIC_Stop</code> 相反，中间用 <code>delay_us(4)</code> 保证建立/保持时间。</li>
+                            <li><code>IIC_Wait_Ack</code> 最多等 250 次，超时就发 STOP 并返回 1；<code>PCF8574_Init</code> 用它判断芯片是否在位。</li>
+                            <li>每次写后有 <code>delay_ms(10)</code>，这是为了让 PCF8574 的 IO 稳定，也解释了为什么切一次方向要花十几毫秒。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="RS485 方向切换">
+                    <h2>09　RS485 方向切换</h2>
+                    <div class="sec-sub">发送前 P6=1 打开驱动器，发完 P6=0 释放总线，两步之间是阻塞发送</div>
+
+                    <figure class="figure">
+                        <img src="./index42-map/rs485-direction.png" alt="RS485 一次发送的方向切换与接收判定流程">
+                        <figcaption>图 9-1　发送三段式与接收侧的 10ms 判帧</figcaption>
+                    </figure>
+
+                    <figure class="figure">
+                        <img src="./index42-map/rs485-timing.png" alt="RS485 方向切换的三层波形：P6 使能、USART2 TX 五字节数据、总线状态与接收判定，标出 10ms 切换开销、5.2ms 发送与 10ms 判帧窗口">
+                        <figcaption>图 9-2　P6、USART2 TX 与总线状态的三层波形（9600，5 字节）</figcaption>
+                    </figure>
+                    <p>P6 在 IIC 应答那一刻就翻转，但函数还要 <code class="inline">delay_ms(10)</code> 才返回，所以真正开始发送的时刻比调用点晚约 10 ms；5 个字节只占 5.2 ms，等 TC 置位后再写 P6=0，总线随即回到高阻的接收态。接收侧靠“10 ms 内 <code class="inline">RS485_RX_CNT</code> 不再增加”判定一帧收完。</p>
+
+                    <pre class="code">void RS485_Send_Data(u8 *buf,u8 len)
+{
+    RS485_TX_Set(1);				<span class="cmt">//设置为发送模式</span>
+    HAL_UART_Transmit(&amp;USART2_RS485Handler,buf,len,1000);	<span class="cmt">//阻塞发送，超时 1000ms</span>
+    RS485_RX_CNT=0;				<span class="cmt">//清接收计数，避免把自己发的当收到</span>
+    RS485_TX_Set(0);				<span class="cmt">//设置为接收模式</span>
+}
+
+void RS485_TX_Set(u8 en)
+{
+    PCF8574_WriteBit(RS485_RE_IO,en);		<span class="cmt">//RS485_RE_IO = 6，写 P6</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：三次 IIC 写撑起一次发送</div>
+                        <ol>
+                            <li><code>RS485_TX_Set(1)</code> 内部是一次“读 0x41 → 改 bit6 → 写 0x40”，耗时约 10ms；此时收发器的 DE=1、RE=1，驱动器打开。</li>
+                            <li><code>HAL_UART_Transmit</code> 是阻塞式：函数返回时最后一个停止位已经移出（TC 置位），所以紧接着拉低 P6 不会截断数据。</li>
+                            <li><code>RS485_RX_CNT=0</code> 必须在切回接收前清零：半双工收发器在发送时通常会把总线回读进 RX，如果不清，下一轮会把自己发的 5 个字节当成收到的。</li>
+                            <li><code>RS485_TX_Set(0)</code> 再花约 10ms 把 P6 拉低，收发器转为高阻接收；这段时间总线由其它节点或终端电阻维持空闲高。</li>
+                            <li>整个发送过程约 5.2ms 数据 + 20ms 方向切换，比数据本身还长，这是软件方向控制的固有开销。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="中断链路：USART2">
+                    <h2>10　中断链路：USART2</h2>
+                    <div class="sec-sub">RXNE → NVIC（中断号 38，抢占 3）→ <code>USART2_IRQHandler</code> → 环形计数</div>
+
+                    <table class="data">
+                        <tr><th>环节</th><th>本工程实际情况</th><th>源码证据</th></tr>
+                        <tr><td>触发源</td><td>USART2 收到 1 字节，RXNE 置位</td><td>硬件行为</td></tr>
+                        <tr><td>控制器</td><td>USART2 的 RXNEIE 已置位</td><td><code>__HAL_UART_ENABLE_IT(...,UART_IT_RXNE)</code></td></tr>
+                        <tr><td>NVIC</td><td>USART2_IRQn，抢占 3 / 子 3</td><td><code>HAL_NVIC_SetPriority</code></td></tr>
+                        <tr><td>ISR</td><td><code>USART2_IRQHandler</code>（定义在 rs485.c）</td><td><code>HARDWARE/RS485/rs485.c</code></td></tr>
+                        <tr><td>用户处理</td><td>把字节存入 <code>RS485_RX_BUF</code>，计数 +1</td><td><code>RS485_RX_BUF[64]</code></td></tr>
+                        <tr><td>主循环取数</td><td><code>RS485_Receive_Data</code> 拷贝并清零</td><td><code>main.c</code></td></tr>
+                    </table>
+
+                    <pre class="code">u8 RS485_RX_BUF[64];		<span class="cmt">//接收缓冲,最大64个字节</span>
+u8 RS485_RX_CNT=0;		<span class="cmt">//接收到的数据长度</span>
+
+void USART2_IRQHandler(void)
+{
+    u8 res;
+    if((__HAL_UART_GET_FLAG(&amp;USART2_RS485Handler,UART_FLAG_RXNE)!=RESET))
+    {
+        HAL_UART_Receive(&amp;USART2_RS485Handler,&amp;res,1,1000);	<span class="cmt">//读走 1 字节，清 RXNE</span>
+        if(RS485_RX_CNT&lt;64)
+        {
+            RS485_RX_BUF[RS485_RX_CNT]=res;		<span class="cmt">//记录接收到的值</span>
+            RS485_RX_CNT++;				<span class="cmt">//接收数据增加1</span>
+        }
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：中断里只做搬运</div>
+                        <ol>
+                            <li><code>HAL_UART_Receive</code> 以 1 字节、1000ms 超时读取，实际会立即返回，同时清掉 RXNE；这一步不能省，否则中断会反复进入。</li>
+                            <li>ISR 里只做“存 + 计数”，不解析协议、不操作 LCD，保证中断短小；解析交给主循环的 <code>RS485_Receive_Data</code>。</li>
+                            <li><code>RS485_RX_CNT&lt;64</code> 是溢出保护：超过 64 字节直接丢弃，不会写穿数组。</li>
+                            <li>主循环读取时先缓存 <code>rxlen</code>，10ms 后再比较；这依赖中断在后台继续累加，因此这是一次典型的主循环与中断共享变量场景（本工程未加临界区，靠 8 位读写原子性）。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="接收判定与 10ms 空闲">
+                    <h2>11　接收判定与 10ms 空闲</h2>
+                    <div class="sec-sub">没有帧头帧尾，用“10ms 内字节数不再增加”当作一帧结束</div>
+
+                    <pre class="code">void RS485_Receive_Data(u8 *buf,u8 *len)
+{
+    u8 rxlen=RS485_RX_CNT;		<span class="cmt">//先记住当前长度</span>
+    u8 i=0;
+    *len=0;				<span class="cmt">//默认为0</span>
+    delay_ms(10);			<span class="cmt">//等待10ms，期间没有新字节就认为收完</span>
+    if(rxlen==RS485_RX_CNT&amp;&amp;rxlen)	<span class="cmt">//长度没变且有数据</span>
+    {
+        for(i=0;i&lt;rxlen;i++)
+        {
+            buf[i]=RS485_RX_BUF[i];	<span class="cmt">//拷贝到用户缓冲</span>
+        }
+        *len=RS485_RX_CNT;		<span class="cmt">//记录本次数据长度</span>
+        RS485_RX_CNT=0;			<span class="cmt">//清零，准备下一帧</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：空闲判帧的代价与适用条件</div>
+                        <ol>
+                            <li>判据是“10ms 前后长度相同”，意味着只要两帧之间间隔小于 10ms，就会被合并成一帧。</li>
+                            <li>9600 波特率下每字节约 1.04ms，10ms 相当于约 10 个字节时间，对 5 字节的小包足够。</li>
+                            <li>函数本身阻塞 10ms，因此主循环每轮至少 20ms（这里 10ms + 末尾 <code>delay_ms(10)</code>），<code>t==20</code> 的 200ms 只是近似值。</li>
+                            <li>如果主循环此时正好在 <code>RS485_Send_Data</code> 里，接收中断仍会进，但因为发送前刚清零，回来后这些字节会被当成“收到的”——半双工回读是这类写法的常见坑。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="主循环与现象">
+                    <h2>12　主循环与现象</h2>
+                    <div class="sec-sub">KEY0 发送、随时接收、200ms 计数；三个现象互相独立，便于分段定位</div>
+
+                    <figure class="figure">
+                        <img src="./index42-map/main-loop.png" alt="实验28 主循环的发送、接收与计数流程">
+                        <figcaption>图 12-1　主循环：发送分支、接收分支、心跳计数</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>可观察现象</th><th>对应代码</th></tr>
+                        <tr><td>上电</td><td>LCD 显示标题、<code>KEY0:Send</code>、Count/Send/Receive 三行</td><td><code>main</code> 中的 <code>LCD_ShowString</code></td></tr>
+                        <tr><td>按 KEY0</td><td>Send Data 行显示 5 个递增数字（cnt…cnt+4）</td><td><code>rs485buf[i]=cnt+i</code></td></tr>
+                        <tr><td>总线上有节点回发</td><td>Receive Data 行显示收到的字节，最多 5 个</td><td><code>RS485_Receive_Data</code></td></tr>
+                        <tr><td>空闲</td><td>Count 每约 200ms 加 1，DS0 同步翻转</td><td><code>t==20</code> 分支</td></tr>
+                        <tr><td>用 USB 转 485 对接</td><td>调试助手收到 5 字节，回发后 LCD 显示回发内容</td><td>需 A/B 线序一致、共地</td></tr>
+                    </table>
+
+                    <div class="sim">
+                        <div class="sim-title">收发分支演示（仅演示逻辑，不涉及真实总线）</div>
+                        <div class="sim-buttons">
+                            <button data-key="send">按 KEY0 发送</button>
+                            <button data-key="recv">模拟收到 5 字节</button>
+                            <button data-key="tick">走 20 个 10ms</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0</div>
+                        </div>
+                        <div class="sim-log" id="simLog">等待操作：发送后观察 Send Data，收到后观察 Receive Data</div>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：现象与分支对应</div>
+                        <ol>
+                            <li>发送分支只改 Send Data 那一行，接收分支只改 Receive Data 那一行，互不覆盖，便于同时观察。</li>
+                            <li><code>cnt</code> 只在 <code>t==20</code> 时自增，因此连续按 KEY0 会看到同一组数字，直到过 200ms 才变化。</li>
+                            <li>接收显示前有 <code>if(key&gt;5)key=5</code>，即使总线上来了一长串，也只显示前 5 个。</li>
+                            <li>DS0 翻转与 Count 更新在同一个分支，二者同步；如果 DS0 不闪而 Count 在变，说明你看到的是静态截图而不是运行状态。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘">
+                    <h2>13　关键逻辑复盘</h2>
+                    <div class="sec-sub">一条发送链路上有 5 个可能出错的环节，按顺序排查最快</div>
+
+                    <table class="data">
+                        <tr><th>环节</th><th>本工程取值</th><th>出错表现</th></tr>
+                        <tr><td>时钟</td><td>PCLK1 = 45MHz</td><td>波特率偏移，调试助手收到乱码</td></tr>
+                        <tr><td>引脚复用</td><td>PA2/PA3 = AF7</td><td>完全没有波形</td></tr>
+                        <tr><td>IIC 总线</td><td>PH4/PH5，上拉，4µs</td><td>PCF8574 探测失败，方向永远不切换</td></tr>
+                        <tr><td>方向位</td><td>P6：1 发 0 收</td><td>发送时总线无驱动，或接收时被自己占住</td></tr>
+                        <tr><td>接收计数</td><td>发送前清 <code>RS485_RX_CNT</code></td><td>把自己发的 5 字节当收到</td></tr>
+                        <tr><td>判帧</td><td>10ms 长度不变</td><td>长包被截断，或两包被合并</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：三步定位</div>
+                        <ol>
+                            <li>先看 LCD 是否能正常显示：不能，说明 LCD/SDRAM/时钟有问题，与 485 无关。</li>
+                            <li>再看按 KEY0 时 Send Data 行是否变化：不变，说明按键或主循环卡住；变化但总线无波形，查 PA2 与方向位。</li>
+                            <li>最后用 USB 转 485 对接：能收到但内容错，查波特率与 A/B 线序；收不到，查 P6 是否在发送期间为高。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="总结与排查">
+                    <h2>14　总结与排查</h2>
+                    <div class="sec-sub">RS485 = UART + 方向控制；本工程的方向控制在 IIC 扩展芯片上，这是最容易忽略的一点</div>
+
+                    <p>从启动角度看，这个实验与 SPI 实验共享同一套启动文件、时钟树、延时与串口框架，新增的只有“USART2 + PCF8574 + 软件 IIC”这一条支路。理解它的关键不是记住某个寄存器，而是明确<strong>谁在什么时候把 P6 拉高、又什么时候拉低</strong>：<code>RS485_Send_Data</code> 负责成对切换，<code>RS485_TX_Set</code> 负责把逻辑电平写进 PCF8574，<code>PCF8574_WriteBit</code> 负责读—改—写，<code>IIC_*</code> 负责把字节送上总线。</p>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>优先检查</th><th>依据</th></tr>
+                        <tr><td>LCD 正常但按键无反应</td><td>KEY0 是否 PH3、<code>KEY_Scan(0)</code> 是否被长阻塞拖慢</td><td><code>key.c</code> / <code>main.c</code></td></tr>
+                        <tr><td>发送时总线无差分信号</td><td>P6 是否变高、收发器是否供电、A/B 是否接反</td><td><code>RS485_TX_Set</code></td></tr>
+                        <tr><td>调试助手收到乱码</td><td>波特率 9600、8-N-1、PCLK1 是否 45MHz</td><td><code>RS485_Init</code></td></tr>
+                        <tr><td>总是收到自己发的数据</td><td>发送前是否清零 <code>RS485_RX_CNT</code></td><td><code>RS485_Send_Data</code></td></tr>
+                        <tr><td>接收被截断/合并</td><td>10ms 判帧窗口与发送间隔</td><td><code>RS485_Receive_Data</code></td></tr>
+                        <tr><td>PCF8574 探测失败</td><td>PH4/PH5 上拉、地址 0x40、IIC 时序</td><td><code>PCF8574_Init</code> / <code>myiic.c</code></td></tr>
+                    </table>
+
+                    <div class="note">本页结论来自 <code>USER/main.c</code>、<code>USER/system_stm32f4xx.c</code>、<code>USER/stm32f4xx_it.c</code>、<code>CORE/startup_stm32f429xx.s</code>、<code>SYSTEM/{sys,delay,usart}</code>、<code>HARDWARE/{RS485,PCF8574,IIC,KEY,LED,LCD,SDRAM}</code>。工程中未体现硬件自动流向控制、DMA 发送与 CRC 校验，本页不作推测。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-12 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    var dot0 = document.getElementById('dot0');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && simLog) {
+        var cnt = 0;
+        var t = 0;
+        var ledOn = false;
+        var sent = [];
+        var recv = [];
+
+        function render(extra) {
+            dot0.classList.toggle('on', ledOn);
+            simLog.textContent =
+                (extra ? extra + '\n' : '') +
+                'cnt = ' + cnt +
+                '　t = ' + t + ' / 20' +
+                '\n发送缓冲：' + (sent.length ? sent.join(' ') : '—') +
+                '\n接收缓冲：' + (recv.length ? recv.join(' ') : '—');
+        }
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (key === 'send') {
+                    sent = [];
+                    for (var i = 0; i < 5; i++) sent.push(cnt + i);
+                    recv = [];
+                    render('RS485_TX_Set(1) → 发 5 字节 → RX_CNT=0 → RS485_TX_Set(0)');
+                } else if (key === 'recv') {
+                    recv = [];
+                    for (var j = 0; j < 5; j++) recv.push(10 + j);
+                    render('USART2 中断收到 5 字节 → 主循环拷贝并显示');
+                } else if (key === 'tick') {
+                    for (var k = 0; k < 20; k++) {
+                        t++;
+                        if (t === 20) {
+                            ledOn = !ledOn;
+                            t = 0;
+                            cnt++;
+                            break;
+                        }
+                    }
+                    render('t 走满 20 → 翻转 DS0、cnt+1、更新 Count');
+                }
+            });
+        });
+
+        render('初始状态：cnt=0，等待 KEY0');
+    }
+</script>
+</body>
+</html>

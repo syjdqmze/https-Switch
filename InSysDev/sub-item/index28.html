@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验14 LTDC LCD（RGB屏）实验</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验14 · LTDC RGB 屏</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">共 14 节，按启动顺序排列；点击标题跳转，滚动自动高亮。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+<section class="content-card" id="s01" data-title="工程概述与硬件资源">
+    <h2>01　工程概述与硬件资源</h2>
+    <div class="sec-sub">实验14 把显示从 MCU 屏换成 RGB 屏，帧缓存搬进外部 SDRAM，由 LTDC 硬件自动扫描</div>
+
+    <p>前一个实验（实验13）只是把 SDRAM 当“大数组”做读写测试；本实验让这块 SDRAM 真正干活：<strong>LTDC 的帧缓存就定位在 0xC0000000</strong>，CPU 只管往内存里写像素，LTDC 按像素时钟把内容一行行送到 RGB 接口。实验12 的 MCU 屏需要“读 ID → 写命令 → 写数据”，本实验的面板没有控制器，只有 RGB 数据线、行场同步和时钟。</p>
+
+    <table class="data">
+        <tr><th>资源</th><th>引脚 / 接口</th><th>在本实验中的作用</th></tr>
+        <tr><td>RGB 屏</td><td>LTDC：PF10、PG6/7/11、PH9~15、PI0/1/2/4/5/6/7/9/10</td><td>24 位 RGB 数据 + HS/VS/DE/PCLK，分辨率由面板决定</td></tr>
+        <tr><td>背光</td><td>PB5（LCD_LED）</td><td><code>LTDC_Init()</code> 末尾置 1 点亮</td></tr>
+        <tr><td>面板 ID</td><td>PG6=M0，PI2=M1，PI7=M2</td><td>上电先当输入读 3 位编码，识别屏型号</td></tr>
+        <tr><td>外部 SDRAM</td><td>FMC Bank5，0xC0000000</td><td>32MB；前 2MB 作 1280×800 帧缓存</td></tr>
+        <tr><td>DS0（红灯）</td><td>PB1（LED0）</td><td>主循环每帧取反，1s 一个亮灭周期</td></tr>
+        <tr><td>串口 1</td><td>PA9 / PA10，115200 8N1</td><td>只做初始化，本实验主流程不打印</td></tr>
+        <tr><td>KEY0/KEY1/KEY2</td><td>PA0 / PC13 / PH2、PH3</td><td>初始化但主循环未使用</td></tr>
+    </table>
+
+    <div class="chips">
+        <span class="chip">RGB565</span>
+        <span class="chip">帧缓存 2MB @ 0xC0000000</span>
+        <span class="chip">1280 × 800 上限</span>
+        <span class="chip">Fdclk 9 / 33 / 45 / 51MHz</span>
+    </div>
+
+    <div class="note">本项目支持 4.3 寸、7 寸（800×480 / 1024×600）、8 寸 1024×600、10.1 寸等 RGB 屏；7 寸 1280×800 分支在源码里并没有配全，后文会单独说明。</div>
+</section>
+
+<section class="content-card" id="s02" data-title="目录与文件分工">
+    <h2>02　目录与文件分工</h2>
+    <div class="sec-sub">启动链只占前 7 个文件，真正的新内容是 HARDWARE/LCD 下的 ltdc.c</div>
+
+    <table class="data">
+        <tr><th>文件</th><th>负责什么</th><th>本页关注点</th></tr>
+        <tr><td>CORE/startup_stm32f429xx.s</td><td>栈堆、向量表、Reset_Handler</td><td>初始 MSP、复位入口、弱符号</td></tr>
+        <tr><td>USER/system_stm32f4xx.c</td><td><code>SystemInit()</code>：FPU、RCC 复位、VTOR</td><td>时钟切换前的现场</td></tr>
+        <tr><td>USER/main.c</td><td>初始化顺序、12 色轮换、文字重绘</td><td>整条链的主线</td></tr>
+        <tr><td>SYSTEM/sys/sys.c</td><td><code>Stm32_Clock_Init()</code></td><td>25MHz → 180MHz</td></tr>
+        <tr><td>SYSTEM/delay/delay.c</td><td><code>delay_init/us/ms</code></td><td>轮询 SysTick，不用中断</td></tr>
+        <tr><td>SYSTEM/usart/usart.c</td><td><code>uart_init()</code> 与 <code>fputc</code></td><td>115200、PA9/PA10</td></tr>
+        <tr><td>HARDWARE/SDRAM/sdram.c</td><td>FMC Bank5、上电命令序列</td><td>帧缓存的物理载体</td></tr>
+        <tr><td>HARDWARE/LCD/ltdc.c</td><td>面板 ID、像素时钟、时序、层、DMA2D 填充</td><td><strong>本实验核心</strong></td></tr>
+        <tr><td>HARDWARE/LCD/lcd.c</td><td><code>LCD_Init()</code> 分派、画点/字符/清屏</td><td>RGB 与 MCU 屏两条路径</td></tr>
+        <tr><td>HARDWARE/LED、KEY</td><td>指示灯与按键</td><td>主循环只用 LED0</td></tr>
+    </table>
+
+    <div class="note blue">工程器件为 <code>STM32F429IGTx</code>，编译宏 <code>USE_HAL_DRIVER, STM32F429xx</code>；内部 SRAM 只有 192KB，放不下 1280×800×2B 的整屏缓存，这是必须外扩 SDRAM 的直接原因。</div>
+</section>
+
+<section class="content-card" id="s03" data-title="启动流程总览">
+    <h2>03　启动流程总览</h2>
+    <div class="sec-sub">main 里只有七步初始化，但第 7 步 LCD_Init 内部又展开了一整棵 LTDC 初始化树</div>
+
+    <figure class="figure">
+        <img src="./index28-map/boot-flow.png" alt="从上电复位到主循环的启动流程图">
+        <figcaption>图 3-1　上电 → Reset_Handler → main 的七步初始化 → while(1)</figcaption>
+    </figure>
+    <figure class="figure"><img src="./index28-map/ltdc-timing.png" alt="LTDC 行场同步与 DE 有效窗口时序图"><figcaption>图 3-2　LTDC 行场同步与 DE 有效窗口</figcaption></figure>
+    <p>一行由 HBP + 有效宽度 + HFP 组成，一帧由 VBP + 有效高度 + VFP 组成；HSYNC/VSYNC 负责同步，DE 为高电平时 RGB 数据才被屏采样。这些参数与 1280×800 分辨率一一对应，DE 窗口内的像素直接取自 SDRAM 帧缓存。</p>
+
+    <pre class="code"><span class="cmt">// USER/main.c（节选）</span>
+int main(void)
+{
+    u8 x=0;
+    u8 lcd_id[12];
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// 180MHz</span>
+    delay_init(180);
+    uart_init(115200);
+    LED_Init();
+    KEY_Init();
+    SDRAM_Init();                   <span class="cmt">// 先让帧缓存的“地基”可用</span>
+    LCD_Init();                     <span class="cmt">// 读屏 ID，再走 LTDC 初始化</span>
+    POINT_COLOR=RED;
+    sprintf((char*)lcd_id,"LCD ID:%04X",lcddev.id);
+    while(1) { <span class="cmt">/* 12 色轮换 + 文字 + LED0 */</span> }
+}</pre>
+
+    <h3>为什么是这个顺序</h3>
+    <ul>
+        <li><strong>时钟必须最先</strong>：后面所有外设的分频、波特率、SysTick 节拍都以 180MHz 为前提。</li>
+        <li><strong>SDRAM 必须在 LCD 之前</strong>：<code>ltdc.c</code> 里的帧缓存数组用 <code>__attribute__((at(0xC0000000)))</code> 固定定位，LTDC 一开就会去读这块地址；SDRAM 控制器没初始化时读到的是总线错误或全 0。</li>
+        <li><strong>串口初始化与显示无直接关系</strong>：RGB 屏分支的 <code>LCD_Init()</code> 不调用 <code>printf</code>，所以顺序不像实验13 那样敏感，但保留在 LED/KEY 之前便于后续调试。</li>
+    </ul>
+
+    <div class="note">注意 main 里没有 <code>HAL_Init()</code>。这不影响本实验：HAL 的 1ms 时基是在 <code>HAL_RCC_ClockConfig()</code> 内部调用 <code>HAL_InitTick()</code> 时建立的，而 <code>delay_ms()</code> 根本不使用 HAL 时基。</div>
+</section>
+
+<section class="content-card" id="s04" data-title="启动文件与向量表">
+    <h2>04　启动文件与向量表</h2>
+    <div class="sec-sub">栈 1KB、堆 512B，复位后先 SystemInit 再 __main，没有任何自定义汇编</div>
+
+    <table class="data">
+        <tr><th>项目</th><th>源码位置</th><th>值 / 行为</th></tr>
+        <tr><td>栈大小</td><td><code>Stack_Size EQU 0x400</code></td><td>1KB，栈顶符号 <code>__initial_sp</code>，复位时装入 MSP</td></tr>
+        <tr><td>堆大小</td><td><code>Heap_Size EQU 0x200</code></td><td>512B，本工程几乎不用 malloc</td></tr>
+        <tr><td>复位向量</td><td>向量表第 2 项 <code>DCD Reset_Handler</code></td><td>上电后 PC 直接指向它</td></tr>
+        <tr><td>复位入口</td><td><code>Reset_Handler</code></td><td><code>BLX SystemInit</code> → <code>BX __main</code></td></tr>
+        <tr><td>.data / .bss</td><td><code>__main</code>（C 库）</td><td>复制初值、清零未初始化段，然后才进 <code>main()</code></td></tr>
+    </table>
+
+    <pre class="code">Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+         IMPORT  SystemInit
+         IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0
+                 LDR     R0, =__main
+                 BX      R0
+                 ENDP</pre>
+
+    <p>向量表里已经预留了 <code>LTDC_IRQHandler</code>、<code>LTDC_ER_IRQHandler</code>、<code>DMA2D_IRQHandler</code> 的位置，但本实验没有开启这三个中断：LTDC 靠硬件自动扫描，DMA2D 填充用轮询 <code>DMA2D_FLAG_TC</code> 等完成，所以它们都停在启动文件里的默认死循环（弱定义）。</p>
+
+    <div class="note blue">所有异常处理函数都是 <code>[WEAK]</code>：用户在 <code>stm32f4xx_it.c</code> 里写同名函数即可覆盖。本工程只重写了 <code>SysTick_Handler</code> 与 <code>USART1_IRQHandler</code>。</div>
+</section>
+
+<section class="content-card" id="s05" data-title="SystemInit 与缺席的 HAL_Init">
+    <h2>05　SystemInit 与“缺席”的 HAL_Init</h2>
+    <div class="sec-sub">复位后只做三件事：开 FPU、把 RCC 打回默认、把向量表指回 Flash</div>
+
+    <pre class="code"><span class="cmt">// USER/system_stm32f4xx.c</span>
+void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">/* CP10/CP11 全访问 */</span>
+  #endif
+  RCC-&gt;CR |= 0x00000001;      <span class="cmt">// 打开 HSI</span>
+  RCC-&gt;CFGR = 0x00000000;     <span class="cmt">// 复位时钟配置</span>
+  <span class="cmt">/* ... 关闭 HSE/PLL，等待 HSI 成为系统时钟 ... */</span>
+  SCB-&gt;VTOR = FLASH_BASE | 0x00;  <span class="cmt">// 向量表仍在 0x08000000</span>
+}</pre>
+
+    <h3>HAL_Init 没调用，时基从哪来</h3>
+    <p>按常规流程，<code>HAL_Init()</code> 会设置 NVIC 优先级分组并调用 <code>HAL_InitTick()</code> 配置 SysTick。这个工程直接把它省了，但 <code>HAL_RCC_ClockConfig()</code> 在切换完时钟后会自己调用一次 <code>HAL_InitTick(TICK_INT_PRIORITY)</code>，把 SysTick 重装为 1ms。因此：</p>
+    <ul>
+        <li><code>HAL_GetTick()</code> / <code>HAL_Delay()</code> 可用，但优先级分组保持复位默认值（PRIGROUP=0，4 位抢占、无子优先级）。</li>
+        <li>本工程的 <code>delay_ms()</code> 不使用中断，也不依赖 <code>HAL_GetTick()</code>，所以即使时基异常也不会卡死延时。</li>
+        <li>真正依赖超时的是 <code>HAL_SDRAM_SendCommand()</code> 与 <code>HAL_SDRAM_ProgramRefreshRate()</code>，它们用 <code>HAL_GetTick()</code> 判断超时，因此 Stm32_Clock_Init 必须先于 SDRAM_Init。</li>
+    </ul>
+
+    <div class="note">这是“能跑但不符合 HAL 规范”的典型写法：把 <code>HAL_Init()</code> 补回去会更稳，但要注意补回后 <code>HAL_InitTick()</code> 会在 16MHz 下先装一次重装值，随后 <code>HAL_RCC_ClockConfig()</code> 会再按新频率重装，顺序不能颠倒。</div>
+</section>
+
+<section class="content-card" id="s06" data-title="时钟树与像素时钟">
+    <h2>06　时钟树与像素时钟</h2>
+    <div class="sec-sub">主 PLL 管 CPU，PLLSAI 单独管 LTDC；两套时钟互不影响</div>
+
+    <figure class="figure">
+        <img src="./index28-map/clock-tree.png" alt="STM32F429 时钟树与 LTDC 像素时钟">
+        <figcaption>图 6-1　25MHz 晶振经主 PLL 得到 180MHz，经 PLLSAI 得到像素时钟</figcaption>
+    </figure>
+
+    <table class="data">
+        <tr><th>输出</th><th>算式</th><th>结果</th><th>供给</th></tr>
+        <tr><td>SYSCLK</td><td>25MHz ÷ 25 × 360 ÷ 2</td><td>180MHz</td><td>系统时钟</td></tr>
+        <tr><td>HCLK</td><td>180MHz ÷ 1</td><td>180MHz</td><td>AHB、FMC、SysTick</td></tr>
+        <tr><td>PCLK1</td><td>180MHz ÷ 4</td><td>45MHz</td><td>APB1 外设</td></tr>
+        <tr><td>PCLK2</td><td>180MHz ÷ 2</td><td>90MHz</td><td>APB2 外设</td></tr>
+        <tr><td>PLLQ</td><td>360MHz ÷ 8</td><td>45MHz</td><td>USB / SDIO / RNG</td></tr>
+        <tr><td>Fdclk（10.1 寸）</td><td>1MHz × 360 ÷ 2 ÷ 4</td><td>45MHz</td><td>LTDC 像素时钟</td></tr>
+        <tr><td>Fdclk（7 寸 1024×600 / 8 寸）</td><td>1MHz × 306 ÷ 3 ÷ 2</td><td>51MHz</td><td>LTDC 像素时钟</td></tr>
+    </table>
+
+    <h3>像素时钟不是“越快越好”</h3>
+    <p><code>LTDC_Clk_Set(pllsain, pllsair, pllsaidivr)</code> 只改 PLLSAI 的三个参数，输入固定是 PLLM 分频后的 1MHz。不同面板的像素时钟在 <code>LTDC_Init()</code> 里按 ID 选择：4.3 寸 <code>288/4/8=9MHz</code>，7 寸 800×480 <code>396/3/4=33MHz</code>，7 寸 1024×600 与 8 寸 <code>306/3/2=51MHz</code>，10.1 寸 <code>360/2/4=45MHz</code>。时钟与前后廊必须成套匹配，单改一个就会出现花屏、偏移或黑屏。</p>
+
+    <div class="note blue">180MHz 还需要三个配套条件：调压器 <code>PWR_REGULATOR_VOLTAGE_SCALE1</code>、<code>HAL_PWREx_EnableOverDrive()</code>、Flash 等待 <code>FLASH_LATENCY_5</code>（5WS = 6 个 CPU 周期）。三者任何一个缺失，现象通常是随机死机或串口乱码。</div>
+</section>
+
+<section class="content-card" id="s07" data-title="延时与串口">
+    <h2>07　延时与串口</h2>
+    <div class="sec-sub">delay 只借用 SysTick 的计数器，不打开中断，也不改重装值</div>
+
+    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">// 时钟源 HCLK</span>
+    fac_us = SYSCLK;                                     <span class="cmt">// 180 → 1us 需要 180 个节拍</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks = nus * fac_us;
+    u32 reload = SysTick-&gt;LOAD;      <span class="cmt">// HAL_InitTick 装好的 1ms 重装值</span>
+    u32 told = SysTick-&gt;VAL;
+    while(1) {
+        u32 tnow = SysTick-&gt;VAL;
+        if(tnow != told) {
+            if(tnow &lt; told) tcnt += told - tnow;
+            else            tcnt += reload - tnow + told;
+            told = tnow;
+            if(tcnt &gt;= ticks) break;
+        }
+    }
+}</pre>
+
+    <p><code>SYSTEM_SUPPORT_OS</code> 为 0，所以走的是上面这段“裸机轮询”分支：<strong>不使能 SysTick 中断</strong>，也不重写 <code>LOAD</code>，只借用 <code>HAL_InitTick()</code> 装好的 1ms 周期做递减计数。若把 <code>LOAD</code> 改成 0，<code>delay_us</code> 会永远等不到 <code>tnow != told</code>，这是排查“卡在延时里”的第一检查点。</p>
+
+    <h3>串口只做初始化</h3>
+    <table class="data">
+        <tr><th>项目</th><th>配置</th><th>说明</th></tr>
+        <tr><td>USART1</td><td>115200、8 数据位、1 停止位、无校验、无流控</td><td><code>uart_init(115200)</code></td></tr>
+        <tr><td>引脚</td><td>PA9=TX，PA10=RX，AF7，复用推挽，上拉</td><td><code>HAL_UART_MspInit</code></td></tr>
+        <tr><td>中断</td><td>RXNE 使能，NVIC 抢占 3 / 子优先级 3</td><td>主流程未使用接收数据</td></tr>
+        <tr><td>printf</td><td><code>fputc</code> 重定向到 USART1</td><td>等待 TXE 后写 DR</td></tr>
+    </table>
+
+    <div class="note">本实验的 RGB 屏分支不依赖串口。即使串口没接，屏幕也能正常显示；但一旦在 <code>LCD_Init()</code> 之前插入 <code>printf</code> 调试语句，就要先确认串口时钟与引脚已初始化。</div>
+</section>
+
+<section class="content-card" id="s08" data-title="SDRAM：帧缓存的地基">
+    <h2>08　SDRAM：帧缓存的地基</h2>
+    <div class="sec-sub">13 行 × 9 列 × 4 Bank × 16 位 = 32MB，SDCLK 90MHz，刷新计数 683</div>
+
+    <table class="data">
+        <tr><th>参数</th><th>源码值</th><th>含义</th></tr>
+        <tr><td>Bank</td><td><code>FMC_SDRAM_BANK1</code></td><td>接在 Bank5，基地址 0xC0000000</td></tr>
+        <tr><td>行 / 列</td><td>13 行 / 9 列</td><td>8192 行 × 512 列</td></tr>
+        <tr><td>数据宽度</td><td>16 位</td><td>一次传输 2 字节</td></tr>
+        <tr><td>内部 Bank</td><td>4 个</td><td>32MB = 8192 × 512 × 4 × 2B</td></tr>
+        <tr><td>CAS</td><td>3</td><td>读命令后 3 个时钟出数据</td></tr>
+        <tr><td>SDCLK</td><td>HCLK / 2 = 90MHz</td><td>周期 11.1ns</td></tr>
+        <tr><td>刷新计数</td><td>683</td><td>64ms × 90MHz ÷ 8192 − 20</td></tr>
+        <tr><td>时序</td><td>TRCD=2、TRP=2、TRC=6、TMRD=2、TXSR=8、TRAS=6</td><td>与 W9825G6KH 手册对应</td></tr>
+    </table>
+
+    <pre class="code"><span class="cmt">// HARDWARE/SDRAM/sdram.c</span>
+SDRAM_Send_Cmd(0,FMC_SDRAM_CMD_CLK_ENABLE,1,0);      <span class="cmt">// 1. 时钟使能</span>
+delay_us(500);                                       <span class="cmt">//    至少 200us</span>
+SDRAM_Send_Cmd(0,FMC_SDRAM_CMD_PALL,1,0);            <span class="cmt">// 2. 所有 Bank 预充电</span>
+SDRAM_Send_Cmd(0,FMC_SDRAM_CMD_AUTOREFRESH_MODE,8,0);<span class="cmt">// 3. 自刷新 8 次</span>
+SDRAM_Send_Cmd(0,FMC_SDRAM_CMD_LOAD_MODE,1,temp);    <span class="cmt">// 4. 写模式寄存器</span>
+HAL_SDRAM_ProgramRefreshRate(&amp;SDRAM_Handler,683);    <span class="cmt">// 5. 刷新率</span></pre>
+
+    <p>这五步必须按顺序执行，少一步的典型现象是：只使能时钟 → 读写全 0；没预充电 → 第一次访问就 HardFault；模式寄存器没写 → 突发长度与 CAS 错，读回的数据错位。</p>
+
+    <div class="note blue">SDRAM 位于 FMC Bank5，CPU 访问它就是普通内存读写，没有“显存”特殊指令；LTDC 也通过 AHB 总线读同一块内存，两者共享带宽。这正是后面帧缓存要放在 SDRAM 起始处、并尽量用 DMA2D 整块填充的原因。</div>
+</section>
+
+<section class="content-card" id="s09" data-title="LCD_Init：先认屏再分路">
+    <h2>09　LCD_Init：先认屏再分路</h2>
+    <div class="sec-sub">PG6/PI2/PI7 三位编码决定面板型号；ID 非 0 走 LTDC，ID 为 0 才去试 MCU 屏</div>
+
+    <pre class="code">void LCD_Init(void)
+{
+    lcddev.id = LTDC_PanelID_Read();   <span class="cmt">// 检查是否有 RGB 屏接入</span>
+    if(lcddev.id != 0)
+    {
+        LTDC_Init();                   <span class="cmt">// 有 RGB 屏：走 LTDC</span>
+    }
+    else
+    {
+        <span class="cmt">// 走 FMC NE1，读 0x9341 / NT35310 等 MCU 屏 ID</span>
+    }
+}</pre>
+
+    <p><code>LTDC_PanelID_Read()</code> 把 PG6、PI2、PI7 配成上拉输入，按 <code>M2:M1:M0</code> 组成 0~5 的索引，再查表返回 16 位 ID。<code>LTDC_Init()</code> 内部<strong>又读了一次</strong>面板 ID，因此上电实际上读了两次；第二次读之前，<code>HAL_LTDC_MspInit()</code> 还没有把这三个脚切成 AF，所以仍然读得到。</p>
+
+    <table class="data">
+        <tr><th>索引 M2:M1:M0</th><th>返回 ID</th><th>面板</th><th>时序与时钟是否完整</th></tr>
+        <tr><td>000</td><td><code>0x4342</code></td><td>4.3 寸 480×272</td><td>完整，9MHz</td></tr>
+        <tr><td>001</td><td><code>0x7084</code></td><td>7 寸 800×480</td><td>完整，33MHz</td></tr>
+        <tr><td>010</td><td><code>0x7016</code></td><td>7 寸 1024×600</td><td>完整，51MHz</td></tr>
+        <tr><td>011</td><td><code>0x7018</code></td><td>7 寸 1280×800</td><td>只填了分辨率，注释“其他参数待定”</td></tr>
+        <tr><td>100</td><td><code>0x8016</code></td><td>8 寸 1024×600</td><td>完整，51MHz，时序与 7 寸 1024×600 相同</td></tr>
+        <tr><td>101</td><td><code>0x1018</code></td><td>10.1 寸 1280×800</td><td>完整，45MHz，PCLK 极性为 IIPC</td></tr>
+        <tr><td>其他</td><td><code>0</code></td><td>无 RGB 屏</td><td>转去 MCU 屏分支</td></tr>
+    </table>
+
+    <p>分支缺口与已补齐项：</p>
+    <ul>
+        <li><strong>8 寸分支已按 ATK70048 补齐</strong>：判断值为 <code>0X8016</code>，分辨率 1024×600；<code>hsw=20</code>、<code>hbp=140</code>、<code>hfp=160</code>、<code>vsw=3</code>、<code>vbp=20</code>、<code>vfp=12</code>，六项均为 ATK70048 规格表的典型值。像素时钟调用 <code>LTDC_Clk_Set(306,3,RCC_PLLSAIDIVR_2)</code> 得到 51MHz：规格典型值是 51.2MHz，但 1MHz 的 PLLSAI 无法整除出 51.2，51MHz 是最接近值，帧率约 59.8Hz，仍在 45~57MHz 范围内。</li>
+        <li><strong>1280×800 分支没有像素时钟</strong>：<code>0X7018</code> 只赋了 <code>pwidth/pheight</code>，<code>hsw/hbp/hfp</code> 全为 0，也没有调用 <code>LTDC_Clk_Set()</code>。真接这种屏，需要按面板手册补齐时序。</li>
+    </ul>
+
+    <div class="note">面板 ID 读取依赖上拉：如果屏没插好或排线断开，三个脚都读到 1，索引为 7，函数返回 0，程序会误以为接的是 MCU 屏，转去跑 FMC NE1 的读 ID 流程——现象是“RGB 屏一直白屏，但程序没死”。</div>
+</section>
+
+<section class="content-card" id="s10" data-title="LTDC 流水线与时序参数">
+    <h2>10　LTDC 流水线与时序参数</h2>
+    <div class="sec-sub">帧缓存是“源”，LTDC 层是“取数器”，时序寄存器决定一行有多少个像素时钟</div>
+
+    <figure class="figure">
+        <img src="./index28-map/ltdc-pipeline.png" alt="LTDC 从帧缓存到 RGB 面板的数据通路">
+        <figcaption>图 10-1　CPU/DMA2D 写缓存，LTDC 读缓存并按 RGB 时序输出</figcaption>
+    </figure>
+
+    <pre class="code"><span class="cmt">// HARDWARE/LCD/ltdc.c · LTDC_Init()</span>
+LTDC_Handler.Init.HSPolarity = LTDC_HSPOLARITY_AL;
+LTDC_Handler.Init.VSPolarity = LTDC_VSPOLARITY_AL;
+LTDC_Handler.Init.DEPolarity  = LTDC_DEPOLARITY_AL;
+if(lcdid==0X1018) LTDC_Handler.Init.PCPolarity = LTDC_PCPOLARITY_IIPC;
+else              LTDC_Handler.Init.PCPolarity = LTDC_PCPOLARITY_IPC;
+
+LTDC_Handler.Init.HorizontalSync     = lcdltdc.hsw - 1;
+LTDC_Handler.Init.VerticalSync       = lcdltdc.vsw - 1;
+LTDC_Handler.Init.AccumulatedHBP     = lcdltdc.hsw + lcdltdc.hbp - 1;
+LTDC_Handler.Init.AccumulatedVBP     = lcdltdc.vsw + lcdltdc.vbp - 1;
+LTDC_Handler.Init.AccumulatedActiveW = lcdltdc.hsw + lcdltdc.hbp + lcdltdc.pwidth - 1;
+LTDC_Handler.Init.AccumulatedActiveH = lcdltdc.vsw + lcdltdc.vbp + lcdltdc.pheight - 1;
+LTDC_Handler.Init.TotalWidth  = lcdltdc.hsw + lcdltdc.hbp + lcdltdc.pwidth  + lcdltdc.hfp - 1;
+LTDC_Handler.Init.TotalHeigh = lcdltdc.vsw + lcdltdc.vbp + lcdltdc.pheight + lcdltdc.vfp - 1;
+HAL_LTDC_Init(&amp;LTDC_Handler);</pre>
+
+    <table class="data">
+        <tr><th>面板</th><th>HSW</th><th>HBP</th><th>HFP</th><th>VSW</th><th>VBP</th><th>VFP</th><th>Fdclk</th></tr>
+        <tr><td>4.3 寸 480×272</td><td>1</td><td>40</td><td>5</td><td>1</td><td>8</td><td>8</td><td>9MHz</td></tr>
+        <tr><td>7 寸 800×480</td><td>1</td><td>46</td><td>210</td><td>1</td><td>23</td><td>22</td><td>33MHz</td></tr>
+        <tr><td>7 寸 1024×600</td><td>20</td><td>140</td><td>160</td><td>3</td><td>20</td><td>12</td><td>51MHz</td></tr>
+        <tr><td>8 寸 1024×600</td><td>20</td><td>140</td><td>160</td><td>3</td><td>20</td><td>12</td><td>51MHz</td></tr>
+        <tr><td>10.1 寸 1280×800</td><td>10</td><td>140</td><td>10</td><td>3</td><td>10</td><td>10</td><td>45MHz</td></tr>
+    </table>
+
+    <p>以 7 寸 1024×600 为例：一行的总像素时钟是 <code>20 + 140 + 1024 + 160 = 1344</code>，写进寄存器时统一减 1，得到 <code>TotalWidth = 1343</code>；一帧总行数是 <code>3 + 20 + 600 + 12 = 635</code>。前后廊不是“随便填的余量”，它必须与面板手册一致，否则图像会左右偏移、上下滚动或直接黑屏。</p>
+
+    <div class="note blue">时序寄存器写入的是“计数边界 − 1”。如果忘记减 1，画面会整体右移/下移一个像素；如果把 HBP 与 HFP 对调，画面会偏移半个屏宽。调屏时优先用示波器看 PCLK 与 HS 的频率，再核对这四个数。</div>
+</section>
+
+<section class="content-card" id="s11" data-title="层配置与帧缓存">
+    <h2>11　层配置与帧缓存</h2>
+    <div class="sec-sub">第 1 层直接指向 0xC0000000，RGB565、Alpha 255、混合系数 6/7</div>
+
+    <figure class="figure">
+        <img src="./index28-map/sdram-frame.png" alt="帧缓存在 SDRAM 中的位置与像素地址换算">
+        <figcaption>图 11-1　32MB SDRAM 的前 2MB 作为 1280×800 帧缓存</figcaption>
+    </figure>
+
+    <pre class="code"><span class="cmt">// ltdc.c：最大分辨率 1280×800，RGB565 时每像素 2 字节</span>
+u16 ltdc_lcd_framebuf[1280][800] __attribute__((at(LCD_FRAME_BUF_ADDR)));
+<span class="cmt">// LCD_FRAME_BUF_ADDR = 0xC0000000</span>
+
+LTDC_Layer_Parameter_Config(0,(u32)ltdc_framebuf[0],LCD_PIXFORMAT,255,0,6,7,0X000000);
+LTDC_Layer_Window_Config(0,0,0,lcdltdc.pwidth,lcdltdc.pheight);
+LTDC_Display_Dir(0);      <span class="cmt">// 默认竖屏</span>
+LTDC_Select_Layer(0);     <span class="cmt">// 选择第 1 层</span>
+LCD_LED = 1;              <span class="cmt">// 点亮背光</span>
+LTDC_Clear(0XFFFFFFFF);   <span class="cmt">// 清成白色</span></pre>
+
+    <p>数组按 <code>[1280][800]</code> 声明，是为了在任何面板下都能装下整屏；实际只用前 <code>pwidth × pheight × 2</code> 字节。以 1280×800 计算正好 2,048,000 字节，地址范围 <code>0xC0000000 ~ 0xC01F3FFF</code>。层参数必须在窗口参数之前配置，源码注释也特别强调这一点：<code>HAL_LTDC_SetWindowSize()</code> 会立即写寄存器，若层还没配置，窗口会被旧参数覆盖。</p>
+
+    <h3>两种写缓存的方式</h3>
+    <table class="data">
+        <tr><th>方式</th><th>源码</th><th>特点</th></tr>
+        <tr><td>CPU 逐点写</td><td><code>LTDC_Draw_Point()</code></td><td>字符、图形；每次 2 字节，速度受总线影响</td></tr>
+        <tr><td>DMA2D 整块填</td><td><code>LTDC_Fill()</code> / <code>LTDC_Clear()</code></td><td>R2M 模式，一次填满矩形，CPU 只等 TC 标志</td></tr>
+    </table>
+
+    <pre class="code"><span class="cmt">// DMA2D 寄存器版填充（LTDC_Fill）</span>
+DMA2D-&gt;CR   = DMA2D_R2M;              <span class="cmt">// 寄存器到存储器</span>
+DMA2D-&gt;OPFCCR = LCD_PIXFORMAT;        <span class="cmt">// RGB565</span>
+DMA2D-&gt;OOR  = offline;                <span class="cmt">// 行偏移 = pwidth - 宽</span>
+DMA2D-&gt;OMAR = addr;                   <span class="cmt">// 目标地址</span>
+DMA2D-&gt;NLR  = 行数 | (列数 &lt;&lt; 16);
+DMA2D-&gt;OCOLR = color;
+DMA2D-&gt;CR  |= DMA2D_CR_START;
+while((DMA2D-&gt;ISR &amp; DMA2D_FLAG_TC)==0) { <span class="cmt">/* 超时 0x1FFFFF */</span> }</pre>
+
+    <div class="note">工程没有配置 MPU，也没有打开 D-Cache：<code>sdram.h</code> 里虽然声明了 <code>SDRAM_MPU_Config()</code>，但 <code>sdram.c</code> 没有实现、<code>main()</code> 也没有调用。当前“CPU 写完、LTDC 立刻能读到”完全依赖 Cache 关闭这一前提；后续若打开 D-Cache，必须把帧缓存区配成 Write-Through 或 Non-Cacheable。</div>
+</section>
+
+<section class="content-card" id="s12" data-title="坐标换算与清屏">
+    <h2>12　坐标换算与清屏</h2>
+    <div class="sec-sub">横屏直接线性寻址，竖屏要按 pheight−x−1 旋转；像素大小固定 2 字节</div>
+
+    <pre class="code">void LTDC_Draw_Point(u16 x,u16 y,u32 color)
+{
+    if(lcdltdc.dir)   <span class="cmt">// 横屏</span>
+        *(u16*)((u32)ltdc_framebuf[0] + lcdltdc.pixsize*(lcdltdc.pwidth*y + x)) = color;
+    else              <span class="cmt">// 竖屏</span>
+        *(u16*)((u32)ltdc_framebuf[0] + lcdltdc.pixsize*(lcdltdc.pwidth*(lcdltdc.pheight-x-1) + y)) = color;
+}</pre>
+
+    <table class="data">
+        <tr><th>符号</th><th>值 / 来源</th><th>作用</th></tr>
+        <tr><td><code>pixsize</code></td><td>2（RGB565）</td><td>每个像素 2 字节</td></tr>
+        <tr><td><code>pwidth</code></td><td>面板物理宽度，如 1024</td><td>行的跨度（stride）</td></tr>
+        <tr><td><code>pheight</code></td><td>面板物理高度，如 600</td><td>竖屏旋转时的基准</td></tr>
+        <tr><td><code>dir</code></td><td><code>LTDC_Display_Dir(0)</code> → 竖屏</td><td>决定是否旋转坐标</td></tr>
+    </table>
+
+    <p>清屏最终落到 <code>LTDC_Fill(0,0,width-1,height-1,color)</code>。竖屏时 <code>lcdltdc.width = pheight</code>、<code>lcdltdc.height = pwidth</code>，所以清屏矩形是“逻辑坐标”的整屏，内部再转换成面板坐标。因为 DMA2D 只认面板坐标，<code>LTDC_Fill()</code> 开头会先把 <code>(sx,sy)-(ex,ey)</code> 旋转成 <code>(psx,psy)-(pex,pey)</code>，这一步写错会表现为“清屏只清了一半”或“清到屏幕外”。</p>
+
+    <div class="note blue">本工程只使用第 1 层，<code>ltdc_framebuf[1]</code> 没有赋值。若后续要开双层（例如 OSD 叠加），必须给第 2 层另外分配一块不重叠的缓存，并注意两层窗口的 Alpha 与混合系数。</div>
+</section>
+
+<section class="content-card" id="s13" data-title="主循环与现象">
+    <h2>13　主循环与现象</h2>
+    <div class="sec-sub">每 1 秒换一种底色并重绘 5 行红字，DS0 同步翻转</div>
+
+    <figure class="figure">
+        <img src="./index28-map/main-loop.png" alt="主循环 12 色轮换与文字重绘">
+        <figcaption>图 13-1　12 种底色循环，每轮 1 秒，文字始终为红色</figcaption>
+    </figure>
+
+    <table class="data">
+        <tr><th>操作</th><th>源码</th><th>可观察现象</th></tr>
+        <tr><td>上电</td><td><code>LTDC_Clear(0xFFFFFFFF)</code>，随后 x=0 清白</td><td>屏幕白底，左上角出现 5 行红字</td></tr>
+        <tr><td>每 1 秒</td><td><code>LCD_Clear(颜色)</code> + 5 次 <code>LCD_ShowString</code></td><td>底色按白、黑、蓝、红、品红、绿、青、黄、棕红、灰、浅灰、棕循环</td></tr>
+        <tr><td>每帧</td><td><code>LED0 = !LED0</code></td><td>DS0（PB1）亮 1s、灭 1s</td></tr>
+        <tr><td>12 帧</td><td><code>x++</code>，到 12 归零</td><td>12 秒完成一轮颜色循环</td></tr>
+    </table>
+
+    <div class="sim">
+        <div class="sim-title">主循环演示（仅演示逻辑，不涉及真实硬件）</div>
+        <div class="sim-buttons">
+            <button data-key="next">下一帧（换底色）</button>
+            <button data-key="run">跑完 12 色</button>
+            <button data-key="reset">复位到 x=0</button>
+        </div>
+        <div class="led-row">
+            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0（PB1）</div>
+        </div>
+        <div class="sim-log" id="simLog">已初始化：SDRAM 32MB，帧缓存 0xC0000000，LTDC 第 1 层已打开。</div>
+    </div>
+
+    <div class="note">演示严格按 <code>main.c</code> 的 switch 顺序换色，每帧都重绘 5 行文字、翻转 LED0，并模拟 <code>delay_ms(1000)</code> 的节奏；按钮只是把 1 秒的等待压缩成立即执行，方便观察 12 色顺序。</div>
+</section>
+
+<section class="content-card" id="s14" data-title="总结与常见问题排查">
+    <h2>14　总结与常见问题排查</h2>
+    <div class="sec-sub">把整条链压成六步，再给一张“现象 → 原因 → 排查”对照表</div>
+
+    <table class="data">
+        <tr><th>阶段</th><th>关键动作</th><th>失败时的典型现象</th></tr>
+        <tr><td>① 复位</td><td>MSP/PC 取自向量表，跳 Reset_Handler</td><td>上电无反应，查 BOOT0 与下载</td></tr>
+        <tr><td>② SystemInit</td><td>开 FPU、RCC 复位、VTOR=0x08000000</td><td>中断跑飞、HardFault</td></tr>
+        <tr><td>③ 时钟</td><td>PLL 180MHz + OverDrive + 5WS</td><td>随机死机、串口乱码</td></tr>
+        <tr><td>④ SDRAM</td><td>FMC Bank5 + 五步上电序列</td><td>帧缓存写入无效、白屏</td></tr>
+        <tr><td>⑤ LTDC</td><td>读面板 ID → 像素时钟 → 时序 → 层 → 背光</td><td>黑屏、花屏、偏移、颜色错</td></tr>
+        <tr><td>⑥ 主循环</td><td>12 色轮换 + 文字 + LED0</td><td>颜色不换、文字残影、LED 不闪</td></tr>
+    </table>
+
+    <h3>现象 → 原因 → 排查</h3>
+    <table class="data">
+        <tr><th>现象</th><th>可能原因</th><th>排查动作</th></tr>
+        <tr><td>整屏白、无文字</td><td>背光未开；或面板 ID 读到 0 走了 MCU 屏分支</td><td>量 PB5 是否为高；在 <code>LCD_Init</code> 后看 <code>lcddev.id</code></td></tr>
+        <tr><td>8 寸屏偏移 / 无显示</td><td>时序按 1024×600 典型值补齐，与实物面板不一定完全一致</td><td>对照面板手册逐项核对 hsw/hbp/hfp、vsw/vbp/vfp 与 <code>LTDC_Clk_Set</code></td></tr>
+        <tr><td>7 寸 1280×800 无显示</td><td><code>0X7018</code> 分支只填了分辨率</td><td>按面板手册补齐 hsw/hbp/hfp/vsw/vbp/vfp 与 <code>LTDC_Clk_Set</code></td></tr>
+        <tr><td>画面左右偏移 / 滚动</td><td>前后廊与面板不匹配，或寄存器忘记减 1</td><td>用示波器测 PCLK/HS 频率，核对 TotalWidth 与 HBP</td></tr>
+        <tr><td>花屏、闪烁</td><td>像素时钟过高，或 SDRAM 带宽不足</td><td>降低 Fdclk；确认 SDCLK=90MHz、刷新计数 683</td></tr>
+        <tr><td>文字有残影</td><td>换底色后没有重绘文字，或只清了局部</td><td>确认每轮都调用 <code>LCD_Clear</code> 全屏 + 5 行 <code>LCD_ShowString</code></td></tr>
+        <tr><td>颜色明显偏色</td><td>RGB 数据线虚焊，或像素格式不是 RGB565</td><td>查 PF/PG/PH/PI 数据脚；核对 <code>LCD_PIXFORMAT</code></td></tr>
+        <tr><td>程序卡在 SDRAM_Init</td><td>FMC 时钟未开、颗粒供电异常、命令超时</td><td>查 <code>HAL_SDRAM_SendCommand</code> 返回值，量 SDCLK 波形</td></tr>
+    </table>
+
+    <div class="note blue">一句话串起来：向量表给起点，PLL 给 180MHz，FMC 把 SDRAM 变成可用内存，面板 ID 选出一套时序，PLLSAI 给出像素时钟，LTDC 从此自己扫描；CPU 要做的只是往 0xC0000000 里写颜色。</div>
+</section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-10 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+// ===== 交互演示（页面无 .sim 时自动跳过） =====
+    (function () {
+        var dot0 = document.getElementById('dot0');
+        var simLog = document.getElementById('simLog');
+        if (!dot0 || !simLog) return;
+
+        var COLORS = [
+            'WHITE', 'BLACK', 'BLUE', 'RED', 'MAGENTA', 'GREEN',
+            'CYAN', 'YELLOW', 'BRRED', 'GRAY', 'LGRAY', 'BROWN'
+        ];
+        var x = 0, led0On = false, lines = [], MAXLN = 9;
+
+        function push(t) { lines.push(t); }
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            simLog.innerHTML = lines.slice(-MAXLN).join('<br>');
+        }
+
+        function frame() {
+            push('x=' + x + ' → LCD_Clear(' + COLORS[x] + ')');
+            push('LTDC_Clear → DMA2D R2M 填充帧缓存前 2000KB');
+            push('LCD_ShowString ×5：POINT_COLOR=RED 重绘文字');
+            led0On = !led0On;
+            push('LED0 = !LED0 → DS0 ' + (led0On ? '亮' : '灭') + '，delay_ms(1000)');
+            x = (x + 1) % 12;
+            render();
+        }
+
+        function reset() {
+            x = 0; led0On = false; lines = [];
+            push('复位：x=0，DS0 灭，帧缓存仍指向 0xC0000000');
+            render();
+        }
+
+        var btns = document.querySelectorAll('.sim-buttons button');
+        for (var b = 0; b < btns.length; b++) {
+            (function (btn) {
+                btn.addEventListener('click', function () {
+                    var k = btn.getAttribute('data-key');
+                    if (k === 'next') frame();
+                    else if (k === 'run') {
+                        for (var n = 0; n < 12; n++) frame();
+                        push('一轮结束：12 色各 1 秒，x 回到 ' + x);
+                        render();
+                    } else reset();
+                });
+            })(btns[b]);
+        }
+    })();
+</script>
+</body>
+</html>

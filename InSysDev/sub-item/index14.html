@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>跑马灯实验代码解析</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-actions {
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .sidebar-actions button {
+            flex: 1;
+            padding: 5px 0;
+            font-size: 12px;
+            border: 1px solid #d9d9d9;
+            background: #fff;
+            color: #595959;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sidebar-actions button:hover {
+            color: #1890ff;
+            border-color: #1890ff;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+            margin: 0;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-menu::-webkit-scrollbar-thumb {
+            background-color: #c5d8e8;
+            border-radius: 3px;
+        }
+
+        .sidebar-menu::-webkit-scrollbar-track {
+            background-color: transparent;
+        }
+
+        .sidebar-menu > li {
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu > li > .menu-title {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .sidebar-menu > li > .menu-title:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu > li.active > .menu-title {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            font-weight: 600;
+        }
+
+        .sidebar-menu > li.active {
+            border-left-color: #1890ff;
+        }
+
+        .sidebar-menu .icon {
+            display: inline-block;
+            width: 16px;
+            margin-right: 8px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-menu .arrow {
+            margin-left: auto;
+            font-size: 10px;
+            transition: transform 0.25s;
+            color: #bbb;
+        }
+
+        .sidebar-menu > li.open > .menu-title .arrow {
+            transform: rotate(90deg);
+        }
+
+        /* 二级子菜单 */
+        .submenu {
+            list-style: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0;
+        }
+
+        .sidebar-menu > li.open > .submenu {
+            max-height: 1000px;
+        }
+
+        .submenu li {
+            padding: 8px 20px 8px 44px;
+            cursor: pointer;
+            color: #777;
+            font-size: 13px;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            margin-left: 3px;
+        }
+
+        .submenu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .submenu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        [id] {
+            scroll-margin-top: 8px;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* 内容小节标题 */
+        .content-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 22px 0 12px 0;
+            padding: 4px 0 4px 12px;
+            border-left: 4px solid #1890ff;
+            background: linear-gradient(90deg, rgba(24,144,255,0.06), transparent);
+        }
+
+        /* 数据表格 */
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0 18px 0;
+            font-size: 13px;
+        }
+
+        .api-table th {
+            background-color: #1890ff;
+            color: #fff;
+            font-weight: 500;
+            padding: 9px 10px;
+            border: 1px solid #d5e3f0;
+            text-align: left;
+        }
+
+        .api-table td {
+            padding: 8px 10px;
+            border: 1px solid #dce8f2;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .api-table tr:nth-child(even) td {
+            background-color: #f7fafd;
+        }
+
+        .api-table td.c, .api-table th.c {
+            text-align: center;
+        }
+
+        /* 代码块 */
+        .code-block {
+            background-color: #282c34;
+            color: #abb2bf;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.65;
+            padding: 14px 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 10px 0 16px 0;
+            white-space: pre;
+        }
+
+        .code-block .cm {
+            color: #7f848e;
+        }
+
+        .code-block .kw {
+            color: #c678dd;
+        }
+
+        .code-block .fn {
+            color: #61afef;
+        }
+
+        .code-block .num {
+            color: #d19a66;
+        }
+
+        /* 启动流程链 */
+        .flow {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: stretch;
+            margin: 14px 0 6px 0;
+        }
+
+        .flow .fbox {
+            background: #e8f4ff;
+            border: 1px solid #91caff;
+            border-radius: 5px;
+            padding: 7px 12px 5px 12px;
+            text-align: center;
+            color: #135c9c;
+            font-size: 13px;
+            font-weight: 600;
+            min-width: 74px;
+        }
+
+        .flow .fbox .fsub {
+            display: block;
+            font-size: 11px;
+            font-weight: 400;
+            color: #5b8db8;
+            margin-top: 2px;
+            white-space: nowrap;
+        }
+
+        .flow .farr {
+            align-self: center;
+            color: #1890ff;
+            font-weight: 700;
+            padding: 0 5px;
+            font-size: 15px;
+        }
+
+        /* 章节小结框 */
+        .summary-box {
+            background: #f2f9f2;
+            border-left: 4px solid #52c41a;
+            border-radius: 0 4px 4px 0;
+            padding: 12px 16px;
+            margin: 18px 0 6px 0;
+            line-height: 1.8;
+        }
+
+        .summary-box .sb-title {
+            font-weight: 600;
+            color: #237804;
+            margin-bottom: 4px;
+        }
+
+        .summary-box p {
+            color: #555;
+            margin-bottom: 4px;
+        }
+
+        /* 操作步骤列表 */
+        .steps {
+            margin: 8px 0 14px 0;
+            padding-left: 4px;
+            list-style: none;
+        }
+
+        .steps li {
+            color: #555;
+            line-height: 1.85;
+            margin-bottom: 7px;
+            padding-left: 26px;
+            position: relative;
+        }
+
+        .steps li .no {
+            position: absolute;
+            left: 0;
+            top: 3px;
+            width: 19px;
+            height: 19px;
+            border-radius: 50%;
+            background: #1890ff;
+            color: #fff;
+            font-size: 12px;
+            text-align: center;
+            line-height: 19px;
+            font-weight: 600;
+        }
+
+        .steps li b, .content-card p b {
+            color: #333;
+        }
+
+        /* 提示/警告框 */
+        .tip {
+            background: #fffbe6;
+            border: 1px solid #ffe58f;
+            border-radius: 4px;
+            padding: 9px 14px;
+            margin: 10px 0 14px 0;
+            color: #6b5900;
+            line-height: 1.7;
+            font-size: 13px;
+        }
+
+        .warn {
+            background: #fff1f0;
+            border: 1px solid #ffa39e;
+            border-radius: 4px;
+            padding: 9px 14px;
+            margin: 10px 0 14px 0;
+            color: #8c3a2e;
+            line-height: 1.7;
+            font-size: 13px;
+        }
+
+        /* 文内目录 */
+        .toc-card {
+            background: #f7fafd;
+            border: 1px solid #dce8f2;
+            border-radius: 6px;
+            padding: 14px 20px;
+            margin: 12px 0 20px 0;
+        }
+
+        .toc-card .toc-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .toc-card ol {
+            margin-left: 20px;
+            color: #555;
+            line-height: 2;
+        }
+
+        .toc-card a {
+            color: #1890ff;
+            text-decoration: none;
+        }
+
+        .toc-card a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">STM32F429跑马灯实验代码解析</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <div class="sidebar-actions">
+                    <button class="btn-expand-all">全部展开</button>
+                    <button class="btn-collapse-all">全部收起</button>
+                </div>
+                <ul class="sidebar-menu">
+                    <li class="active open" data-target="sec-gpio-intro">
+                        <div class="menu-title"><span class="icon">&#9654;</span>1 GPIO简介<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-gpio-mode">1.1 八种工作模式</li>
+                            <li data-target="sec-gpio-af">1.2 GPIO 功能复用</li>
+                            <li data-target="sec-gpio-regs">1.3 GPIO 相关寄存器</li>
+                            <li data-target="sec-gpio-hal">1.4 HAL库GPIO驱动</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-hw">
+                        <div class="menu-title"><span class="icon">&#9654;</span>2 硬件设计<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-goal">2.1 实验目标与现象</li>
+                            <li data-target="sec-hardware">2.2 硬件资源与电路</li>
+                            <li data-target="sec-project">2.3 工程文件结构</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-sw">
+                        <div class="menu-title"><span class="icon">&#9654;</span>3 软件设计(启动顺序)<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-flow">3.1 程序流程与启动总览</li>
+                            <li data-target="sec-startup">3.2 启动文件解析</li>
+                            <li data-target="sec-sysinit">3.3 SystemInit与__main</li>
+                            <li data-target="sec-halinit">3.4 HAL_Init 解析</li>
+                            <li data-target="sec-clock">3.5 时钟初始化解析</li>
+                            <li data-target="sec-delayinit">3.6 延时初始化解析</li>
+                            <li data-target="sec-led">3.7 LED初始化解析</li>
+                            <li data-target="sec-loop">3.8 主循环解析</li>
+                        </ul>
+                    </li>
+                    <li data-target="sec-verify-chap">
+                        <div class="menu-title"><span class="icon">&#9654;</span>4 下载验证<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-download">4.1 编译结果解读</li>
+                            <li data-target="sec-verify">4.2 下载验证</li>
+                            <li data-target="sec-conclusion">4.3 全程小结</li>
+                        </ul>
+                    </li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+
+                    <!-- ═══════════ 第1章 GPIO简介（对应手册13.1） ═══════════ -->
+                    <div class="content-card">
+                        <h3 id="sec-gpio-intro">1 GPIO 简介（对应手册 13.1）</h3>
+                        <div class="toc-card">
+                            <div class="toc-title">本页目录（与手册第十三章 13.1~13.4 小节一一对应）</div>
+                            <ol>
+                                <li><a href="#sec-gpio-intro">GPIO 简介</a>：IO 工作模式、功能复用、寄存器、HAL 库驱动（手册 13.1）</li>
+                                <li><a href="#sec-hw">硬件设计</a>：实验目标、硬件资源与电路、工程文件结构（手册 13.2）</li>
+                                <li><a href="#sec-sw">软件设计</a>：按启动顺序解析——启动文件 → SystemInit/__main → HAL_Init → 时钟 → 延时 → LED → 主循环（手册 13.3）</li>
+                                <li><a href="#sec-verify-chap">下载验证</a>：编译结果解读、下载验证、全程小结（手册 13.4）</li>
+                            </ol>
+                        </div>
+                        <p>　　本页以"实验1 跑马灯实验"（标准例程-HAL库版本）工程为对象，参考《STM32F429 阿波罗开发指南 V1.2》第十三章《跑马灯实验》，章节顺序与手册小节保持一致；其中第 3 章"软件设计"按照<strong>程序启动的先后顺序</strong>逐层解析代码。本章先掌握 STM32F429 的 IO 口作为输出的使用方法（对应手册 13.1 节），为后续解析 LED 驱动代码打好基础。</p>
+
+                        <h4 id="sec-gpio-mode">1.1 IO 简介与八种工作模式</h4>
+                        <p>　　手册 13.1.1 节给出 GPIO 的<strong>八种工作模式</strong>：输入浮空、输入上拉、输入下拉、模拟、开漏输出、推挽输出、开漏式复用、推挽式复用。八种模式由 MODER/OTYPER/OSPEEDR/PUPDR 四个配置寄存器组合决定（表 13.1.3.1）：MODER 区分输入(00)/输出(01)/复用(10)/模拟(11)四大类，OTYPER 在输出类中区分推挽/开漏，PUPDR 决定是否接内部上/下拉。跑马灯实验取"输出(01) + 推挽(0) + 上拉(01)"组合，即<strong>推挽输出</strong>——P-MOS 负责拉高、N-MOS 负责拉低，两管轮流导通，驱动 LED 毫无压力（推挽模式驱动能力最大 25mA）。</p>
+
+                        <h4 id="sec-gpio-af">1.2 GPIO 功能复用</h4>
+                        <p>　　手册 13.1.2 节指出：STM32F429 的每个 IO 口都可作为<strong>复用功能引脚</strong>（如 USART、SPI、I2C、定时器等外设信号），由两个 32 位复用功能选择寄存器 <strong>AFRL/AFRH</strong> 配置——AFRL 控制 IO0~IO7、AFRH 控制 IO8~IO15，每 4 位对应一个 IO 的 AF0~AF15 十六种复用功能编号。本实验把 PB0/PB1 用作<strong>普通 GPIO 输出</strong>（MODER=01 通用输出模式），不涉及复用配置，故 GPIO_InitTypeDef 的 Alternate 成员无需设置。</p>
+
+                        <h4 id="sec-gpio-regs">1.3 GPIO 相关寄存器</h4>
+                        <p>　　每组 GPIO 挂载在 AHB1 总线上（GPIOA~GPIOK 基址 0x40020000 起，每组 0x400 字节）。GPIOB 的 ODR 地址为 0x40020414。关键寄存器如下（手册 13.1.3 节）：</p>
+                        <table class="api-table">
+                            <tr><th class="c">寄存器</th><th>作用</th></tr>
+                            <tr><td class="c">MODER</td><td>模式寄存器：每 2 位控制 1 个 IO——00 输入 / 01 通用输出 / 10 复用功能 / 11 模拟。GPIOB 复位值 0xFFFFFEBF，即 PB0/PB1 复位后默认为模拟模式</td></tr>
+                            <tr><td class="c">OTYPER</td><td>输出类型寄存器：每 1 位控制 1 个 IO——0 推挽 / 1 开漏（仅输出模式有效）</td></tr>
+                            <tr><td class="c">OSPEEDR</td><td>输出速度寄存器：每 2 位控制 1 个 IO——00 低速 / 01 中速 / 10 快速 / 11 高速</td></tr>
+                            <tr><td class="c">PUPDR</td><td>上下拉寄存器：每 2 位控制 1 个 IO——00 无上下拉 / 01 上拉 / 10 下拉（弱上拉约 30~50KΩ）</td></tr>
+                            <tr><td class="c">IDR</td><td>输入数据寄存器（只读）：读取引脚实际电平</td></tr>
+                            <tr><td class="c">ODR</td><td>输出数据寄存器（可读可写）：写 1 输出高、写 0 输出低；改电平需整体重写、有被中断打断的风险</td></tr>
+                            <tr><td class="c">BSRR</td><td>置位/复位寄存器（只写）：低 16 位 BSy 写 1 置高、高 16 位 BRy 写 1 置低、写 0 无影响——无需先读后改，<strong>原子操作不可被中断打断</strong></td></tr>
+                            <tr><td class="c">LCKR</td><td>引脚配置锁定寄存器：冻结引脚配置直至复位</td></tr>
+                            <tr><td class="c">AFRL/AFRH</td><td>复用功能选择寄存器：每 4 位选择 AF0~AF15（见 1.2 节）</td></tr>
+                        </table>
+                        <p>　　对比数据类寄存器：<strong>ODR</strong> 可读可写但整体重写；<strong>BSRR</strong> 只写但一次 32 位写入只改变目标引脚、原子生效——这就是 HAL 库控制电平选用 BSRR 的原因（见 3.8.2 节），也是位带操作（见 3.7.1 节）能"一个位一个地址"的硬件基础。</p>
+
+                        <h4 id="sec-gpio-hal">1.4 HAL 库 GPIO 驱动与输出配置步骤</h4>
+                        <p>　　手册 13.1.4 节介绍 HAL 库 GPIO 驱动。使用 HAL 库操作 GPIO 的核心是 <strong>GPIO_InitTypeDef 初始化结构体</strong>与三个常用函数：</p>
+                        <table class="api-table">
+                            <tr><th class="c">结构体成员</th><th class="c">取值示例</th><th>含义</th></tr>
+                            <tr><td class="c">Pin</td><td class="c">GPIO_PIN_0 | GPIO_PIN_1</td><td>指定引脚号，可用"|"一次选多个（PB0、PB1）</td></tr>
+                            <tr><td class="c">Mode</td><td class="c">GPIO_MODE_OUTPUT_PP</td><td>模式选择（还能选 OD 开漏、AF 复用、ANALOG 模拟、IT 外部中断等）</td></tr>
+                            <tr><td class="c">Pull</td><td class="c">GPIO_PULLUP</td><td>上下拉配置（NOPULL / PULLUP / PULLDOWN）</td></tr>
+                            <tr><td class="c">Speed</td><td class="c">GPIO_SPEED_HIGH</td><td>输出速度等级（LOW / MEDIUM / HIGH / VERY_HIGH 四档）</td></tr>
+                            <tr><td class="c">Alternate</td><td class="c">未设置</td><td>复用功能编号（AF0~AF15），仅在 AF 模式下使用</td></tr>
+                        </table>
+                        <table class="api-table">
+                            <tr><th class="c">HAL 库函数</th><th>功能说明</th></tr>
+                            <tr><td class="c">HAL_GPIO_Init()</td><td>按结构体参数初始化一个或多个 IO 口的 MODER/OTYPER/OSPEEDR/PUPDR（同一组口的 Mode/Pull/Speed 等参数一致时才可一次初始化多个）</td></tr>
+                            <tr><td class="c">HAL_GPIO_WritePin()</td><td>控制引脚输出高/低电平（写 BSRR，见 3.8.2 节）</td></tr>
+                            <tr><td class="c">HAL_GPIO_TogglePin()</td><td>翻转引脚输出电平（写 ODR 取反）</td></tr>
+                        </table>
+                        <p>　　GPIO 输出配置三步骤（手册 13.3.1 节总结，跑马灯的 LED_Init 即按此展开）：</p>
+                        <ul class="steps">
+                            <li><span class="no">1</span><b>使能 GPIO 时钟</b>　STM32 任意外设使用前必须先开时钟，通过 __HAL_RCC_GPIOx_CLK_ENABLE() 宏置位 RCC->AHB1ENR；</li>
+                            <li><span class="no">2</span><b>设置工作模式</b>　填充 GPIO_InitTypeDef 结构体，调用 HAL_GPIO_Init() 写入四个配置寄存器——"先清旧值、再写新值"：对 Pin 选中位段清零后，按 Mode 写 MODER，输出类再写 OTYPER/OSPEEDR，按 Pull 写 PUPDR；</li>
+                            <li><span class="no">3</span><b>控制引脚电平</b>　用 HAL_GPIO_WritePin()（或 ODR/BSRR/位带）输出高、低电平。</li>
+                        </ul>
+                        <p>　　以本实验配置（PB0/PB1 推挽输出+上拉+高速）为例，HAL_GPIO_Init 落地到寄存器的写入值为：</p>
+                        <table class="api-table">
+                            <tr><th class="c">寄存器</th><th class="c">写入值</th><th>作用</th></tr>
+                            <tr><td class="c">MODER</td><td class="c">PB0/PB1 位段 = 01</td><td>通用输出模式</td></tr>
+                            <tr><td class="c">OTYPER</td><td class="c">PB0/PB1 位 = 0</td><td>推挽输出</td></tr>
+                            <tr><td class="c">OSPEEDR</td><td class="c">PB0/PB1 位段 = 10</td><td>高速</td></tr>
+                            <tr><td class="c">PUPDR</td><td class="c">PB0/PB1 位段 = 01</td><td>上拉</td></tr>
+                        </table>
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>GPIO 八种模式由四个配置寄存器组合决定；数据控制靠 ODR（整体写）与 BSRR（原子写）；HAL 库以 GPIO_InitTypeDef + HAL_GPIO_Init 封装寄存器配置，输出配置遵循"开时钟→设模式→控电平"三步骤。带着这些知识进入第 2、3 章。</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ 第2章 硬件设计（对应手册13.2） ═══════════ -->
+                    <div class="content-card">
+                        <h3 id="sec-hw">2 硬件设计（对应手册 13.2）</h3>
+
+                        <h4 id="sec-goal">2.1 实验目标与现象</h4>
+                        <p>　　跑马灯实验是 STM32 学习的第一个物理输出实验，目的在于验证开发环境与下载流程、掌握 GPIO 输出的完整链路。实验现象：<strong>LED0 与 LED1 每隔 500ms 交替点亮/熄灭一次</strong>，实现类似跑马灯的效果。</p>
+
+                        <h4 id="sec-hardware">2.2 硬件资源与电路</h4>
+                        <p>　　依据手册 13.2 节《硬件设计》，本实验硬件资源如下：</p>
+                        <table class="api-table">
+                            <tr><th class="c">资源</th><th class="c">连接引脚</th><th>说明</th></tr>
+                            <tr><td class="c">LED0</td><td class="c">PB1</td><td>低电平点亮（阳极经限流电阻接 3.3V，阴极接 IO 口）</td></tr>
+                            <tr><td class="c">LED1</td><td class="c">PB0</td><td>低电平点亮，与 LED0 同电路</td></tr>
+                        </table>
+                        <p>　　LED 电路在开发板上已经固定连接，无需改动任何硬件。由于 IO 输出<strong>低电平时 LED 导通点亮</strong>，输出高电平时熄灭，所以代码中"灯亮"对应引脚写 0，"灯灭"对应引脚写 1——这一点贯穿整个工程代码的注释。</p>
+
+                        <h4 id="sec-project">2.3 工程文件结构</h4>
+                        <p>　　工程按功能分目录存放，与本页解析直接相关的文件如下（HALLIB 为 ST 官方 HAL 库源码，本页只摘取其中被调用到的函数）：</p>
+                        <table class="api-table">
+                            <tr><th style="text-align:left;">文件</th><th>作用</th><th class="c">启动阶段</th></tr>
+                            <tr><td style="text-align:left;">CORE/startup_stm32f429xx.s</td><td>启动文件：栈/堆空间、中断向量表、复位处理程序</td><td class="c">上电→main 之前</td></tr>    
+                            <tr><td style="text-align:left;">USER/system_stm32f4xx.c</td><td>SystemInit：FPU、时钟复位、向量表定位</td><td class="c">main 之前</td></tr>
+                            <tr><td style="text-align:left;">USER/main.c</td><td>主函数：系统级初始化 + 用户初始化 + 主循环</td><td class="c">main 之后</td></tr>
+                            <tr><td style="text-align:left;">SYSTEM/sys/sys.c / sys.h</td><td>Stm32_Clock_Init 时钟配置、位带操作宏、汇编工具函数</td><td class="c">main 内</td></tr>
+                            <tr><td style="text-align:left;">SYSTEM/delay/delay.c</td><td>delay_init / delay_us / delay_ms（SysTick 计数延时）</td><td class="c">main 内</td></tr>
+                            <tr><td style="text-align:left;">HARDWARE/LED/led.c / led.h</td><td>LED 驱动：LED_Init 初始化 PB0/PB1</td><td class="c">main 内</td></tr>
+                            <tr><td style="text-align:left;">USER/stm32f4xx_it.c</td><td>中断服务函数：SysTick_Handler 中调用 HAL_IncTick() 维护毫秒时基</td><td class="c">运行中</td></tr>
+                            <tr><td style="text-align:left;">HALLIB/…/stm32f4xx_hal.c 等</td><td>HAL 库：HAL_Init、HAL_GPIO_Init、HAL_GPIO_WritePin 等</td><td class="c">被调用时</td></tr>
+                        </table>
+                        <div class="tip">main.c 中虽包含了 usart.h（usart.c 参与编译，用于 printf 重定向），但本实验主流程并未调用串口初始化，属于工程模板的公共保留部分。</div>
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结</div>
+                            <p>跑马灯实验的硬件资源仅 PB0/PB1 两个 IO 口，低电平点亮；工程由启动文件、系统文件、SYSTEM 支撑库、LED 驱动与 HAL 库组成。下一章进入软件设计，按启动顺序逐层解析。</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ 第3章 软件设计（对应手册13.3，按启动顺序） ═══════════ -->
+                    <div class="content-card">
+                        <h3 id="sec-sw">3 软件设计：按启动顺序解析（对应手册 13.3）</h3>
+
+                        <h4 id="sec-flow">3.1 程序流程与启动总览</h4>
+                        <p>　　手册 13.3.1 节的程序流程图将其归纳为：<strong>系统级别的初始化（HAL 库、系统时钟、延时函数）→ 用户初始化（LED 灯初始化）→ 无限循环交替点亮/熄灭</strong>。对应的 main() 函数：</p>
+                        <div class="code-block"><span class="kw">int</span> <span class="fn">main</span>(<span class="kw">void</span>)
+{
+    <span class="fn">HAL_Init</span>();                     <span class="cm">//初始化HAL库   </span>
+    <span class="fn">Stm32_Clock_Init</span>(<span class="num">360</span>,<span class="num">25</span>,<span class="num">2</span>,<span class="num">8</span>);   <span class="cm">//设置时钟,180Mhz</span>
+    <span class="fn">delay_init</span>(<span class="num">180</span>);                <span class="cm">//初始化延时函数</span>
+    <span class="fn">LED_Init</span>();                     <span class="cm">//初始化LED  </span>
+    <span class="kw">while</span>(<span class="num">1</span>) { ... }                <span class="cm">//主循环，见 3.8 节</span>
+}</div>
+                        <p>　　而从上电到两盏灯交替闪烁，代码实际按下面的链路依次执行——其中前五步由硬件复位行为与启动文件、C 库自动完成，属于"看不见的启动过程"，本页 3.2~3.3 节将其补齐；main 内的四个初始化函数在 3.4~3.7 节逐段解析：</p>
+                        <div class="flow">
+                            <div class="fbox">上电/复位<span class="fsub">硬件行为</span></div><div class="farr">&#10148;</div>
+                            <div class="fbox">取 MSP / PC<span class="fsub">0x00000000 / 0x00000004</span></div><div class="farr">&#10148;</div>
+                            <div class="fbox">Reset_Handler<span class="fsub">启动文件</span></div><div class="farr">&#10148;</div>
+                            <div class="fbox">SystemInit<span class="fsub">system_stm32f4xx.c</span></div><div class="farr">&#10148;</div>
+                            <div class="fbox">__main<span class="fsub">C 库初始化</span></div><div class="farr">&#10148;</div>
+                            <div class="fbox">main<span class="fsub">main.c</span></div><div class="farr">&#10148;</div>
+                            <div class="fbox">HAL_Init<span class="fsub">HAL 库</span></div><div class="farr">&#10148;</div>
+                            <div class="fbox">Stm32_Clock_Init<span class="fsub">sys.c</span></div><div class="farr">&#10148;</div>
+                            <div class="fbox">delay_init<span class="fsub">delay.c</span></div><div class="farr">&#10148;</div>
+                            <div class="fbox">LED_Init<span class="fsub">led.c</span></div><div class="farr">&#10148;</div>
+                            <div class="fbox">while(1) 跑马灯<span class="fsub">主循环</span></div>
+                        </div>
+
+                        <h4 id="sec-startup">3.2 启动文件解析（startup_stm32f429xx.s）</h4>
+                        <p>　　启动文件是一段汇编程序（MDK-ARM 工具链版本），上电后最先执行的部分由它完成。它首先定义了系统要用的栈和堆空间：</p>
+                        <div class="code-block"><span class="cm">; Amount of memory (in bytes) allocated for Stack</span>
+Stack_Size      EQU     <span class="num">0x400</span>;                       <span class="cm">; 栈空间大小：1024 字节</span>
+
+                AREA    STACK, NOINIT, READWRITE, ALIGN=<span class="num">3</span>  <span class="cm">; 8 字节对齐的栈段</span>
+Stack_Mem       SPACE   Stack_Size
+__initial_sp                                     <span class="cm">; 栈顶地址标号（栈从高地址向低生长）</span>
+
+Heap_Size       EQU     <span class="num">0x200</span>;                       <span class="cm">; 堆空间大小：512 字节</span>
+
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=<span class="num">3</span>
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit                                     <span class="cm">; 堆底地址标号（堆从低地址向高生长）</span></div>
+
+                        <h4 id="sec-stack">3.2.1 栈与堆的分配</h4>
+                        <p>　　栈（STACK）用于函数调用时的局部变量、寄存器现场保护等，大小 0x400（1KB）；堆（HEAP）供 malloc 等动态内存分配使用，大小 0x200（512B）。<strong>__initial_sp</strong> 标号位于栈空间末尾，即栈顶指针 MSP 复位后的初始值——它在下一步将被硬件直接加载。</p>
+
+                        <h4 id="sec-vectors">3.2.2 中断向量表</h4>
+                        <p>　　启动文件在只读数据段 RESET 中建立了<strong>中断向量表</strong>（与 index13 页面第 2.2 节相呼应）。向量表本质是一个函数入口地址数组，其<strong>前两个字</strong>具有特殊身份：</p>
+                        <div class="code-block">                AREA    RESET, DATA, READONLY
+                EXPORT  __Vectors
+
+__Vectors       DCD     __initial_sp               <span class="cm">; Top of Stack —— 向量表第 0 项：主栈指针 MSP 初始值</span>
+                DCD     Reset_Handler              <span class="cm">; Reset Handler —— 第 1 项：复位中断服务程序入口</span>
+                DCD     NMI_Handler                <span class="cm">; NMI Handler</span>
+                DCD     HardFault_Handler          <span class="cm">; Hard Fault Handler</span>
+                ...                                   <span class="cm">;（系统异常 + 91 个外设中断入口，共 90 余项）</span>
+                DCD     SysTick_Handler            <span class="cm">; SysTick Handler</span></div>
+                        <p>　　地址 0x0000 0000 处存放的不是指令，而是 <strong>MSP 的初始值（__initial_sp）</strong>；地址 0x0000 0004 处才是第一个服务程序 <strong>Reset_Handler</strong> 的入口地址。后面的条目依次是 NMI、HardFault、SysTick 等系统异常和 WWDG、USART1 等外设中断的默认服务函数（均为 [WEAK] 弱定义的死循环空函数，用户代码中同名函数会覆盖它们——例如 stm32f4xx_it.c 中的 SysTick_Handler）。</p>
+
+                        <h4 id="sec-reset">3.2.3 Reset_Handler 复位处理</h4>
+                        <p>　　上电或复位后，Cortex-M4 内核自动完成两件事：从 0x0000 0000 取出值装入 MSP（栈指针），从 0x0000 0004 取出值装入 PC（程序计数器）——于是 CPU 开始执行 <strong>Reset_Handler</strong>：</p>
+                        <div class="code-block"><span class="cm">; Reset handler</span>
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit                         <span class="cm">; 声明外部函数：位于 system_stm32f4xx.c</span>
+        IMPORT  __main                             <span class="cm">; 声明外部函数：C 库初始化入口</span>
+
+                 LDR     R0, =SystemInit
+                 BLX     R0                         <span class="cm">; 第一步：跳转执行 SystemInit，初始化时钟/FPU/向量表</span>
+                 LDR     R0, =__main
+                 BX      R0                          <span class="cm">; 第二步：跳入 __main，之后永不返回（由 C 库最终调到用户 main）</span>
+                 ENDP</div>
+                        <p>　　Reset_Handler 只做两件事：<strong>先调用 SystemInit</strong>（3.3 节解析），<strong>再跳转到 __main</strong>（3.3.3 小节解析）。注意这里的 __main 是 ARM C 库的入口函数，<strong>不是</strong>用户编写的 main()。启动文件末尾还提供了堆栈初始化函数 __user_initial_stackheap（把 Heap_Mem/Stack_Mem 的边界告知 C 库），供标准 C 库在 __main 中调用。</p>
+
+                        <h4 id="sec-sysinit">3.3 SystemInit 与 __main</h4>
+
+                        <h4 id="sec-sysinit-fpu">3.3.1 SystemInit 初始化</h4>
+                        <p>　　SystemInit 位于 USER/system_stm32f4xx.c，在进入 main 之前被 Reset_Handler 调用，把芯片恢复到一个"干净的已知状态"：</p>
+                        <div class="code-block"><span class="kw">void</span> <span class="fn">SystemInit</span>(<span class="kw">void</span>)
+{
+  <span class="cm">/* FPU settings --- 使能 FPU -----------------------------------------*/</span>
+  <span class="kw">#if</span> (__FPU_PRESENT == <span class="num">1</span>) && (__FPU_USED == <span class="num">1</span>)
+    SCB-&gt;CPACR |= ((<span class="num">3</span>UL &lt;&lt; <span class="num">10</span>*<span class="num">2</span>)|(<span class="num">3</span>UL &lt;&lt; <span class="num">11</span>*<span class="num">2</span>));  <span class="cm">/* CP10、CP11 完全访问权 */</span>
+  <span class="kw">#endif</span>
+  <span class="cm">/* Reset the RCC clock configuration to the default reset state */</span>
+  RCC-&gt;CR |= (<span class="kw">uint32_t</span>)<span class="num">0x00000001</span>;      <span class="cm">; 开启 HSI（内部 16MHz）</span>
+  RCC-&gt;CFGR = <span class="num">0x00000000</span>;                <span class="cm">; 复位时钟配置寄存器</span>
+  RCC-&gt;CR &amp;= (<span class="kw">uint32_t</span>)<span class="num">0xFEF6FFFF</span>;      <span class="cm">; 关闭 HSE、CSS、PLL</span>
+  RCC-&gt;PLLCFGR = <span class="num">0x24003010</span>;             <span class="cm">; 复位 PLL 配置寄存器（M=16, N=192...默认值）</span>
+  RCC-&gt;CR &amp;= (<span class="kw">uint32_t</span>)<span class="num">0xFFFBFFFF</span>;      <span class="cm">; 复位 HSEBYP</span>
+  RCC-&gt;CIR = <span class="num">0x00000000</span>;                 <span class="cm">; 关闭所有 RCC 时钟中断</span>
+  ...
+}</div>
+                        <p>　　要点有三：<strong>① 开启 FPU</strong>（F429 带 FPU，写 CPACR 的 CP10/CP11 位开放协处理器访问权，此后编译出的浮点指令才能使用）；<strong>② 复位全部时钟配置</strong>——注意此时系统时钟是 HSI 16MHz（变量 SystemCoreClock 初始值即为 16000000），真正的 180MHz 主频要到 main 里 Stm32_Clock_Init 才配置；<strong>③ 本工程未定义 DATA_IN_ExtSRAM/ExtSDRAM，不初始化外部存储器。</strong></p>
+
+                        <h4 id="sec-vtor">3.3.2 向量表定位 VTOR</h4>
+                        <div class="code-block">  <span class="cm">/* Configure the Vector Table location add offset address ---*/</span>
+<span class="kw">#ifdef</span> VECT_TAB_SRAM
+  SCB-&gt;VTOR = SRAM_BASE  | VECT_TAB_OFFSET; <span class="cm">/* 向量表重定位到 SRAM */</span>
+<span class="kw">#else</span>
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET; <span class="cm">/* 向量表定位在内部 FLASH */</span>
+<span class="kw">#endif</span></div>
+                        <p>　　本工程 USER/system_stm32f4xx.c 中 <strong>VECT_TAB_SRAM 未定义、VECT_TAB_OFFSET = 0x00</strong>，因此执行 <code>SCB->VTOR = 0x08000000</code>，把向量表明确指向内部 FLASH 首地址。此后发生中断时，NVIC 都到 0x08000000 起始的表中查入口地址（复位瞬间硬件默认也映射到 FLASH，此处再显式设置一次以保万全）。</p>
+
+                        <h4 id="sec-cmain">3.3.3 __main 与 C 库初始化</h4>
+                        <p>　　SystemInit 返回后，Reset_Handler 执行 <code>BX R0</code> 跳入 <strong>__main</strong>。__main 是 ARM 编译器 C 运行时库的入口，它完成从"裸汇编环境"到"能跑 C 程序的环境"的过渡：</p>
+                        <ul class="steps">
+                            <li><span class="no">1</span><b> Scatter-Loading 数据搬运</b>　把已初始化的全局/静态变量（RW 数据）从 FLASH 拷贝到 RAM；把未初始化的全局/静态变量（ZI 数据）所在的 RAM 区清零。对应编译信息中的 RW-data 与 ZI-data；</li>
+                            <li><span class="no">2</span><b> 堆栈初始化</b>　调用启动文件提供的 __user_initial_stackheap（或 MicroLib 的等效机制），建立 C 库使用的堆与栈；</li>
+                            <li><span class="no">3</span><b> 进入 main</b>　环境就绪后，C 库最终调用用户的应用程序入口 main()，从此进入跑马灯工程的 C 世界，永不返回。</li>
+                        </ul>
+
+                        <h4 id="sec-halinit">3.4 HAL_Init 解析</h4>
+                        <p>　　进入 main 后，第一行代码就是 <code>HAL_Init()</code>（HALLIB/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal.c）。手册要求：<strong>main 程序中它必须是第一条被执行的指令，先于任何其他 HAL 函数调用</strong>。</p>
+
+                        <h4 id="sec-flash">3.4.1 Flash 缓存与预取</h4>
+                        <div class="code-block">HAL_StatusTypeDef <span class="fn">HAL_Init</span>(<span class="kw">void</span>)
+{
+  <span class="cm">/* Configure Flash prefetch, Instruction cache, Data cache */</span>
+<span class="kw">#if</span> (INSTRUCTION_CACHE_ENABLE != <span class="num">0</span>)
+   __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();   <span class="cm">; 指令缓存 ICEN 置位</span>
+<span class="kw">#endif</span>
+<span class="kw">#if</span> (DATA_CACHE_ENABLE != <span class="num">0</span>)
+   __HAL_FLASH_DATA_CACHE_ENABLE();          <span class="cm">; 数据缓存 DCEN 置位</span>
+<span class="kw">#endif</span>
+<span class="kw">#if</span> (PREFETCH_ENABLE != <span class="num">0</span>)
+   __HAL_FLASH_PREFETCH_BUFFER_ENABLE();     <span class="cm">; 预取缓冲 PRFTEN 置位</span>
+<span class="kw">#endif</span>
+  ...</div>
+                        <p>　　三个开关宏在 USER/stm32f4xx_hal_conf.h 中均定义为 1，因此 HAL_Init 先打开 FLASH 的<strong>预取缓冲、指令缓存、数据缓存</strong>（写 FLASH->ACR 寄存器），提升取指效率，为后面切到 180MHz 高主频做准备。</p>
+
+                        <h4 id="sec-nvic-group">3.4.2 NVIC 优先级分组</h4>
+                        <div class="code-block">  <span class="cm">/* Set Interrupt Group Priority */</span>
+  <span class="fn">HAL_NVIC_SetPriorityGrouping</span>(NVIC_PRIORITYGROUP_2);<span class="cm">//中断优先级分组2</span></div>
+                        <p>　　这一行把 AIRCR 的 PRIGROUP 设为分组 2：<strong>4 位优先级中，2 位抢占优先级（0~3）+ 2 位响应优先级（0~3）</strong>（与 index13 页面第 2.5 节的分组表对应）。整个工程只需在这里设置这一次，后续所有外设中断的优先级都在此框架下分配。</p>
+
+                        <h4 id="sec-systick-base">3.4.3 SysTick 时基与 HAL_MspInit</h4>
+                        <div class="code-block">  <span class="cm">/* Use systick as time base source and configure 1ms tick (default clock after Reset is HSI) */</span>
+  <span class="fn">HAL_InitTick</span>(TICK_INT_PRIORITY);
+  <span class="cm">/* Init the low level hardware */</span>
+  <span class="fn">HAL_MspInit</span>();
+  <span class="kw">return</span> HAL_OK;</div>
+                        <p>　　<code>HAL_InitTick(TICK_INT_PRIORITY)</code> 以 SysTick 为 HAL 时基（TICK_INT_PRIORITY 在 stm32f4xx_hal_conf.h 中为 0x0F），内部调用 <code>HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000)</code>：<strong>此刻系统时钟还是 HSI 16MHz</strong>，所以装载值 = 16000000/1000 = 16000，即 SysTick 每 1ms 产生一次中断；中断服务函数 SysTick_Handler（stm32f4xx_it.c）中调用 HAL_IncTick() 让 uwTick 自增，供 HAL_GetTick()/HAL_Delay() 使用。</p>
+                        <p>　　最后调用 <code>HAL_MspInit()</code>——它是 __weak 弱定义的回调，供用户重写以做底层硬件初始化（如 SYSCFG 时钟、电源管理），<strong>本工程未重写，执行空实现</strong>。</p>
+
+                        <h4 id="sec-clock">3.5 时钟初始化解析 Stm32_Clock_Init(360,25,2,8)</h4>
+                        <p>　　Stm32_Clock_Init 位于 SYSTEM/sys/sys.c，把系统时钟从 HSI 16MHz 切换到 <strong>PLL 倍频后的 180MHz</strong>。四个参数依次是 plln、pllm、pllp、pllq（注意参数顺序：先 N 后 M）。</p>
+
+                        <h4 id="sec-pll">3.5.1 PLL 参数与频率计算</h4>
+                        <div class="code-block"><span class="cm">//时钟系统配置函数</span>
+<span class="cm">//Fvco=Fs*(plln/pllm);</span>
+<span class="cm">//SYSCLK=Fvco/pllp=Fs*(plln/(pllm*pllp));</span>
+<span class="cm">//Fusb=Fvco/pllq=Fs*(plln/(pllm*pllq));</span>
+<span class="cm">//外部晶振为25M的时候,推荐值:plln=360,pllm=25,pllp=2,pllq=8.</span>
+<span class="cm">//得到:Fvco=25*(360/25)=360Mhz</span>
+<span class="cm">//     SYSCLK=360/2=180Mhz</span>
+<span class="cm">//     Fusb=360/8=45Mhz</span>
+<span class="kw">void</span> <span class="fn">Stm32_Clock_Init</span>(u32 plln,u32 pllm,u32 pllp,u32 pllq)
+{
+    RCC_OscInitStructure.OscillatorType = RCC_OSCILLATORTYPE_HSE;  <span class="cm">//时钟源为HSE</span>
+    RCC_OscInitStructure.HSEState       = RCC_HSE_ON;              <span class="cm">//打开HSE</span>
+    RCC_OscInitStructure.PLL.PLLState   = RCC_PLL_ON;              <span class="cm">//打开PLL</span>
+    RCC_OscInitStructure.PLL.PLLSource  = RCC_PLLSOURCE_HSE;       <span class="cm">//PLL时钟源选择HSE</span>
+    RCC_OscInitStructure.PLL.PLLM = pllm;  <span class="cm">//PLL之前的分频 = 25</span>
+    RCC_OscInitStructure.PLL.PLLN = plln;  <span class="cm">//PLL倍频系数     = 360</span>
+    RCC_OscInitStructure.PLL.PLLP = pllp;  <span class="cm">//PLL之后的分频   = 2</span>
+    RCC_OscInitStructure.PLL.PLLQ = pllq;  <span class="cm">//USB/SDIO等分频  = 8</span>
+    ret = <span class="fn">HAL_RCC_OscConfig</span>(&amp;RCC_OscInitStructure);  <span class="cm">//初始化振荡器与PLL</span>
+    <span class="kw">if</span>(ret != HAL_OK) <span class="kw">while</span>(<span class="num">1</span>);            <span class="cm">//失败则死循环</span></div>
+                        <p>　　频率链路（阿波罗板外部晶振 25MHz，stm32f4xx_hal_conf.h 中 HSE_VALUE=25000000）：</p>
+                        <table class="api-table">
+                            <tr><th class="c">环节</th><th class="c">计算</th><th class="c">结果</th></tr>
+                            <tr><td class="c">HSE 晶振</td><td class="c">—</td><td class="c">25 MHz</td></tr>
+                            <tr><td class="c">VCO 输入</td><td class="c">25M / PLLM(25)</td><td class="c">1 MHz（要求 1~2MHz）</td></tr>
+                            <tr><td class="c">VCO 输出</td><td class="c">1M × PLLN(360)</td><td class="c">360 MHz（要求 100~432MHz）</td></tr>
+                            <tr><td class="c">SYSCLK</td><td class="c">360M / PLLP(2)</td><td class="c"><strong>180 MHz</strong>（F429 最高主频）</td></tr>
+                            <tr><td class="c">USB/SDIO/RNG</td><td class="c">360M / PLLQ(8)</td><td class="c">45 MHz（USB 恰好需要 48M 之外的合法值域）</td></tr>
+                        </table>
+
+                        <h4 id="sec-od">3.5.2 调压器与 Over-Drive</h4>
+                        <div class="code-block">    __HAL_RCC_PWR_CLK_ENABLE(); <span class="cm">//使能PWR时钟</span>
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);<span class="cm">//调压器输出电压级别1</span>
+    ...
+    ret = <span class="fn">HAL_PWREx_EnableOverDrive</span>(); <span class="cm">//开启Over-Driver功能</span>
+    <span class="kw">if</span>(ret != HAL_OK) <span class="kw">while</span>(<span class="num">1</span>);</div>
+                        <p>　　主频越高，内核对供电的要求越高。<strong>调压器级别 1（SCALE1）</strong>是支持 180MHz 的电压档位；而要让 VCO 跑到 360MHz 这类超出常规 PLL 范围的频率，必须开启 F42x/F43x 特有的 <strong>Over-Drive 模式</strong>（解除内部稳压器的频率限制）。两步缺一不可，否则 HAL_RCC_OscConfig/HAL_RCC_ClockConfig 会返回错误，代码进入 while(1) 死循环。</p>
+
+                        <h4 id="sec-busclk">3.5.3 总线分频与 Flash 等待</h4>
+                        <div class="code-block">    <span class="cm">//选中PLL作为系统时钟源并且配置HCLK,PCLK1和PCLK2</span>
+    RCC_ClkInitStructure.ClockType     = (RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_HCLK
+                                         |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2);
+    RCC_ClkInitStructure.SYSCLKSource  = RCC_SYSCLKSOURCE_PLLCLK; <span class="cm">//系统时钟源=PLL</span>
+    RCC_ClkInitStructure.AHBCLKDivider = RCC_SYSCLK_DIV1;         <span class="cm">//AHB  = 180/1 = 180Mhz</span>
+    RCC_ClkInitStructure.APB1CLKDivider= RCC_HCLK_DIV4;           <span class="cm">//APB1 = 180/4 = 45Mhz</span>
+    RCC_ClkInitStructure.APB2CLKDivider= RCC_HCLK_DIV2;           <span class="cm">//APB2 = 180/2 = 90Mhz</span>
+    ret = <span class="fn">HAL_RCC_ClockConfig</span>(&amp;RCC_ClkInitStructure, FLASH_LATENCY_5);
+    <span class="kw">if</span>(ret != HAL_OK) <span class="kw">while</span>(<span class="num">1</span>);</div>
+                        <p>　　切换 SYSCLK 到 PLL 的同时设置三级总线分频：</p>
+                        <table class="api-table">
+                            <tr><th class="c">时钟域</th><th class="c">分频</th><th class="c">频率</th><th>挂载外设示例</th></tr>
+                            <tr><td class="c">SYSCLK/HCLK(AHB)</td><td class="c">/1</td><td class="c">180 MHz</td><td>CPU、DMA、GPIO（本实验的 GPIOB 就在此域）</td></tr>
+                            <tr><td class="c">PCLK1(APB1)</td><td class="c">/4</td><td class="c">45 MHz</td><td>低速外设；APB1 定时器自动×2 = 90MHz</td></tr>
+                            <tr><td class="c">PCLK2(APB2)</td><td class="c">/2</td><td class="c">90 MHz</td><td>高速外设；APB2 定时器自动×2 = 180MHz</td></tr>
+                        </table>
+                        <p>　　<code>FLASH_LATENCY_5</code> 把 FLASH 等待周期设为 5WS（6 个 CPU 周期取一次）——180MHz 下 FLASH 取指跟不上 CPU，必须插入等待周期。另外，<strong>HAL_RCC_ClockConfig 内部在时钟切换完成后会再次调用 HAL_InitTick()</strong>，用新的 HCLK=180MHz 重建 1ms 时基（装载值变为 180000），并更新 SystemCoreClock 变量。</p>
+
+                        <h4 id="sec-delayinit">3.6 延时初始化解析 delay_init(180)</h4>
+
+                        <h4 id="sec-systick-src">3.6.1 SysTick 时钟源与 fac_us</h4>
+                        <div class="code-block"><span class="kw">void</span> <span class="fn">delay_init</span>(u8 SYSCLK)
+{
+    <span class="fn">HAL_SYSTICK_CLKSourceConfig</span>(SYSTICK_CLKSOURCE_HCLK);<span class="cm">//SysTick频率为HCLK</span>
+    fac_us = SYSCLK;    <span class="cm">//fac_us = 180，即每 1us 需要 180 个节拍</span>
+    <span class="cm">//本工程 sys.h 中 SYSTEM_SUPPORT_OS=0，不使用 ucos，其余分支不编译</span>
+}</div>
+                        <p>　　两件事：<strong>①</strong> 把 SysTick 的时钟源设为 HCLK（180MHz），而不是 HCLK/8（45MHz），由 SysTick->CTRL 的 CLKSOURCE 位控制；<strong>②</strong> 记录延时倍乘数 fac_us = 180——因为 SysTick 是纯计数器（不涉及任何分频寄存器换算），延时 nus 需要 nus × 180 个计数节拍。此时 SysTick 仍在以 HAL_Init/ClockConfig 建立的 1ms 周期产生中断，delay 函数只是"搭便车"读取它的递减计数器。</p>
+
+                        <h4 id="sec-delay-fn">3.6.2 delay_us 与 delay_ms 原理</h4>
+                        <div class="code-block"><span class="kw">void</span> <span class="fn">delay_us</span>(u32 nus)
+{		
+    u32 ticks; u32 told,tnow,tcnt=<span class="num">0</span>;
+    u32 reload = SysTick-&gt;LOAD;      <span class="cm">//LOAD 的值（1ms 对应 180000-1）</span>
+    ticks = nus * fac_us;            <span class="cm">//需要的节拍数 = nus*180</span>
+    told = SysTick-&gt;VAL;             <span class="cm">//刚进入时的计数器值</span>
+    <span class="kw">while</span>(<span class="num">1</span>)
+    {
+        tnow = SysTick-&gt;VAL;	
+        <span class="kw">if</span>(tnow != told)
+        {	    
+            <span class="kw">if</span>(tnow&lt;told) tcnt += told-tnow;          <span class="cm">//正常递减，累计差值</span>
+            <span class="kw">else</span>          tcnt += reload-tnow+told;   <span class="cm">//发生过一次重装载（计数器回绕）</span>
+            told = tnow;
+            <span class="kw">if</span>(tcnt &gt;= ticks) <span class="kw">break</span>;                  <span class="cm">//累计节拍数达到目标，退出</span>
+        }  
+    };
+}
+<span class="kw">void</span> <span class="fn">delay_ms</span>(u16 nms)
+{
+    u32 i;
+    <span class="kw">for</span>(i=<span class="num">0</span>;i&lt;nms;i++) <span class="fn">delay_us</span>(<span class="num">1000</span>);  <span class="cm">//逐次 1ms 拼接，避免 24 位计数器溢出</span>
+}</div>
+                        <p>　　SysTick 是一个<strong>递减计数器</strong>：从 LOAD 递减到 0 后重装载 LOAD 再继续。delay_us 不等待中断，而是<strong>轮询 SysTick->VAL，把每次观测到的差值累加</strong>（含回绕补偿），累计节拍数达到 nus×fac_us 即结束——与 OS 版本的差别仅在不需要锁定调度。delay_ms 用"每次 1ms 循环 nms 次"的方式突破 SysTick 24 位计数器单次最大约 0.093s@180MHz 的限制，主循环中的 delay_ms(500) 即由此而来。</p>
+
+                        <h4 id="sec-led">3.7 LED 初始化解析 LED_Init()</h4>
+
+                        <h4 id="sec-led-h">3.7.1 led.h 引脚宏与位带操作</h4>
+                        <div class="code-block"><span class="cm">//led.h</span>
+<span class="kw">#define</span> LED0  <span class="fn">PBout</span>(<span class="num">1</span>)   <span class="cm">//LED0 —— PB1 的位带别名</span>
+<span class="kw">#define</span> LED1  <span class="fn">PBout</span>(<span class="num">0</span>)   <span class="cm">//LED1 —— PB0 的位带别名</span>
+
+<span class="cm">//sys.h 中的位带实现（Cortex-M4 外设位带区）：</span>
+<span class="kw">#define</span> BITBAND(addr, bitnum) ((addr &amp; <span class="num">0xF0000000</span>)+<span class="num">0x2000000</span>+((addr &amp;<span class="num">0xFFFFF</span>)&lt;&lt;<span class="num">5</span>)+(bitnum&lt;&lt;<span class="num">2</span>)) 
+<span class="kw">#define</span> MEM_ADDR(addr)  *((<span class="kw">volatile</span> <span class="kw">unsigned</span> <span class="kw">long</span> *)(addr)) 
+<span class="kw">#define</span> BIT_ADDR(addr, bitnum)   MEM_ADDR(BITBAND(addr, bitnum)) 
+<span class="kw">#define</span> GPIOB_ODR_Addr  (GPIOB_BASE+<span class="num">20</span>)  <span class="cm">//0x40020414</span>
+<span class="kw">#define</span> PBout(n)   BIT_ADDR(GPIOB_ODR_Addr,n)  <span class="cm">//输出 </span></div>
+                        <p>　　位带（Bit-Band）把 ODR 寄存器的<strong>一个位</strong>膨胀为别名区的一个 32 位字，实现"写一个地址 = 改一个位"，效果类似 51 单片机的 sbit。以 LED0（PB1）为例：GPIOB_ODR 地址 0x40020414，代入公式得别名地址 0x42000000 + (0x20414&lt;&lt;5) + (1&lt;&lt;2) = <strong>0x42408284</strong>，于是 <code>LED0 = 0</code> 就是向该地址写 0，等价于把 PB1 的输出锁存位清零（灯亮）。</p>
+                        <div class="tip">手册第十三章（新修订驱动）采用了另一种封装风格：LED0_GPIO_PORT/PIN/CLK_ENABLE 三组宏 + LED0(x) 条件宏。本工程为经典写法（LED_Init + PBout 位带宏），两者功能等价，本页以工程实际代码为准解析。</div>
+
+                        <h4 id="sec-led-init">3.7.2 GPIO_InitTypeDef 与 LED_Init</h4>
+                        <div class="code-block"><span class="kw">void</span> <span class="fn">LED_Init</span>(<span class="kw">void</span>)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    <span class="fn">__HAL_RCC_GPIOB_CLK_ENABLE</span>();           <span class="cm">//开启GPIOB时钟</span>
+	
+    GPIO_Initure.Pin   = GPIO_PIN_0|GPIO_PIN_1; <span class="cm">//PB1,0</span>
+    GPIO_Initure.Mode  = GPIO_MODE_OUTPUT_PP;   <span class="cm">//推挽输出</span>
+    GPIO_Initure.Pull  = GPIO_PULLUP;           <span class="cm">//上拉</span>
+    GPIO_Initure.Speed = GPIO_SPEED_HIGH;       <span class="cm">//高速</span>
+    <span class="fn">HAL_GPIO_Init</span>(GPIOB,&amp;GPIO_Initure);
+	
+    <span class="fn">HAL_GPIO_WritePin</span>(GPIOB,GPIO_PIN_0,GPIO_PIN_SET);	<span class="cm">//PB0置1，默认初始化后灯灭</span>
+    <span class="fn">HAL_GPIO_WritePin</span>(GPIOB,GPIO_PIN_1,GPIO_PIN_SET);	<span class="cm">//PB1置1，默认初始化后灯灭</span>
+}</div>
+                        <p>　　LED_Init 正是 1.4 节"GPIO 输出配置三步骤"的具体落地：<strong>①</strong> <code>__HAL_RCC_GPIOB_CLK_ENABLE()</code> 把 RCC->AHB1ENR 的 GPIOBEN 置 1（宏内部含"写后读"延时以稳定时钟）；<strong>②</strong> 填充 GPIO_InitTypeDef（成员取值见 1.4 节表格：PB0/PB1、推挽输出、上拉、高速），调用 HAL_GPIO_Init 写入 GPIOB 四个配置寄存器（写入值见 1.4 节落地表）；<strong>③</strong> HAL_GPIO_WritePin 把 PB0/PB1 预置为高——LED 阴极接 IO，高电平即初始"灯灭"状态，避免上电瞬间灯乱闪。</p>
+                        <p>　　对照原理图：PB0/PB1 复位后默认是模拟模式（GPIOB->MODER 复位值 0xFFFFFEBF），HAL_GPIO_Init 把它们切换成"推挽输出"，驱动 LED 毫无压力。</p>
+
+                        <h4 id="sec-loop">3.8 主循环解析 while(1) 跑马灯</h4>
+
+                        <h4 id="sec-loop-main">3.8.1 while(1) 交替闪烁</h4>
+                        <div class="code-block">    <span class="kw">while</span>(<span class="num">1</span>)
+    {
+        <span class="fn">HAL_GPIO_WritePin</span>(GPIOB,GPIO_PIN_1,GPIO_PIN_RESET); <span class="cm">//LED0对应引脚PB1拉低，亮</span>
+        <span class="fn">HAL_GPIO_WritePin</span>(GPIOB,GPIO_PIN_0,GPIO_PIN_SET);   <span class="cm">//LED1对应引脚PB0拉高，灭</span>
+        <span class="fn">delay_ms</span>(<span class="num">500</span>);										<span class="cm">//延时500ms</span>
+        <span class="fn">HAL_GPIO_WritePin</span>(GPIOB,GPIO_PIN_1,GPIO_PIN_SET);   <span class="cm">//LED0对应引脚PB1拉高，灭</span>
+        <span class="fn">HAL_GPIO_WritePin</span>(GPIOB,GPIO_PIN_0,GPIO_PIN_RESET); <span class="cm">//LED1对应引脚PB0拉低，亮</span>
+        <span class="fn">delay_ms</span>(<span class="num">500</span>);                                      <span class="cm">//延时500ms </span>
+    }</div>
+                        <p>　　逻辑与手册 13.3.2 节程序流程图完全一致：LED0 亮 + LED1 灭 → 延时 500ms → LED0 灭 + LED1 亮 → 再延时 500ms → 无限重复，两灯以 1s 为周期交替点亮，肉眼观感即为"跑马灯"。</p>
+
+                        <h4 id="sec-writepin">3.8.2 HAL_GPIO_WritePin 与 BSRR</h4>
+                        <div class="code-block"><span class="kw">void</span> <span class="fn">HAL_GPIO_WritePin</span>(GPIO_TypeDef *GPIOx, u16 GPIO_Pin, GPIO_PinState PinState)
+{
+  <span class="kw">if</span>(PinState != GPIO_PIN_RESET)
+    GPIOx-&gt;BSRR = GPIO_Pin;                <span class="cm">//SET：低16位写1 → 输出高电平（灯灭）</span>
+  <span class="kw">else</span>
+    GPIOx-&gt;BSRR = (<span class="kw">uint32_t</span>)GPIO_Pin &lt;&lt; <span class="num">16</span>; <span class="cm">//RESET：高16位写1 → 输出低电平（灯亮）</span>
+}</div>
+                        <p>　　WritePin 只有一条写 BSRR 的语句：SET 走低 16 位（置位区）、RESET 走高 16 位（复位区）。BSRR 写 0 的位不产生任何影响，因此<strong>一次 32 位写入只改变目标引脚，且原子生效、不可被中断打断</strong>——这正是 1.3 节所述 BSRR 优于 ODR 的地方，也是多任务/中断环境下推荐的控制方式。</p>
+
+                        <h4 id="sec-3ways">3.8.3 三种输出方式对比</h4>
+                        <p>　　main.c 中保留了同一跑马灯的三种写法（另两种以注释形式存在），控制效果完全相同：</p>
+                        <table class="api-table">
+                            <tr><th class="c">方式</th><th>示例代码</th><th>特点</th></tr>
+                            <tr><td class="c">HAL 库</td><td>HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);</td><td>可读性/可移植性最好，屏蔽了寄存器细节</td></tr>
+                            <tr><td class="c">位带操作</td><td>LED0 = 0;（即 PBout(1) = 0）</td><td>写位带别名地址 0x42408284，像 51 的 sbit 一样简洁</td></tr>
+                            <tr><td class="c">直接寄存器</td><td>GPIOB-&gt;BSRR = GPIO_PIN_1; / GPIOB-&gt;BSRR = GPIO_PIN_0 &lt;&lt; 16;</td><td>效率最高、最贴近硬件，适合对时序敏感的场景</td></tr>
+                        </table>
+                        <p>　　三种方式最终都殊途同归：<strong>写 GPIOB 的 BSRR 寄存器改变 PB0/PB1 电平</strong>。HAL 库是封装、位带是映射、寄存器是本体，理解了 BSRR 就理解了全部。</p>
+                        <div class="summary-box">
+                            <div class="sb-title">本章小结（软件设计全链路）</div>
+                            <p>① 上电复位：硬件从向量表装载 MSP（栈顶 1KB）与 PC，进入启动文件的 Reset_Handler；② SystemInit：开 FPU、复位时钟寄存器、VTOR 指向 0x08000000（此时仍是 HSI 16MHz）；③ __main：C 库完成 RW 搬运、ZI 清零、堆栈初始化，进入用户 main；④ HAL_Init：开 Flash 缓存/预取、NVIC 分组 2、以 HSI 16MHz 建立 1ms SysTick 时基；⑤ Stm32_Clock_Init(360,25,2,8)：HSE 25MHz 经 PLL 倍频为 180MHz 主频，FLASH 5WS；⑥ delay_init(180)：SysTick 时钟源取 HCLK，fac_us=180；⑦ LED_Init：使能 GPIOB 时钟，配置 PB0/PB1 推挽输出并预置高电平；⑧ 主循环：HAL_GPIO_WritePin 经 BSRR 让两灯每 500ms 交替亮灭。</p>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ 第4章 下载验证（对应手册13.4） ═══════════ -->
+                    <div class="content-card">
+                        <h3 id="sec-verify-chap">4 下载验证（对应手册 13.4）</h3>
+
+                        <h4 id="sec-download">4.1 编译结果解读</h4>
+                        <p>　　手册 13.4 节给出本工程编译结果：0 错误 0 警告，占用 FLASH 6380 字节（Code 5866 + RO-data 486 + RW-data 28），SRAM 2952 字节（RW-data 28 + ZI-data 2924）。各字段含义：</p>
+                        <table class="api-table">
+                            <tr><th class="c">字段</th><th>含义</th><th class="c">存放位置</th></tr>
+                            <tr><td class="c">Code</td><td>程序代码本体</td><td class="c">FLASH</td></tr>
+                            <tr><td class="c">RO-data</td><td>Read Only 数据：程序中定义的常量</td><td class="c">FLASH</td></tr>
+                            <tr><td class="c">RW-data</td><td>Read Write 数据：已初始化的变量（__main 搬运的对象）</td><td class="c">FLASH + SRAM</td></tr>
+                            <tr><td class="c">ZI-data</td><td>Zero Init 数据：未初始化变量（__main 清零的对象）</td><td class="c">SRAM</td></tr>
+                        </table>
+                        <div class="tip">程序大小 = Code + RO-data（注意不是 .hex 文件大小）。RW-data 同时计入 FLASH（存放初值）与 SRAM（运行位置），与 3.3.3 小节 Scatter-Loading 搬运过程正好对应。</div>
+
+                        <h4 id="sec-verify">4.2 下载验证</h4>
+                        <p>　　用 DAP 仿真器（或其他仿真器）把编译好的固件下载到阿波罗开发板，复位后即可看到 <strong>LED0 与 LED1 每 500ms 交替点亮</strong>的跑马灯现象，与 3.8.1 小节解析的主循环逻辑一致。</p>
+
+                        <h4 id="sec-conclusion">4.3 全程小结</h4>
+                        <div class="summary-box">
+                            <div class="sb-title">跑马灯工程启动全过程回顾</div>
+                            <p>一句话总结：<strong>硬件取向量 → 启动文件铺路 → SystemInit 归零 → C 库搬家 → main 里"HAL 时基、时钟提速、延时就位、灯口配好"→ 循环点灯</strong>。掌握了这条链路，后面学习按键输入（第十四章）等外设实验时，只需替换"用户级初始化 + 主循环逻辑"即可。</p>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // ===== 左侧目录交互（与 index13 一致） =====
+        const topItems = document.querySelectorAll('.sidebar-menu > li');
+        const subItems = document.querySelectorAll('.submenu li');
+
+        // 全部展开 / 全部收起按钮
+        document.querySelector('.btn-expand-all').addEventListener('click', function(e) {
+            e.stopPropagation();
+            topItems.forEach(function(li) { li.classList.add('open'); });
+        });
+        document.querySelector('.btn-collapse-all').addEventListener('click', function(e) {
+            e.stopPropagation();
+            topItems.forEach(function(li) { li.classList.remove('open'); });
+        });
+
+        function clearActive() {
+            document.querySelectorAll('.sidebar-menu .active').forEach(function(el) {
+                el.classList.remove('active');
+            });
+        }
+
+        function scrollToTarget(targetId) {
+            if (!targetId) return;
+            const target = document.getElementById(targetId);
+            if (target) {
+                target.scrollIntoView({ behavior: 'auto', block: 'start' });
+            }
+        }
+
+        // 一级菜单：点击独立切换展开/折叠，并滚动到对应章节
+        topItems.forEach(function(li) {
+            const title = li.querySelector('.menu-title');
+            title.addEventListener('click', function(e) {
+                e.stopPropagation();
+                // 仅切换当前菜单的展开状态，不影响其他菜单
+                li.classList.toggle('open');
+                // 高亮 + 滚动
+                clearActive();
+                li.classList.add('active');
+                scrollToTarget(li.getAttribute('data-target'));
+            });
+        });
+
+        // 二级菜单：点击滚动到对应小节，并高亮自身与父级
+        subItems.forEach(function(li) {
+            li.addEventListener('click', function(e) {
+                e.stopPropagation();
+                clearActive();
+                li.classList.add('active');
+                const parentLi = li.closest('.sidebar-menu > li');
+                if (parentLi) {
+                    parentLi.classList.add('open');
+                    parentLi.classList.add('active');
+                }
+                scrollToTarget(li.getAttribute('data-target'));
+            });
+        });
+    </script>
+</body>
+</html>

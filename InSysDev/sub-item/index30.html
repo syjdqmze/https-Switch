@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验16 RTC 实时时钟实验</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2f7a52;
+            margin-bottom: 6px;
+        }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验16 · RTC 实时时钟实验</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">源码取证：实验16 RTC实时时钟实验<br>模板：code-boot-summary</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">RTC 走独立低速时钟，先把“用的什么引脚、什么时钟、看什么现象”交代清楚</div>
+
+                    <p>本实验在阿波罗 STM32F429 开发板上使用片内 RTC 外设做日历：LCD 显示时间、日期与星期；1 秒唤醒中断翻转 DS1；串口 USMART 可以修改时间、日期、闹钟与唤醒周期。RTC 时钟源为外部 32.768kHz 晶振 LSE，不经过主 PLL。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>连接 / 参数</th><th>源码位置</th></tr>
+                        <tr><td>DS0</td><td>PB1，推挽输出，初始化时置高（灭）</td><td><code>HARDWARE/LED/led.c</code></td></tr>
+                        <tr><td>DS1</td><td>PB0，推挽输出，由唤醒中断翻转</td><td><code>HARDWARE/LED/led.c</code></td></tr>
+                        <tr><td>KEY0 / KEY1</td><td>PH3 / PH2，上拉输入</td><td><code>HARDWARE/KEY/key.c</code></td></tr>
+                        <tr><td>USART1</td><td>PA9 / PA10，115200-8-N-1，兼作 printf 与 USMART</td><td><code>SYSTEM/usart/usart.c</code></td></tr>
+                        <tr><td>RTC</td><td>LSE 32.768kHz，备份寄存器 BKP0R 记录是否首次配置</td><td><code>HARDWARE/RTC/rtc.c</code></td></tr>
+                        <tr><td>LCD</td><td>按 <code>lcddev.id</code> 选屏，RGB 屏走 LTDC，帧缓存 0xC0000000</td><td><code>HARDWARE/LCD/lcd.c</code></td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">LSE 32.768kHz</span>
+                        <span class="chip">BKP0R = 0x5050</span>
+                        <span class="chip">RTC_WKUP_IRQn = 3</span>
+                        <span class="chip">RTC_Alarm_IRQn = 41</span>
+                    </div>
+
+                    <div class="note">本页只讲代码能证明的链路：时钟怎么来、备份域怎么解锁、日历怎么读写、中断怎么进、主循环怎么刷新。板级电池、晶振负载电容等硬件细节，工程中未体现。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">先定位“哪一段代码负责哪一步”，后面读代码就不会跳来跳去</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>负责什么</th><th>本页看什么</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化顺序、LCD 固定文字、主循环刷新</td><td>全文与 while(1)</td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td><code>SystemInit</code>、<code>SystemCoreClock</code></td><td>FPU、RCC 复位、VTOR</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>内核异常与 <code>SysTick_Handler</code></td><td>RTC 中断不在这里</td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>向量表、栈堆、<code>Reset_Handler</code></td><td>Stack 0x400 / Heap 0x200</td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td><code>Stm32_Clock_Init</code></td><td>PLL 参数与 180MHz</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>SysTick 轮询延时</td><td>是否依赖中断</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>USART1 初始化与 <code>fputc</code></td><td>printf 重定向</td></tr>
+                        <tr><td><code>HARDWARE/RTC/rtc.c</code></td><td>RTC 初始化、时间日期、唤醒、闹钟</td><td>本页核心</td></tr>
+                        <tr><td><code>HARDWARE/LED/led.c</code></td><td>PB0 / PB1 推挽输出</td><td>DS0 / DS1</td></tr>
+                        <tr><td><code>HARDWARE/KEY/key.c</code></td><td>PH2 / PH3 上拉输入</td><td>本实验主循环未用按键</td></tr>
+                        <tr><td><code>HARDWARE/SDRAM/sdram.c</code></td><td>FMC SDRAM 初始化</td><td>RGB 屏帧缓存前提</td></tr>
+                        <tr><td><code>HARDWARE/LCD/lcd.c</code></td><td>读屏 ID、LCD 与 LTDC 初始化</td><td><code>LCD_Init</code> 内的 printf</td></tr>
+                        <tr><td><code>USMART/usmart.c</code></td><td>TIM4 周期扫描串口命令</td><td>函数注册表</td></tr>
+                    </table>
+
+                    <div class="note blue">启动文件里的 <code>RTC_WKUP_IRQHandler</code> 与 <code>RTC_Alarm_IRQHandler</code> 只是弱定义；<code>rtc.c</code> 里的同名函数是强定义，链接时覆盖弱符号，所以不需要改启动文件。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电复位到 while(1)，main 的每一行初始化解决什么问题</div>
+
+                    <figure class="figure">
+                        <img src="./index30-map/boot-flow.png" alt="从上电复位到主循环的启动流程图">
+                        <figcaption>图 3-1　启动链路总览</figcaption>
+                    </figure>
+                    <figure class="figure"><img src="./index30-map/rtc-timing.png" alt="RTC 秒中断与闹钟时序图"><figcaption>图 3-2　RTC 秒中断与闹钟 A 触发时序</figcaption></figure>
+                    <p>RTC 用 1Hz 的 ck_spre 推进日历，每秒产生一次秒标志并进 RTC_WKUP 中断，回调只做翻转 LED1 和清标志这类短动作；闹钟 A 是“到点触发一次”的事件，靠 ALRAF 与日历匹配，由 USMART 调用 <code class="inline">RTC_Set_AlarmA</code> 动态设定。</p>
+
+                    <h3>main 函数（原文）</h3>
+                    <pre class="code">int main(void)
+{
+    RTC_TimeTypeDef RTC_TimeStruct;
+    RTC_DateTypeDef RTC_DateStruct;
+    u8 tbuf[40];
+    u8 t=0;
+    HAL_Init();                     <span class="cmt">//初始化HAL库</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">//设置时钟,180Mhz</span>
+    delay_init(180);                <span class="cmt">//初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">//初始化USART</span>
+    usmart_dev.init(90);            <span class="cmt">//初始化USMART</span>
+    LED_Init();                     <span class="cmt">//初始化LED</span>
+    KEY_Init();                     <span class="cmt">//初始化按键</span>
+    SDRAM_Init();                   <span class="cmt">//初始化SDRAM</span>
+    LCD_Init();                     <span class="cmt">//初始化LCD</span>
+    RTC_Init();                     <span class="cmt">//初始化RTC</span>
+    RTC_Set_WakeUp(RTC_WAKEUPCLOCK_CK_SPRE_16BITS,0); <span class="cmt">//1秒钟中断一次</span>
+    POINT_COLOR=RED;
+    LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7");
+    LCD_ShowString(30,70,200,16,16,"RTC TEST");
+    LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");
+    LCD_ShowString(30,110,200,16,16,"2016/1/13");
+    while(1)
+    {
+        t++;
+        if((t%10)==0)
+        {
+            HAL_RTC_GetTime(&amp;RTC_Handler,&amp;RTC_TimeStruct,RTC_FORMAT_BIN);   <span class="cmt">//先读时间</span>
+            sprintf((char*)tbuf,"Time:%02d:%02d:%02d",RTC_TimeStruct.Hours,RTC_TimeStruct.Minutes,RTC_TimeStruct.Seconds);  <span class="cmt">//拼字符串</span>
+            LCD_ShowString(30,140,210,16,16,tbuf);                          <span class="cmt">//写显存</span>
+            HAL_RTC_GetDate(&amp;RTC_Handler,&amp;RTC_DateStruct,RTC_FORMAT_BIN);   <span class="cmt">//再读日期，同时解锁影子寄存器</span>
+            sprintf((char*)tbuf,"Date:20%02d-%02d-%02d",RTC_DateStruct.Year,RTC_DateStruct.Month,RTC_DateStruct.Date);  <span class="cmt">//年份补 20</span>
+            LCD_ShowString(30,160,210,16,16,tbuf);
+            sprintf((char*)tbuf,"Week:%d",RTC_DateStruct.WeekDay);
+            LCD_ShowString(30,180,210,16,16,tbuf);
+        }
+        if((t%20)==0)LED0=!LED0;    <span class="cmt">//每200ms,翻转一次LED0</span>
+        delay_ms(10);               <span class="cmt">//主循环最小节拍 10ms</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：每一行初始化解决什么问题</div>
+                        <ol>
+                            <li><code>HAL_Init()</code>：按复位后的 16MHz HSI 建立 1ms 时基，并把分组固定为 <code>NVIC_PRIORITYGROUP_2</code>。</li>
+                            <li><code>Stm32_Clock_Init(360,25,2,8)</code>：HSE 25MHz 经 PLL 切到 180MHz，函数内部会重算 <code>SystemCoreClock</code> 并重新校准 SysTick。</li>
+                            <li><code>delay_init(180)</code>：把 <code>fac_us</code> 置为 180，让 <code>delay_us</code> 的计数值与 HCLK 对齐。</li>
+                            <li><code>uart_init(115200)</code>：USART1 同时服务 <code>printf</code> 与 USMART，必须早于任何打印。</li>
+                            <li><code>usmart_dev.init(90)</code>：按 90MHz 的 APB1 配置 TIM4，建立串口命令扫描。</li>
+                            <li><code>LED_Init()</code> / <code>KEY_Init()</code>：PB0/PB1 推挽输出、PH2/PH3 上拉输入；本实验只用 LED。</li>
+                            <li><code>SDRAM_Init() → LCD_Init()</code>：先让显存可用，再初始化屏与 LTDC。</li>
+                            <li><code>RTC_Init()</code>：解锁备份域 → 选 LSE → 配 1Hz 日历 → 首次上电写默认时间。</li>
+                            <li><code>RTC_Set_WakeUp(CK_SPRE_16BITS,0)</code>：打开 1s 唤醒中断，DS1 的翻转从此与主循环解耦。</li>
+                            <li><code>while(1)</code>：只负责读取与显示，计时全部由 RTC 硬件完成。</li>
+                        </ol>
+                    </div>
+
+                    <h3>顺序为什么不能随意换</h3>
+                    <ul>
+                        <li><strong>HAL_Init 在时钟切换之前</strong>：它按复位后的 HSI 16MHz 建立 1ms SysTick；<code>HAL_RCC_ClockConfig</code> 结尾会用新的 HCLK 重新调用 <code>HAL_InitTick</code>，所以切到 180MHz 后 1ms 仍然准确。</li>
+                        <li><strong>uart_init 在 LCD_Init 之前</strong>：<code>LCD_Init</code> 内部会 <code>printf(" LCD ID:%x\r\n",lcddev.id)</code>，串口没初始化就打印不出来。</li>
+                        <li><strong>usmart 在 LCD 之前</strong>：USMART 的 TIM4 扫描只依赖 90MHz 的 APB1 时钟，但它提供的命令包含 <code>RTC_Set_Time</code> 等函数，放在外设初始化前不会影响外设本身。</li>
+                        <li><strong>SDRAM 在 LCD 之前</strong>：RGB 屏的帧缓存被链接到 <code>0xC0000000</code>，SDRAM 控制器没初始化就无法写显存。</li>
+                        <li><strong>RTC 放最后</strong>：LSE 与主 PLL 无关，只依赖 PWR 时钟与备份域访问；放在最后不会影响前面任何外设。</li>
+                    </ul>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">复位后 CPU 从哪取栈顶、从哪取第一条指令，堆栈又有多大</div>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>值</th><th>含义 / 来源</th></tr>
+                        <tr><td>Stack_Size</td><td><code>0x400</code>（1KB）</td><td>启动文件 AREA STACK，<code>__initial_sp</code> 指向栈顶</td></tr>
+                        <tr><td>Heap_Size</td><td><code>0x200</code>（512B）</td><td>启动文件 AREA HEAP，<code>__heap_base</code> / <code>__heap_limit</code></td></tr>
+                        <tr><td>向量表第 0 项</td><td><code>__initial_sp</code></td><td>复位时硬件装入 MSP</td></tr>
+                        <tr><td>向量表第 1 项</td><td><code>Reset_Handler</code></td><td>复位后第一条指令入口</td></tr>
+                        <tr><td>VTOR</td><td><code>FLASH_BASE | VECT_TAB_OFFSET</code></td><td>工程未重定义偏移，取默认 0x00000000</td></tr>
+                    </table>
+
+                    <pre class="code">Stack_Size      EQU     0x400          <span class="cmt">;栈大小 1KB</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp                            <span class="cmt">;栈顶地址，复位时装进 MSP</span>
+
+Heap_Size       EQU     0x200          <span class="cmt">;堆大小 512B</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]   <span class="cmt">;弱符号，可被 C 同名函数覆盖</span>
+        IMPORT  SystemInit
+        IMPORT  __main
+
+                 LDR     R0, =SystemInit   <span class="cmt">;R0 = SystemInit 入口地址</span>
+                 BLX     R0                <span class="cmt">;带返回跳转：开 FPU、复位 RCC、定位 VTOR</span>
+                 LDR     R0, =__main
+                 BX      R0                <span class="cmt">;不返回，进入 C 库启动</span>
+                 ENDP</pre>
+
+                    <p><code>Reset_Handler</code> 只做两件事：先调 <code>SystemInit</code>，再跳 <code>__main</code>。真正把 <code>.data</code> 从 Flash 拷到 RAM、把 <code>.bss</code> 清零的是 C 库的 <code>__main</code>（分散加载），启动文件里没有手写拷贝循环。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：__main 在 main 之前做的三件事</div>
+                        <ol>
+                            <li>硬件复位时从向量表第 0 项取 <code>__initial_sp</code> 装入 MSP，从第 1 项取 <code>Reset_Handler</code> 装入 PC。</li>
+                            <li><code>Reset_Handler</code> 用 <code>BLX</code> 调 <code>SystemInit</code>（会返回），再用 <code>BX __main</code> 跳走（不返回）。</li>
+                            <li><code>__main</code> 来自 C 库，负责分散加载：复制 <code>.data</code> 初值、清零 <code>.bss</code>、初始化堆，然后才跳到 <code>main</code>。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">1KB 栈要同时容纳 <code>sprintf</code> 的格式化调用与 <code>LCD_ShowString</code> 的层层调用，属于偏紧的配置；这也是后面“疑点”里保留的一条。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">一个在 __main 之前跑，一个在 main 第一行跑，职责不要混</div>
+
+                    <h3>SystemInit：只做最基础的复位状态整理</h3>
+                    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">/* CP10/CP11 全访问 */</span>
+  #endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="cmt">/* 打开 HSION */</span>
+  RCC-&gt;CFGR = 0x00000000;               <span class="cmt">/* 清时钟配置 */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="cmt">/* 关 HSEON/CSSON/PLLON */</span>
+  RCC-&gt;PLLCFGR = 0x24003010;            <span class="cmt">/* 复位值：PLLM=16、PLLN=192 */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;      <span class="cmt">/* 清 HSEBYP */</span>
+  RCC-&gt;CIR = 0x00000000;                <span class="cmt">/* 关所有 RCC 中断 */</span>
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;  <span class="cmt">/* 向量表重定位，偏移为 0 */</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>动作</th><th>源码依据</th><th>结果</th></tr>
+                        <tr><td>开 FPU</td><td><code>SCB-&gt;CPACR</code> 置 CP10/CP11</td><td>后续浮点指令不触发 NOCP 异常</td></tr>
+                        <tr><td>RCC 复位</td><td>HSION=1、CFGR=0、关 HSE/PLL</td><td>离开复位后先跑 HSI 16MHz</td></tr>
+                        <tr><td>向量表定位</td><td><code>SCB-&gt;VTOR = FLASH_BASE</code></td><td>中断从 0x08000000 的向量表取入口</td></tr>
+                        <tr><td>SystemCoreClock</td><td>初值 <code>16000000</code></td><td>切 180MHz 前，HAL 认为主频是 16MHz</td></tr>
+                    </table>
+
+                    <h3>HAL_Init：时基与优先级分组</h3>
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
+  __HAL_FLASH_DATA_CACHE_ENABLE();
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
+
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);  <span class="cmt">//2 位抢占 + 2 位子优先级</span>
+  HAL_InitTick(TICK_INT_PRIORITY);                     <span class="cmt">//1ms SysTick</span>
+  HAL_MspInit();                                       <span class="cmt">//弱函数，本工程未重写</span>
+  return HAL_OK;
+}</pre>
+
+                    <p>这一步把整个工程的中断优先级规则固定为“2 位抢占、2 位子优先级”，后面 RTC 的 <code>0x02/0x02</code>、<code>0x01/0x02</code> 才有意义；如果换成 GROUP 4，源码里的子优先级参数会被当成抢占位解释。</p>
+
+                    <div class="note blue"><code>HAL_MspInit</code> 在工程中没有被重写，所以 HAL_Init 不会额外配置任何引脚或外设，只做缓存、分组与 SysTick。</div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：两次时基建立的区别</div>
+                        <ol>
+                            <li><code>SystemInit</code> 在 <code>__main</code> 之前执行，只把 RCC 恢复成复位状态（HSI 16MHz），不建立 SysTick，也不改 <code>SystemCoreClock</code>。</li>
+                            <li><code>HAL_Init</code> 用 16MHz 建立第一个 1ms SysTick，同时固定优先级分组，为后面所有 NVIC 配置定下规则。</li>
+                            <li><code>Stm32_Clock_Init</code> 里的 <code>HAL_RCC_ClockConfig</code> 结尾会再次调用 <code>HAL_InitTick</code>，按新的 180MHz 重算重装值，所以切频后 1ms 不会被拉长。</li>
+                            <li>分组一旦改变，之前设置过的优先级会被重新解释；因此分组放在最前面，后面只填抢占/子优先级数值。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟链：180MHz 与 1Hz">
+                    <h2>06　时钟链：180MHz 与 1Hz</h2>
+                    <div class="sec-sub">系统时钟走 HSE + PLL，RTC 时钟走 LSE + 两级分频，两条链互不影响</div>
+
+                    <figure class="figure">
+                        <img src="./index30-map/clock-tree.png" alt="系统时钟与 RTC 时钟的分频链">
+                        <figcaption>图 6-1　系统时钟与 RTC 时钟的分频关系</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>节点</th><th>计算</th><th>结果</th></tr>
+                        <tr><td>PLL 输入</td><td>25MHz ÷ PLLM(25)</td><td>1MHz</td></tr>
+                        <tr><td>VCO</td><td>1MHz × PLLN(360)</td><td>360MHz</td></tr>
+                        <tr><td>SYSCLK</td><td>360MHz ÷ PLLP(2)</td><td>180MHz</td></tr>
+                        <tr><td>HCLK</td><td>180MHz ÷ AHB(1)</td><td>180MHz</td></tr>
+                        <tr><td>PCLK1</td><td>180MHz ÷ APB1(4)</td><td>45MHz</td></tr>
+                        <tr><td>PCLK2</td><td>180MHz ÷ APB2(2)</td><td>90MHz</td></tr>
+                        <tr><td>PLLQ 输出</td><td>360MHz ÷ PLLQ(8)</td><td>45MHz（USB/SDIO）</td></tr>
+                        <tr><td>RTC 异步分频</td><td>32768Hz ÷ (7F+1 = 128)</td><td>256Hz</td></tr>
+                        <tr><td>RTC 同步分频</td><td>256Hz ÷ (FF+1 = 256)</td><td>1Hz</td></tr>
+                        <tr><td>唤醒周期</td><td>(cnt + 1) × 1s，cnt = 0</td><td>1s</td></tr>
+                    </table>
+
+                    <pre class="code">RCC_ClkInitStructure.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK;   <span class="cmt">//SYSCLK 取 PLL 输出</span>
+RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;           <span class="cmt">//HCLK = 180MHz</span>
+RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;            <span class="cmt">//PCLK1 = 45MHz</span>
+RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;            <span class="cmt">//PCLK2 = 90MHz</span>
+ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5); <span class="cmt">//5 个 Flash 等待周期</span></pre>
+
+                    <p><code>FLASH_LATENCY_5</code> 对应 5 个等待周期；在 180MHz 之前还调用了 <code>HAL_PWREx_EnableOverDrive()</code>。这两步任一失败，源码用 <code>while(1)</code> 停住，不会带着错误时钟继续跑。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：RTC 的 1Hz 是怎么来的</div>
+                        <ol>
+                            <li>LSE 32.768kHz 进入 <code>RTCCLK</code>，先过 7 位异步分频 <code>PREDIV_A=0x7F</code>：32768 ÷ 128 = 256Hz。</li>
+                            <li>再过 15 位同步分频 <code>PREDIV_S=0xFF</code>：256 ÷ 256 = 1Hz，这个 1Hz 同时驱动日历和 <code>ck_spre</code>。</li>
+                            <li>唤醒定时器选 <code>CK_SPRE_16BITS</code> 时，计数时钟就是 1Hz；<code>cnt=0</code> 表示每 (0+1) 个周期触发一次。</li>
+                            <li>整条链不经过主 PLL，所以改主频、开 Over-Drive 都不会影响走时精度。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">LSE 是 32.768kHz 音叉晶振，HAL 在 <code>HAL_RCC_OscConfig</code> 里等待 <code>LSERDY</code> 置位；起振失败会返回错误，但 <code>HAL_RTC_MspInit</code> 没有检查返回值，这是后面“疑点”里的第一条。</div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="延时、串口与 printf">
+                    <h2>07　延时、串口与 printf</h2>
+                    <div class="sec-sub">主循环的 10ms 节拍靠什么实现，printf 又输出到哪里</div>
+
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">//SysTick 时钟 = HCLK</span>
+    fac_us=SYSCLK;                                       <span class="cmt">//180MHz 时 fac_us = 180</span>
+}
+
+void delay_us(u32 nus)                 <span class="cmt">//SYSTEM_SUPPORT_OS = 0 的分支</span>
+{
+    u32 ticks, told, tnow, tcnt=0;
+    u32 reload=SysTick-&gt;LOAD;          <span class="cmt">//当前 1ms 重装值</span>
+    ticks=nus*fac_us;                  <span class="cmt">//需要的 HCLK 个数</span>
+    told=SysTick-&gt;VAL;                 <span class="cmt">//起点计数值</span>
+    while(1)
+    {
+        tnow=SysTick-&gt;VAL;             <span class="cmt">//轮询递减计数</span>
+        if(tnow!=told)
+        {
+            if(tnow&lt;told)tcnt+=told-tnow;   <span class="cmt">//没跨 0，直接相减</span>
+            else tcnt+=reload-tnow+told;    <span class="cmt">//跨过 0，分段累加</span>
+            told=tnow;
+            if(tcnt&gt;=ticks)break;           <span class="cmt">//累计够了就退出</span>
+        }
+    }
+}
+
+void delay_ms(u16 nms)
+{
+    u32 i;
+    for(i=0;i&lt;nms;i++) delay_us(1000);
+}</pre>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>实现</th><th>是否依赖中断</th></tr>
+                        <tr><td>delay_us</td><td>轮询 <code>SysTick-&gt;VAL</code> 的递减差值</td><td>否，纯查询</td></tr>
+                        <tr><td>delay_ms</td><td>循环 <code>delay_us(1000)</code></td><td>否</td></tr>
+                        <tr><td>HAL 1ms 时基</td><td>SysTick 中断里递增 <code>uwTick</code></td><td>是，但主循环未用 <code>HAL_Delay</code></td></tr>
+                        <tr><td>串口参数</td><td>115200、8 数据位、1 停止位、无校验、无流控</td><td>—</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：为什么轮询延时不怕被中断打断</div>
+                        <ol>
+                            <li><code>SysTick</code> 由 HCLK 驱动、自由递减，<code>VAL</code> 是硬件计数值，读数不依赖中断。</li>
+                            <li>延时累计的是“相邻两次读数的差值”；即使中途进中断，回来后继续读 <code>VAL</code>，差值照样补齐，时间不会丢。</li>
+                            <li><code>tnow &lt; told</code> 说明计数器跨过了 0，要按 <code>reload - tnow + told</code> 分段计算，否则会得到负数。</li>
+                            <li><code>delay_ms</code> 只是循环调用 <code>delay_us(1000)</code>，主循环的 10ms 节拍因此是 CPU 空转出来的，不是定时器中断。</li>
+                        </ol>
+                    </div>
+
+                    <pre class="code">int fputc(int ch, FILE *f)
+{
+    while((USART1-&gt;SR&amp;0X40)==0); <span class="cmt">//等 TXE=1，发送寄存器空</span>
+    USART1-&gt;DR = (u8) ch;        <span class="cmt">//写数据寄存器，硬件开始发送</span>
+    return ch;
+}</pre>
+
+                    <p><code>printf</code> 最终走到 <code>fputc</code>，逐字节查询 <code>USART1-&gt;SR</code> 的 TXE 位再写 DR。也就是说，LCD 初始化里的那一行 LCD ID 打印与闹钟回调里的 <code>printf("ALARM A!\r\n")</code> 都是阻塞式发送。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：printf 的三个落点</div>
+                        <ol>
+                            <li><code>printf</code> 先在 C 库里完成格式化，再把每个字符交给 <code>fputc</code>。</li>
+                            <li><code>fputc</code> 等 TXE 置位才写 <code>DR</code>，属于阻塞发送；波特率 115200 时，输出一行十几字节约需 1ms 量级。</li>
+                            <li>LCD 初始化里的 ID 打印、闹钟回调里的 <code>ALARM A!</code> 都走这条路径，所以串口必须先初始化。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="备份域与 RTC 初始化">
+                    <h2>08　备份域与 RTC 初始化</h2>
+                    <div class="sec-sub">先开 PWR 时钟、解锁 DBP，再选 LSE 作为 RTCCLK，最后才允许写 RTC 寄存器</div>
+
+                    <figure class="figure">
+                        <img src="./index30-map/rtc-init.png" alt="RTC 初始化流程与首次上电分支">
+                        <figcaption>图 8-1　RTC_Init 的配置顺序与 BKP0R 分支</figcaption>
+                    </figure>
+
+                    <pre class="code">u8 RTC_Init(void)
+{
+    RTC_Handler.Instance=RTC;                     <span class="cmt">//RTC 寄存器基址</span>
+    RTC_Handler.Init.HourFormat=RTC_HOURFORMAT_24; <span class="cmt">//24 小时格式</span>
+    RTC_Handler.Init.AsynchPrediv=0X7F;           <span class="cmt">//异步分频 127</span>
+    RTC_Handler.Init.SynchPrediv=0XFF;            <span class="cmt">//同步分频 255</span>
+    RTC_Handler.Init.OutPut=RTC_OUTPUT_DISABLE;   <span class="cmt">//不输出 RTC 校准/闹钟脉冲</span>
+    RTC_Handler.Init.OutPutPolarity=RTC_OUTPUT_POLARITY_HIGH;
+    RTC_Handler.Init.OutPutType=RTC_OUTPUT_TYPE_OPENDRAIN;
+    if(HAL_RTC_Init(&amp;RTC_Handler)!=HAL_OK) return 2;  <span class="cmt">//失败返回 2</span>
+
+    if(HAL_RTCEx_BKUPRead(&amp;RTC_Handler,RTC_BKP_DR0)!=0X5050) <span class="cmt">//是否第一次配置</span>
+    {
+        RTC_Set_Time(23,59,56,RTC_HOURFORMAT12_PM);
+        RTC_Set_Date(15,12,27,7);
+        HAL_RTCEx_BKUPWrite(&amp;RTC_Handler,RTC_BKP_DR0,0X5050);
+    }
+    return 0;
+}</pre>
+
+                    <pre class="code">void HAL_RTC_MspInit(RTC_HandleTypeDef* hrtc)
+{
+    RCC_OscInitTypeDef RCC_OscInitStruct;
+    RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
+
+    __HAL_RCC_PWR_CLK_ENABLE();      <span class="cmt">//先开 PWR 时钟</span>
+    HAL_PWR_EnableBkUpAccess();      <span class="cmt">//PWR_CR.DBP = 1，解锁备份域</span>
+
+    RCC_OscInitStruct.OscillatorType=RCC_OSCILLATORTYPE_LSE;
+    RCC_OscInitStruct.PLL.PLLState=RCC_PLL_NONE;
+    RCC_OscInitStruct.LSEState=RCC_LSE_ON;
+    HAL_RCC_OscConfig(&amp;RCC_OscInitStruct);     <span class="cmt">//等 LSERDY，返回值未检查</span>
+
+    PeriphClkInitStruct.PeriphClockSelection=RCC_PERIPHCLK_RTC;
+    PeriphClkInitStruct.RTCClockSelection=RCC_RTCCLKSOURCE_LSE;  <span class="cmt">//RTCSEL = LSE</span>
+    HAL_RCCEx_PeriphCLKConfig(&amp;PeriphClkInitStruct);
+
+    __HAL_RCC_RTC_ENABLE();          <span class="cmt">//RCC_BDCR.RTCEN = 1</span>
+}</pre>
+
+                    <h3>HAL_RTC_Init 内部做了什么</h3>
+                    <ol>
+                        <li><code>RTC_Handler.State</code> 初值为 0（RESET），所以第一次调用会先执行 <code>HAL_RTC_MspInit</code>。</li>
+                        <li>解锁 RTC 写保护（<code>RTC_WPR</code> 写 0xCA / 0x53），进入初始化模式并等待 <code>INITS</code>。</li>
+                        <li>写 <code>RTC_CR</code> 的 FMT（24h）与输出配置，写 <code>RTC_PRER</code> 的异步/同步分频。</li>
+                        <li>退出初始化模式，等待 <code>INITS</code> 清零，日历开始按 1Hz 走。</li>
+                    </ol>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：三条顺序依赖，少一步就写不进寄存器</div>
+                        <ol>
+                            <li><code>__HAL_RCC_PWR_CLK_ENABLE()</code> 必须先于 <code>HAL_PWR_EnableBkUpAccess()</code>，否则对 <code>PWR_CR.DBP</code> 的写操作被硬件忽略。</li>
+                            <li>DBP 置位后，才允许修改 <code>RCC_BDCR</code>：选 <code>RTCSEL=LSE</code> 并置 <code>RTCEN</code> 打开 RTC 时钟。</li>
+                            <li>RTC 时钟到位后，<code>HAL_RTC_Init</code> 才能解锁 <code>RTC_WPR</code>（先写 0xCA 再写 0x53），进入初始化模式写 <code>RTC_PRER</code>。</li>
+                            <li><code>RTC_Handler.State</code> 初值为 RESET，所以 <code>MspInit</code> 只在第一次调用时执行；时钟与解锁不会重复做。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">关键顺序：<code>__HAL_RCC_PWR_CLK_ENABLE</code> 必须在 <code>HAL_PWR_EnableBkUpAccess</code> 之前，否则 DBP 位写不进去；DBP 没置位时，写 <code>RCC_BDCR</code> 选 RTC 时钟会被硬件忽略。</div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="日历读写与 BKP 标记">
+                    <h2>09　日历读写与 BKP 标记</h2>
+                    <div class="sec-sub">时间日期怎么写入、怎么读出，BKP0R 又如何避免每次复位都重置时间</div>
+
+                    <pre class="code">HAL_StatusTypeDef RTC_Set_Time(u8 hour,u8 min,u8 sec,u8 ampm)
+{
+    RTC_TimeTypeDef RTC_TimeStructure;
+    RTC_TimeStructure.Hours=hour;
+    RTC_TimeStructure.Minutes=min;
+    RTC_TimeStructure.Seconds=sec;
+    RTC_TimeStructure.TimeFormat=ampm;                       <span class="cmt">//24h 模式下会被 HAL 清零</span>
+    RTC_TimeStructure.DayLightSaving=RTC_DAYLIGHTSAVING_NONE;
+    RTC_TimeStructure.StoreOperation=RTC_STOREOPERATION_RESET;
+    return HAL_RTC_SetTime(&amp;RTC_Handler,&amp;RTC_TimeStructure,RTC_FORMAT_BIN);  <span class="cmt">//十进制入参</span>
+}
+
+HAL_StatusTypeDef RTC_Set_Date(u8 year,u8 month,u8 date,u8 week)
+{
+    RTC_DateTypeDef RTC_DateStructure;
+    RTC_DateStructure.Date=date;
+    RTC_DateStructure.Month=month;
+    RTC_DateStructure.WeekDay=week;
+    RTC_DateStructure.Year=year;
+    return HAL_RTC_SetDate(&amp;RTC_Handler,&amp;RTC_DateStructure,RTC_FORMAT_BIN);
+}</pre>
+
+                    <p>两个函数都用 <code>RTC_FORMAT_BIN</code>，所以传入的是十进制数，不需要自己转 BCD。年份只写两位，显示时由 <code>sprintf("Date:20%02d-%02d-%02d", ...)</code> 补上“20”。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：写时间必须先解锁、后写入、再锁回</div>
+                        <ol>
+                            <li><code>HAL_RTC_SetTime</code> 先写 <code>RTC_WPR</code> 解锁，再等 <code>INITS</code> 才能改 <code>RTC_TR</code> / <code>RTC_DR</code>。</li>
+                            <li><code>RTC_FORMAT_BIN</code> 让 HAL 在内部把十进制转成 BCD 再写入寄存器，避免手工转换出错。</li>
+                            <li>写完后 HAL 自动重新上锁并退出初始化模式，日历从新值继续按 1Hz 走。</li>
+                            <li>因为设置函数是普通 C 函数，USMART 可以直接按函数名调用它，不需要额外的串口协议。</li>
+                        </ol>
+                    </div>
+
+                    <h3>主循环里的读取顺序</h3>
+                    <pre class="code">HAL_RTC_GetTime(&amp;RTC_Handler,&amp;RTC_TimeStruct,RTC_FORMAT_BIN);
+<span class="cmt">// ... 用 RTC_TimeStruct 拼 Time 字符串 ...</span>
+HAL_RTC_GetDate(&amp;RTC_Handler,&amp;RTC_DateStruct,RTC_FORMAT_BIN);
+<span class="cmt">// ... 用 RTC_DateStruct 拼 Date / Week 字符串 ...</span></pre>
+
+                    <div class="note blue">HAL 的约定是“先 GetTime、再 GetDate”。读 <code>RTC_TR</code> 会锁住高位的日历影子寄存器，必须读一次 <code>RTC_DR</code> 才解锁；如果只读时间不读日期，下一次读到的可能是旧值。本工程的主循环顺序正好满足这个要求。</div>
+
+                    <h3>BKP0R 的作用</h3>
+                    <table class="data">
+                        <tr><th>BKP0R 的值</th><th>RTC_Init 的行为</th><th>结果</th></tr>
+                        <tr><td>不等于 0x5050</td><td>写 23:59:56、2015-12-27、星期 7，再写 0x5050</td><td>首次上电或备份域掉电后的默认时间</td></tr>
+                        <tr><td>等于 0x5050</td><td>跳过时间/日期写入</td><td>保留备份域里原来的时间</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：BKP0R 为什么能记住“已经配置过”</div>
+                        <ol>
+                            <li><code>RTC_BKP_DR0</code> 属于备份域，只要 VBAT 或 VDD 持续供电，主复位不会清掉它的内容。</li>
+                            <li>首次上电读到的是随机值，通常不等于 0x5050，于是写入默认时间，再写 0x5050 作为标记。</li>
+                            <li>之后每次复位读到 0x5050，就跳过时间写入，RTC 继续走原来的日历。</li>
+                            <li>0x5050 只是工程自选的魔数，没有硬件含义；换成别的值同样可行。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">注释写的是“RTC 设置为 24 小时格式”，而 <code>RTC_Set_Time</code> 的实参传了 <code>RTC_HOURFORMAT12_PM</code>；在 24 小时模式下 HAL 会把 <code>TimeFormat</code> 清零，所以 PM 参数不会把 23:59:56 变成 11:59:56。</div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="唤醒定时器与中断链路">
+                    <h2>10　唤醒定时器与中断链路</h2>
+                    <div class="sec-sub">从 ck_spre 到 EXTI 线 22，再到 NVIC IRQ 3，最后进 LED1 翻转回调</div>
+
+                    <figure class="figure">
+                        <img src="./index30-map/rtc-irq.png" alt="唤醒定时器与闹钟 A 的中断链路">
+                        <figcaption>图 10-1　两条 RTC 中断路径</figcaption>
+                    </figure>
+
+                    <pre class="code">void RTC_Set_WakeUp(u32 wksel,u16 cnt)
+{
+    __HAL_RTC_WAKEUPTIMER_CLEAR_FLAG(&amp;RTC_Handler, RTC_FLAG_WUTF);   <span class="cmt">//先清旧标志</span>
+
+    HAL_RTCEx_SetWakeUpTimer_IT(&amp;RTC_Handler,cnt,wksel);              <span class="cmt">//置 WUTE，开 WUTF 中断</span>
+
+    HAL_NVIC_SetPriority(RTC_WKUP_IRQn,0x02,0x02); <span class="cmt">//抢占2,子优先级2</span>
+    HAL_NVIC_EnableIRQ(RTC_WKUP_IRQn);             <span class="cmt">//使能 IRQ 3</span>
+}
+
+void RTC_WKUP_IRQHandler(void)
+{
+    HAL_RTCEx_WakeUpTimerIRQHandler(&amp;RTC_Handler); <span class="cmt">//判源、清 WUTF 与 EXTI 挂起位</span>
+}
+
+void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc)
+{
+    LED1=!LED1;                                    <span class="cmt">//回调里只翻转 GPIO，不延时</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>环节</th><th>源码依据</th><th>说明</th></tr>
+                        <tr><td>计数时钟</td><td><code>RTC_WAKEUPCLOCK_CK_SPRE_16BITS</code></td><td>1Hz，16 位唤醒计数器</td></tr>
+                        <tr><td>重装值</td><td><code>cnt = 0</code></td><td>周期 (0+1) × 1s = 1s</td></tr>
+                        <tr><td>RTC 侧使能</td><td><code>HAL_RTCEx_SetWakeUpTimer_IT</code></td><td>置 <code>RTC_CR.WUTE</code>，允许 WUTF 中断</td></tr>
+                        <tr><td>EXTI</td><td>线 22（RTC 唤醒事件）</td><td>HAL 内部置 IMR 对应位</td></tr>
+                        <tr><td>NVIC</td><td><code>RTC_WKUP_IRQn</code>，0x02 / 0x02</td><td>分组 2 下抢占优先级为 2</td></tr>
+                        <tr><td>清标志</td><td><code>HAL_RTCEx_WakeUpTimerIRQHandler</code></td><td>清 WUTF 与 EXTI 挂起位后回调</td></tr>
+                    </table>
+
+                    <p>唤醒中断完全异步：主循环是否在 <code>delay_ms</code> 里、是否正在刷 LCD，都不影响 DS1 每 1 秒翻转。回调里只做了一次 GPIO 取反，没有阻塞延时。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：一次唤醒中断的完整路径</div>
+                        <ol>
+                            <li>唤醒计数器减到 0 → 硬件置 <code>RTC_ISR.WUTF</code> → 经 EXTI 线 22 产生中断请求。</li>
+                            <li>NVIC 按 <code>RTC_WKUP_IRQn</code>（IRQ 3，抢占 2）响应，跳到启动文件里的 <code>RTC_WKUP_IRQHandler</code>。</li>
+                            <li><code>HAL_RTCEx_WakeUpTimerIRQHandler</code> 判断 <code>WUTF</code>，先清 <code>WUTF</code> 与 EXTI 挂起位，再调用用户回调。</li>
+                            <li>回调 <code>HAL_RTCEx_WakeUpTimerEventCallback</code> 执行 <code>LED1=!LED1</code>，随即退出中断，主循环继续。</li>
+                            <li>标志在回调前就已清除，1 秒后可以再次进入，不会因为漏清标志而卡死。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">源码注释写“抢占优先级1,子优先级2”，但实际参数是 <code>0x02,0x02</code>，即抢占 2、子 2。以代码为准，注释与参数不一致。</div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="闹钟 A 与 USMART 调试">
+                    <h2>11　闹钟 A 与 USMART 调试</h2>
+                    <div class="sec-sub">闹钟不是上电默认功能，必须通过串口命令显式设置后才会产生中断</div>
+
+                    <pre class="code">void RTC_Set_AlarmA(u8 week,u8 hour,u8 min,u8 sec)
+{
+    RTC_AlarmTypeDef RTC_AlarmSturuct;
+
+    RTC_AlarmSturuct.AlarmTime.Hours=hour;
+    RTC_AlarmSturuct.AlarmTime.Minutes=min;
+    RTC_AlarmSturuct.AlarmTime.Seconds=sec;
+    RTC_AlarmSturuct.AlarmTime.SubSeconds=0;
+    RTC_AlarmSturuct.AlarmTime.TimeFormat=RTC_HOURFORMAT12_AM;   <span class="cmt">//24h 模式下被 HAL 清零</span>
+
+    RTC_AlarmSturuct.AlarmMask=RTC_ALARMMASK_NONE;      <span class="cmt">//星期、时分秒都参与匹配</span>
+    RTC_AlarmSturuct.AlarmSubSecondMask=RTC_ALARMSUBSECONDMASK_NONE;
+    RTC_AlarmSturuct.AlarmDateWeekDaySel=RTC_ALARMDATEWEEKDAYSEL_WEEKDAY;  <span class="cmt">//按星期匹配</span>
+    RTC_AlarmSturuct.AlarmDateWeekDay=week;
+    RTC_AlarmSturuct.Alarm=RTC_ALARM_A;
+    HAL_RTC_SetAlarm_IT(&amp;RTC_Handler,&amp;RTC_AlarmSturuct,RTC_FORMAT_BIN);    <span class="cmt">//置 ALRAE，开闹钟中断</span>
+
+    HAL_NVIC_SetPriority(RTC_Alarm_IRQn,0x01,0x02);     <span class="cmt">//抢占1,子优先级2</span>
+    HAL_NVIC_EnableIRQ(RTC_Alarm_IRQn);                 <span class="cmt">//使能 IRQ 41</span>
+}
+
+void RTC_Alarm_IRQHandler(void)
+{
+    HAL_RTC_AlarmIRQHandler(&amp;RTC_Handler);              <span class="cmt">//清 ALRAF 后回调</span>
+}
+
+void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)
+{
+    printf("ALARM A!\r\n");                             <span class="cmt">//经 USART1 阻塞输出</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：闹钟是“显式功能”，不设置就不会响</div>
+                        <ol>
+                            <li><code>main</code> 里没有调用 <code>RTC_Set_AlarmA</code>，所以上电后闹钟 A 处于关闭状态，只有 USMART 命令才会打开。</li>
+                            <li><code>AlarmMask=NONE</code> 表示星期、时、分、秒全部参与比较，任何一项不匹配都不会触发。</li>
+                            <li><code>AlarmDateWeekDaySel=WEEKDAY</code> 使匹配按“星期几 + 时分秒”，而不是按“几号 + 时分秒”。</li>
+                            <li>到点后 <code>HAL_RTC_AlarmIRQHandler</code> 清 <code>ALRAF</code> 并调用 <code>HAL_RTC_AlarmAEventCallback</code>，串口打印 <code>ALARM A!</code>。</li>
+                            <li>闹钟中断优先级（抢占 1）高于唤醒中断（抢占 2），两者同时到点时闹钟先执行。</li>
+                        </ol>
+                    </div>
+
+                    <p>USMART 的函数注册表里已经把 RTC 接口暴露给串口：</p>
+
+                    <pre class="code">(void*)RTC_Set_Time,"u8 RTC_Set_Time(u8 hour,u8 min,u8 sec,u8 ampm)",          <span class="cmt">//改时间</span>
+(void*)RTC_Set_Date,"u8 RTC_Set_Date(u8 year,u8 month,u8 date,u8 week)",        <span class="cmt">//改日期</span>
+(void*)RTC_Set_AlarmA,"void RTC_Set_AlarmA(u8 week,u8 hour,u8 min,u8 sec)",     <span class="cmt">//设闹钟 A</span>
+(void*)RTC_Set_WakeUp,"void RTC_Set_WakeUp(u8 wksel,u16 cnt)",                  <span class="cmt">//改唤醒周期</span></pre>
+
+                    <table class="data">
+                        <tr><th>串口命令示例</th><th>作用</th><th>下一帧 LCD</th></tr>
+                        <tr><td><code>RTC_Set_Time(12,30,0,0)</code></td><td>把时间改为 12:30:00</td><td>下次 <code>t%10==0</code> 时显示 12:30:00</td></tr>
+                        <tr><td><code>RTC_Set_Date(26,11,11,3)</code></td><td>2026-11-11，星期三</td><td>Date / Week 两行同步更新</td></tr>
+                        <tr><td><code>RTC_Set_AlarmA(3,12,31,0)</code></td><td>星期三 12:31:00 触发闹钟 A</td><td>串口打印 <code>ALARM A!</code></td></tr>
+                        <tr><td><code>RTC_Set_WakeUp(4,0)</code></td><td>CK_SPRE 16 位，1s 唤醒</td><td>DS1 继续每 1s 翻转</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：USMART 如何在不改主循环的情况下操作 RTC</div>
+                        <ol>
+                            <li><code>usmart_dev.init(90)</code> 按 90MHz 的 APB1 配置 TIM4，用周期中断检查串口缓冲区。</li>
+                            <li>注册表把“函数指针 + 参数类型字符串”成对登记，USMART 按字符串把串口输入解析成实参，再通过函数指针调用。</li>
+                            <li>所以输入 <code>RTC_Set_Time(12,30,0,0)</code> 等价于程序里直接调用该函数，改完主循环下一轮就会显示新值。</li>
+                            <li>命令在中断上下文执行，返回后主循环继续；解析期间主循环暂停，但 10ms 节拍只被推迟，不会丢节拍。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">USMART 由 TIM4 周期扫描：<code>usmart_dev.init(90)</code> 内部调用 <code>Timer4_Init(1000, 90*100-1)</code>，按注释是 10kHz、100ms 进一次中断；命令本身在主循环之外执行，改时间不需要停主循环。</div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="显示链路：SDRAM + LTDC">
+                    <h2>12　显示链路：SDRAM + LTDC</h2>
+                    <div class="sec-sub">RTC 数据最终要落到 LCD，先看清显存从哪里来</div>
+
+                    <p><code>LCD_Init</code> 先读屏 ID：如果是 RGB 屏，就调用 <code>LTDC_Init</code> 配置 LTDC 与 PLLSAI；如果是 MCU 屏，则走 FSMC 一类接口。初始化完成后用 <code>printf(" LCD ID:%x\r\n",lcddev.id)</code> 把 ID 打到串口，因此串口必须先于 LCD 初始化。</p>
+
+                    <pre class="code">#define LCD_FRAME_BUF_ADDR          0XC0000000          <span class="cmt">//SDRAM 映射区起始</span>
+u32 ltdc_lcd_framebuf[1280][800] __attribute__((at(LCD_FRAME_BUF_ADDR)));  <span class="cmt">//强制放到 SDRAM</span>
+...
+LTDC_Init();                     <span class="cmt">//ID 是 RGB 屏时走这里</span>
+...
+printf(" LCD ID:%x\r\n",lcddev.id);   <span class="cmt">//串口输出屏 ID</span></pre>
+
+                    <table class="data">
+                        <tr><th>步骤</th><th>源码位置</th><th>依赖</th></tr>
+                        <tr><td>FMC 初始化 SDRAM</td><td><code>SDRAM_Init</code></td><td>GPIO、FMC 时钟</td></tr>
+                        <tr><td>RGB 屏帧缓存</td><td><code>ltdc_lcd_framebuf</code> 固定在 0xC0000000</td><td>SDRAM 已可用</td></tr>
+                        <tr><td>LTDC 像素时钟</td><td><code>LTDC_Clk_Set(360,2,RCC_PLLSAIDIVR_4)</code> 等分支</td><td>PLLSAI</td></tr>
+                        <tr><td>文字输出</td><td><code>LCD_ShowString</code> 写显存</td><td>LCD_Init 完成</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：显存地址为什么必须先有 SDRAM</div>
+                        <ol>
+                            <li><code>ltdc_lcd_framebuf</code> 被 <code>at()</code> 固定在 0xC0000000，编译器不会再为它分配片内 RAM。</li>
+                            <li>LTDC 通过 AHB 直接读这块内存送屏；SDRAM 控制器没初始化时，读写这块地址会失败或读出乱码。</li>
+                            <li><code>LCD_ShowString</code> 本质是往显存写点阵：CPU 写、LTDC 读，两边共用同一块内存，所以刷新时可能出现短暂撕裂。</li>
+                            <li>RTC 与显示没有耦合：SDRAM 或屏初始化失败，RTC 仍然走时，只是看不到结果。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">本页不展开 LTDC 的时序参数；与 RTC 直接相关的是“显示函数可用”，以及主循环每 100ms 调一次 <code>LCD_ShowString</code>。如果 SDRAM 没初始化，RGB 屏会花屏或黑屏，但 RTC 本身仍然走时。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="主循环与可观察现象">
+                    <h2>13　主循环与可观察现象</h2>
+                    <div class="sec-sub">10ms 最小节拍，100ms 刷 LCD，200ms 翻 DS0，1s 中断翻 DS1</div>
+
+                    <figure class="figure">
+                        <img src="./index30-map/main-loop.png" alt="主循环节拍与 LED 波形">
+                        <figcaption>图 13-1　主循环节拍与两条现象的时间关系</figcaption>
+                    </figure>
+
+                    <pre class="code">while(1)
+{
+    t++;            <span class="cmt">//轮次 +1，约 10ms 一次</span>
+    if((t%10)==0)   <span class="cmt">//每100ms更新一次显示数据</span>
+    {
+        HAL_RTC_GetTime(&amp;RTC_Handler,&amp;RTC_TimeStruct,RTC_FORMAT_BIN);   <span class="cmt">//先读时间</span>
+        sprintf((char*)tbuf,"Time:%02d:%02d:%02d",...);                 <span class="cmt">//拼字符串</span>
+        LCD_ShowString(30,140,210,16,16,tbuf);                          <span class="cmt">//写显存</span>
+        HAL_RTC_GetDate(&amp;RTC_Handler,&amp;RTC_DateStruct,RTC_FORMAT_BIN);   <span class="cmt">//再读日期，解锁影子寄存器</span>
+        sprintf((char*)tbuf,"Date:20%02d-%02d-%02d",...);               <span class="cmt">//年份补 20</span>
+        LCD_ShowString(30,160,210,16,16,tbuf);
+        sprintf((char*)tbuf,"Week:%d",RTC_DateStruct.WeekDay);
+        LCD_ShowString(30,180,210,16,16,tbuf);
+    }
+    if((t%20)==0)LED0=!LED0;  <span class="cmt">//每200ms,翻转一次LED0</span>
+    delay_ms(10);             <span class="cmt">//最小节拍</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：t 的三个模运算</div>
+                        <ol>
+                            <li><code>t++</code> 每轮加 1，一轮约 10ms，由 <code>delay_ms(10)</code> 决定下限，LCD 刷新会让这一轮再长一点。</li>
+                            <li><code>t%10==0</code>：约每 100ms 读一次 RTC，并重画 Time / Date / Week 三行。</li>
+                            <li><code>t%20==0</code>：约每 200ms 翻转 DS0；当 <code>t</code> 同时满足两个条件时，这一轮既刷新又翻转。</li>
+                            <li>DS1 的 1s 翻转不在这里，由唤醒中断独立完成，所以主循环卡在 LCD 刷新时 DS1 仍然在闪。</li>
+                            <li><code>t</code> 是局部变量，只在主循环里用；中断回调不碰它，因此不需要 <code>volatile</code>，也不存在竞态。</li>
+                        </ol>
+                    </div>
+
+                    <table class="data">
+                        <tr><th>操作 / 时刻</th><th>可观察现象</th><th>源码依据</th></tr>
+                        <tr><td>首次上电（BKP0R 不是 0x5050）</td><td>LCD 显示 23:59:56、2015-12-27、Week:7</td><td><code>RTC_Set_Time/Date</code></td></tr>
+                        <tr><td>继续走时约 4 秒</td><td>跨过 00:00:00，进入下一天</td><td>日历硬件按 1Hz 进位</td></tr>
+                        <tr><td>每 100ms</td><td>Time / Date / Week 三行刷新</td><td><code>t%10==0</code></td></tr>
+                        <tr><td>每 200ms</td><td>DS0 翻转一次（亮灭各 200ms）</td><td><code>t%20==0</code></td></tr>
+                        <tr><td>每 1s</td><td>DS1 翻转一次，与主循环无关</td><td>唤醒中断回调</td></tr>
+                        <tr><td>USMART 改时间</td><td>下一轮 100ms 刷新时显示新时间</td><td><code>RTC_Set_Time</code></td></tr>
+                        <tr><td>设置闹钟 A 后到点</td><td>串口输出 <code>ALARM A!</code></td><td><code>HAL_RTC_AlarmAEventCallback</code></td></tr>
+                    </table>
+
+                    <h3>交互演示：主循环与中断分支</h3>
+                    <div class="sim">
+                        <div class="sim-title">点击按钮复现源码分支（仅演示逻辑，不连接真实硬件）</div>
+                        <div class="sim-buttons">
+                            <button data-key="tick">走 10ms 节拍</button>
+                            <button data-key="wake">1s 唤醒中断</button>
+                            <button data-key="first">复位：BKP0R 不是 0x5050</button>
+                            <button data-key="again">复位：BKP0R 等于 0x5050</button>
+                            <button data-key="clear">清空</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0（PB1，主循环）</div>
+                            <div class="led-item"><span class="led-dot" id="dot1"></span>DS1（PB0，唤醒中断）</div>
+                            <div class="led-item">t = <span id="simT" style="font-family:Consolas,monospace;color:#3d7599;">0</span></div>
+                        </div>
+                        <div class="sim-log" id="simLog">等待操作：点“走 10ms 节拍”模拟 while(1) 的一轮。</div>
+                    </div>
+
+                    <div class="note">“复位”两个按钮对应 <code>RTC_Init</code> 里 <code>BKP0R != 0x5050</code> 的两个分支；节拍按钮只复现 <code>t%10</code> 与 <code>t%20</code> 的判断，不模拟 LCD 的实际绘制耗时。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="总结与排查">
+                    <h2>14　总结与排查</h2>
+                    <div class="sec-sub">把整条链路压缩成一张证据表，再列出源码里能看到的疑点</div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：五步串起全文</div>
+                        <ol>
+                            <li>取指：向量表第 0 项给栈顶、第 1 项给 <code>Reset_Handler</code>。</li>
+                            <li>整理现场：<code>SystemInit</code> 开 FPU、复位 RCC、定位 VTOR，此时主频还是 HSI 16MHz。</li>
+                            <li>建时基：<code>HAL_Init</code> 定优先级分组与 1ms SysTick，<code>Stm32_Clock_Init</code> 切到 180MHz。</li>
+                            <li>建日历：解锁备份域 → LSE → 1Hz 分频 → 首次写默认时间 → 打开 1s 唤醒中断。</li>
+                            <li>跑起来：主循环只读不写，LCD 与 DS0 由软件节拍驱动，DS1 由中断驱动，计时始终由 RTC 硬件负责。</li>
+                        </ol>
+                    </div>
+
+                    <h3>证据表</h3>
+                    <table class="data">
+                        <tr><th>结论</th><th>文件</th><th>函数 / 宏</th><th>关键语句</th></tr>
+                        <tr><td>主频 180MHz</td><td><code>SYSTEM/sys/sys.c</code></td><td><code>Stm32_Clock_Init</code></td><td><code>PLLN=360, PLLM=25, PLLP=2</code></td></tr>
+                        <tr><td>Flash 5WS + Over-Drive</td><td><code>SYSTEM/sys/sys.c</code></td><td><code>HAL_RCC_ClockConfig</code></td><td><code>FLASH_LATENCY_5</code></td></tr>
+                        <tr><td>1ms SysTick 基于 HCLK</td><td><code>HAL</code> / <code>delay.c</code></td><td><code>HAL_InitTick</code></td><td><code>HCLK/1000</code></td></tr>
+                        <tr><td>延时为轮询，不靠中断</td><td><code>SYSTEM/delay/delay.c</code></td><td><code>delay_us</code></td><td>读 <code>SysTick-&gt;VAL</code> 累计差值</td></tr>
+                        <tr><td>RTC 时钟源 LSE</td><td><code>HARDWARE/RTC/rtc.c</code></td><td><code>HAL_RTC_MspInit</code></td><td><code>RCC_RTCCLKSOURCE_LSE</code></td></tr>
+                        <tr><td>日历 1Hz</td><td><code>HARDWARE/RTC/rtc.c</code></td><td><code>RTC_Init</code></td><td><code>0x7F / 0xFF</code></td></tr>
+                        <tr><td>首次配置标记</td><td><code>HARDWARE/RTC/rtc.c</code></td><td><code>HAL_RTCEx_BKUPRead</code></td><td><code>RTC_BKP_DR0 != 0x5050</code></td></tr>
+                        <tr><td>1s 唤醒中断</td><td><code>HARDWARE/RTC/rtc.c</code></td><td><code>RTC_Set_WakeUp</code></td><td><code>CK_SPRE_16BITS, cnt=0</code></td></tr>
+                        <tr><td>DS1 由中断翻转</td><td><code>HARDWARE/RTC/rtc.c</code></td><td><code>HAL_RTCEx_WakeUpTimerEventCallback</code></td><td><code>LED1=!LED1</code></td></tr>
+                        <tr><td>DS0 在主循环翻转</td><td><code>USER/main.c</code></td><td><code>while(1)</code></td><td><code>if((t%20)==0)LED0=!LED0</code></td></tr>
+                    </table>
+
+                    <h3>源码中可见的疑点</h3>
+                    <ol>
+                        <li><strong>LSE 起振失败未检查</strong>：<code>HAL_RCC_OscConfig</code> 的返回值被忽略，<code>RTC_Init</code> 只检查 <code>HAL_RTC_Init</code>；若 LSE 没起来，时间不走、唤醒中断也不来。</li>
+                        <li><strong>每次复位都会重配 RTC</strong>：<code>RTC_Init</code> 无条件调用 <code>HAL_RTC_Init</code>，会重新进初始化模式写分频；只有 BKP0R 不是 0x5050 时才写时间/日期，所以时间能保留。</li>
+                        <li><strong>唤醒优先级注释与参数不一致</strong>：注释写“抢占优先级1”，代码是 <code>HAL_NVIC_SetPriority(RTC_WKUP_IRQn,0x02,0x02)</code>。</li>
+                        <li><strong>栈只有 1KB</strong>：<code>Stack_Size 0x400</code>，主循环里同时有 <code>sprintf</code> 与 LCD 调用，深调用时余量偏小。</li>
+                        <li><strong>USMART 定时器重装值被改写</strong>：<code>TIM4_IRQHandler</code> 把 AUTORELOAD 设为 100，注释却写“恢复原来的设置”；首次之后扫描周期从约 100ms 变成约 10ms。</li>
+                        <li><strong>闹钟的 12/24 小时参数被忽略</strong>：RTC 配置为 24 小时制，<code>AlarmTime.TimeFormat=RTC_HOURFORMAT12_AM</code> 会被 HAL 清零，实际按 24 小时值匹配。</li>
+                    </ol>
+
+                    <h3>现象 → 原因 → 排查</h3>
+                    <table class="data">
+                        <tr><th>现象</th><th>优先怀疑</th><th>检查点</th></tr>
+                        <tr><td>LCD 时间不走</td><td>LSE 未起振 / RTCCLK 没选 LSE</td><td>读 <code>RCC-&gt;BDCR</code> 的 LSERDY、RTCSEL；测 32.768kHz</td></tr>
+                        <tr><td>DS1 不闪</td><td>WUTE / EXTI 22 / NVIC 未使能</td><td><code>RTC-&gt;CR.WUTE</code>、EXTI IMR bit22、NVIC ISER bit3</td></tr>
+                        <tr><td>时间显示卡住不更新</td><td>只调了 GetTime，没调 GetDate</td><td>确认主循环先 GetTime 再 GetDate</td></tr>
+                        <tr><td>每次复位时间都被重置</td><td>BKP0R 没写进去</td><td>确认 DBP 已置位、<code>HAL_RTCEx_BKUPWrite</code> 执行</td></tr>
+                        <tr><td>设置闹钟后没有输出</td><td>未调用 <code>RTC_Set_AlarmA</code> 或星期不匹配</td><td>USMART 命令、<code>AlarmDateWeekDay</code></td></tr>
+                    </table>
+
+                    <div class="note blue">硬件层面的 VBAT 电池、LSE 负载电容与屏型号，源码中未体现；本页不对这些下结论。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-10 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示：复现 main.c 与 rtc.c 的分支 =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+    var simT = document.getElementById('simT');
+
+    if (dot0 && dot1 && simLog && simT) {
+        var t = 0;
+        var led0On = false;
+        var led1On = false;
+
+        function renderSim() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simT.textContent = t;
+        }
+
+        function logSim(text) {
+            simLog.textContent = text;
+        }
+
+        var handlers = {
+            tick: function () {
+                t++;
+                var msg = 't = ' + t + '：';
+                var active = false;
+                if (t % 10 === 0) {
+                    msg += 't%10==0 → GetTime/GetDate 并刷新 Time/Date/Week；';
+                    active = true;
+                }
+                if (t % 20 === 0) {
+                    led0On = !led0On;
+                    msg += 't%20==0 → LED0 翻转；';
+                    active = true;
+                }
+                if (!active) {
+                    msg += '本轮只执行 delay_ms(10)，不刷新、不翻转。';
+                }
+                logSim(msg);
+            },
+            wake: function () {
+                led1On = !led1On;
+                logSim('WUT 到点 → RTC_WKUP_IRQHandler → 回调 LED1 翻转（与 t 无关，主循环不参与）。');
+            },
+            first: function () {
+                logSim('BKP0R 不是 0x5050 → 写 23:59:56、2015-12-27、Week 7，再写 BKP0=0x5050。');
+            },
+            again: function () {
+                logSim('BKP0R 等于 0x5050 → 跳过时间/日期写入，保留备份域里的原时间，只重配分频。');
+            },
+            clear: function () {
+                t = 0;
+                led0On = false;
+                led1On = false;
+                logSim('已清空演示状态：t = 0，DS0 灭，DS1 灭。');
+            }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                renderSim();
+            });
+        });
+
+        renderSim();
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,510 @@
+﻿﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429启动过程浅析</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+        }
+
+        .sidebar-menu li {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+        }
+
+        .sidebar-menu li.menu-sub {
+            padding: 6px 20px 6px 46px;
+            font-size: 12px;
+            color: #888;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-menu li.menu-sub:hover {
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.menu-sub.active {
+            color: #1890ff;
+            border-left-color: #1890ff;
+        }
+
+        [id] {
+            scroll-margin-top: 8px;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+    </style>
+    <link rel="stylesheet" href="./a4-print-template.css">
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">STM32F429启动过程浅析</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <ul class="sidebar-menu">
+                    <li data-target="sec-boot"><span class="icon">&#9654;</span>STM32F429自举模式</li>
+                    <li class="menu-sub" data-target="sec-self-boot">· 自举模式</li>
+                    <li class="menu-sub" data-target="sec-physical-remap">· 物理重映射</li>
+                    <li data-target="sec-assembly"><span class="icon">&#9654;</span>STM32F429汇编指令</li>
+                    <li data-target="sec-boot—progress"><span class="icon">&#9654;</span>STM32F429启动过程</li>
+                    <li class="menu-sub" data-target="sec-stack-set">· 栈空间开辟</li>
+                    <li class="menu-sub" data-target="sec-heap-set">· 堆空间开辟</li>
+                    <li class="menu-sub" data-target="sec-intVec-set">· 中断向量表定义</li>
+                    <li class="menu-sub" data-target="sec-reset-proc">· 复位程序</li>
+                    <li data-target="sec-example"><span class="icon">&#9654;</span>示例</li>
+                    <li class="menu-sub" data-target="sec-system--boot-proc">· 系统启动流程</li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+                        <h3 id="sec-boot">STM32F429自举模式</h3>
+                        <p id="sec-self-boot"><strong>● 自举模式</strong></p>
+                        <p>　　存储器采用固定的存储器映射，代码区域起始地址为 0x0000 0000(通过 ICode/DCode 总线访问)，而数据区域起始地址为 0x2000 0000。在 STM32F4xx 中，可通过 BOOT[1:0] 引脚选择三种不同的自举模式，如表 3 所示：</p>
+                        <img src="./index03-map/Self-starting-mode.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　复位后，在 SYSCLK 的第四个上升沿锁存 BOOT 引脚的值。复位后，用户可以通过设置 BOOT1 和 BOOT0 引脚来选择需要的自举模式。</p>
+                        <p>　　BOOT0 为专用引脚，而 BOOT1 则与 GPIO 引脚共用。一旦完成对 BOOT1 的采样，相应 GPIO 引脚即进入空闲状态，可用于其它用途。</p>
+                        <p>  器件退出待机模式时，还会对 BOOT 引脚重新采样。因此，当器件处于待机模式时，这些引 脚必须保持所需的自举模式配置。这样的启动延迟结束后，CPU 将从地址 0x0000 0000 获 取栈顶值，然后从始于 0x0000 0004 的自举存储器开始执行代码。</p>
+                        <p id="sec-physical-remap"><strong>● 物理重映射</strong></p>
+                        <p>　　选择自举引脚后，应用程序软件可以将某些存储器设定为从代码空间进行访问（这样，可通过 ICode 总线而非系统总线执行代码）。这样的修改通过在 SYSCFG 控制器中编程 SYSCFG 存储器重映射寄存器（SYSCFG_MEMRMP）来实现。</p>
+                        <p>　　<strong>因此可重映射以下存储器：</strong></p>
+                        <p>　　— 主 Flash</p>
+                        <p>　　— 系统存储器</p>
+                        <p>　　— 嵌入式 SRAM1 (112 KB)</p>
+                        <p>　　— FSMC 块 1(NOR/PSRAM 1 和 2)</p>
+                        <img src="./index03-map/system-pyhsical-remapping.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                </div>
+                <div class="content-card">
+                        <h3 id="sec-assembly">STM32F429汇编指令</h3>
+                        <img src="./index03-map/stm32-assembly-instruction.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　关于其他更多的 ARM 汇编指令，我们可以通过 MDK 的索引搜索工具中搜索找到。打开索引搜索工具的方法：MDK->Help->uVision Help</p>
+                </div>
+                <div class="content-card">
+                        <h3 id="sec-boot—progress">STM32F429启动过程</h3>
+                        <p id="sec-stack-set"><strong>● 栈空间开辟</strong></p>
+                        <p>　　开辟栈空间的源代码如下：</p>
+                        <img src="./index03-map/System-stack-setting.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　33 行 EQU：宏定义的伪指令，给数字常量取一个符号名，类似与 C 中的 define。定义栈大小为 0x00000400 字节，即 1024B（1KB），常量的符号是 Stack_Size。</p>
+                        <p>　　35 行 AREA 汇编一个新的代码段或者数据段。段名为 STACK，段名可以任意命名；NOINIT 表示不初始化； READWRITE 表示可读可写；ALIGN=3，表示按照 2^3 对齐，即 8 字节对齐。</p>
+                        <p>　　36 行 SPACE 分配内存指令，分配大小为 Stack_Size 字节连续的存储单元给栈空间。</p>
+                        <p>　　37 行__initial_sp 紧挨着 SPACE 放置，表示栈的结束地址，栈是从高往低生长，所以结束地址就是栈顶地址。</p>
+                        <p>　　栈主要用于存放局部变量，函数形参等，属于编译器自动分配和释放的内存，栈的大小不能超过内部 SRAM 的大小。如果工程的程序量比较大，定义的局部变量比较多，那么就需要在启动代码中修改栈的大小，即修改 Stack_Size 的值。如果程序出现了莫名其妙的错误，并进入了 HardFault 的时候，你就要考虑下是不是栈空间不够大，溢出了问题。</p>
+                        <p id="sec-heap-set"><strong>● 堆空间开辟</strong></p>
+                        <p>　　开辟堆空间的源代码如下：</p>
+                        <img src="./index03-map/Sytem-heap-setting.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　堆空间开辟代码跟栈空间开辟代码是类似的了。这部分代码的意思就是：开辟堆的大小为 0x00000200（512 字节），段名为 HEAP，不初始化，可读可写，8 字节对齐。__heap_base表示堆的起始地址，__heap_limit 表示堆的结束地址。堆和栈的生长方向相反的，堆是由低向高生长，而栈是从高往低生长。</p>
+                        <p>　　堆主要用于动态内存的分配，像 malloc()、calloc()和 realloc()等函数申请的内存就在堆上面。堆中的内存一般由程序员分配和释放，若程序员不释放，程序结束时可能由操作系统回收。</p>
+                        <p>  接下来是 PRESERVE8 和 THUMB 指令两行代码。如图下图所示。</p>
+                        <img src="./index03-map/Preserve-Thumb-instruction.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　PRESERVE8：指示编译器按照 8 字节对齐。</p>
+                        <p>　　THUMB：指示编译器之后的指令为 THUMB 指令。</p>
+                        <p>　　注意：由于正点原子提供了独立的内存管理实现方式(mymalloc，myfree 等)，并不需要使用 C 库的 malloc 和 free 等函数，也就用不到堆空间，因此我们可以设置 Heap_Size 的大小为 0，以节省内存空间。</p>
+                        <p id="sec-intVec-set"><strong>● 中断向量表定义</strong></p>
+                        <p>　　中断向量表定义代码：</p>
+                        <img src="./index03-map/System-IntVec-coding.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　定义一个数据段，名字为 RESET, READONLY 表示只读。EXPORT 表示声明一个标号具有全局属性，可被外部的文件使用。这里是声明了__Vectors、__Vectors_End 和__Vectors_Size 三个标号具有全局性，可被外部的文件使用。</p>
+                        <p>　　当内核响应了一个发生的异常后，对应的异常服务例程(ESR)就会执行。为了决定 ESR的入口地址， 内核使用了向量表查表机制。向量表其实是一个 WORD（32 位整数）数组，每个下标对应一种异常，该下标元素的值则是该 ESR 的入口地址。向量表在地址空间中的位置是可以设置的，通过 NVIC 中的一个重定位寄存器来指出向量表的地址。在复位后，该寄存器的值为 0。因此，在地址 0 （即 FLASH 地址 0） 处必须包含一张向量表，用于初始时的异常分配。</p>
+                        <p>　　Stm32F429的中断向量表如下：</p>
+                        <img src="./index03-map/System-IntVec-table.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　举个具体的例子：如果发生了 SVCall 异常（异常编号为 11），则 NVIC 会计算出偏移量为 11×4=44 字节=0x2C，然后从地址 0x0000002C 处取出 SVCall 服务例程的入口地址并跳入执行。</p>
+                        <p>　　需要注意的是，地址 0x00000000 是一个特例——它存储的并不是什么异常服务例程的入口地址，而是给出了复位后 MSP（主堆栈指针）的初始值。真正的第一个异常入口地址（Reset_Handler）存放在 0x00000004 处。</p>
+                        <img src="./index03-map/System-IntVec_defineCoding.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p id="sec-reset-proc"><strong>● 复位程序</strong></p>
+                        <img src="./index03-map/System-reset-proc.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　利用 PROC、ENDP 这一对伪指令把程序段分为若干个过程，使程序的结构加清晰。</p>
+                        <p>　　145 行子程序开始</p>
+                        <p>　　146 行声明复位中断向量 Reset_Handler 为全局属性，这样外部文件就可以调用此复位中断服务。WEAK：表示弱定义，如果外部文件优先定义了该标号则首先引用外部定义的标号，如果外部文件没有声明也不会出错。这里表示复位子程序可以由用户在其他文件重新实现，这里并不是唯一的。</p>
+                        <p>　　147 行和 148 行 IMPORT 表示该标号来自外部文件。这里表示 SystemInit 和__main 这两个函数均来自外部的文件。</p>
+                        <p>　　149 行 LDR 表示从存储器中加载字到一个存储器中。SystemInit 是一个标准的库函数，在 system_stm32f1xx.c 文件中定义，主要作用是配置系统时钟、还有就是初始化 FSMC/FMC 总线上外挂的 SRAM(可选)，前面说配置外部 SRAM 作为数据存储器（可选）就是这个。</p>
+                        <p>　　150 行 BLX 表示跳转到由寄存器给出的地址，并根据寄存器的 LSE 确定处理器的状态，还要把跳转前的下条指令地址保存到 LR。</p>
+                        <p>　　151 行把__main 的地址给 R0。__main 是一个标准的 C 库函数，主要作用是初始化用户堆栈和变量等，最终调用 main 函数去到 C 的世界。这就是为什么我们写的程序都有一个 main 函数的原因，如果不调用__main，那么程序最终就不会调用我们 C 文件里面的 main，也就无法正常运行。</p>
+                        <p>　　152 行 BX 表示跳转到由寄存器/标号给出的地址，不用返回。这里表示切换到__main 地址，最终调用 main 函数，不返回，进入 C 的世界。</p>
+                        <p>　　153 行 ENDP 表示子程序结束。LDR、BLX、BX 是内核的指令，可在《CM3 权威指南 CnR2》第四章-指令集里面查询到。</p>
+                </div>
+                <div class="content-card">
+                        <h3 id="sec-example">示例</h3>
+                        <p id="sec-system--boot-proc"><strong>● 系统启动流程</strong></p>
+                        <p>　　在以前 ARM7/ARM9 内核的控制器在复位后，CPU 会从存储空间的绝对地址 0x00000000 取出第一条指令执行复位中断服务程序的方式启动，即固定了复位后的起始地址为 0x00000000（PC = 0x00000000），同时中断向量表的位置也是固定的。而 Cortex-M3 内核复位后的起始地址和中断向量表的位置可以被重映射。重映射的方法是通过启动模式的选择，有以下 3 种情况：</p>
+                        <p>　　1、通过 boot 引脚设置可以将中断向量表定位于 SRAM 区，即起始地址为 0x2000000，同时复位后 PC 指针位于 0x2000000 处；</p>
+                        <p>　　2、通过 boot 引脚设置可以将中断向量表定位于 FLASH 区，即起始地址为 0x8000000，同时复位后 PC 指针位于 0x8000000 处；</p>
+                        <p>　　3、通过 boot 引脚设置可以将中断向量表定位于内置 Bootloader 区，本文不对这种情况做论述。</p>
+                        <p>　　Cortex-M3 内核规定，起始地址必须存放堆顶指针，而第二个地址则必须存放复位中断入口向量地址，这样在 Cortex-M3 内核复位后，会自动从起始地址的下一个 32 位空间取出复位中断入口向量，跳转执行复位中断服务程序。</p>
+                        <p>　　下面将结合《Cortex-M3 权威指南 (中文)》chpt03-复位序列的内容进行讲解。</p>
+                        <p>　　启动模式不同，启动的起始地址是不一样的，下面我们以代码下载到内部 FLASH 的情况举例，即代码从地址 0x0800 0000 开始被执行。</p>
+                        <p>　　我们知道的复位方式有三种：上电复位，硬件复位和软件复位。当产生复位，并且离开复位状态后，CM3 内核做的第一件事就是读取下列两个 32 位整数的值：</p>
+                        <p>　　(1)从地址 0x0800 0000 处取出堆栈指针 MSP 的初始值，该值就是栈顶地址。</p>
+                        <p>  (2) 从地址 0x0800 0004 处取出程序计数器指针 PC 的初始值，该值指向复位后执行的第一条指令。下面用示意图表示，如图 3.1 所示。</p>
+                        <img src="./index03-map/System-reset-sequence.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>  我们看看战舰开发板 HAL 库例程的实验 1 跑马灯实验中，取出的 MPS 和 PC 的值是多少，方法如图 3.2 所示。</p>
+                        <img src="./index03-map/System-first-instruction.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　由图 3.2 可以知道地址 0x08000000 的值是 0x20000788，地址 0x08000004 的值是 0x080001CD，即堆栈指针 SP = 0x20000788，程序计数器指针 PC = 0x080001CD。因为 CM3 内核是小端模式，所以倒着读。</p>
+                        <p>　　请注意，这与传统的 ARM 架构不同——其实也和绝大多数的其它单片机不同。传统的 ARM 架构总是从 0 地址开始执行第一条指令。它们的 0 地址处总是一条跳转指令。而在 CM3 内核中，0 地址处提供 MSP 的初始值，然后就是向量表（向量表在以后还可以被移至其它位置）。向量表中的数值是 32 位的地址，而不是跳转指令。向量表的第一个条目指向复位后应执行的第一条指令，就是 Reset_Handler 这个函数。下面继续以战舰开发板 HAL 库例程的实验 1 跑马灯实验为例，代码从地址 0x0800 0000 开始被执行，讲解一下系统启动，初始化堆栈、MSP 和 PC 后的内存情况。</p>
+                        <img src="./index03-map/System-memory-partition.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　因为 CM3 使用的是向下生长的满栈，所以 MSP 的初始值必须是堆栈内存的末地址加 1。举例来说，如果你的栈区域在 0x20000388-0x20000787 之间，那么 MSP 的初始值就必须是 0x20000788。</p>
+                        <p>　　向量表跟随在 MSP 的初始值之后——也就是第 2 个表目。</p>
+                        <p>　　R15 是程序计数器，在汇编代码中，可以使用名字"PC"来访问它。ARM 规定：PC 最低两位并不表示真实地址，最低位 LSB 用于表示是 ARM 指令 (0) 还是 Thumb 指令 (1)，因为 CM3 主要执行 Thumb 指令，所以这些指令的最低位都是 1（都是奇数）。因为 CM3 内部使用了指令流水线，读 PC 时返回的值是当前指令的地址 +4。比如说：</p>
+                        <p style="text-align: center; font-weight: bold; color: red;">0x1000: MOV R0, PC ; R0 = 0x1004</p>
+                        <p>　　如果向 PC 写数据，就会引起一次程序的分支（但是不更新 LR 寄存器）。CM3 中的指令至少是半字对齐的，所以 PC 的 LSB 总是读回 0。然而，在分支时，无论是直接写 PC 的值还是使用分支指令，都必须保证加载到 PC 的数值是奇数（即 LSB=1），表明是在 Thumb 状态下执行。倘若写了 0，则视为转入 ARM 模式，CM3 将产生一个 fault 异常。</p>
+                        <p>　　正因为上述原因，图 3.3 中使用 0x080001CD 来表达地址 0x080001CC。当 0x080001CD 处的指令得到执行后，就正式开始了程序的执行（即去到 C 的世界）。所以在此之前初始化 MSP 是必需的，因为可能第 1 条指令还没执行就会被 NMI 或是其它 fault 打断。MSP 初始化好后就已经为它们的服务例程准备好了堆栈。</p>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 侧边栏目录点击跳转
+        document.querySelectorAll('.sidebar-menu li[data-target]').forEach(function(item) {
+            item.addEventListener('click', function() {
+                var targetId = this.getAttribute('data-target');
+                var target = document.getElementById(targetId);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+                document.querySelectorAll('.sidebar-menu li').forEach(function(li) {
+                    li.classList.remove('active');
+                });
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

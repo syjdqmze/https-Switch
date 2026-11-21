@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验61 UCOSII消息队列信号量集软件定时器实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验61 UCOSII消息队列信号量集软件定时器实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">本页源码取自实验61；三个软件定时器分别做统计、填色与生产消息，队列缓存 256 条，信号量集汇总 5 个按键位。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+<section id="s01" data-title="01 实验目标与硬件资源" class="content-card">
+  <h2>01 实验目标与硬件资源</h2>
+  <p class="sec-sub">三个软件定时器 + 一个 256 项消息队列 + 一组 5 位信号量集，把“按键、显示、生产、消费”彻底解耦</p>
+  <p>实验 61 是 UCOSII 三个实验中综合度最高的一个：<b>消息队列</b>缓存不定长消息，<b>信号量集</b>用位图汇总多个按键事件，<b>软件定时器</b>在定时器任务里周期性生产消息、刷新统计、循环填色。主任务只负责按键分发，显示任务只负责消费队列。</p>
+  <table class="data">
+    <thead><tr><th>任务</th><th>优先级</th><th>栈</th><th>行为</th></tr></thead>
+    <tbody>
+      <tr><td>定时器任务（内核创建）</td><td>0</td><td>OS_TASK_TMR_STK_SIZE</td><td>等 OSTmrSignal，推进定时器轮并执行回调</td></tr>
+      <tr><td>KEY</td><td>2</td><td>128</td><td>扫描按键与 TPAD，键码投邮箱</td></tr>
+      <tr><td>FLAGS</td><td>3</td><td>128</td><td>等信号量集，显示键名并蜂鸣 50 ms，随后整组清零</td></tr>
+      <tr><td>MAIN</td><td>4</td><td>128</td><td>等邮箱，置位信号量集，分发键码并启停定时器</td></tr>
+      <tr><td>QMSGSHOW</td><td>5</td><td>128</td><td>等消息队列，显示消息后释放内存，每 500 ms 取一条</td></tr>
+      <tr><td>TOUCH</td><td>6</td><td>128</td><td>扫描触摸并在左下区域画红线</td></tr>
+      <tr><td>LED</td><td>7</td><td>64</td><td>10 ms 计数，第 8 次灭、第 100 次亮</td></tr>
+      <tr><td>START</td><td>10</td><td>64</td><td>建邮箱/队列/信号量集，OSStatInit，建 5 个任务后挂起</td></tr>
+      <tr><td>统计 / 空闲（内核创建）</td><td>62 / 63</td><td>—</td><td>CPU 使用率统计与兜底</td></tr>
+    </tbody>
+  </table>
+  <table class="data">
+    <thead><tr><th>按键</th><th>键码</th><th>main_task 动作</th><th>现象</th></tr></thead>
+    <tbody>
+      <tr><td>KEY0</td><td>1</td><td><code>LED1 = !LED1</code></td><td>DS1 翻转，FLAGS 区显示 KEY0 DOWN</td></tr>
+      <tr><td>KEY1</td><td>2</td><td>启停 <code>tmr3</code></td><td>队列开始/停止每 100 ms 生产消息</td></tr>
+      <tr><td>KEY2</td><td>3</td><td><code>LCD_Fill(0,221,129,...)</code></td><td>清空左下触摸区</td></tr>
+      <tr><td>WKUP</td><td>4</td><td>停定时器 → <code>TP_Adjust()</code> → 重启</td><td>触摸校准并重载界面</td></tr>
+      <tr><td>TPAD</td><td>5</td><td>启停 <code>tmr2</code></td><td>右下区域停止/继续循环填色</td></tr>
+    </tbody>
+  </table>
+  <pre class="code"><span class="cmt">/* HARDWARE/KEY/key.h：前四个键码；TPAD 的 5 由 key_task 补上 */</span>
+#define KEY0_PRES   1        <span class="cmt">// DS1 翻转</span>
+#define KEY1_PRES   2        <span class="cmt">// 启停 tmr3</span>
+#define KEY2_PRES   3        <span class="cmt">// 清左下触摸区</span>
+#define WKUP_PRES   4        <span class="cmt">// 触摸校准</span>
+<span class="cmt">/* key_task：if (TPAD_Scan(0)) key = 5;  → 启停 tmr2 */</span></pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>定时器任务优先级 0，高于所有应用任务；回调一旦耗时，会直接拖慢按键与显示。</li>
+      <li>五个键码 1~5 既写进邮箱，也当作信号量集的位号：<code>1 &lt;&lt; (key - 1)</code> 对应 bit0~bit4。</li>
+      <li>队列容量 256，生产 10 条/秒、消费 2 条/秒，净增 8 条/秒，约 32 s 后队列满并触发 tmr3 自停。</li>
+      <li>FLAGS 任务处理完一次就整组清 <code>0x001F</code>，处理期间的叠加按键会被一并清掉，这是本实验的简化设计。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s02" data-title="02 工程结构与源码地图" class="content-card">
+  <h2>02 工程结构与源码地图</h2>
+  <p class="sec-sub">在实验60 的邮箱/信号量之上，增加 os_q.c、os_flag.c、os_tmr.c 三个模块</p>
+  <table class="data">
+    <thead><tr><th>文件</th><th>本页关注点</th></tr></thead>
+    <tbody>
+      <tr><td>USER/main.c</td><td>start_task、main_task、flags_task、qmsgshow_task、key_task、三个回调</td></tr>
+      <tr><td>UCOSII/uCOS-II/Source/os_q.c</td><td>OSQCreate、OSQPend、OSQPost</td></tr>
+      <tr><td>UCOSII/uCOS-II/Source/os_flag.c</td><td>OSFlagCreate、OSFlagPend、OSFlagPost、OS_FlagBlock</td></tr>
+      <tr><td>UCOSII/uCOS-II/Source/os_tmr.c</td><td>OSTmrCreate、OSTmrStart、OSTmrStop、OSTmr_Task</td></tr>
+      <tr><td>UCOSII/uCOS-II/Source/os_core.c</td><td>OSInit、OS_Sched、OS_EventTaskRdy、OS_TCBInit</td></tr>
+      <tr><td>UCOSII/uCOS-CONFIG/os_cfg.h</td><td>OS_MAX_QS=4、OS_MAX_FLAGS=5、OS_TMR_EN=1、定时器 100 Hz</td></tr>
+      <tr><td>UCOSII/Ports/.../os_cpu_c.c</td><td>OSTimeTickHook：每 10 个 OS tick 调一次 OSTmrSignal</td></tr>
+      <tr><td>SYSTEM/delay/delay.c</td><td>1 ms SysTick，delay_ms 在 OS 启动后转 OSTimeDly</td></tr>
+    </tbody>
+  </table>
+  <pre class="code"><span class="cmt">/* includes.h：应用侧包含顺序 */</span>
+#include &lt;stdio.h&gt;
+#include "ucos_ii.h"     <span class="cmt">// OS_Q、OS_FLAG_GRP、OS_TMR 与全部 API</span>
+#include "os_cpu.h"      <span class="cmt">// OS_ENTER_CRITICAL、OS_TASK_SW</span>
+#include "os_cfg.h"      <span class="cmt">// OS_MAX_QS、OS_MAX_FLAGS、OS_TMR_EN</span>
+#include "app_cfg.h"</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>队列控制块最多 4 个、信号量集最多 5 组、软件定时器最多 16 个，全部是静态池，运行期不 malloc 控制块。</li>
+      <li>消息体本身由 <code>mymalloc(SRAMIN,13)</code> 从内部内存池申请，队列只保存指针。</li>
+      <li>软件定时器的“节拍”与 OS 的 1 ms tick 不同：前者 100 Hz，即 10 ms 一个定时器 tick。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s03" data-title="03 启动流程总览" class="content-card">
+  <h2>03 启动流程总览</h2>
+  <p class="sec-sub">main 里只创建开始任务；队列、信号量集、统计任务都在 start_task 内完成</p>
+  <figure class="figure">
+    <img src="./index76-map/boot-flow.png" alt="UCOSII 从上电复位到 OSStart 的启动流程图">
+    <figcaption>图 3-1　从上电复位到 OSStart 的启动链路（实验61 增加 TPAD 与内部内存池初始化）</figcaption>
+  </figure>
+  <pre class="code">int main(void)
+{
+    HAL_Init();
+    Stm32_Clock_Init(360, 25, 2, 8);   <span class="cmt">// 180 MHz</span>
+    delay_init(180);
+    uart_init(115200);
+    LED_Init();
+    KEY_Init();
+    PCF8574_Init();                    <span class="cmt">// 蜂鸣器</span>
+    SDRAM_Init();
+    LCD_Init();
+    TPAD_Init(2);                      <span class="cmt">// 电容触摸按键</span>
+    tp_dev.init();                     <span class="cmt">// 电阻/电容屏</span>
+    my_mem_init(SRAMIN);               <span class="cmt">// 内部内存池，供 13 字节消息使用</span>
+    ucos_load_main_ui();               <span class="cmt">// 静态界面先画好</span>
+
+    OSInit();                          <span class="cmt">// 建空闲 63、统计 62、定时器任务 0</span>
+    OSTaskCreateExt((void (*)(void *))start_task, ... START_TASK_PRIO ...);
+    OSStart();                         <span class="cmt">// 切到 start_task</span>
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>OSInit</code> 在 <code>OS_TMR_EN=1</code> 时会创建优先级 0 的定时器任务，并创建它专用的信号量。</li>
+      <li>内存池必须在任何 <code>mymalloc</code> 之前初始化，否则 tmr3 回调申请 13 字节会失败。</li>
+      <li>界面先画、任务后建，避免任务运行时访问尚未配置的 LCD 或触摸芯片。</li>
+      <li>所有任务的 <code>opt</code> 都含 <code>STK_CHK|STK_CLR|SAVE_FP</code>，与实验60 保持一致。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s04" data-title="04 时钟、节拍与定时器时基" class="content-card">
+  <h2>04 时钟、节拍与定时器时基</h2>
+  <p class="sec-sub">OS tick 1 ms，定时器 tick 10 ms；OSTmrCreate 的 dly/period 单位是定时器 tick</p>
+  <pre class="code">void OSTimeTickHook(void)
+{
+#if OS_APP_HOOKS_EN &gt; 0u
+    App_TimeTickHook();
+#endif
+#if OS_TMR_EN &gt; 0u
+    OSTmrCtr++;
+    if (OSTmrCtr &gt;= (OS_TICKS_PER_SEC / OS_TMR_CFG_TICKS_PER_SEC)) {
+        OSTmrCtr = 0;                  <span class="cmt">// 1000 / 100 = 每 10 个 OS tick</span>
+        OSTmrSignal();                 <span class="cmt">// OSSemPost(OSTmrSemSignal)</span>
+    }
+#endif
+}</pre>
+  <pre class="code"><span class="cmt">/* os_cfg.h：两个频率不要混淆 */</span>
+#define OS_TICKS_PER_SEC         1000u  <span class="cmt">// OS 节拍 1 ms：延时、超时</span>
+#define OS_TMR_CFG_TICKS_PER_SEC  100u  <span class="cmt">// 定时器节拍 10 ms</span>
+#define OS_TMR_CFG_WHEEL_SIZE       8u  <span class="cmt">// 定时器轮 8 个槽</span>
+#define OS_TASK_TMR_PRIO            0u  <span class="cmt">// 定时器任务最高优先级</span></pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>OSTmrCreate(10, 10, ...)</code> 的 10 是 10 个定时器 tick，即 100 ms，而不是 10 ms。</li>
+      <li>定时器任务每次被唤醒，<code>OSTmrTime++</code>，槽号 <code>= OSTmrTime % 8</code>。</li>
+      <li>SysTick 仍由 <code>delay_init</code> 配成 1 ms；<code>OSTimeTickHook</code> 只是在这 1 ms 节拍里再分频出 100 Hz。</li>
+      <li>定时器任务优先级 0，回调运行时其他任务都让路，所以回调必须短小。</li>
+    </ol>
+  </div>
+  <div class="note">本工程同样没有调用 <code>OS_CPU_SysTickInit</code>，而是由 <code>delay_init(180)</code> 设置 <code>SysTick-&gt;LOAD = 180000</code> 并打开 TICKINT，效果等价。</div>
+</section>
+
+<section id="s05" data-title="05 启动汇编与 main 初始化" class="content-card">
+  <h2>05 启动汇编与 main 初始化</h2>
+  <p class="sec-sub">向量表弱符号被 os_cpu_a.asm 与 delay.c 的强符号覆盖，FPU 在 __main 前使能</p>
+  <pre class="code">Reset_Handler   PROC
+                LDR     R0, =SystemInit
+                BLX     R0
+                LDR.W   R0, =0xE000ED88       <span class="cmt">; CPACR</span>
+                LDR     R1, [R0]
+                ORR     R1, R1, #(0xF &lt;&lt; 20)   <span class="cmt">; CP10/CP11 全开</span>
+                STR     R1, [R0]
+                DSB
+                ISB
+                LDR     R0, =__main
+                BX      R0                    <span class="cmt">; 初始化 .data/.bss 后进 main</span>
+                ENDP
+
+                DCD     PendSV_Handler        <span class="cmt">; 启动文件里是 [WEAK]</span>
+                DCD     SysTick_Handler       <span class="cmt">; delay.c 提供强符号</span></pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>SystemInit</code> 只做最基础的时钟/向量表设置，真正的 180 MHz 在 <code>Stm32_Clock_Init</code>。</li>
+      <li>FPU 使能必须早于任何浮点指令；<code>SAVE_FP</code> 只是让任务栈预留 S0~S31 的保存空间。</li>
+      <li>启动文件的 <code>PendSV_Handler</code> 只有死循环，链接时被内核强符号替换，否则任务切换会卡死。</li>
+      <li><code>__main</code> 完成 C 运行时初始化，全局指针 <code>msg_key/q_msg/flags_key</code> 初值都是 0。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s06" data-title="06 消息队列：环形缓冲与 OSQ API" class="content-card">
+  <h2>06 消息队列：环形缓冲与 OSQ API</h2>
+  <p class="sec-sub">队列只搬指针：入队在 OSQIn，出队在 OSQOut，绕回 OSQStart 形成环</p>
+  <figure class="figure">
+    <img src="./index76-map/q-ring.png" alt="消息队列环形缓冲区与 OSQIn/OSQOut/OSQEntries">
+    <figcaption>图 6-1　OSQStart/OSQIn/OSQOut 构成的环形缓冲；OSQIn 到达 OSQEnd 后回绕，OSQEntries 记录当前消息数</figcaption>
+  </figure>
+  <pre class="code">typedef struct os_q {
+    struct os_q  *OSQPtr;      <span class="cmt">/* 空闲队列链指针 */</span>
+    void        **OSQStart;    <span class="cmt">/* 缓冲区首地址 &amp;MsgGrp[0] */</span>
+    void        **OSQEnd;      <span class="cmt">/* &amp;MsgGrp[256]，哨兵位置 */</span>
+    void        **OSQIn;       <span class="cmt">/* 下一条消息写入位置 */</span>
+    void        **OSQOut;      <span class="cmt">/* 下一条消息取出位置 */</span>
+    INT16U        OSQSize;     <span class="cmt">/* 256 */</span>
+    INT16U        OSQEntries;  <span class="cmt">/* 当前条数 */</span>
+} OS_Q;</pre>
+  <pre class="code">OS_EVENT *OSQCreate(void **start, INT16U size)
+{
+    OS_EVENT *pevent;
+    OS_Q     *pq;
+    OS_ENTER_CRITICAL();
+    pevent = OSEventFreeList;                 <span class="cmt">// 先取事件块</span>
+    if (pevent != (OS_EVENT *)0) {
+        OSEventFreeList = (OS_EVENT *)OSEventFreeList-&gt;OSEventPtr;
+        if (OSQFreeList != (OS_Q *)0) {       <span class="cmt">// 再取队列控制块</span>
+            pq = OSQFreeList;
+            OSQFreeList = OSQFreeList-&gt;OSQPtr;
+            OS_EXIT_CRITICAL();
+            pq-&gt;OSQStart   = start;
+            pq-&gt;OSQEnd     = &amp;start[size];
+            pq-&gt;OSQIn      = start;
+            pq-&gt;OSQOut     = start;
+            pq-&gt;OSQSize    = size;
+            pq-&gt;OSQEntries = 0u;
+            pevent-&gt;OSEventType = OS_EVENT_TYPE_Q;
+            pevent-&gt;OSEventCnt  = 0u;
+            pevent-&gt;OSEventPtr  = (void *)pq; <span class="cmt">// 事件块指向队列</span>
+            OS_EventWaitListInit(pevent);
+            return (pevent);
+        }
+    }
+    ...
+}</pre>
+  <pre class="code">void *OSQPend(OS_EVENT *pevent, INT32U timeout, INT8U *perr)
+{
+    ...
+    OS_ENTER_CRITICAL();
+    pq = (OS_Q *)pevent-&gt;OSEventPtr;
+    if (pq-&gt;OSQEntries &gt; 0u) {           <span class="cmt">// 有消息，直接取</span>
+        pmsg = *pq-&gt;OSQOut++;
+        pq-&gt;OSQEntries--;
+        if (pq-&gt;OSQOut == pq-&gt;OSQEnd) {   <span class="cmt">// 取到哨兵，回绕</span>
+            pq-&gt;OSQOut = pq-&gt;OSQStart;
+        }
+        OS_EXIT_CRITICAL();
+        *perr = OS_ERR_NONE;
+        return (pmsg);
+    }
+    OSTCBCur-&gt;OSTCBStat |= OS_STAT_Q;     <span class="cmt">// 标记在等队列</span>
+    OSTCBCur-&gt;OSTCBDly   = timeout;       <span class="cmt">// qmsgshow 传 0：永久等待</span>
+    OS_EventTaskWait(pevent);
+    OS_EXIT_CRITICAL();
+    OS_Sched();
+    ...
+    pmsg = OSTCBCur-&gt;OSTCBMsg;            <span class="cmt">// 被唤醒时消息挂在这里</span>
+    ...
+    return (pmsg);
+}</pre>
+  <pre class="code">INT8U OSQPost(OS_EVENT *pevent, void *pmsg)
+{
+    OS_ENTER_CRITICAL();
+    if (pevent-&gt;OSEventGrp != 0u) {       <span class="cmt">// 有任务在等，直接交给它</span>
+        (void)OS_EventTaskRdy(pevent, pmsg, OS_STAT_Q, OS_STAT_PEND_OK);
+        OS_EXIT_CRITICAL();
+        OS_Sched();
+        return (OS_ERR_NONE);
+    }
+    pq = (OS_Q *)pevent-&gt;OSEventPtr;
+    if (pq-&gt;OSQEntries &gt;= pq-&gt;OSQSize) {  <span class="cmt">// 256 条已满</span>
+        OS_EXIT_CRITICAL();
+        return (OS_ERR_Q_FULL);
+    }
+    *pq-&gt;OSQIn++ = pmsg;
+    pq-&gt;OSQEntries++;
+    if (pq-&gt;OSQIn == pq-&gt;OSQEnd) {        <span class="cmt">// 写指针回绕</span>
+        pq-&gt;OSQIn = pq-&gt;OSQStart;
+    }
+    OS_EXIT_CRITICAL();
+    return (OS_ERR_NONE);
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>OSQCreate(&amp;MsgGrp[0], 256)</code> 的缓冲区是全局 <code>void *MsgGrp[256]</code>，控制块只有 4 个。</li>
+      <li>队列满时 <code>OSQPost</code> 返回 <code>OS_ERR_Q_FULL</code>，消息指针仍归生产者所有，必须自己释放。</li>
+      <li><code>OSQPend</code> 的 timeout=0 表示永久等待；qmsgshow 任务没有消息就一直阻塞，不占 CPU。</li>
+      <li>取走消息不会释放消息体，<code>myfree(SRAMIN, p)</code> 是消费者必须做的配对操作。</li>
+      <li>有人等待时 Post 直接把消息写进 <code>OSTCBMsg</code> 并唤醒任务，不经过环形缓冲。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s07" data-title="07 任务控制块与就绪表" class="content-card">
+  <h2>07 任务控制块与就绪表</h2>
+  <p class="sec-sub">等待队列、等待信号量集、等待邮箱，最终都落到 OSTCBStat 与就绪位图</p>
+  <pre class="code">typedef struct os_tcb {
+    OS_STK      *OSTCBStkPtr;     <span class="cmt">/* 当前栈顶，PendSV 保存/恢复 */</span>
+    OS_STK      *OSTCBStkBottom;
+    INT32U       OSTCBStkSize;
+    INT16U       OSTCBOpt;        <span class="cmt">/* STK_CHK | STK_CLR | SAVE_FP */</span>
+    INT8U        OSTCBStat;       <span class="cmt">/* RDY/SEM/MBOX/Q/SUSPEND/FLAG 位 */</span>
+    INT8U        OSTCBStatPend;   <span class="cmt">/* OK / TIMEOUT / ABORT */</span>
+    INT8U        OSTCBPrio;
+    INT8U        OSTCBX, OSTCBY;  <span class="cmt">/* 优先级拆成行/列 */</span>
+    INT8U        OSTCBBitX, OSTCBBitY;
+    INT16U       OSTCBDly;        <span class="cmt">/* 剩余延时 tick，0 表示不延时 */</span>
+    OS_EVENT    *OSTCBEventPtr;   <span class="cmt">/* 正在等待的事件块 */</span>
+    void        *OSTCBMsg;        <span class="cmt">/* 邮箱/队列直接交付的消息 */</span>
+    OS_FLAGS     OSTCBFlagsRdy;   <span class="cmt">/* 本次满足的信号量位 */</span>
+} OS_TCB;</pre>
+  <pre class="code"><span class="cmt">/* os_core.c OS_TCBInit：把优先级拆成位图坐标 */</span>
+ptcb-&gt;OSTCBY    = (INT8U)(prio &gt;&gt; 3u);          <span class="cmt">// 行号 0~7</span>
+ptcb-&gt;OSTCBX    = (INT8U)(prio &amp; 0x07u);        <span class="cmt">// 列号 0~7</span>
+ptcb-&gt;OSTCBBitY = (OS_PRIO)(1uL &lt;&lt; ptcb-&gt;OSTCBY);
+ptcb-&gt;OSTCBBitX = (OS_PRIO)(1uL &lt;&lt; ptcb-&gt;OSTCBX);
+...
+OSRdyGrp           |= ptcb-&gt;OSTCBBitY;          <span class="cmt">// 行就绪</span>
+OSRdyTbl[ptcb-&gt;OSTCBY] |= ptcb-&gt;OSTCBBitX;     <span class="cmt">// 列就绪</span>
+
+<span class="cmt">/* OS_SchedNew：找最高优先级 O(1) */</span>
+y             = OSUnMapTbl[OSRdyGrp];
+OSPrioHighRdy = (INT8U)((y &lt;&lt; 3u) + OSUnMapTbl[OSRdyTbl[y]]);</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>优先级 2 的 KEY 任务：<code>y=0, x=2</code>，行位 <code>0x01</code>，列位 <code>0x04</code>。</li>
+      <li>等待事件时 <code>OS_EventTaskWait</code> 同时清 <code>OSRdyTbl</code> 位、置 <code>OSEventTbl</code> 位，任务从就绪表消失。</li>
+      <li>被唤醒时 <code>OS_EventTaskRdy</code> 把 <code>OSTCBDly</code> 清 0、清等待类型位、重新置就绪位，并写 <code>OSTCBFlagsRdy/OSTCBMsg</code>。</li>
+      <li>延时的任务 <code>OSTCBDly &gt; 0</code>，SysTick 每 tick 减 1，减到 0 时由 <code>OSTimeTick</code> 置就绪。</li>
+      <li><code>OS_STAT_PEND_ANY</code> 是 SEM/MBOX/Q/MUTEX/FLAG 的并集，用于判断“是否还在等事件”。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s08" data-title="08 信号量集：位图等待与 OSFlag API" class="content-card">
+  <h2>08 信号量集：位图等待与 OSFlag API</h2>
+  <p class="sec-sub">5 个按键对应 bit0~bit4；WAIT_SET_ANY 命中任一位就返回，处理完整组清 0</p>
+  <figure class="figure">
+    <img src="./index76-map/flag-bits.png" alt="flags_key 的 5 个按键位、0x001F 掩码与等待/置位/清零关系">
+    <figcaption>图 8-1　flags_key 的 bit0~bit4 与 0x001F 掩码；WAIT_SET_ANY 命中任一位置位，处理完整组清 0</figcaption>
+  </figure>
+  <pre class="code">typedef struct os_flag_grp {
+    INT8U     OSFlagType;      <span class="cmt">/* OS_EVENT_TYPE_FLAG */</span>
+    void     *OSFlagWaitList;  <span class="cmt">/* OS_FLAG_NODE 链表头 */</span>
+    OS_FLAGS  OSFlagFlags;     <span class="cmt">/* 32 位位图，本实验只用低 5 位 */</span>
+    INT8U    *OSFlagName;
+} OS_FLAG_GRP;
+
+typedef struct os_flag_node {
+    void     *OSFlagNodeNext;      <span class="cmt">/* 下一个等待节点 */</span>
+    void     *OSFlagNodePrev;
+    void     *OSFlagNodeTCB;       <span class="cmt">/* 等待任务的 TCB */</span>
+    void     *OSFlagNodeFlagGrp;
+    OS_FLAGS  OSFlagNodeFlags;     <span class="cmt">/* 关心的位 0x001F */</span>
+    INT8U     OSFlagNodeWaitType;  <span class="cmt">/* WAIT_SET_ANY 等 */</span>
+} OS_FLAG_NODE;</pre>
+  <pre class="code">OS_FLAG_GRP *OSFlagCreate(OS_FLAGS flags, INT8U *perr)
+{
+    ...
+    OS_ENTER_CRITICAL();
+    pgrp = OSFlagFreeList;                  <span class="cmt">// 最多 5 组</span>
+    if (pgrp != (OS_FLAG_GRP *)0) {
+        OSFlagFreeList       = (OS_FLAG_GRP *)OSFlagFreeList-&gt;OSFlagWaitList;
+        pgrp-&gt;OSFlagType     = OS_EVENT_TYPE_FLAG;
+        pgrp-&gt;OSFlagFlags    = flags;        <span class="cmt">// 本实验传 0：全部清零</span>
+        pgrp-&gt;OSFlagWaitList = (void *)0;
+        ...
+    }
+    return (pgrp);
+}</pre>
+  <pre class="code">OS_FLAGS OSFlagPend(OS_FLAG_GRP *pgrp, OS_FLAGS flags, INT8U wait_type,
+                    INT32U timeout, INT8U *perr)
+{
+    OS_FLAG_NODE node;                       <span class="cmt">// 节点在任务栈上，不 malloc</span>
+    ...
+    OS_ENTER_CRITICAL();
+    switch (wait_type) {
+        case OS_FLAG_WAIT_SET_ANY:
+            flags_rdy = (OS_FLAGS)(pgrp-&gt;OSFlagFlags &amp; flags);
+            if (flags_rdy != (OS_FLAGS)0) {  <span class="cmt">// 任一位已置位，立即返回</span>
+                OSTCBCur-&gt;OSTCBFlagsRdy = flags_rdy;
+                OS_EXIT_CRITICAL();
+                *perr = OS_ERR_NONE;
+                return (flags_rdy);
+            } else {
+                OS_FlagBlock(pgrp, &amp;node, flags, wait_type, timeout);
+                OS_EXIT_CRITICAL();
+            }
+            break;
+        ...
+    }
+    OS_Sched();
+    OS_ENTER_CRITICAL();
+    ...
+    flags_cur = pgrp-&gt;OSFlagFlags;
+    OS_EXIT_CRITICAL();
+    *perr = OS_ERR_NONE;
+    return (flags_cur);
+}</pre>
+  <pre class="code">OS_FLAGS OSFlagPost(OS_FLAG_GRP *pgrp, OS_FLAGS flags, INT8U opt, INT8U *perr)
+{
+    ...
+    OS_ENTER_CRITICAL();
+    if (opt == OS_FLAG_SET) {
+        pgrp-&gt;OSFlagFlags |= flags;          <span class="cmt">// 置位</span>
+    } else {
+        pgrp-&gt;OSFlagFlags &amp;= (OS_FLAGS)~flags; <span class="cmt">// 清零</span>
+    }
+    pnode = (OS_FLAG_NODE *)pgrp-&gt;OSFlagWaitList;
+    while (pnode != (OS_FLAG_NODE *)0) {     <span class="cmt">// 逐个检查等待者是否满足</span>
+        switch (pnode-&gt;OSFlagNodeWaitType) { ... }
+        pnode = (OS_FLAG_NODE *)pnode-&gt;OSFlagNodeNext;
+    }
+    OS_EXIT_CRITICAL();
+    if (sched == OS_TRUE) {
+        OS_Sched();
+    }
+    flags_cur = pgrp-&gt;OSFlagFlags;
+    return (flags_cur);
+}</pre>
+  <pre class="code">void flags_task(void *pdata)
+{
+    u16 flags;
+    u8  err;
+    while (1) {
+        flags = OSFlagPend(flags_key, 0x001F, OS_FLAG_WAIT_SET_ANY, 0, &amp;err);
+        if (flags &amp; 0x0001) LCD_ShowString(140, 162, 240, 16, 16, "KEY0 DOWN  ");
+        if (flags &amp; 0x0002) LCD_ShowString(140, 162, 240, 16, 16, "KEY1 DOWN  ");
+        if (flags &amp; 0x0004) LCD_ShowString(140, 162, 240, 16, 16, "KEY2 DOWN  ");
+        if (flags &amp; 0x0008) LCD_ShowString(140, 162, 240, 16, 16, "KEY_UP DOWN");
+        if (flags &amp; 0x0010) LCD_ShowString(140, 162, 240, 16, 16, "TPAD DOWN  ");
+        PCF8574_WriteBit(BEEP_IO, 0);        <span class="cmt">// 蜂鸣 50 ms</span>
+        delay_ms(50);
+        PCF8574_WriteBit(BEEP_IO, 1);
+        OSFlagPost(flags_key, 0x001F, OS_FLAG_CLR, &amp;err); <span class="cmt">// 整组清零</span>
+    }
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>OSFlagCreate(0, &amp;err)</code> 的 0 是初值，不是掩码；5 个位初始全为 0。</li>
+      <li><code>0x001F</code> 只关心 bit0~bit4，高位即使被置位也不会让 <code>WAIT_SET_ANY</code> 命中。</li>
+      <li>等待节点 <code>node</code> 是 <code>OSFlagPend</code> 的局部变量，位于 FLAGS 任务栈上，所以 FLAGS 栈不能太小。</li>
+      <li>timeout=0 是永久等待；被 <code>OSFlagPost</code> 唤醒后返回的是整组当前值，需要自己按位判断。</li>
+      <li><code>OSFlagPost(flags_key, 1 &lt;&lt; (key - 1), OS_FLAG_SET, &amp;err)</code> 在 main_task 中调用，键码 1 对应 bit0。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s09" data-title="09 临界区与中断嵌套" class="content-card">
+  <h2>09 临界区与中断嵌套</h2>
+  <p class="sec-sub">队列环形指针、信号量位图、就绪表必须原子更新；方法 3 用 PRIMASK 支持嵌套</p>
+  <pre class="code"><span class="cmt">/* os_cpu.h：临界区方法 3 */</span>
+#define OS_CRITICAL_METHOD  3u
+#define OS_ENTER_CRITICAL()  { cpu_sr = OS_CPU_SR_Save(); }
+#define OS_EXIT_CRITICAL()   { OS_CPU_SR_Restore(cpu_sr); }</pre>
+  <pre class="code"><span class="cmt">/* os_cpu_a.asm */</span>
+OS_CPU_SR_Save
+    MRS     R0, PRIMASK      <span class="cmt">; 保存进入前的屏蔽状态</span>
+    CPSID   I                <span class="cmt">; 关可屏蔽中断</span>
+    BX      LR
+
+OS_CPU_SR_Restore
+    MSR     PRIMASK, R0      <span class="cmt">; 恢复旧值，嵌套不会提前开中断</span>
+    BX      LR</pre>
+  <pre class="code">void touch_task(void *pdata)
+{
+    u16 lastpos[2];
+    while (1) {
+        tp_dev.scan(0);
+        if (tp_dev.sta &amp; TP_PRES_DOWN) {
+            if (tp_dev.x[0] &lt; 129 &amp;&amp; tp_dev.y[0] &gt; 221) {
+                if (lastpos[0] == 0xFFFF) {
+                    lastpos[0] = tp_dev.x[0];
+                    lastpos[1] = tp_dev.y[0];
+                }
+                OS_ENTER_CRITICAL();   <span class="cmt">// 防止 MAIN/QMSGSHOW 同时写 LCD</span>
+                lcd_draw_bline(lastpos[0], lastpos[1], tp_dev.x[0], tp_dev.y[0], 2, RED);
+                OS_EXIT_CRITICAL();
+                lastpos[0] = tp_dev.x[0];
+                lastpos[1] = tp_dev.y[0];
+            }
+        } else {
+            lastpos[0] = 0xFFFF;
+            delay_ms(10);
+        }
+    }
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>OSQPost</code> 的 <code>*OSQIn++</code>、<code>OSQEntries++</code>、回绕判断必须在同一个临界区里完成，否则会丢消息。</li>
+      <li><code>OSFlagPost</code> 修改位图后要遍历等待链表，同样整段关中断。</li>
+      <li>方法 3 保存的是旧 PRIMASK，不是无条件 <code>CPSIE I</code>，所以嵌套调用安全。</li>
+      <li>触摸画线关中断时间很短；若在临界区里调用 <code>delay_ms</code> 或 Pend，系统会直接卡死。</li>
+      <li>定时器回调里 <code>OSQPost</code> 内部也会关中断，回调本身不需要再包一层。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s10" data-title="10 调度与 PendSV 上下文切换" class="content-card">
+  <h2>10 调度与 PendSV 上下文切换</h2>
+  <p class="sec-sub">OS_Sched 只选最高优先级并触发 PendSV；真正保存寄存器在 PendSV 里完成</p>
+  <pre class="code">void OS_Sched(void)
+{
+    OS_ENTER_CRITICAL();
+    if ((OSIntNesting == 0u) &amp;&amp; (OSLockNesting == 0u)) {
+        y = OSUnMapTbl[OSRdyGrp];
+        OSPrioHighRdy = (INT8U)((y &lt;&lt; 3u) + OSUnMapTbl[OSRdyTbl[y]]);
+        if (OSPrioHighRdy != OSPrioCur) {
+            OSTCBHighRdy = OSTCBPrioTbl[OSPrioHighRdy];
+            OSCtxSwCtr++;
+            OS_TASK_SW();              <span class="cmt">// 触发 PendSV</span>
+        }
+    }
+    OS_EXIT_CRITICAL();
+}</pre>
+  <pre class="code">PendSV_Handler
+    CPSID   I
+    MRS     R0, PSP
+    CBZ     R0, PendSV_nosave
+    SUBS    R0, R0, #0x20
+    STM     R0, {R4-R11}             <span class="cmt">; 保存旧任务 R4-R11</span>
+    LDR     R1, =OSTCBCur
+    LDR     R1, [R1]
+    STR     R0, [R1]                 <span class="cmt">; 更新 OSTCBStkPtr</span>
+PendSV_nosave
+    PUSH    {R14}
+    LDR     R0, =OSTaskSwHook
+    BLX     R0
+    POP     {R14}
+    LDR     R0, =OSPrioCur
+    LDR     R1, =OSPrioHighRdy
+    LDRB    R2, [R1]
+    STRB    R2, [R0]                 <span class="cmt">; OSPrioCur = OSPrioHighRdy</span>
+    LDR     R0, =OSTCBCur
+    LDR     R1, =OSTCBHighRdy
+    LDR     R2, [R1]
+    STR     R2, [R0]                 <span class="cmt">; OSTCBCur = OSTCBHighRdy</span>
+    LDR     R0, [R2]
+    LDM     R0, {R4-R11}
+    ADDS    R0, R0, #0x20
+    MSR     PSP, R0
+    ORR     LR, LR, #0xF4
+    CPSIE   I
+    BX      LR</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>OSLockNesting</code> 非 0 时 <code>OS_Sched</code> 直接返回；<code>OSTmrCreate</code> 用 <code>OSSchedLock</code> 保护定时器池。</li>
+      <li>PendSV 优先级最低，所有中断先处理完，再统一切换任务，避免中断里直接切栈。</li>
+      <li>硬件异常帧保存 R0-R3/R12/LR/PC/xPSR，PendSV 只补 R4-R11，所以任务栈布局是“硬件帧 + 软件帧”。</li>
+      <li><code>ORR LR, LR, #0xF4</code> 让异常返回后使用 PSP 与 Thread 模式，任务继续运行在自己的栈上。</li>
+      <li>定时器任务优先级 0，一旦被唤醒就会抢占当前应用任务，回调里不能做耗时操作。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s11" data-title="11 软件定时器：定时器轮与回调" class="content-card">
+  <h2>11 软件定时器：定时器轮与回调</h2>
+  <p class="sec-sub">单次/周期、启动/停止、回调参数，全部由 OSTmr_* 管理，回调运行在定时器任务</p>
+  <pre class="code">typedef struct os_tmr {
+    INT8U            OSTmrType;        <span class="cmt">/* OS_TMR_TYPE */</span>
+    OS_TMR_CALLBACK  OSTmrCallback;    <span class="cmt">/* void (*)(OS_TMR *, void *) */</span>
+    void            *OSTmrCallbackArg; <span class="cmt">/* 创建时传入的参数 */</span>
+    void            *OSTmrNext;
+    void            *OSTmrPrev;
+    INT32U           OSTmrMatch;       <span class="cmt">/* OSTmrTime == Match 时到期 */</span>
+    INT32U           OSTmrDly;         <span class="cmt">/* 首次延时，单位定时器 tick */</span>
+    INT32U           OSTmrPeriod;      <span class="cmt">/* 周期，单位定时器 tick */</span>
+    INT8U           *OSTmrName;
+    INT8U            OSTmrOpt;         <span class="cmt">/* ONE_SHOT / PERIODIC */</span>
+    INT8U            OSTmrState;       <span class="cmt">/* UNUSED/RUNNING/STOPPED/COMPLETED */</span>
+} OS_TMR;</pre>
+  <pre class="code">OS_TMR *OSTmrCreate(INT32U dly, INT32U period, INT8U opt,
+                    OS_TMR_CALLBACK callback, void *callback_arg,
+                    INT8U *pname, INT8U *perr)
+{
+    ...
+    OSSchedLock();
+    ptmr = OSTmr_Alloc();                      <span class="cmt">// 从 16 个定时器池取</span>
+    if (ptmr == (OS_TMR *)0) {
+        OSSchedUnlock();
+        *perr = OS_ERR_TMR_NON_AVAIL;
+        return ((OS_TMR *)0);
+    }
+    ptmr-&gt;OSTmrState       = OS_TMR_STATE_STOPPED;
+    ptmr-&gt;OSTmrDly         = dly;
+    ptmr-&gt;OSTmrPeriod      = period;
+    ptmr-&gt;OSTmrOpt         = opt;
+    ptmr-&gt;OSTmrCallback    = callback;
+    ptmr-&gt;OSTmrCallbackArg = callback_arg;
+    ...
+    *perr = OS_ERR_NONE;
+    return (ptmr);
+}
+
+<span class="cmt">/* main_task 中的实际调用：10 tick = 100 ms */</span>
+tmr1 = OSTmrCreate(10, 10, OS_TMR_OPT_PERIODIC, (OS_TMR_CALLBACK)tmr1_callback, 0, "tmr1", &amp;err);
+tmr2 = OSTmrCreate(10, 20, OS_TMR_OPT_PERIODIC, (OS_TMR_CALLBACK)tmr2_callback, 0, "tmr2", &amp;err);
+tmr3 = OSTmrCreate(10, 10, OS_TMR_OPT_PERIODIC, (OS_TMR_CALLBACK)tmr3_callback, 0, "tmr3", &amp;err);</pre>
+  <pre class="code">BOOLEAN OSTmrStart(OS_TMR *ptmr, INT8U *perr)
+{
+    ...
+    OSSchedLock();
+    switch (ptmr-&gt;OSTmrState) {
+        case OS_TMR_STATE_RUNNING:                  <span class="cmt">// 已在跑：重装</span>
+             OSTmr_Unlink(ptmr);
+             OSTmr_Link(ptmr, OS_TMR_LINK_DLY);
+             ...
+             return (OS_TRUE);
+        case OS_TMR_STATE_STOPPED:
+        case OS_TMR_STATE_COMPLETED:
+             OSTmr_Link(ptmr, OS_TMR_LINK_DLY);     <span class="cmt">// 首次挂到定时器轮</span>
+             ...
+             return (OS_TRUE);
+        ...
+    }
+}
+
+BOOLEAN OSTmrStop(OS_TMR *ptmr, INT8U opt, void *callback_arg, INT8U *perr)
+{
+    ...
+    case OS_TMR_STATE_RUNNING:
+        OSTmr_Unlink(ptmr);                         <span class="cmt">// 从轮上摘下</span>
+        if (opt == OS_TMR_OPT_CALLBACK) {
+            (*pfnct)((void *)ptmr, ptmr-&gt;OSTmrCallbackArg);
+        }
+        ...
+        return (OS_TRUE);
+    case OS_TMR_STATE_STOPPED:
+    case OS_TMR_STATE_COMPLETED:
+        *perr = OS_ERR_TMR_STOPPED;                 <span class="cmt">// 已经停着，也算成功</span>
+        return (OS_TRUE);
+    ...
+}</pre>
+  <pre class="code">static void OSTmr_Task(void *p_arg)
+{
+    for (;;) {
+        OSSemPend(OSTmrSemSignal, 0u, &amp;err);        <span class="cmt">// 每 10 ms 一个信号</span>
+        OSSchedLock();
+        OSTmrTime++;
+        spoke  = (INT16U)(OSTmrTime % OS_TMR_CFG_WHEEL_SIZE);
+        pspoke = &amp;OSTmrWheelTbl[spoke];
+        ptmr   = pspoke-&gt;OSTmrFirst;
+        while (ptmr != (OS_TMR *)0) {
+            ptmr_next = (OS_TMR *)ptmr-&gt;OSTmrNext;
+            if (OSTmrTime == ptmr-&gt;OSTmrMatch) {
+                OSTmr_Unlink(ptmr);
+                if (ptmr-&gt;OSTmrOpt == OS_TMR_OPT_PERIODIC) {
+                    OSTmr_Link(ptmr, OS_TMR_LINK_PERIODIC);
+                } else {
+                    ptmr-&gt;OSTmrState = OS_TMR_STATE_COMPLETED;
+                }
+                (*ptmr-&gt;OSTmrCallback)((void *)ptmr, ptmr-&gt;OSTmrCallbackArg);
+            }
+            ptmr = ptmr_next;
+        }
+        OSSchedUnlock();
+    }
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>定时器状态：STOPPED（未启动）、RUNNING（在轮上）、COMPLETED（单次已完成）、UNUSED（已删除）。</li>
+      <li><code>OSTmrStart</code> 对运行中的定时器会先摘链再重挂，等于“重新计时”。</li>
+      <li><code>OSTmrStop</code> 只摘链，不释放定时器对象；再次 Start 还能用，删除要用 <code>OSTmrDel</code>。</li>
+      <li>周期定时器到期后由 <code>OSTmr_Link(...PERIODIC)</code> 重挂；单次定时器置 COMPLETED 后不再执行。</li>
+      <li><code>OSTmr_Task</code> 用 <code>OSSchedLock</code> 而不是关中断，防止遍历定时器轮时链被改。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s12" data-title="12 三定时器与 IPC 数据流" class="content-card">
+  <h2>12 三定时器与 IPC 数据流</h2>
+  <p class="sec-sub">tmr1 统计、tmr2 填色、tmr3 生产消息；队列与信号量集把四个任务串成一条链</p>
+  <figure class="figure">
+    <img src="./index76-map/ipc-overview.png" alt="三个软件定时器、消息队列、信号量集与任务的数据流">
+    <figcaption>图 12-1　三个软件定时器、消息队列、信号量集与各任务的数据流</figcaption>
+  </figure>
+  <pre class="code">void start_task(void *pdata)
+{
+    OS_CPU_SR cpu_sr = 0;
+    u8 err;
+    pdata = pdata;
+    msg_key   = OSMboxCreate((void *)0);   <span class="cmt">// 键码邮箱</span>
+    q_msg     = OSQCreate(&amp;MsgGrp[0], 256);<span class="cmt">// 256 条消息队列</span>
+    flags_key = OSFlagCreate(0, &amp;err);     <span class="cmt">// 5 位信号量集，初值 0</span>
+    OSStatInit();                          <span class="cmt">// 统计任务采样</span>
+    OS_ENTER_CRITICAL();
+    OSTaskCreateExt(led_task, ... LED_TASK_PRIO ...);
+    OSTaskCreateExt(touch_task, ... TOUCH_TASK_PRIO ...);
+    OSTaskCreateExt(qmsgshow_task, ... QMSGSHOW_TASK_PRIO ...);
+    OSTaskCreateExt(main_task, ... MAIN_TASK_PRIO ...);
+    OSTaskCreateExt(flags_task, ... FLAGS_TASK_PRIO ...);
+    OSTaskCreateExt(key_task, ... KEY_TASK_PRIO ...);
+    OS_EXIT_CRITICAL();
+    OSTaskSuspend(START_TASK_PRIO);
+}</pre>
+  <pre class="code">void main_task(void *pdata)
+{
+    u32 key = 0;
+    u8  err;
+    u8  tmr2sta = 1;
+    u8  tmr3sta = 0;
+    u8  flagsclrt = 0;
+
+    <span class="cmt">/* 定时器在 main_task 里创建，不是在 start_task */</span>
+    tmr1 = OSTmrCreate(10, 10, OS_TMR_OPT_PERIODIC, (OS_TMR_CALLBACK)tmr1_callback, 0, "tmr1", &amp;err);
+    tmr2 = OSTmrCreate(10, 20, OS_TMR_OPT_PERIODIC, (OS_TMR_CALLBACK)tmr2_callback, 0, "tmr2", &amp;err);
+    tmr3 = OSTmrCreate(10, 10, OS_TMR_OPT_PERIODIC, (OS_TMR_CALLBACK)tmr3_callback, 0, "tmr3", &amp;err);
+    OSTmrStart(tmr1, &amp;err);
+    OSTmrStart(tmr2, &amp;err);
+    while (1) {
+        key = (u32)OSMboxPend(msg_key, 10, &amp;err);
+        if (key) {
+            flagsclrt = 51;                    <span class="cmt">// 51 × 10 ms ≈ 500 ms 后清显示</span>
+            OSFlagPost(flags_key, 1 &lt;&lt; (key - 1), OS_FLAG_SET, &amp;err);
+        }
+        switch (key) {
+            case 1: LED1 = !LED1; break;
+            case 2: tmr3sta = !tmr3sta;
+                    if (tmr3sta) OSTmrStart(tmr3, &amp;err);
+                    else         OSTmrStop(tmr3, OS_TMR_OPT_NONE, 0, &amp;err);
+                    break;
+            case 3: LCD_Fill(0, 221, 129, lcddev.height - 1, WHITE); break;
+            case 4: ... TP_Adjust(); ucos_load_main_ui(); break;
+            case 5: tmr2sta = !tmr2sta; ... break;
+        }
+        delay_ms(10);
+    }
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>KEY 任务拿到键码后只投邮箱；MAIN 任务置信号量位；FLAGS 任务负责显示与蜂鸣，职责清晰。</li>
+      <li>tmr3 由 KEY1 启停，只有启动后才每 100 ms 往队列投一条 13 字节消息。</li>
+      <li>tmr1 与 tmr2 在 <code>main_task</code> 启动时创建并立即启动，界面一进入循环就开始刷新。</li>
+      <li>WKUP 校准时先停 tmr1/tmr2、挂起 TOUCH/QMSGSHOW，避免校准界面被定时器覆盖。</li>
+      <li>所有定时器都是 PERIODIC；tmr3 因队列满而 <code>OSTmrStop</code> 后变为 STOPPED，需要再次按键才能重启。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s13" data-title="13 实验现象与调试验证" class="content-card">
+  <h2>13 实验现象与调试验证</h2>
+  <p class="sec-sub">生产 10 条/秒、消费 2 条/秒，队列约 32 s 填满，正好用来观察 Q_FULL 与定时器自停</p>
+  <figure class="figure">
+    <img src="./index76-map/qflag-timer-timing.png" alt="软件定时器、消息队列与信号量集时序">
+    <figcaption>图 13-1　tmr3 每 100 ms 生产、tmr1 每 500 ms 刷新统计、tmr2 每 200 ms 换色与 flags_task 等待/处理的时序</figcaption>
+  </figure>
+  <pre class="code">void qmsgshow_task(void *pdata)
+{
+    u8 *p;
+    u8  err;
+    while (1) {
+        p = OSQPend(q_msg, 0, &amp;err);              <span class="cmt">// 永久等待一条消息</span>
+        LCD_ShowString(5, 170, 240, 16, 16, p);    <span class="cmt">// 显示消息体</span>
+        myfree(SRAMIN, p);                         <span class="cmt">// 与 tmr3 的 mymalloc 配对</span>
+        delay_ms(500);                             <span class="cmt">// 每秒最多消费 2 条</span>
+    }
+}</pre>
+  <table class="data">
+    <thead><tr><th>操作 / 时刻</th><th>预期现象</th><th>调试确认</th></tr></thead>
+    <tbody>
+      <tr><td>上电</td><td>界面出现；右下颜色每 200 ms 变化；CPU/MEM/Q 数字刷新</td><td>Watch 看 <code>OSCPUUsage</code>、<code>((OS_Q *)q_msg-&gt;OSEventPtr)-&gt;OSQEntries</code></td></tr>
+      <tr><td>KEY0</td><td>DS1 翻转，FLAGS 区显示 KEY0 DOWN，蜂鸣 50 ms</td><td><code>flags_key-&gt;OSFlagFlags</code> 先置 0x0001，再被清 0</td></tr>
+      <tr><td>KEY1 启动 tmr3</td><td>Message 区每 100 ms 出现新消息，Q 计数持续上升</td><td>tmr3 处于 RUNNING，生产者每 100 ms 调 <code>OSQPost</code></td></tr>
+      <tr><td>约 32 s 后</td><td>队列填满 256 条，消息停止增加，Q 计数不再上升</td><td>tmr3 回调收到 <code>OS_ERR_Q_FULL</code>，myfree 后自停</td></tr>
+      <tr><td>KEY2</td><td>左下触摸区被清空</td><td>只清 <code>x ≤ 129, y ≥ 221</code> 区域</td></tr>
+      <tr><td>TPAD</td><td>右下填色停止/继续</td><td>tmr2 状态在 STOPPED / RUNNING 间切换</td></tr>
+      <tr><td>WKUP</td><td>触摸校准，完成后界面重载</td><td>TOUCH/QMSGSHOW 短暂从就绪表消失</td></tr>
+    </tbody>
+  </table>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>Q 计数由 tmr1 每 100 ms 读 <code>OSQEntries</code> 显示；它只读不改，不需要临界区。</li>
+      <li>队列满后 tmr3 先 <code>myfree</code> 再 <code>OSTmrStop</code>，顺序不能反，否则 13 字节内存泄漏。</li>
+      <li>FLAGS 任务蜂鸣 50 ms 期间不等待信号量，这段时间内的新按键只能等下一次 Pend。</li>
+      <li>若 Q 一直为 0，先确认 KEY1 是否真的启动了 tmr3，再看 tmr3 是否因 Q_FULL 已自停。</li>
+    </ol>
+  </div>
+  <div class="note blue">队列和信号量集都不是“万能管道”：队列有 256 条上限，信号量集只有 32 位。生产速度长期高于消费速度时，必须有满/丢策略，本实验选择“满则停生产者”。</div>
+</section>
+
+<section id="s14" data-title="14 总结与移植要点" class="content-card">
+  <h2>14 总结与移植要点</h2>
+  <p class="sec-sub">队列解决“多条消息”，信号量集解决“多个事件”，软件定时器解决“周期动作”</p>
+  <table class="data">
+    <thead><tr><th>API</th><th>作用</th><th>关键参数</th><th>返回 / 错误</th></tr></thead>
+    <tbody>
+      <tr><td>OSQCreate</td><td>创建消息队列</td><td>start 缓冲区、size 条数</td><td>OS_EVENT*，池耗尽返回 NULL</td></tr>
+      <tr><td>OSQPend</td><td>取一条消息</td><td>timeout：0 永久等待</td><td>消息指针，超时 NULL</td></tr>
+      <tr><td>OSQPost</td><td>投一条消息</td><td>pmsg 指针</td><td>NONE / Q_FULL</td></tr>
+      <tr><td>OSFlagCreate</td><td>创建信号量集</td><td>flags 初值</td><td>OS_FLAG_GRP*，耗尽 NULL</td></tr>
+      <tr><td>OSFlagPend</td><td>等待位组合</td><td>flags 掩码、wait_type、timeout</td><td>满足的位，超时 0</td></tr>
+      <tr><td>OSFlagPost</td><td>置位/清零</td><td>OS_FLAG_SET / OS_FLAG_CLR</td><td>操作后的整组值</td></tr>
+      <tr><td>OSTmrCreate</td><td>创建软件定时器</td><td>dly、period（定时器 tick）、opt、callback</td><td>OS_TMR*，池耗尽 NULL</td></tr>
+      <tr><td>OSTmrStart / Stop</td><td>启动 / 停止</td><td>ptmr、opt</td><td>OS_TRUE / OS_FALSE</td></tr>
+    </tbody>
+  </table>
+  <pre class="code"><span class="cmt">/* os_cfg.h：本实验的容量与频率配置 */</span>
+#define OS_MAX_EVENTS            20u   <span class="cmt">// 事件块总数</span>
+#define OS_MAX_QS                 4u   <span class="cmt">// 队列控制块 4 个</span>
+#define OS_MAX_FLAGS              5u   <span class="cmt">// 信号量集 5 组</span>
+#define OS_Q_EN                   1u
+#define OS_FLAG_EN                1u
+#define OS_TMR_EN                 1u
+#define OS_TMR_CFG_MAX           16u   <span class="cmt">// 定时器 16 个</span>
+#define OS_TMR_CFG_WHEEL_SIZE     8u   <span class="cmt">// 轮 8 槽</span>
+#define OS_TMR_CFG_TICKS_PER_SEC 100u  <span class="cmt">// 10 ms/tick</span>
+#define OS_TASK_TMR_PRIO          0u   <span class="cmt">// 定时器任务最高优先级</span></pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>队列保存指针，消息体生命周期由生产者/消费者共同保证；本实验用 <code>mymalloc/myfree</code> 配对。</li>
+      <li>信号量集返回的是“当前整组值”，用掩码按位判断；本实验用 <code>WAIT_SET_ANY</code>，任一位即可唤醒。</li>
+      <li>软件定时器的 dly/period 单位是 <code>OS_TMR_CFG_TICKS_PER_SEC</code> 的 tick，不是 OS 的 1 ms tick。</li>
+      <li>回调运行在优先级 0 的定时器任务里，必须短小；需要耗时处理时应投队列，交给低优先级任务。</li>
+      <li>移植时先确认 <code>OS_TMR_EN</code>、<code>OS_TMR_CFG_MAX</code>、<code>OS_TASK_TMR_PRIO</code> 与 SysTick 频率，再核对 <code>OSTimeTickHook</code> 的分频。</li>
+    </ol>
+  </div>
+  <div class="note">三个 UCOSII 实验至此形成完整闭环：实验59 讲任务与调度，实验60 讲邮箱/信号量，实验61 讲队列/信号量集/软件定时器。真正做产品时，优先用“队列 + 事件标志 + 软定时器”组合，而不是在中断里堆业务逻辑。</div>
+</section>
+
+            
+
+            
+                <section class="content-card" id="s15" data-title="15 交互演示">
+                    <h2>15　交互演示</h2>
+                    <div class="sec-sub">按钮对应 <code class="inline">os_q.c</code> / <code class="inline">os_flag.c</code> / <code class="inline">os_tmr.c</code>，仅演示逻辑</div>
+                    <div class="sim">
+                        <div class="sim-title">消息队列、信号量集与软件定时器</div>
+                        <div class="sim-buttons">
+                            <button data-act="q_post">OSQPost 入队</button>
+                            <button data-act="q_pend">OSQPend 出队</button>
+                            <button data-act="flag_set">OSFlagPost 置位</button>
+                            <button data-act="tmr_start">OSTmrStart 启动</button>
+                        </div>
+                        <div class="sim-log" id="simLog">队列：0/10　标志：0x00　定时器：停止</div>
+                    </div>
+                    <div class="note blue">队列满时 <code class="inline">OSQPost</code> 返回 <code class="inline">OS_ERR_Q_FULL</code>；标志位要等全部置位才唤醒等待任务。</div>
+                    <script>
+                        (function () {
+                            var log = document.getElementById('simLog');
+                            var q = 0, flag = 0, tmr = false;
+                            function show(msg) {
+                                log.textContent = msg + '　队列：' + q + '/10' +
+                                    '　标志：0x' + ('0' + flag.toString(16).toUpperCase()).slice(-2) +
+                                    '　定时器：' + (tmr ? '运行' : '停止');
+                            }
+                            var acts = {
+                                q_post: function () {
+                                    if (q >= 10) { show('队列满，返回 OS_ERR_Q_FULL'); return; }
+                                    q++;
+                                    show('OSQPost 成功，消息指针入队');
+                                },
+                                q_pend: function () {
+                                    if (q === 0) { show('队列为空，任务阻塞等待'); return; }
+                                    q--;
+                                    show('OSQPend 取走一条消息');
+                                },
+                                flag_set: function () {
+                                    flag = flag | 0x03;
+                                    show('OSFlagPost 置位 bit0/bit1，等待任务可被唤醒');
+                                },
+                                tmr_start: function () {
+                                    if (tmr) { show('定时器已在运行，返回 OS_ERR_TMR_IS_RUNNING'); return; }
+                                    tmr = true;
+                                    show('OSTmrStart 启动，到期回调 OSTmrCallback');
+                                }
+                            };
+                            Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (b) {
+                                b.addEventListener('click', function () { var a = b.getAttribute('data-act'); if (acts[a]) acts[a](); });
+                            });
+                        })();
+                    </script>
+                </section>
+</div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

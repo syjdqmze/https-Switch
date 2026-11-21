@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验23 DMA实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2f7a52;
+            margin-bottom: 6px;
+        }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验23 DMA实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">先时钟后外设，DMA 只负责搬字节。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">用 DMA 把 7800 字节搬进串口，CPU 只在旁边算进度</div>
+
+                    <p>实验23 沿用实验22 的板级初始化，只把“发数据”这件事交给 DMA：<strong>CPU 不再逐字节写 <code class="inline">USART1-&gt;DR</code></strong>，而是配置好 DMA2 的 Stream7 / Channel4，由 DMA 控制器在每个发送寄存器空时自动搬运一个字节。主循环里唯一要做的就是查传输完成标志、顺便把进度百分比刷到屏上。</p>
+
+                    <table class="data">
+                        <tr><th>功能</th><th>引脚 / 外设</th><th>工程中的初始化</th></tr>
+                        <tr><td>串口发送</td><td>PA9，复用 AF7</td><td><code>HAL_UART_MspInit()</code></td></tr>
+                        <tr><td>串口接收</td><td>PA10，复用 AF7</td><td><code>HAL_UART_MspInit()</code></td></tr>
+                        <tr><td>DMA 数据流</td><td>DMA2_Stream7 / Channel4</td><td><code>MYDMA_Config()</code></td></tr>
+                        <tr><td>KEY0</td><td>PH3，输入上拉</td><td><code>KEY_Init()</code></td></tr>
+                        <tr><td>LED0</td><td>PB1，推挽输出</td><td><code>LED_Init()</code></td></tr>
+                        <tr><td>显示</td><td>LCD（LTDC + 外部 SDRAM）</td><td><code>SDRAM_Init()</code> + <code>LCD_Init()</code></td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">USART1 115200 8N1</span>
+                        <span class="chip">DMA2_Stream7</span>
+                        <span class="chip">DMA_CHANNEL_4</span>
+                        <span class="chip">SendBuff[7800]</span>
+                        <span class="chip">DMA_FLAG_TCIF3_7</span>
+                    </div>
+
+                    <div class="note">USART1_TX 固定映射到 DMA2 的 Channel4，这是 F4 的请求映射表决定的，不能随意改成 Channel1；选错通道的现象是 DMA 计数不动、串口一个字节也不发。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">先认路，再谈启动顺序，否则容易在 HAL 库里绕圈</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本实验关注点</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化顺序与主循环</td><td>10 条初始化调用、缓冲区填充、进度计算</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>异常与中断入口</td><td><code>SysTick_Handler()</code>、<code>HardFault_Handler()</code></td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>复位后的最小配置</td><td>FPU、RCC 复位、VTOR 重定位</td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>向量表、栈堆、复位入口</td><td>Stack 0x400、Heap 0x200、<code>Reset_Handler</code></td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td>时钟初始化</td><td><code>Stm32_Clock_Init()</code> 的 PLL 与 Flash 等待</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>微秒/毫秒延时</td><td><code>fac_us</code> 与 SysTick 轮询</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>串口与 printf</td><td><code>fputc()</code> 重定向、PA9/PA10 配置</td></tr>
+                        <tr><td><code>HARDWARE/dma/dma.c</code></td><td>本实验核心</td><td>DMA 句柄配置与启动函数</td></tr>
+                        <tr><td><code>HARDWARE/led|key|sdram|lcd</code></td><td>板级外设</td><td>现象呈现：灯、按键、屏幕</td></tr>
+                    </table>
+
+                    <p>工程采用“外设驱动 + HAL 库”两层结构：<code class="inline">USER</code> 只写业务，<code class="inline">HARDWARE</code> 提供板级驱动，<code class="inline">SYSTEM</code> 提供与芯片无关的通用能力（时钟、延时、串口），<code class="inline">CORE</code> 与 <code class="inline">HALLIB</code> 由芯片厂商提供，本次不修改。</p>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从复位向量到 while(1)：12 个节点，前 9 个与实验22 完全一致</div>
+
+                    <figure class="figure">
+                        <img src="./index37-map/boot-flow.png" alt="实验23 DMA 从上电复位到主循环的启动流程图">
+                        <figcaption>图 3-1　启动链路与初始化顺序</figcaption>
+                    </figure>
+
+                    <p>把 <code class="inline">main()</code> 里的调用按“先底层后上层”排一下就能看出规律：<strong>先让芯片跑起来（时钟、时基、串口），再让板子亮起来（LED、按键、SDRAM、LCD），最后才配置本实验的主角（DMA）</strong>。顺序一旦颠倒，最典型的后果是 LCD 还没有时钟就调用 <code class="inline">LCD_ShowString()</code>，屏幕全白或花屏。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>复位后第一条指令不是 <code>main</code>，而是启动文件里的 <code>Reset_Handler</code>，它先调 <code>SystemInit</code>，再跳 C 库的 <code>__main</code>。</li>
+                            <li><code>HAL_Init()</code> 建立 1ms 的 SysTick 时基，后面 <code>HAL_Delay()</code> 与 HAL 内部的超时判断都依赖它。</li>
+                            <li><code>Stm32_Clock_Init(360,25,2,8)</code> 把主频从 16MHz 的 HSI 切到 180MHz 的 PLL。</li>
+                            <li><code>delay_init(180)</code> 必须传 180，因为此时 HCLK 已经是 180MHz，延时系数按它算。</li>
+                            <li><code>MYDMA_Config()</code> 内部用 <code>__HAL_LINKDMA</code> 绑定 <code>UART1_Handler</code>，所以必须排在 <code>uart_init()</code> 之后。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">栈 1KB、堆 512B，向量表第 0 字就是栈顶地址</div>
+
+                    <pre class="code">Stack_Size      EQU     0x400;                          <span class="cmt">// 栈 1KB，主栈 MSP 从这里向下生长</span>
+Heap_Size       EQU     0x200;                          <span class="cmt">// 堆 512B，本工程几乎不用 malloc</span>
+
+__Vectors       DCD     __initial_sp               ; Top of Stack
+                DCD     Reset_Handler              ; Reset Handler
+                DCD     NMI_Handler                ; NMI Handler
+                DCD     HardFault_Handler          ; Hard Fault Handler
+                ...
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0                              <span class="cmt">// 先跑 SystemInit</span>
+                 LDR     R0, =__main
+                 BX      R0                              <span class="cmt">// 再进 C 库，最终调用 main</span>
+                 ENDP</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>复位时内核强制从地址 0x00000000 取两个字：第 0 个字装入 MSP，第 1 个字装入 PC。所以向量表第 0 项必须是 <code>__initial_sp</code>，第 1 项必须是 <code>Reset_Handler</code>。</li>
+                            <li>F429 的 Flash 起始地址是 0x08000000，通过 <code>SYSCLK</code> 的映射，0x00000000 会别名到 Flash，因此上电时读到的就是本工程的向量表。</li>
+                            <li><code>Reset_Handler</code> 用 <code>LDR + BLX</code> 而不是 <code>B</code>，因为目标是另一个编译单元里的函数指针，需要先取地址再跳转，且要保留返回能力。</li>
+                            <li>栈只有 0x400 字节：本实验的局部变量只有几个 <code>u16/u8/float</code>，但 <code>LCD_ShowString</code> 内部调用较深，若改成大数组局部变量要留意溢出。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">一个把时钟打回默认值，一个建立时基，二者都不能跳过</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  /* set CP10 and CP11 Full Access */
+  #endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;          <span class="cmt">// 先开内部 HSI，保证有饭吃</span>
+  RCC-&gt;CFGR = 0x00000000;                   <span class="cmt">// 清空分频配置</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;          <span class="cmt">// 关 HSEON / CSSON / PLLON</span>
+  RCC-&gt;PLLCFGR = 0x24003010;                <span class="cmt">// PLL 参数恢复复位值</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;          <span class="cmt">// 清 HSEBYP</span>
+  RCC-&gt;CIR = 0x00000000;                    <span class="cmt">// 关闭所有 RCC 中断</span>
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET; <span class="cmt">// 向量表定位到 Flash 起始</span>
+}
+</pre>
+
+                    <p>紧接着的 <code class="inline">HAL_Init()</code> 做三件事：调用 <code class="inline">HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4)</code> 把优先级分成 4 位抢占、0 位子优先级；调用 <code class="inline">HAL_InitTick(TICK_INT_PRIORITY)</code> 把 SysTick 配成 1ms 中断；使能 Flash 预取与指令/数据缓存。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>SystemInit</code> 不配置 PLL，只把 RCC 恢复到复位状态。真正切到 180MHz 的是后面 <code>Stm32_Clock_Init()</code>。</li>
+                            <li><code>SCB-&gt;CPACR</code> 那两行打开 CP10/CP11，即 FPU 全访问；本实验用到 <code>float pro</code>，若不开 FPU，浮点指令会进 HardFault。</li>
+                            <li><code>VTOR</code> 只在需要把中断向量搬到 SRAM 或做 IAP 时才改；本工程保持 0x08000000，所以 <code>stm32f4xx_it.c</code> 里的函数名必须与启动文件向量表一一对应。</li>
+                            <li><code>HAL_Init</code> 建立的 1ms 节拍同时服务于 <code>HAL_Delay</code> 和 <code>HAL_UART_Transmit</code> 的 1000ms 超时参数。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟、延时与串口">
+                    <h2>06　时钟、延时与串口</h2>
+                    <div class="sec-sub">25MHz 晶振怎样变成 180MHz，以及延时和 printf 靠什么工作</div>
+
+                    <figure class="figure">
+                        <img src="./index37-map/clock-tree.png" alt="Stm32_Clock_Init 参数对应的时钟树与分频结果">
+                        <figcaption>图 6-1　PLL 参数与各级分频</figcaption>
+                    </figure>
+
+                    <pre class="code">void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq)
+{
+    __HAL_RCC_PWR_CLK_ENABLE();                               <span class="cmt">// 使能PWR时钟</span>
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1); <span class="cmt">// 调压器级别1</span>
+
+    RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE; <span class="cmt">// 时钟源为HSE</span>
+    RCC_OscInitStructure.HSEState=RCC_HSE_ON;                  <span class="cmt">// 打开HSE</span>
+    RCC_OscInitStructure.PLL.PLLState=RCC_PLL_ON;              <span class="cmt">// 打开PLL</span>
+    RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;      <span class="cmt">// PLL源选HSE</span>
+    RCC_OscInitStructure.PLL.PLLM=pllm;                        <span class="cmt">// 25</span>
+    RCC_OscInitStructure.PLL.PLLN=plln;                        <span class="cmt">// 360</span>
+    RCC_OscInitStructure.PLL.PLLP=pllp;                        <span class="cmt">// 2</span>
+    RCC_OscInitStructure.PLL.PLLQ=pllq;                        <span class="cmt">// 8</span>
+    ret=HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+    if(ret!=HAL_OK) while(1);
+
+    ret=HAL_PWREx_EnableOverDrive();                            <span class="cmt">// 180MHz 必须开过驱动</span>
+    if(ret!=HAL_OK) while(1);
+
+    RCC_ClkInitStructure.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK;  <span class="cmt">// 系统时钟选PLL</span>
+    RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;         <span class="cmt">// HCLK=180MHz</span>
+    RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;          <span class="cmt">// PCLK1=45MHz</span>
+    RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;          <span class="cmt">// PCLK2=90MHz</span>
+    ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5); <span class="cmt">// 同时设 5WS</span>
+    if(ret!=HAL_OK) while(1);
+}</pre>
+
+                    <p>延时与 printf 分别由 <code class="inline">delay.c</code> 与 <code class="inline">usart.c</code> 提供，两者都与时钟强相关：</p>
+
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);   <span class="cmt">// SysTick 时钟 = HCLK</span>
+    fac_us=SYSCLK;                                         <span class="cmt">// 180MHz 下 1us = 180 个节拍</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks; u32 told,tnow,tcnt=0;
+    u32 reload=SysTick->LOAD;
+    ticks=nus*fac_us;                                      <span class="cmt">// 需要的节拍数</span>
+    told=SysTick->VAL;
+    while(1)
+    {
+        tnow=SysTick->VAL;                                 <span class="cmt">// 轮询递减计数器</span>
+        if(tnow!=told)
+        {
+            if(tnow&lt;told)tcnt+=told-tnow;
+            else tcnt+=reload-tnow+told;                  <span class="cmt">// 处理回绕</span>
+            told=tnow;
+            if(tcnt&gt;=ticks)break;
+        }
+    }
+}
+
+int fputc(int ch, FILE *f)
+{
+    while((USART1->SR&amp;0X40)==0);                          <span class="cmt">// 等 TXE 置位</span>
+    USART1->DR = (u8) ch;                                 <span class="cmt">// printf 最终落到这里</span>
+    return ch;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>VCO = HSE / PLLM × PLLN = 25 / 25 × 360 = 360MHz；SYSCLK = VCO / PLLP = 180MHz；Fusb = 360 / 8 = 45MHz。</li>
+                            <li>180MHz 超出 168MHz 档，必须先 <code>HAL_PWREx_EnableOverDrive()</code>，且 Flash 至少 5 个等待周期，否则取指错乱。</li>
+                            <li><code>delay_us</code> 是纯软件轮询，不依赖中断，因此在中断里也能用；代价是占用 CPU。</li>
+                            <li><code>delay_ms</code> 内部就是循环调用 <code>delay_us(1000)</code>，所以 10ms 延时并不精确到单周期。</li>
+                            <li><code>fputc</code> 里用 <code>USART1-&gt;SR</code> 的 TXE 标志做阻塞判断，这就是未开 DMA 时“printf 会卡住 CPU”的原因。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="DMA 原理与参数">
+                    <h2>07　DMA 原理与参数</h2>
+                    <div class="sec-sub">把“谁搬、搬到哪、搬多少、搬完怎么通知”这四件事写进寄存器</div>
+
+                    <p>DMA 控制器独立于内核，它监听外设的请求信号。<strong>USART1 发送寄存器一空，就向 DMA2 的 Channel4 发一次请求，DMA 从内存读一个字节写进 DR</strong>。整个过程 CPU 只需在开始前配置一次，结束后查一次标志。</p>
+
+                    <pre class="code">void MYDMA_Config(DMA_Stream_TypeDef *DMA_Streamx,u32 chx)
+{
+     if((u32)DMA_Streamx&gt;(u32)DMA2)                      <span class="cmt">// 判断属于 DMA2 还是 DMA1</span>
+     {
+        __HAL_RCC_DMA2_CLK_ENABLE();                       <span class="cmt">// DMA2 时钟使能</span>
+     }else
+     {
+        __HAL_RCC_DMA1_CLK_ENABLE();
+     }
+
+    __HAL_LINKDMA(&amp;UART1_Handler,hdmatx,UART1TxDMA_Handler); <span class="cmt">// 句柄互相绑定</span>
+
+    UART1TxDMA_Handler.Instance=DMA_Streamx;                         <span class="cmt">// DMA2_Stream7</span>
+    UART1TxDMA_Handler.Init.Channel=chx;                             <span class="cmt">// DMA_CHANNEL_4</span>
+    UART1TxDMA_Handler.Init.Direction=DMA_MEMORY_TO_PERIPH;          <span class="cmt">// 内存 -> 外设</span>
+    UART1TxDMA_Handler.Init.PeriphInc=DMA_PINC_DISABLE;              <span class="cmt">// 外设地址不变</span>
+    UART1TxDMA_Handler.Init.MemInc=DMA_MINC_ENABLE;                  <span class="cmt">// 内存地址递增</span>
+    UART1TxDMA_Handler.Init.PeriphDataAlignment=DMA_PDATAALIGN_BYTE; <span class="cmt">// 外设 8 位</span>
+    UART1TxDMA_Handler.Init.MemDataAlignment=DMA_MDATAALIGN_BYTE;    <span class="cmt">// 内存 8 位</span>
+    UART1TxDMA_Handler.Init.Mode=DMA_NORMAL;                         <span class="cmt">// 单次，不循环</span>
+    UART1TxDMA_Handler.Init.Priority=DMA_PRIORITY_MEDIUM;            <span class="cmt">// 中优先级</span>
+    UART1TxDMA_Handler.Init.FIFOMode=DMA_FIFOMODE_DISABLE;           <span class="cmt">// 不用 FIFO</span>
+    UART1TxDMA_Handler.Init.FIFOThreshold=DMA_FIFO_THRESHOLD_FULL;
+    UART1TxDMA_Handler.Init.MemBurst=DMA_MBURST_SINGLE;              <span class="cmt">// 单次突发</span>
+    UART1TxDMA_Handler.Init.PeriphBurst=DMA_PBURST_SINGLE;
+
+    HAL_DMA_DeInit(&amp;UART1TxDMA_Handler);                             <span class="cmt">// 先复位再初始化</span>
+    HAL_DMA_Init(&amp;UART1TxDMA_Handler);
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>方向必须是 <code>MEMORY_TO_PERIPH</code>：内存地址递增（<code>MINC</code>），外设地址固定（<code>PINC</code> 关闭），因为 7800 个字节都写进同一个 <code>DR</code>。</li>
+                            <li>两侧数据宽度都是 <code>BYTE</code>。若设成半字，DMA 会一次搬 2 个字节到 8 位 DR，串口只会发出后一个字节的低 8 位。</li>
+                            <li><code>DMA_NORMAL</code> 表示搬完 <code>NDTR</code> 个字节就停，需要下次重新装载；若要连续刷同一块缓冲区才用 <code>DMA_CIRCULAR</code>。</li>
+                            <li><code>__HAL_LINKDMA</code> 把 <code>UART1_Handler.hdmatx</code> 指向 DMA 句柄，这样 <code>HAL_UART_DMAStop()</code> 才知道该关哪个流。</li>
+                            <li>FIFO 关闭时数据宽度不一致会报错，所以两侧都统一成字节最省心。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="GPIO 与串口配置">
+                    <h2>08　GPIO 与串口配置</h2>
+                    <div class="sec-sub">PA9/PA10 复用 AF7，115200 由 PCLK2 = 90MHz 分频得到</div>
+
+                    <pre class="code">void uart_init(u32 bound)
+{
+     UART1_Handler.Instance=USART1;
+     UART1_Handler.Init.BaudRate=bound;                   <span class="cmt">// 115200</span>
+     UART1_Handler.Init.WordLength=UART_WORDLENGTH_8B;    <span class="cmt">// 8 位数据</span>
+     UART1_Handler.Init.StopBits=UART_STOPBITS_1;         <span class="cmt">// 1 位停止</span>
+     UART1_Handler.Init.Parity=UART_PARITY_NONE;          <span class="cmt">// 无校验</span>
+     UART1_Handler.Init.HwFlowCtl=UART_HWCONTROL_NONE;    <span class="cmt">// 无硬件流控</span>
+     UART1_Handler.Init.Mode=UART_MODE_TX_RX;             <span class="cmt">// 收发</span>
+     HAL_UART_Init(&amp;UART1_Handler);                       <span class="cmt">// 内部会调 MspInit</span>
+}
+
+void HAL_UART_MspInit(UART_HandleTypeDef *huart)
+{
+     if(huart-&gt;Instance==USART1)
+     {
+             __HAL_RCC_GPIOA_CLK_ENABLE();                <span class="cmt">// GPIOA 时钟</span>
+             __HAL_RCC_USART1_CLK_ENABLE();               <span class="cmt">// USART1 时钟</span>
+
+             GPIO_Initure.Pin=GPIO_PIN_9;                 <span class="cmt">// PA9 = TX</span>
+             GPIO_Initure.Mode=GPIO_MODE_AF_PP;           <span class="cmt">// 复用推挽</span>
+             GPIO_Initure.Pull=GPIO_PULLUP;               <span class="cmt">// 上拉</span>
+             GPIO_Initure.Speed=GPIO_SPEED_FAST;
+             GPIO_Initure.Alternate=GPIO_AF7_USART1;      <span class="cmt">// AF7</span>
+             HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+
+             GPIO_Initure.Pin=GPIO_PIN_10;                <span class="cmt">// PA10 = RX</span>
+             HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+     }
+}</pre>
+
+                    <table class="data">
+                        <tr><th>参数</th><th>取值</th><th>来源</th></tr>
+                        <tr><td>波特率</td><td>115200</td><td><code>uart_init(115200)</code></td></tr>
+                        <tr><td>USART1 时钟</td><td>PCLK2 = 90MHz</td><td>APB2 分频 2</td></tr>
+                        <tr><td>USARTDIV</td><td>90M / (16 × 115200) ≈ 48.83</td><td>HAL 内部按 <code>UART_OVERSAMPLING_16</code> 计算</td></tr>
+                        <tr><td>GPIO 复用</td><td>AF7</td><td><code>GPIO_AF7_USART1</code></td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>HAL_UART_Init</code> 本身不碰 GPIO，它通过回调 <code>HAL_UART_MspInit</code> 完成“时钟 + 引脚 + 中断”的板级配置，这是 HAL 的分层约定。</li>
+                            <li>PA9 设成 <code>GPIO_MODE_AF_PP</code> 才能由 USART 外设接管输出；若误设成普通推挽，串口波形出不来。</li>
+                            <li>引脚复用编号必须查数据手册：F429 的 USART1 在 PA9/PA10 上对应 AF7，写成 AF6 会连到别的外设。</li>
+                            <li>本实验只用查询方式发数据（DMA + 轮询标志），<code>HAL_UART_Receive_IT</code> 被注释掉，因此不会产生接收中断。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="发送缓冲区填充">
+                    <h2>09　发送缓冲区填充</h2>
+                    <div class="sec-sub">7800 字节不是随手写的常量，而是按“正文 + CRLF”循环铺满</div>
+
+                    <pre class="code">#define SEND_BUF_SIZE 7800                  <span class="cmt">// 发送长度，取 sizeof(TEXT)+2 的整数倍便于对齐</span>
+u8 SendBuff[SEND_BUF_SIZE];                 <span class="cmt">// 全局数组，位于内部 SRAM</span>
+const u8 TEXT_TO_SEND[]={"ALIENTEK Apollo STM32F4 DMA 串口实验"};
+
+j=sizeof(TEXT_TO_SEND);
+for(i=0;i&lt;SEND_BUF_SIZE;i++)               <span class="cmt">// 填满整个缓冲区</span>
+{
+    if(t&gt;=j)                                <span class="cmt">// 正文写完，补回车换行</span>
+    {
+        if(mask)
+        {
+            SendBuff[i]=0x0a;               <span class="cmt">// LF</span>
+            t=0;
+        }else
+        {
+            SendBuff[i]=0x0d;               <span class="cmt">// CR</span>
+            mask++;
+        }
+    }else                                   <span class="cmt">// 逐个复制正文字符</span>
+    {
+        mask=0;
+        SendBuff[i]=TEXT_TO_SEND[t];
+        t++;
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>sizeof(TEXT_TO_SEND)</code> 含字符串结尾的 <code>'\0'</code>，所以循环会把这个 <code>0</code> 也当普通字节发出去，屏幕上表现为一个空字符。</li>
+                            <li>用 <code>mask</code> 在 0/1 之间切换，实现“先 CR 后 LF”，与串口助手的“自动换行”配合才能正常分行。</li>
+                            <li>缓冲区必须是全局或静态数组：DMA 在后台搬运，若放在 <code>main</code> 的栈上，函数返回后栈被复用就会发出乱码。</li>
+                            <li>7800 字节是 <code>SEND_BUF_SIZE</code> 的编译期常量，DMA 传输长度直接取它，不会越界。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="DMA 传输链路与标志位">
+                    <h2>10　DMA 传输链路与标志位</h2>
+                    <div class="sec-sub">HAL_DMA_Start 只装载地址，真正的“开闸”是 CR3 的 DMAT 位</div>
+
+                    <figure class="figure">
+                        <img src="./index37-map/dma-path.png" alt="DMA 从 SRAM 到 USART1 数据寄存器再到引脚的链路">
+                        <figcaption>图 10-1　一次 DMA 发送的数据通路与控制位</figcaption>
+                    </figure>
+
+                    <pre class="code">void MYDMA_USART_Transmit(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size)
+{
+    HAL_DMA_Start(huart-&gt;hdmatx, (u32)pData, (uint32_t)&amp;huart-&gt;Instance-&gt;DR, Size); <span class="cmt">// 装地址与计数</span>
+
+    huart-&gt;Instance-&gt;CR3 |= USART_CR3_DMAT;      <span class="cmt">// 使能串口 DMA 发送</span>
+}</pre>
+
+                    <p><code class="inline">HAL_DMA_Start()</code> 内部会做四件事：关流、写 <code>PAR</code>（外设地址）、写 <code>M0AR</code>（内存地址）、写 <code>NDTR</code>（数量），最后置 <code>EN</code>。但此时 USART1 还没有被允许发 DMA 请求，必须再置 <code>CR3.DMAT</code>，数据才会真正流动。</p>
+
+                    <p>把这条链路摊到时间轴上看，每个字节都重复同一套动作：<code class="inline">DR</code> 一空就置起 <code class="inline">TXE</code>，DMA 立刻从 SRAM 取出一个字节写进 <code class="inline">DR</code>，<code class="inline">NDTR</code> 随之减 1。</p>
+
+                    <figure class="figure">
+                        <img src="./index37-map/dma-timing.png" alt="USART1 与 DMA2_Stream7 的单字节搬运时序波形，标注每字节 86.8 微秒与 NDTR 递减">
+                        <figcaption>图 10-2　每个字节一次的 TXE 请求、DMA 搬运与 NDTR 递减</figcaption>
+                    </figure>
+
+                    <p>按 115200 8N1 计算，一位 8.68 µs、一个字节 10 bit 约 86.8 µs；7800 字节连发下去，整帧时长在 677 ms 量级（推算值），这也是屏上百分比不可能瞬间跳到 100% 的原因。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>外设地址取 <code>&amp;Instance-&gt;DR</code>，即数据寄存器；若误写成 <code>&amp;Instance-&gt;SR</code>，会不停把状态寄存器内容发出去。</li>
+                            <li><code>NDTR</code> 是递减计数器，每搬一个字节减 1，减到 0 时硬件置 <code>TCIF</code> 并停止（NORMAL 模式）。</li>
+                            <li>进度百分比由 <code>pro = 1 - NDTR / SEND_BUF_SIZE</code> 得到，所以刚启动时 NDTR = 7800，显示 0%。</li>
+                            <li><code>TCIF3_7</code> 是“DMA2 Stream7 传输完成”标志，必须手动清零，否则下一次传输会立即误判为完成。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="主循环与现象">
+                    <h2>11　主循环与现象</h2>
+                    <div class="sec-sub">KEY0 触发一次，屏上百分比从 0 走到 100，串口助手收到 7800 字节</div>
+
+                    <figure class="figure">
+                        <img src="./index37-map/main-loop.png" alt="实验23 主循环与 DMA 等待流程">
+                        <figcaption>图 11-1　主循环、内层轮询与回到顶部</figcaption>
+                    </figure>
+
+                    <pre class="code">while(1)
+{
+    t=KEY_Scan(0);
+    if(t==KEY0_PRES)                                    <span class="cmt">// KEY0 按下</span>
+    {
+        printf("\r\nDMA DATA:\r\n");
+        LCD_ShowString(30,150,200,16,16,"Start Transimit....");
+        LCD_ShowString(30,170,200,16,16,"   %");         <span class="cmt">// 先画百分号</span>
+
+        MYDMA_USART_Transmit(&amp;UART1_Handler,(u8*)SendBuff,SEND_BUF_SIZE); <span class="cmt">// 启动传输</span>
+
+        while(1)                                        <span class="cmt">// 期间 CPU 可以做别的事</span>
+        {
+            if(__HAL_DMA_GET_FLAG(&amp;UART1TxDMA_Handler,DMA_FLAG_TCIF3_7)) <span class="cmt">// 传完了？</span>
+            {
+                __HAL_DMA_CLEAR_FLAG(&amp;UART1TxDMA_Handler,DMA_FLAG_TCIF3_7);
+                HAL_UART_DMAStop(&amp;UART1_Handler);       <span class="cmt">// 关串口 DMA</span>
+                break;
+            }
+            pro=__HAL_DMA_GET_COUNTER(&amp;UART1TxDMA_Handler); <span class="cmt">// 剩余字节数</span>
+            pro=1-pro/SEND_BUF_SIZE;                    <span class="cmt">// 换算成比例</span>
+            pro*=100;                                   <span class="cmt">// 百分比</span>
+            LCD_ShowNum(30,170,pro,3,16);
+        }
+        LCD_ShowNum(30,170,100,3,16);                   <span class="cmt">// 补一个 100%</span>
+        LCD_ShowString(30,150,200,16,16,"Transimit Finished!");
+    }
+    i++;
+    delay_ms(10);
+    if(i==20)                                           <span class="cmt">// 200ms 翻转一次</span>
+    {
+        LED0=!LED0;                                     <span class="cmt">// 提示系统正在运行</span>
+        i=0;
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>内层 <code>while(1)</code> 是“忙等”而非阻塞式 HAL 发送，每圈只读一次 <code>NDTR</code> 和一个标志位，CPU 仍有富余。</li>
+                            <li>标志判断必须放在读 <code>NDTR</code> 之前：传输刚完成时 <code>NDTR</code> 已经是 0，若顺序反了会先显示 100% 再退出，时序上看不出差别，但语义不对。</li>
+                            <li><code>HAL_UART_DMAStop()</code> 会关闭 DMA 通道并清 <code>CR3.DMAT</code>，避免下一次 <code>MYDMA_USART_Transmit</code> 之前串口继续发请求。</li>
+                            <li><code>i</code> 是 <code>u16</code> 且每 20 次归零，所以 LED0 以约 200ms 周期闪烁，与 DMA 传输是否进行无关。</li>
+                            <li>KEY_Scan(0) 不支持连按：按住不放只会触发一次，避免连续启动 DMA 造成数据覆盖。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="交互演示：进度与指示灯">
+                    <h2>12　交互演示：进度与指示灯</h2>
+                    <div class="sec-sub">按源码分支复现一次 KEY0 传输，仅演示逻辑，不涉及真实硬件</div>
+
+                    <div class="sim">
+                        <div class="sim-title">KEY0 → MYDMA_USART_Transmit → 轮询 TCIF3_7</div>
+                        <div class="sim-buttons">
+                            <button data-act="key0">按一下 KEY0</button>
+                            <button data-act="tick">轮询一次</button>
+                            <button data-act="reset">复位</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="d37a"></span>LED0（每 20 次 i++ 翻转）</div>
+                            <div class="led-item"><span class="led-dot" id="d37b"></span>DMA 正在传输</div>
+                        </div>
+                        <div style="height:14px;background:#e6eff7;border-radius:7px;overflow:hidden;margin-bottom:10px;">
+                            <div id="bar37" style="height:14px;width:0%;background:#45B97C;transition:width .2s;"></div>
+                        </div>
+                        <div class="sim-log" id="log37">等待按键。LED0 灭，DMA 空闲。</div>
+                    </div>
+
+                    <div class="note">演示中的每一步都对应源码里的一行：启动对应 <code>MYDMA_USART_Transmit</code>，每次轮询对应内层 <code>while(1)</code> 的一圈，进度到 100% 对应 <code>TCIF3_7</code> 置位后 <code>break</code>。</div>
+
+                    <script>
+                    (function () {
+                        var pro = 0, running = false, i = 0, led0 = false;
+                        var bar = document.getElementById('bar37');
+                        var log = document.getElementById('log37');
+                        var dotA = document.getElementById('d37a');
+                        var dotB = document.getElementById('d37b');
+
+                        function render(msg) {
+                            bar.style.width = pro + '%';
+                            dotA.classList.toggle('on', led0);
+                            dotB.classList.toggle('on', running);
+                            if (msg) log.textContent = msg;
+                        }
+
+                        document.querySelectorAll('.sim-buttons button').forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                var act = btn.getAttribute('data-act');
+                                if (act === 'reset') {
+                                    pro = 0; running = false; i = 0; led0 = false;
+                                    render('已复位：NDTR = 7800，进度 0%，DMA 空闲。');
+                                    return;
+                                }
+                                if (act === 'key0') {
+                                    pro = 0; running = true; i = 0;
+                                    render('KEY0 按下：LCD 显示 Start Transimit....，HAL_DMA_Start 装载 7800 字节，CR3.DMAT = 1。');
+                                    return;
+                                }
+                                if (act === 'tick') {
+                                    if (!running) {
+                                        render('DMA 空闲：内层 while(1) 不会进入，直接 i++ 与 delay_ms(10)。');
+                                        return;
+                                    }
+                                    pro += 20;
+                                    if (pro >= 100) {
+                                        pro = 100; running = false;
+                                        render('NDTR = 0 → TCIF3_7 置位 → 清标志 → HAL_UART_DMAStop → 显示 100% 与 Transimit Finished!');
+                                    } else {
+                                        render('读 NDTR 得剩余 ' + (7800 - 7800 * pro / 100) + ' 字节，pro = ' + pro + '%，LCD 刷新。');
+                                    }
+                                    i++;
+                                    if (i % 5 === 0) { led0 = !led0; }
+                                    render(null);
+                                }
+                            });
+                        });
+
+                        render(null);
+                    })();
+                    </script>
+                </section>
+
+                <section class="content-card" id="s13" data-title="操作与现象对照">
+                    <h2>13　操作与现象对照</h2>
+                    <div class="sec-sub">调试时先看现象，再回代码定位，比盲猜快得多</div>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>可观察现象</th><th>对应代码</th></tr>
+                        <tr><td>上电复位</td><td>LCD 白屏后显示 “Apollo STM32F4/F7 / DMA TEST / KEY0:Start”</td><td><code>LCD_Init</code> 后的 5 条 <code>LCD_ShowString</code></td></tr>
+                        <tr><td>不按任何键</td><td>LED0 约 200ms 闪烁一次</td><td><code>i==20</code> → <code>LED0=!LED0</code></td></tr>
+                        <tr><td>按下 KEY0</td><td>屏上显示 Start Transimit....，百分数从 0 递增到 100</td><td>内层 <code>while(1)</code> 读 <code>NDTR</code></td></tr>
+                        <tr><td>按下 KEY0 后看串口助手</td><td>收到 7800 字节，正文与回车换行交替出现</td><td><code>SendBuff</code> 填充 + DMA 搬运</td></tr>
+                        <tr><td>传输结束</td><td>屏上显示 Transimit Finished!</td><td><code>HAL_UART_DMAStop</code> 后两条显示</td></tr>
+                        <tr><td>再按一次 KEY0</td><td>重复上述过程，进度重新从 0 开始</td><td><code>HAL_DMA_Start</code> 重新装载 <code>NDTR</code></td></tr>
+                    </table>
+
+                    <div class="note blue">如果屏上百分比一直是 0：先确认 <code>CR3.DMAT</code> 是否置位，再看 <code>DMA2_Stream7-&gt;NDTR</code> 有没有变化。NDTR 不动说明请求没进来，通常是通道号选错或串口没使能。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="关键逻辑复盘与排查">
+                    <h2>14　关键逻辑复盘与排查</h2>
+                    <div class="sec-sub">把散落在各节的结论收成一张检查表</div>
+
+                    <h3>链路一句话</h3>
+                    <p><strong>KEY0（PH3）→ KEY_Scan 返回 KEY0_PRES → MYDMA_USART_Transmit 装载地址与 7800 → CR3.DMAT 置位 → DMA2 Stream7 随 TXE 搬字节 → NDTR 递减 → 归零置 TCIF3_7 → 主循环清标志并 DMAStop</strong>。</p>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>优先怀疑</th><th>定位方法</th></tr>
+                        <tr><td>串口一个字节都没有</td><td>DMA 通道号错 / DMAT 未置位</td><td>看 <code>DMA2_Stream7-&gt;NDTR</code> 是否递减</td></tr>
+                        <tr><td>只收到前几个字节</td><td>数据宽度设成了半字/字</td><td>检查 <code>PDATAALIGN</code> 与 <code>MDATAALIGN</code></td></tr>
+                        <tr><td>收到乱码</td><td>缓冲区在栈上，或波特率不匹配</td><td>确认 <code>SendBuff</code> 为全局；示波器量 PA9</td></tr>
+                        <tr><td>进度停在某个值不动</td><td>DMA 被其他流抢占或发生传输错误</td><td>查 <code>TEIF</code>、<code>DMEIF</code> 标志</td></tr>
+                        <tr><td>第二次按键无反应</td><td><code>TCIF</code> 未清或未 <code>DMAStop</code></td><td>单步看 <code>__HAL_DMA_CLEAR_FLAG</code> 是否执行</td></tr>
+                        <tr><td>程序卡在 <code>while(1)</code> 不进主循环</td><td>时钟初始化失败</td><td>检查 HSE 是否起振，<code>Stm32_Clock_Init</code> 内三个 <code>while(1)</code></td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>本实验没有使用 DMA 中断，全部靠标志位轮询；若改成中断方式，需要在 <code>HAL_DMA_Init</code> 后调用 <code>HAL_NVIC_EnableIRQ(DMA2_Stream7_IRQn)</code> 并在 ISR 里处理 <code>XferCpltCallback</code>。</li>
+                            <li><code>HAL_UART_DMAStop</code> 与 <code>HAL_DMA_Abort</code> 不等价：前者同时清串口的 DMAT 位，后者只关流。</li>
+                            <li>传输期间不要改写 <code>SendBuff</code>，DMA 读到哪算哪，容易出现“前半段新数据、后半段旧数据”。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s15" data-title="总结">
+                    <h2>15　总结</h2>
+                    <div class="sec-sub">这个实验真正要带走的三件事</div>
+
+                    <p>第一，<strong>启动顺序有依赖</strong>：时钟 → 时基 → 串口 → 板级外设 → 本实验外设，任何一步提前都会引出难查的时序问题。第二，<strong>DMA 配置的四个要素</strong>是流、通道、方向与数据宽度，缺一不可，其中通道号由芯片的请求映射表固定。第三，<strong>HAL 的分层</strong>体现在 <code class="inline">HAL_UART_Init</code> 自动回调 <code class="inline">HAL_UART_MspInit</code>、<code class="inline">__HAL_LINKDMA</code> 把两个句柄绑在一起，理解这层关系后，HAL 库就不再是黑盒。</p>
+
+                    <div class="note">实验24 会把数据通道从“串口 + DMA”换成“软件模拟 IIC + EEPROM”，但启动顺序与时钟配置完全一致，可以对照着看。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-12 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

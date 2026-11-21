@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验58 网络通信实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验58 网络通信实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">网络起不来先分四层查：PHY 复位（P7）、RMII 时钟、IP 网段、协议回调。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">STM32F429 内置 MAC + 外置 LAN8720 PHY，跑 lwIP 1.4.1，做 TCP 服务器/客户端与 UDP 收发</div>
+
+                    <p>本实验把开发板接入以太网：STM32F429 的 MAC 通过 RMII 接口连接 LAN8720 PHY，PHY 再经网络变压器接到 RJ45。协议栈使用 lwIP 1.4.1 的裸机移植版（无操作系统），主循环里轮询 <code class="inline">lwip_periodic_handle()</code> 驱动定时任务。</p>
+
+                    <p>启动阶段的任务顺序与前面实验不同：<strong>时钟降到 180MHz</strong>（<code class="inline">Stm32_Clock_Init(360,25,2,8)</code>），并额外初始化 <code class="inline">TIM3</code> 产生 10ms 时基、<code class="inline">ADC</code>、<code class="inline">RTC</code> 和三个内存池。lwIP 本身不用 RTOS，但需要“毫秒时间”来算 ARP 老化、TCP 重传与 DHCP 超时，这个时间就来自 TIM3 中断累加的 <code class="inline">lwip_localtime</code>。</p>
+
+                    <table class="data">
+                        <tr><th>对比项</th><th>实验58 网络通信（本页）</th><th>实验57 USB 鼠标键盘</th><th>实验55 虚拟串口</th></tr>
+                        <tr><td>外设</td><td>ETH MAC + LAN8720（RMII）</td><td>OTG_FS Host + HID</td><td>OTG_FS Device + CDC</td></tr>
+                        <tr><td>主频</td><td>180MHz（360/25/2/8）</td><td>192MHz（384/25/2/8）</td><td>192MHz</td></tr>
+                        <tr><td>时基</td><td>TIM3 10ms → <code>lwip_localtime</code></td><td>USB 帧计数</td><td>USB 帧计数</td></tr>
+                        <tr><td>数据触发</td><td>ETH DMA 接收中断</td><td>OTG_FS 中断</td><td>OTG_FS 中断</td></tr>
+                        <tr><td>协议栈</td><td>lwIP 1.4.1 + FATFS 无关</td><td>USB Host 库</td><td>USB Device 库</td></tr>
+                    </table>
+
+                    <h3>引脚与板级资源</h3>
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚 / 参数</th><th>说明</th></tr>
+                        <tr><td>ETH_MDIO / MDC</td><td>PA2 / PC1，AF11</td><td>读写 PHY 寄存器（SMI 管理接口）</td></tr>
+                        <tr><td>RMII_REF_CLK</td><td>PA1</td><td>50MHz 参考时钟，由 PHY 或外部晶振提供</td></tr>
+                        <tr><td>RMII_CRS_DV</td><td>PA7</td><td>载波侦听 / 接收数据有效</td></tr>
+                        <tr><td>RMII_RXD0 / RXD1</td><td>PC4 / PC5</td><td>接收数据</td></tr>
+                        <tr><td>RMII_TX_EN</td><td>PB11</td><td>发送使能</td></tr>
+                        <tr><td>RMII_TXD0 / TXD1</td><td>PG13 / PG14</td><td>发送数据</td></tr>
+                        <tr><td>PHY 复位</td><td>PCF8574 P7（<code>ETH_RESET_IO=7</code>）</td><td>I2C 扩展 IO，软件拉高 100ms 再拉低</td></tr>
+                        <tr><td>按键</td><td>KEY0 / KEY1 / KEY2 / WK_UP</td><td>分别进入 TCP Server / TCP Client / UDP / 退出</td></tr>
+                        <tr><td>时基</td><td>TIM3，10ms</td><td>累加 <code>lwip_localtime</code>，供协议栈超时判断</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">180MHz 主频</span>
+                        <span class="chip">RMII + LAN8720</span>
+                        <span class="chip">lwIP 1.4.1 裸机</span>
+                        <span class="chip">DHCP 自动获取 IP</span>
+                        <span class="chip">TCP Server / Client</span>
+                        <span class="chip">UDP + WebServer</span>
+                    </div>
+
+                    <div class="note">LAN8720 的复位脚没有直接接 GPIO，而是挂在 PCF8574 的 P7 上。也就是说：<strong>I2C 没通，PHY 就复位不了</strong>，链路永远起不来。排查网络问题第一步应确认 <code>PCF8574_Init()</code> 是否成功、P7 是否真的翻转。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">HARDWARE 管 PHY 与定时器，LWIP 分成“内核 / 移植层 / 应用层”三块</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本页关注点</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化、<code>lwip_comm_init</code>、DHCP 等待、主循环</td><td><code>lwip_test_ui</code>、按键分派</td></tr>
+                        <tr><td><code>HARDWARE/LAN8720/lan8720.c</code></td><td>PHY 复位、<code>HAL_ETH_Init</code>、DMA 中断</td><td><code>ETH_IRQHandler</code>、<code>LAN8720_Init</code></td></tr>
+                        <tr><td><code>HARDWARE/TIMER/timer.c</code></td><td>TIM3 10ms 中断</td><td><code>lwip_localtime += 10</code></td></tr>
+                        <tr><td><code>LWIP/arch/sys_arch.c</code></td><td>裸机“系统层”</td><td>空实现，屏蔽 OS 依赖</td></tr>
+                        <tr><td><code>LWIP/lwip-1.4.1/src/netif/ethernetif.c</code></td><td>网卡驱动适配层</td><td><code>low_level_input/output</code></td></tr>
+                        <tr><td><code>LWIP/lwip_app/lwip_comm/lwip_comm.c</code></td><td>协议栈启动与周期任务</td><td><code>lwip_comm_init</code>、DHCP 状态机</td></tr>
+                        <tr><td><code>lwip_app/tcp_server_demo</code></td><td>TCP 服务器</td><td><code>tcp_accept/recv/sent/poll</code></td></tr>
+                        <tr><td><code>lwip_app/tcp_client_demo</code></td><td>TCP 客户端</td><td><code>tcp_connect</code> 与断线重连</td></tr>
+                        <tr><td><code>lwip_app/udp_demo</code></td><td>UDP 收发</td><td><code>udp_recv</code> 回调</td></tr>
+                        <tr><td><code>lwip_app/web_server_demo</code></td><td>HTTP 服务器</td><td><code>httpd_init()</code>、fsdata</td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>栈堆、向量表</td><td><code>ETH_IRQHandler</code> 弱符号</td></tr>
+                    </table>
+
+                    <div class="note blue">读代码顺序建议：<code>main</code>（谁先谁后）→ <code>LAN8720_Init</code>（MAC/PHY 怎么起）→ <code>lwip_comm_init</code>（netif 怎么挂）→ <code>ethernetif.c</code>（收发怎么走 DMA）→ <code>ETH_IRQHandler</code>（数据怎么进协议栈）→ 三个 demo（回调怎么注册）。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">上电到能收发报文共五段：基础外设 → 内存池 → PHY 与协议栈 → DHCP → 应用</div>
+
+                    <figure class="figure">
+                        <img src="./index72-map/boot-flow.png" alt="STM32F429 网络通信实验从上电到主循环的启动流程图">
+                        <figcaption>图 3-1　启动链路总览：复位 → 时钟/时基 → 外设 → 内存池 → lwip_comm_init → DHCP → httpd_init → 主循环</figcaption>
+                    </figure>
+
+                    <pre class="code">int main(void)
+{
+    u8 t;
+	u8 key;
+    HAL_Init();                     <span class="cmt">// 初始化HAL库</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// 设置时钟,180Mhz（不是192M！）</span>
+    delay_init(180);                <span class="cmt">// 初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">// 初始化USART</span>
+    LED_Init();                     <span class="cmt">// 初始化LED</span>
+    KEY_Init();                     <span class="cmt">// 初始化按键</span>
+    SDRAM_Init();                   <span class="cmt">// 初始化SDRAM</span>
+    LCD_Init();                     <span class="cmt">// 初始化LCD</span>
+    PCF8574_Init();                 <span class="cmt">// 初始化PCF8574（P7 复位 PHY）</span>
+    MY_ADC_Init();                  <span class="cmt">// 初始化ADC</span>
+    RTC_Init();                     <span class="cmt">// 初始化RTC</span>
+    TIM3_Init(1000-1,900-1);        <span class="cmt">// 10ms 时基：90M/900=100K，1000 计数=10ms</span>
+    my_mem_init(SRAMIN);		    <span class="cmt">// 内部内存池</span>
+	my_mem_init(SRAMEX);		    <span class="cmt">// 外部内存池</span>
+	my_mem_init(SRAMCCM);		    <span class="cmt">// CCM 内存池</span>
+   	POINT_COLOR=RED;
+	LED0=0;
+	lwip_test_ui(1);			    <span class="cmt">// 加载前半部分 UI</span>
+    LCD_ShowString(30,110,200,16,16,"lwIP Initing...");
+	while(lwip_comm_init())         <span class="cmt">// 失败就重试，不往下走</span>
+	{
+		LCD_ShowString(30,110,200,20,16,"LWIP Init Falied! ");
+		delay_ms(500);
+		LCD_ShowString(30,110,200,16,16,"Retrying...       ");
+        delay_ms(500);
+	}
+	LCD_ShowString(30,110,200,20,16,"LWIP Init Success!");
+ 	LCD_ShowString(30,130,200,16,16,"DHCP IP configing...");
+#if LWIP_DHCP
+	while((lwipdev.dhcpstatus!=2)&&(lwipdev.dhcpstatus!=0XFF))<span class="cmt">// 等成功或超时</span>
+	{
+		lwip_periodic_handle();	<span class="cmt">// 内核需要定时驱动</span>
+	}
+#endif
+    lwip_test_ui(2);		<span class="cmt">// 加载后半部分 UI（显示 IP/速率）</span>
+	httpd_init();	        <span class="cmt">// HTTP 服务器</span>
+	while(1)
+	{
+		key=KEY_Scan(0);
+		switch(key)
+		{
+			case KEY0_PRES: tcp_server_test(); lwip_test_ui(3); break;
+			case KEY1_PRES: tcp_client_test(); lwip_test_ui(3); break;
+			case KEY2_PRES: udp_demo_test();   lwip_test_ui(3); break;
+		}
+		lwip_periodic_handle();	<span class="cmt">// ARP 老化 / TCP 重传 / DHCP 计时</span>
+		delay_ms(2);
+		t++;
+		if(t==100)LCD_ShowString(30,230,200,16,16,"Please choose a mode!");
+		if(t==200){ t=0; LED0=!LED0; }<span class="cmt">// 心跳灯</span>
+	}
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>180MHz 而不是 192MHz</strong>：本工程用 <code>(360,25,2,8)</code>，SYSCLK=180MHz，PLLQ=8 仍给出 48MHz 无关项；<code>delay_init(180)</code> 必须跟着改，否则延时全部偏长。</li>
+                            <li><strong>TIM3 必须在协议栈之前启动</strong>：<code>lwip_localtime</code> 靠在 TIM3 回调里累加，若在 <code>lwip_comm_init</code> 之后才开，会出现“时间为 0”导致 DHCP 计时异常。</li>
+                            <li><strong>三个内存池缺一不可</strong>：lwIP 的 <code>memp_memory</code> 与 <code>ram_heap</code> 通过 <code>mymalloc(SRAMIN,...)</code> 申请，<code>my_mem_init</code> 没调用就会分配失败，<code>lwip_comm_init</code> 直接返回 2。</li>
+                            <li><strong><code>while(lwip_comm_init())</code> 是死等</strong>：PHY 没接网线也能初始化成功，但 LAN8720 自协商失败会返回 3；此时不会继续往下，LCD 一直显示 Retrying。</li>
+                            <li><strong>DHCP 等待期间必须喂内核</strong>：<code>lwip_periodic_handle()</code> 里跑 <code>dhcp_fine_tmr()</code>，不调用的话 DHCP 报文永远不会重发，状态一直停在 1。</li>
+                            <li><strong><code>lwip_test_ui(3)</code> 是 bit0|bit1</strong>：从 demo 返回后前后两半 UI 都要重画，IP 与速率才不会被残留文字覆盖。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">栈 1KB、堆 512B；ETH 与 TIM3 的中断入口都在启动文件里以弱符号占位</div>
+
+                    <pre class="code">Stack_Size      EQU     0x400;                <span class="cmt">; 1KB 栈</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp                                  <span class="cmt">; 向量表第 0 项：初始 MSP</span>
+
+Heap_Size       EQU     0x200;                <span class="cmt">; 512B 堆</span>
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0                    <span class="cmt">; SystemInit：FPU / RCC / VTOR</span>
+                 LDR     R0, =__main
+                 BX      R0                    <span class="cmt">; C 库启动 → main</span>
+                 ENDP
+
+                DCD     ETH_IRQHandler        ; Ethernet
+                EXPORT  ETH_IRQHandler        [WEAK] <span class="cmt">; lan8720.c 里的强符号覆盖它</span>
+ETH_IRQHandler
+                B       .
+
+                DCD     TIM3_IRQHandler       ; TIM3
+                EXPORT  TIM3_IRQHandler       [WEAK] <span class="cmt">; timer.c 里的强符号覆盖它</span>
+TIM3_IRQHandler
+                B       .</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>lwIP 的静态内存不在栈上</strong>：<code>memp_memory</code>、<code>ram_heap</code>、<code>Rx_Buff</code>、<code>Tx_Buff</code> 全部由 <code>mymalloc</code> 从内部 SRAM 池里切出来，因此 1KB 栈够用；真正吃内存的是几十 KB 的协议栈缓冲。</li>
+                            <li><strong>中断嵌套深度要留余量</strong>：<code>ETH_IRQHandler</code> 里会调 <code>ethernetif_input</code>、<code>ip_input</code>、<code>tcp_input</code>，调用链很深，栈主要被这条路径消耗。</li>
+                            <li><strong>弱符号占位是标准做法</strong>：启动文件只提供死循环，驱动里定义同名函数即可替换；反过来若忘记在工程里加入 <code>lan8720.c</code>，现象就是“一收包就卡死”。</li>
+                            <li><strong>向量表偏移未改</strong>：<code>SCB-&gt;VTOR = 0x08000000</code>；若以后做 IAP 或从外部 SDRAM 启动，必须同步改偏移，否则中断会跳到旧固件。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">FPU、RCC 复位、分组 2、1ms 时基，与 USB 系列实验完全一致</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));<span class="cmt">/* 放开 CP10/CP11 */</span>
+  #endif
+  RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="cmt">/* HSI 开 */</span>
+  RCC-&gt;CFGR = 0x00000000;               <span class="cmt">/* 时钟源回 HSI */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="cmt">/* 关 HSEON/CSSON/PLLON */</span>
+  RCC-&gt;PLLCFGR = 0x24003010;            <span class="cmt">/* PLL 复位值 */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;      <span class="cmt">/* 清 HSEBYP */</span>
+  RCC-&gt;CIR = 0x00000000;                <span class="cmt">/* 关 RCC 中断 */</span>
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;
+}</pre>
+
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+   __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
+   __HAL_FLASH_DATA_CACHE_ENABLE();
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);<span class="cmt">// 2 位抢占 + 2 位子优先级</span>
+  HAL_InitTick(TICK_INT_PRIORITY);        <span class="cmt">// 0x0F，1ms</span>
+  HAL_MspInit();
+  return HAL_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>Cache 打开后 DMA 描述符必须是普通内存</strong>：本工程把描述符放在内部 SRAM 且由 <code>mymalloc</code> 分配，未使用带 cache 属性的区域；如果改到 SDRAM 并开 cache，收发前必须手动 clean/invalidate。</li>
+                            <li><strong>分组 2 决定了 ETH 的抢占关系</strong>：<code>ETH_IRQn</code> 配 <code>(1,0)</code>、<code>TIM3_IRQn</code> 配 <code>(1,1)</code>，两者抢占级相同，ETH 子优先级更高，收包能先于时基处理。</li>
+                            <li><strong>HAL 的 1ms 时基只服务 HAL</strong>：协议栈使用的是 <code>lwip_localtime</code>（TIM3 累加），两者互不相干，所以改 <code>HAL_InitTick</code> 不影响 lwIP 超时。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟树与 TIM3 时基">
+                    <h2>06　时钟树与 TIM3 时基</h2>
+                    <div class="sec-sub">180MHz 主频，APB1 定时器时钟 90MHz；10ms 中断累加出协议栈的“毫秒时间”</div>
+
+                    <pre class="code">void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq)
+{
+    RCC_OscInitTypeDef RCC_OscInitStructure;
+    RCC_ClkInitTypeDef RCC_ClkInitStructure;
+
+    __HAL_RCC_PWR_CLK_ENABLE();
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);<span class="cmt">// Scale1</span>
+
+    RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE;
+    RCC_OscInitStructure.HSEState=RCC_HSE_ON;                    <span class="cmt">// 25MHz 晶振</span>
+    RCC_OscInitStructure.PLL.PLLState=RCC_PLL_ON;
+    RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;
+    RCC_OscInitStructure.PLL.PLLM=pllm;   <span class="cmt">// 25 → 1MHz</span>
+    RCC_OscInitStructure.PLL.PLLN=plln;   <span class="cmt">// 360 → VCO 360MHz</span>
+    RCC_OscInitStructure.PLL.PLLP=pllp;   <span class="cmt">// /2 → 180MHz</span>
+    RCC_OscInitStructure.PLL.PLLQ=pllq;   <span class="cmt">// /8 → 45MHz（本实验不用 USB）</span>
+    HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+
+    RCC_ClkInitStructure.ClockType=(RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2);
+    RCC_ClkInitStructure.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;
+    RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;   <span class="cmt">// PCLK1=45MHz → TIM3 90MHz</span>
+    RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;   <span class="cmt">// PCLK2=90MHz</span>
+    HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5);<span class="cmt">// 5WS</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>节点</th><th>算式</th><th>结果</th><th>本实验用途</th></tr>
+                        <tr><td>VCO</td><td>25MHz/25 × 360</td><td>360MHz</td><td>P/P/Q 分频源</td></tr>
+                        <tr><td>SYSCLK</td><td>360 / 2</td><td>180MHz</td><td>内核、内存、ETH</td></tr>
+                        <tr><td>PCLK1</td><td>180 / 4</td><td>45MHz</td><td>TIM3 计数时钟 90MHz</td></tr>
+                        <tr><td>PCLK2</td><td>180 / 2</td><td>90MHz</td><td>USART1（115200）</td></tr>
+                        <tr><td>TIM3</td><td>90MHz / 900 / 1000</td><td>10ms</td><td><code>lwip_localtime += 10</code></td></tr>
+                    </table>
+
+                    <pre class="code">void TIM3_Init(u16 arr,u16 psc)
+{
+    TIM3_Handler.Instance=TIM3;
+    TIM3_Handler.Init.Prescaler=psc;                     <span class="cmt">// 900-1 → 100kHz</span>
+    TIM3_Handler.Init.CounterMode=TIM_COUNTERMODE_UP;    <span class="cmt">// 向上计数</span>
+    TIM3_Handler.Init.Period=arr;                        <span class="cmt">// 1000-1 → 10ms</span>
+    TIM3_Handler.Init.ClockDivision=TIM_CLOCKDIVISION_DIV1;
+    HAL_TIM_Base_Init(&amp;TIM3_Handler);
+    HAL_TIM_Base_Start_IT(&amp;TIM3_Handler);                <span class="cmt">// 开更新中断</span>
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if(htim==(&amp;TIM3_Handler))
+    {
+        lwip_localtime +=10; <span class="cmt">// 每 10ms 加 10，得到毫秒时间</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>APB1 分频会翻倍给定时器</strong>：APB1=45MHz 时，定时器时钟自动 ×2 得到 90MHz。所以 900 分频后是 100kHz，1000 个计数正好 10ms，与 <code>main</code> 注释一致。</li>
+                            <li><strong><code>lwip_localtime</code> 是“软件毫秒”</strong>：它不是 RTC 时间，也不是 SysTick，只在 TIM3 中断里累加；主频改了但 <code>TIM3_Init</code> 参数没跟着改，所有 TCP/DHCP 超时都会成比例失真。</li>
+                            <li><strong>初始值为 0 会带来首包超时</strong>：<code>lwip_periodic_handle</code> 用 <code>lwip_localtime - DHCPfineTimer &gt;= 500</code> 判断，前 500ms 内不会跑 DHCP 精细定时器，这是正常的启动延迟。</li>
+                            <li><strong>回调里只做加法</strong>：10ms 中断频率不低，回调里不打印、不延时、不刷屏，避免拖慢中断与 ETH 收包。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="LAN8720 PHY 初始化">
+                    <h2>07　LAN8720 PHY 初始化</h2>
+                    <div class="sec-sub">先硬复位 PHY，再配 MAC 的 RMII/中断/硬件校验，最后交给 HAL 启动</div>
+
+                    <figure class="figure">
+                        <img src="./index72-map/eth-init-flow.png" alt="以太网初始化链路图：ETH 时钟与 GPIO 复用、PCF8574 复位 LAN8720、HAL_ETH_Init、DMA 描述符与启动">
+                        <figcaption>图 7-1　以太网初始化链路：GPIO 复用 → PHY 复位 → HAL_ETH_Init → 描述符 → HAL_ETH_Start</figcaption>
+                    </figure>
+
+                    <pre class="code">u8 LAN8720_Init(void)
+{
+    u8 macaddress[6];
+
+    INTX_DISABLE();                         <span class="cmt">// 关中断：复位过程不能被打断</span>
+    PCF8574_WriteBit(ETH_RESET_IO,1);       <span class="cmt">// P7 拉高</span>
+    delay_ms(100);
+    PCF8574_WriteBit(ETH_RESET_IO,0);       <span class="cmt">// 拉低 = 释放复位</span>
+    delay_ms(100);
+    INTX_ENABLE();
+
+    macaddress[0]=lwipdev.mac[0];  ...  macaddress[5]=lwipdev.mac[5];
+
+	ETH_Handler.Instance=ETH;
+    ETH_Handler.Init.AutoNegotiation=ETH_AUTONEGOTIATION_ENABLE;<span class="cmt">// 自协商</span>
+    ETH_Handler.Init.Speed=ETH_SPEED_100M;<span class="cmt">// 自协商时此项无效</span>
+    ETH_Handler.Init.DuplexMode=ETH_MODE_FULLDUPLEX;<span class="cmt">// 自协商时此项无效</span>
+    ETH_Handler.Init.PhyAddress=LAN8720_PHY_ADDRESS;<span class="cmt">// PHY 的 SMI 地址</span>
+    ETH_Handler.Init.MACAddr=macaddress;
+    ETH_Handler.Init.RxMode=ETH_RXINTERRUPT_MODE;<span class="cmt">// 中断方式收包</span>
+    ETH_Handler.Init.ChecksumMode=ETH_CHECKSUM_BY_HARDWARE;<span class="cmt">// 硬件校验和</span>
+    ETH_Handler.Init.MediaInterface=ETH_MEDIA_INTERFACE_RMII;<span class="cmt">// RMII</span>
+    if(HAL_ETH_Init(&amp;ETH_Handler)==HAL_OK) return 0;
+    else return 1;
+}</pre>
+
+                    <pre class="code">void HAL_ETH_MspInit(ETH_HandleTypeDef *heth)
+{
+    __HAL_RCC_ETH_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE(); __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE(); __HAL_RCC_GPIOG_CLK_ENABLE();
+
+    GPIO_Initure.Pin=GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_7; <span class="cmt">// PA1/PA2/PA7</span>
+    GPIO_Initure.Mode=GPIO_MODE_AF_PP;
+    GPIO_Initure.Pull=GPIO_NOPULL;
+    GPIO_Initure.Speed=GPIO_SPEED_HIGH;
+    GPIO_Initure.Alternate=GPIO_AF11_ETH;   <span class="cmt">// 复用为 ETH</span>
+    HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+
+    GPIO_Initure.Pin=GPIO_PIN_11;           <span class="cmt">// PB11 TX_EN</span>
+    HAL_GPIO_Init(GPIOB,&amp;GPIO_Initure);
+    GPIO_Initure.Pin=GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5;<span class="cmt">// PC1/4/5</span>
+    HAL_GPIO_Init(GPIOC,&amp;GPIO_Initure);
+    GPIO_Initure.Pin=GPIO_PIN_13|GPIO_PIN_14;<span class="cmt">// PG13/14</span>
+    HAL_GPIO_Init(GPIOG,&amp;GPIO_Initure);
+
+    HAL_NVIC_SetPriority(ETH_IRQn,1,0);     <span class="cmt">// 网络中断优先级要高</span>
+    HAL_NVIC_EnableIRQ(ETH_IRQn);
+}</pre>
+
+                    <pre class="code">u8 LAN8720_Get_Speed(void)
+{
+	u8 speed;
+	speed=((LAN8720_ReadPHY(31)&amp;0x1C)&gt;&gt;2); <span class="cmt">// 读 31 号特殊寄存器</span>
+	return speed;                            <span class="cmt">// 001/101=10M，010/110=100M</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>先复位再配置</strong>：LAN8720 上电后寄存器状态不确定，必须先经 PCF8574 的 P7 打一个复位脉冲；更高明的做法是复位后读 PHY ID（寄存器 2/3），本工程靠 <code>HAL_ETH_Init</code> 的返回值兜底。</li>
+                            <li><strong>复位期间关中断</strong>：<code>INTX_DISABLE()</code> 避免 I2C 时序被 ETH 或 TIM3 打断；PCF8574 是模拟 I2C，时序被打断就可能写错位。</li>
+                            <li><strong>自协商开启时 Speed/Duplex 无效</strong>：这两个字段只在强制模式生效；实际速率由 PHY 与交换机协商，代码里通过 <code>LAN8720_Get_Speed()</code> 事后读取。</li>
+                            <li><strong>RMII 必须 50MHz 参考时钟</strong>：PA1 上的 REF_CLK 由 PHY 的 25MHz 晶振倍频或外部有源晶振提供，缺这个时钟连 <code>HAL_ETH_Init</code> 都可能超时。</li>
+                            <li><strong>硬件校验和是省 CPU 的关键</strong>：<code>ETH_CHECKSUM_BY_HARDWARE</code> 让 MAC 自动算 IP/TCP/UDP 校验和，lwIP 侧相应配置 <code>CHECKSUM_BY_HARDWARE</code>，否则每包都要软件遍历。</li>
+                            <li><strong><code>ETH_IRQn</code> 配 (1,0)</strong>：这是“较高但不最高”的优先级，保证收包及时，同时不打断 SysTick 与 USB 之类更高优先级任务。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="lwIP 协议栈与网卡适配层">
+                    <h2>08　lwIP 协议栈与网卡适配层</h2>
+                    <div class="sec-sub">ethernetif.c 是“协议栈”和“DMA 硬件”之间唯一的桥：收包组 pbuf，发包拆 pbuf</div>
+
+                    <figure class="figure">
+                        <img src="./index72-map/lwip-arch.png" alt="lwIP 协议栈分层与数据流：应用层、传输层、网络层、链路层、物理层及 RMII 信号">
+                        <figcaption>图 8-1　lwIP 分层与数据流：应用回调 → TCP/UDP → IP/ARP/DHCP → netif → MAC + LAN8720</figcaption>
+                    </figure>
+
+                    <pre class="code">static err_t low_level_init(struct netif *netif)
+{
+	netif-&gt;hwaddr_len = ETHARP_HWADDR_LEN; <span class="cmt">// MAC 长度 6</span>
+	netif-&gt;hwaddr[0]=lwipdev.mac[0]; ... netif-&gt;hwaddr[5]=lwipdev.mac[5];
+	netif-&gt;mtu=1500; <span class="cmt">// 最大传输单元</span>
+	netif-&gt;flags = NETIF_FLAG_BROADCAST|NETIF_FLAG_ETHARP|NETIF_FLAG_LINK_UP;
+
+    HAL_ETH_DMATxDescListInit(&amp;ETH_Handler,DMATxDscrTab,Tx_Buff,ETH_TXBUFNB);<span class="cmt">// 发送描述符</span>
+    HAL_ETH_DMARxDescListInit(&amp;ETH_Handler,DMARxDscrTab,Rx_Buff,ETH_RXBUFNB);<span class="cmt">// 接收描述符</span>
+	HAL_ETH_Start(&amp;ETH_Handler); <span class="cmt">// 开 MAC 和 DMA</span>
+	return ERR_OK;
+}
+
+err_t ethernetif_init(struct netif *netif)
+{
+	netif-&gt;name[0]=IFNAME0;
+	netif-&gt;name[1]=IFNAME1;
+	netif-&gt;output=etharp_output;        <span class="cmt">// IP 层发包入口</span>
+	netif-&gt;linkoutput=low_level_output; <span class="cmt">// ARP 层发包入口</span>
+	low_level_init(netif);
+	return ERR_OK;
+}</pre>
+
+                    <pre class="code">err_t ethernetif_input(struct netif *netif)
+{
+	err_t err;
+	struct pbuf *p;
+	p=low_level_input(netif);   <span class="cmt">// DMA 缓冲 → pbuf</span>
+	if(p==NULL) return ERR_MEM;
+	err=netif-&gt;input(p, netif); <span class="cmt">// 交给 IP 层（ethernet_input）</span>
+	if(err!=ERR_OK)
+	{
+		pbuf_free(p); p = NULL;
+	}
+	return err;
+}
+
+static struct pbuf * low_level_input(struct netif *netif)
+{
+	if(HAL_ETH_GetReceivedFrame(&amp;ETH_Handler)!=HAL_OK) return NULL;
+	len=ETH_Handler.RxFrameInfos.length;
+	buffer=(uint8_t *)ETH_Handler.RxFrameInfos.buffer;
+	if(len&gt;0) p=pbuf_alloc(PBUF_RAW,len,PBUF_POOL); <span class="cmt">// 从池里取 pbuf</span>
+	... <span class="cmt">// 逐段 memcpy 到 pbuf 链</span>
+	for(i=0;i&lt;ETH_Handler.RxFrameInfos.SegCount; i++)
+	{
+		dmarxdesc-&gt;Status|=ETH_DMARXDESC_OWN;<span class="cmt">// 描述符归还 DMA</span>
+		dmarxdesc=(ETH_DMADescTypeDef *)(dmarxdesc-&gt;Buffer2NextDescAddr);
+	}
+	ETH_Handler.RxFrameInfos.SegCount =0;
+	if((ETH_Handler.Instance-&gt;DMASR&amp;ETH_DMASR_RBUS)!=(uint32_t)RESET)
+	{
+		ETH_Handler.Instance-&gt;DMASR = ETH_DMASR_RBUS;
+		ETH_Handler.Instance-&gt;DMARPDR=0; <span class="cmt">// 唤醒挂起的 RxDMA</span>
+	}
+	return p;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong><code>output</code> 与 <code>linkoutput</code> 分工不同</strong>：IP 报文先交给 <code>etharp_output</code>，由它查 ARP 表得到目的 MAC，再调 <code>linkoutput</code> 真正搬数据；直接调 <code>low_level_output</code> 会缺 MAC 头。</li>
+                            <li><strong>pbuf 是“链”不是“块”</strong>：一个以太帧可能被拆成多个 pbuf，<code>low_level_output</code> 用 <code>for(q=p;q!=NULL;q=q-&gt;next)</code> 逐段拷贝，跨缓冲时还要换下一个发送描述符。</li>
+                            <li><strong>OWN 位是描述符归属</strong>：OWN=1 表示 DMA 拥有，CPU 不能碰；收完后软件必须把 OWN 重新置 1，否则 DMA 再收到包也没有空描述符可用。</li>
+                            <li><strong>RBUS/TUS 是 DMA 挂起</strong>：接收缓冲不可用（RBUS）或发送下溢（TUS）都会让 DMA 停摆，代码通过写 <code>DMARPDR/DMATPDR</code> 任意值唤醒，这是 ST 手册要求的恢复动作。</li>
+                            <li><strong><code>mtu=1500</code> 与 pbuf 池大小要匹配</strong>：池子太小会在 <code>pbuf_alloc</code> 返回 NULL，表现为大包（如网页）打不开而 ping 正常。</li>
+                            <li><strong>LINK_UP 是写死的</strong>：本工程没有链路状态回调，网线拔掉也仍标记 LINK_UP；若要做插拔检测，应读 PHY 的 BMSR 寄存器并在 <code>netif_set_link_down</code> 中清标志。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="lwIP 初始化与 DHCP">
+                    <h2>09　lwIP 初始化与 DHCP</h2>
+                    <div class="sec-sub">内存池 → 默认 IP/MAC → PHY 重试 5 次 → netif_add → dhcp_start，状态机在主循环里推进</div>
+
+                    <figure class="figure">
+                        <img src="./index72-map/lwip-dhcp-timing.png" alt="lwIP 启动时 10ms 时基与 DHCP DISCOVER/OFFER/REQUEST/ACK 交互时序图">
+                        <figcaption>图 9-1　DHCP 交互时序：10ms 时基驱动 lwip_periodic_handle，DISCOVER→OFFER→REQUEST→ACK 后状态置 2</figcaption>
+                    </figure>
+
+                    <pre class="code">u8 lwip_comm_init(void)
+{
+    u8 retry=0;
+	struct netif *Netif_Init_Flag;
+	struct ip_addr ipaddr, netmask, gw;
+
+	if(ETH_Mem_Malloc())return 1;		<span class="cmt">// DMA 描述符/缓冲申请失败</span>
+	if(lwip_comm_mem_malloc())return 2;	<span class="cmt">// memp/ram_heap 申请失败</span>
+    lwip_comm_default_ip_set(&amp;lwipdev);	<span class="cmt">// MAC + 默认静态 IP</span>
+    while(LAN8720_Init())		        <span class="cmt">// PHY 初始化，最多重试 5 次</span>
+    {
+        retry++;
+        if(retry&gt;5) {retry=0;return 3;}
+    }
+	lwip_init();						<span class="cmt">// 协议栈内核初始化</span>
+
+#if LWIP_DHCP
+	ipaddr.addr = 0; netmask.addr = 0; gw.addr = 0; <span class="cmt">// 全 0：等 DHCP 分配</span>
+#else
+	IP4_ADDR(&amp;ipaddr,lwipdev.ip[0],lwipdev.ip[1],lwipdev.ip[2],lwipdev.ip[3]);
+	...
+#endif
+	Netif_Init_Flag=netif_add(&amp;lwip_netif,&amp;ipaddr,&amp;netmask,&amp;gw,NULL,
+	                          &amp;ethernetif_init,&amp;ethernet_input);<span class="cmt">// 挂网卡</span>
+#if LWIP_DHCP
+	lwipdev.dhcpstatus=0;
+	dhcp_start(&amp;lwip_netif);	<span class="cmt">// 启动 DHCP 客户端</span>
+#endif
+	if(Netif_Init_Flag==NULL)return 4;	<span class="cmt">// 网卡添加失败</span>
+	netif_set_default(&amp;lwip_netif); <span class="cmt">// 默认网口</span>
+	netif_set_up(&amp;lwip_netif);      <span class="cmt">// 打开网口</span>
+	return 0;
+}</pre>
+
+                    <pre class="code">void lwip_periodic_handle(void)
+{
+    sys_check_timeouts();	<span class="cmt">// TCP/ARP/IP 定时任务</span>
+#if LWIP_DHCP
+  if (lwip_localtime - DHCPfineTimer &gt;= DHCP_FINE_TIMER_MSECS)<span class="cmt">// 500ms</span>
+  {
+    DHCPfineTimer =  lwip_localtime;
+    dhcp_fine_tmr();
+    if ((lwipdev.dhcpstatus != 2)&amp;&amp;(lwipdev.dhcpstatus != 0XFF))
+    { 
+      lwip_dhcp_process_handle();	<span class="cmt">// 应用层 DHCP 状态机</span>
+    }
+  }
+  if (lwip_localtime - DHCPcoarseTimer &gt;= DHCP_COARSE_TIMER_MSECS)<span class="cmt">// 60s</span>
+  {
+    DHCPcoarseTimer =  lwip_localtime;
+    dhcp_coarse_tmr();
+  }  
+#endif
+}
+
+void lwip_dhcp_process_handle(void)
+{
+	switch(lwipdev.dhcpstatus)
+	{
+		case 0: dhcp_start(&amp;lwip_netif);
+		        lwipdev.dhcpstatus = 1; <span class="cmt">// 等待分配</span>
+		        break;
+		case 1:
+			ip=lwip_netif.ip_addr.addr;
+			if(ip!=0) { lwipdev.dhcpstatus=2; <span class="cmt">// 成功</span>
+			           lwipdev.ip[3]=(uint8_t)(ip&gt;&gt;24); ... }
+			else if(lwip_netif.dhcp-&gt;tries&gt;LWIP_MAX_DHCP_TRIES)<span class="cmt">// 4 次</span>
+			{ lwipdev.dhcpstatus=0XFF; <span class="cmt">// 超时，回退静态 IP</span>
+			  IP4_ADDR(&amp;(lwip_netif.ip_addr),lwipdev.ip[0],...); }
+			break;
+	}
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>MAC 来自芯片唯一 ID</strong>：<code>sn0=*(vu32*)(0x1FFF7A10)</code>，前三字节固定 <code>2.0.0</code>（本地管理地址），后三字节取 UID 低 24 位，保证多板同网段不冲突。</li>
+                            <li><strong>返回值是排错地图</strong>：1=ETH 缓冲申请失败，2=lwIP 堆申请失败，3=PHY 初始化失败，4=netif_add 失败；看到重试界面时应先看串口/调试器里的返回值。</li>
+                            <li><strong>DHCP 时 ipaddr 必须全 0</strong>：lwIP 用 0.0.0.0 表示“尚未分配”，若沿用静态 IP，DHCP 会认为地址已配置而不再请求。</li>
+                            <li><strong>DHCP 精细 500ms、粗糙 60s</strong>：精细定时器负责重发 DISCOVER/REQUEST，粗糙定时器负责租期续约；两者都依赖 <code>lwip_localtime</code>。</li>
+                            <li><strong>字节序要反过来读</strong>：<code>ip.addr</code> 是网络字节序，<code>ip&gt;&gt;24</code> 才是第一个点分十进制数，代码里 <code>ip[3]=(ip&gt;&gt;24)</code> 正是这个原因，写反会显示成 30.1.168.192。</li>
+                            <li><strong>超时回退静态 IP</strong>：<code>tries&gt;4</code> 后置 0xFF 并把 <code>lwip_netif</code> 的地址改成静态值，这样没 DHCP 服务器也能继续做 TCP/UDP 实验。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="以太网中断链路">
+                    <h2>10　以太网中断链路</h2>
+                    <div class="sec-sub">ETH 中断里直接把整帧喂给 lwIP；中断服务程序必须尽量短、且只清必要标志</div>
+
+                    <figure class="figure">
+                        <img src="./index72-map/eth-irq-chain.png" alt="以太网 DMA 接收中断到 lwIP 协议栈与 TCP/UDP 回调的中断链路图">
+                        <figcaption>图 10-1　收包链路：DMA 中断 → ETH_IRQHandler → ethernetif_input → ip/tcp_input → 应用回调</figcaption>
+                    </figure>
+
+                    <pre class="code">void ETH_IRQHandler(void)
+{
+    while(ETH_GetRxPktSize(ETH_Handler.RxDesc))   <span class="cmt">// 还有待处理帧</span>
+    {
+        lwip_pkt_handle();<span class="cmt">// 交给 LWIP（ethernetif_input）</span>
+    }
+    __HAL_ETH_DMA_CLEAR_IT(&amp;ETH_Handler,ETH_DMA_IT_NIS);<span class="cmt">// 清 DMA 中断</span>
+    __HAL_ETH_DMA_CLEAR_IT(&amp;ETH_Handler,ETH_DMA_IT_R);  <span class="cmt">// 清接收中断</span>
+}
+
+u32 ETH_GetRxPktSize(ETH_DMADescTypeDef *DMARxDesc)
+{
+    u32 frameLength = 0;
+    if(((DMARxDesc-&gt;Status&amp;ETH_DMARXDESC_OWN)==(uint32_t)RESET) &amp;&amp;<span class="cmt">// CPU 拥有</span>
+     ((DMARxDesc-&gt;Status&amp;ETH_DMARXDESC_ES)==(uint32_t)RESET) &amp;&amp;<span class="cmt">// 无错误</span>
+     ((DMARxDesc-&gt;Status&amp;ETH_DMARXDESC_LS)!=(uint32_t)RESET))     <span class="cmt">// 最后一帧</span>
+    {
+        frameLength=((DMARxDesc-&gt;Status&amp;ETH_DMARXDESC_FL)&gt;&gt;ETH_DMARXDESC_FRAME_LENGTHSHIFT);
+    }
+    return frameLength;
+}
+
+void lwip_pkt_handle(void)
+{
+  ethernetif_input(&amp;lwip_netif); <span class="cmt">// 组 pbuf → netif->input</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>触发源</th><th>判断</th><th>NVIC</th><th>ISR</th><th>后续动作</th></tr>
+                        <tr><td>收到以太帧</td><td>DMA 描述符 OWN=0 且 LS=1</td><td>ETH_IRQn，1/0</td><td><code>ETH_IRQHandler</code></td><td>组 pbuf → <code>ip_input</code></td></tr>
+                        <tr><td>TIM3 10ms</td><td>更新事件</td><td>TIM3_IRQn，1/1</td><td><code>TIM3_IRQHandler</code></td><td><code>lwip_localtime += 10</code></td></tr>
+                        <tr><td>TCP 数据到达</td><td>握手完成后</td><td>同 ETH</td><td>同上</td><td><code>tcp_server_recv</code> / <code>tcp_client_recv</code></td></tr>
+                        <tr><td>UDP 数据到达</td><td>端口匹配</td><td>同 ETH</td><td>同上</td><td><code>udp_demo_recv</code></td></tr>
+                        <tr><td>DMA 下溢/缓冲不可用</td><td>TUS / RBUS</td><td>同 ETH</td><td>同上</td><td>写 DMATPDR / DMARPDR 唤醒</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>中断里跑完整协议栈</strong>：本工程没有 RTOS 收包线程，<code>ethernetif_input</code> 直接在 ISR 中执行；因此 ISR 里任何长耗时操作（printf、LCD 刷新）都会丢包。</li>
+                            <li><strong><code>while</code> 循环一次清空所有帧</strong>：DMA 可能连续收到多帧，只处理一帧就退出会触发中断风暴；<code>ETH_GetRxPktSize</code> 返回 0 时才跳出。</li>
+                            <li><strong>OWN/ES/LS 三个条件缺一不可</strong>：OWN 仍为 1 说明 DMA 正在写；ES 置位说明帧错误；LS 为 0 说明是多段帧的前段，此时长度字段无效。</li>
+                            <li><strong>只清 NIS 与 R</strong>：清 <code>NIS</code> 会一并清掉其下所有子标志，再清 <code>R</code> 是双保险；清得过多可能漏掉发送完成事件。</li>
+                            <li><strong><code>lwip_pkt_handle</code> 只有一行</strong>：它故意做成中间层，方便以后改成“ISR 置标志 + 主循环处理”的架构，而不必改 ISR。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="TCP 服务器/客户端与 UDP 应用">
+                    <h2>11　TCP 服务器/客户端与 UDP 应用</h2>
+                    <div class="sec-sub">三个 demo 都是“建 PCB → 注册回调 → 主循环收发”，区别只在连接方向与可靠性</div>
+
+                    <pre class="code">void tcp_server_test(void)
+{
+	err_t err;
+	struct tcp_pcb *tcppcbnew, *tcppcbconn;
+	tcppcbnew=tcp_new();	<span class="cmt">// 新建 PCB</span>
+	if(tcppcbnew)
+	{ 
+		err=tcp_bind(tcppcbnew,IP_ADDR_ANY,TCP_SERVER_PORT);<span class="cmt">// 绑定任意本机 IP + 端口</span>
+		if(err==ERR_OK)
+		{
+			tcppcbconn=tcp_listen(tcppcbnew); <span class="cmt">// 进入监听</span>
+			tcp_accept(tcppcbconn,tcp_server_accept);<span class="cmt">// 注册连接回调</span>
+		}else res=1;  
+	}else res=1;
+	while(res==0)
+	{
+		key=KEY_Scan(0);
+		if(key==WKUP_PRES)break;            <span class="cmt">// 退出</span>
+		if(key==KEY0_PRES) tcp_server_usersent(tcppcbnew);<span class="cmt">// 发送固定字符串</span>
+		if(tcp_server_flag&amp;1&lt;&lt;6) { ...显示接收数据... tcp_server_flag&amp;=~(1&lt;&lt;6); }
+		if(tcp_server_flag&amp;1&lt;&lt;5) { ...显示客户端 IP... }
+		lwip_periodic_handle();
+		delay_ms(2);
+		t++; if(t==200){t=0;LED0=!LED0;}
+	}
+	tcp_server_connection_close(tcppcbnew,0);
+	tcp_server_connection_close(tcppcbconn,0);
+	tcp_server_remove_timewait();
+}</pre>
+
+                    <pre class="code">err_t tcp_server_accept(void *arg,struct tcp_pcb *newpcb,err_t err)
+{
+	struct tcp_server_struct *es; 
+	tcp_setprio(newpcb,TCP_PRIO_MIN);<span class="cmt">// 新连接优先级</span>
+	es=(struct tcp_server_struct*)mem_malloc(sizeof(struct tcp_server_struct));
+	if(es!=NULL)
+	{
+		es-&gt;state=ES_TCPSERVER_ACCEPTED;
+		es-&gt;pcb=newpcb; es-&gt;p=NULL;
+		tcp_arg(newpcb,es);                  <span class="cmt">// 回调参数</span>
+		tcp_recv(newpcb,tcp_server_recv);	 <span class="cmt">// 收到数据</span>
+		tcp_err(newpcb,tcp_server_error); 	 <span class="cmt">// 异常</span>
+		tcp_poll(newpcb,tcp_server_poll,1);	 <span class="cmt">// 每 500ms 轮询</span>
+		tcp_sent(newpcb,tcp_server_sent);  	 <span class="cmt">// 收到 ACK</span>
+		tcp_server_flag|=1&lt;&lt;5;				<span class="cmt">// 标记已连接</span>
+		lwipdev.remoteip[0]=newpcb-&gt;remote_ip.addr&amp;0xff;
+		...
+		ret_err=ERR_OK;
+	}else ret_err=ERR_MEM;
+	return ret_err;
+}
+
+void udp_demo_recv(void *arg,struct udp_pcb *upcb,struct pbuf *p,
+                   struct ip_addr *addr,u16_t port)
+{
+	if(p!=NULL)
+	{
+		memset(udp_demo_recvbuf,0,UDP_DEMO_RX_BUFSIZE);
+		for(q=p;q!=NULL;q=q-&gt;next)	<span class="cmt">// 遍历 pbuf 链</span>
+		{
+			if(q-&gt;len &gt; (UDP_DEMO_RX_BUFSIZE-data_len))
+				memcpy(udp_demo_recvbuf+data_len,q-&gt;payload,(UDP_DEMO_RX_BUFSIZE-data_len));
+			else memcpy(udp_demo_recvbuf+data_len,q-&gt;payload,q-&gt;len);
+			data_len += q-&gt;len;
+			if(data_len &gt; UDP_DEMO_RX_BUFSIZE) break;
+		}
+		upcb-&gt;remote_ip=*addr;   <span class="cmt">// 记录来源，便于回发</span>
+		upcb-&gt;remote_port=port;
+		udp_demo_flag|=1&lt;&lt;6;
+		pbuf_free(p);
+	}else udp_disconnect(upcb); 
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>回调都在中断上下文</strong>：<code>tcp_server_recv</code> 与 <code>udp_demo_recv</code> 由 ETH 中断里的 <code>tcp_input/udp_input</code> 调用，所以里面只做 memcpy 和置标志，刷屏留给主循环。</li>
+                            <li><strong>标志位是“中断 → 主循环”的桥</strong>：bit6 收到数据、bit5 已连接；主循环轮询后清零，避免在中断里操作 LCD。</li>
+                            <li><strong><code>tcp_recved</code> 必须调用</strong>：它把接收窗口往回补，不调用的话对端发到窗口满就停住，表现为“收了几包后再也收不到”。</li>
+                            <li><strong>TCP 客户端要自己重连</strong>：<code>tcp_connect</code> 失败不会自动重试，<code>tcp_client_test</code> 在每 200 次循环（约 400ms）检查未连接就重建 PCB 再连。</li>
+                            <li><strong>UDP 的“连接”只是记录对端</strong>：<code>udp_connect</code> 不产生握手，<code>udp_recv</code> 里要把 <code>addr/port</code> 存回 <code>upcb</code>，否则 <code>udp_send</code> 不知道发给谁。</li>
+                            <li><strong>退出时要清 timewait</strong>：服务器主动断开会在 <code>tcp_tw_pcbs</code> 里留 PCB，<code>tcp_server_remove_timewait</code> 强制 purge，否则再次进入 demo 会因 PCB 耗尽而 <code>tcp_new</code> 失败。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="串口日志与 LCD 显示">
+                    <h2>12　串口调试与 LCD 显示</h2>
+                    <div class="sec-sub">LCD 显示 IP 与速率，串口打印 DHCP 全过程；两者配合才能快速判断“卡在哪一步”</div>
+
+                    <pre class="code">void lwip_test_ui(u8 mode)
+{
+	u8 speed;
+	u8 buf[30]; 
+	POINT_COLOR=RED;
+	if(mode&amp;1&lt;&lt;0)   <span class="cmt">// 前半部分</span>
+	{
+		LCD_Fill(30,30,lcddev.width,110,WHITE);
+		LCD_ShowString(30,30,200,16,16,"Apollo STM32F4/F7");
+		LCD_ShowString(30,50,200,16,16,"Ethernet lwIP Test");
+		LCD_ShowString(30,70,200,16,16,"ATOM@ALIENTEK");
+		LCD_ShowString(30,90,200,16,16,"2016/2/29"); 	
+	}
+	if(mode&amp;1&lt;&lt;1)   <span class="cmt">// 后半部分</span>
+	{
+		LCD_Fill(30,110,lcddev.width,lcddev.height,WHITE);
+		LCD_ShowString(30,110,200,16,16,"lwIP Init Successed");
+		if(lwipdev.dhcpstatus==2)
+			sprintf((char*)buf,"DHCP IP:%d.%d.%d.%d",lwipdev.ip[0],lwipdev.ip[1],lwipdev.ip[2],lwipdev.ip[3]);
+		else sprintf((char*)buf,"Static IP:%d.%d.%d.%d",lwipdev.ip[0],lwipdev.ip[1],lwipdev.ip[2],lwipdev.ip[3]);
+		LCD_ShowString(30,130,210,16,16,buf); 
+		speed=LAN8720_Get_Speed();
+		if(speed&amp;1&lt;&lt;1)LCD_ShowString(30,150,200,16,16,"Ethernet Speed:100M");
+		else LCD_ShowString(30,150,200,16,16,"Ethernet Speed:10M");
+		LCD_ShowString(30,170,200,16,16,"KEY0:TCP Server Test");
+		LCD_ShowString(30,190,200,16,16,"KEY1:TCP Client Test");
+		LCD_ShowString(30,210,200,16,16,"KEY2:UDP Test");
+	}
+}</pre>
+
+                    <table class="data">
+                        <tr><th>阶段</th><th>LCD 现象</th><th>串口日志</th></tr>
+                        <tr><td>PHY 初始化失败</td><td>“LWIP Init Falied! / Retrying...” 反复</td><td>无输出（卡在 <code>lwip_comm_init</code>）</td></tr>
+                        <tr><td>DHCP 进行中</td><td>“DHCP IP configing...”</td><td>“正在查找DHCP服务器,请稍等...........”</td></tr>
+                        <tr><td>DHCP 成功</td><td>“DHCP IP:192.168.x.x”、速率 100M/10M</td><td>MAC 地址、IP、子网掩码、默认网关四行</td></tr>
+                        <tr><td>DHCP 超时</td><td>“Static IP:192.168.1.30”</td><td>“DHCP服务超时,使用静态IP地址!”</td></tr>
+                        <tr><td>按键进入 demo</td><td>清屏显示对应模式与本地 IP</td><td>与 PC 端工具收发数据</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong><code>mode</code> 是位掩码不是序号</strong>：1=只画上半屏，2=只画下半屏，3=两半都画；demo 返回后用 3，避免残留文字。</li>
+                            <li><strong>IP 判定用 <code>dhcpstatus==2</code></strong>：0/1/0xFF 都按静态处理，因此超时回退后 LCD 会显示 Static IP，与串口中的提示一致。</li>
+                            <li><strong>速率取 bit1</strong>：<code>LAN8720_Get_Speed()</code> 返回 001/101（10M）或 010/110（100M），bit1 为 1 即 100M。</li>
+                            <li><strong>串口打印只在启动阶段</strong>：收发数据不打印，避免 115200 波特率成为吞吐瓶颈；调试协议时可临时在回调里加打印。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘与排查">
+                    <h2>13　关键逻辑复盘与排查</h2>
+                    <div class="sec-sub">网络问题按“供电/复位 → 链路速率 → IP → 协议”四层顺序排查最省时间</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>原因</th><th>排查</th></tr>
+                        <tr><td>一直停在 Retrying</td><td>PHY 复位失败或 RMII 无 50MHz</td><td>量 P7 是否有 100ms 脉冲；量 PA1 时钟；查网线/变压器</td></tr>
+                        <tr><td>初始化成功但 ping 不通</td><td>IP 不在同一网段或 PC 防火墙</td><td>看 LCD 的 IP 与掩码；PC 改同网段；关防火墙</td></tr>
+                        <tr><td>DHCP 一直轮询后超时</td><td>没有 DHCP 服务器</td><td>属正常回退；也可直接改静态 IP 模式</td></tr>
+                        <tr><td>能 ping 但网页打不开</td><td>pbuf 池太小或 fsdata 未编译</td><td>调大 <code>PBUF_POOL_SIZE</code>；确认 <code>httpd_init</code> 与 fsdata</td></tr>
+                        <tr><td>TCP 连接后收几包就停</td><td>漏调 <code>tcp_recved</code></td><td>检查 recv 回调尾部是否补窗口</td></tr>
+                        <tr><td>反复进 demo 后 <code>tcp_new</code> 失败</td><td>timewait PCB 未清理</td><td>确认退出时调用 <code>tcp_server_remove_timewait</code></td></tr>
+                        <tr><td>网络时快时慢，偶尔丢包</td><td>中断里打印/刷屏，或延时过长</td><td>精简 ISR；主循环 <code>delay_ms(2)</code> 不要再加大</td></tr>
+                        <tr><td>所有超时都成比例不对</td><td>主频改了但 TIM3 参数没改</td><td>按 90MHz/900/1000 重算 10ms</td></tr>
+                    </table>
+
+                    <h3>复盘要点</h3>
+                    <ol>
+                        <li><strong>裸机 lwIP 靠“喂”</strong>：没有 OS 就没有后台线程，<code>lwip_periodic_handle()</code> 与 <code>sys_check_timeouts()</code> 必须被周期性调用，否则 ARP 老化、TCP 重传、DHCP 重发全部失效。</li>
+                        <li><strong>时间源必须独立且准确</strong>：<code>lwip_localtime</code> 由 TIM3 累加，任何阻塞超过 10ms 的操作都会让“毫秒时间”落后于真实时间。</li>
+                        <li><strong>DMA 描述符是共享资源</strong>：CPU 与 DMA 靠 OWN 位交接，任何越界写、提前释放都会造成“随机丢包/死机”，改动缓冲大小时要同步改描述符数量。</li>
+                        <li><strong>先链路后协议</strong>：LAN8720 的自协商、RMII 时钟、PHY 地址是硬前提；这三项不对，lwIP 配置再正确也发不出一个字节。</li>
+                    </ol>
+                </section>
+
+                <section class="content-card" id="s14" data-title="交互演示">
+                    <h2>14　交互演示</h2>
+                    <div class="sec-sub">点击按钮模拟“链路就绪”与“DHCP 拿到地址”两个分支，仅演示逻辑</div>
+
+                    <div class="sim">
+                        <div class="sim-title">网络启动状态推进演示</div>
+                        <div class="sim-buttons">
+                            <button data-key="key0">lwip_comm_init() 返回 0</button>
+                            <button data-key="key1">dhcpstatus 变为 2</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS1（PHY 链路就绪）</div>
+                            <div class="led-item"><span class="led-dot" id="dot1"></span>DS0（DHCP 已获取 IP）</div>
+                        </div>
+                        <div class="sim-log" id="simLog">最后按键：无　　当前状态：DS0 灭　DS1 灭</div>
+                    </div>
+
+                    <p>第一个按钮对应 <code>main</code> 里 <code>while(lwip_comm_init())</code> 成功退出——此时 PHY 已复位、DMA 已启动、netif 已挂上，但还没有 IP。第二个按钮对应 <code>lwip_dhcp_process_handle()</code> 读到非 0 地址后把 <code>dhcpstatus</code> 置 2，主循环随后跳出等待并调用 <code>lwip_test_ui(2)</code> 显示 IP 与速率。</p>
+
+                    <div class="note">演示的分支必须与源码一一对应；改逻辑时同步改下面 <code>handlers</code>。</div>
+                </section>
+            </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+
+<script>
+/* sim-wire：把演示按钮接到日志，分支与正文源码说明一致 */
+(function () {
+    var log = document.getElementById('simLog');
+    if (!log) return;
+    var msgs = {"key0": "lwip_comm_init() 返回 0：ETH 初始化、netif_add、dhcp_start 全部成功", "key1": "dhcpstatus 变为 2：DHCP 绑定成功，拿到 IP 地址"};
+    Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (b) {
+        b.addEventListener('click', function () {
+            var k = b.getAttribute('data-key') || b.getAttribute('data-act');
+            if (k && msgs[k]) log.textContent = msgs[k];
+        });
+    });
+})();
+</script>
+</body>
+</html>

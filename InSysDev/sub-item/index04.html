@@ -1,0 +1,547 @@
+﻿﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 MAP文件浅析</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgb(255, 255, 255);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+        }
+
+        .sidebar-menu li {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+        }
+
+        .sidebar-menu li.menu-sub {
+            font-size: 12px;
+            padding-left: 46px;
+            padding-top: 6px;
+            padding-bottom: 6px;
+            color: #888;
+            border-left: 2px solid transparent;
+        }
+
+        .sidebar-menu li.menu-sub:hover {
+            color: #1890ff;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 12px 0 0 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card + .content-card {
+            margin-top: 12px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+    </style>
+    <link rel="stylesheet" href="./a4-print-template.css">
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">STM32F429MAP文件浅析</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <ul class="sidebar-menu">
+                    <li data-target="overview"><span class="icon">&#9654;</span>概述</li>
+                    <li data-target="section-cross-references"><span class="icon">&#9654;</span>函数调用关系</li>
+                    <li data-target="section-unused-input-sections"><span class="icon">&#9654;</span>删除未使用的程序段</li>
+                    <li data-target="memory-map-of-the-image"><span class="icon">&#9654;</span>内存映射</li>
+                    <li class="menu-sub" data-target="sec-local-symbols">· Local Symbols</li>
+                    <li class="menu-sub" data-target="sec-global-symbols">· Global Symbols</li>
+                    <li data-target="sec-image-symbol-table"><span class="icon">&#9654;</span>镜像符号表</li>
+                    <li data-target="sec-image-component-sizes"><span class="icon">&#9654;</span>镜像组件大小</li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+                        <h3 id="overview">一、Overview</h3>
+                        <p>　　.map 文件是编译器链接时生成的一个文件，它主要包含了交叉链接信息。通过 .map 文件，我们可以知道整个工程的函数调用关系、FLASH 和 RAM 占用情况及其详细汇总信息，能具体到单个源文件（.c/.s）的占用情况，根据这些信息，我们可以对代码进行优化。<strong style="color: red;">.map 文件可以分为以下 5 个组成部分：</strong></p>
+                        <p>　　。程序段交叉引用关系(Section Cross References)</p>
+                        <p>　　。删除映像未使用的程序段(Removing Unused input sections from the image)</p>
+                        <p>　　。映像符号表(Image Symbol Table)</p>
+                        <p>　　。映像内存分布图(Memory Map of the image)</p>
+                        <p>　　。映像组件大小(Image component sizes)</p>
+                        <img src="./index04-map/mapfile-image-component.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　我们在 Keil 中最常见的就是在编译之后，编译窗口会显示类似如下一段关于程序和数据大小的信息：</p>
+                        <img src="./index04-map/mapfile-image-program-size.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　这一段提示信息其实是汇总了程序和数据的信息，这些信息其实是单个模块汇总而成，在 .map 文件里有详细列表。</p>
+                        <p>　　<strong style="color: red;">.map 文件输出信息的配置位于：Project -> Options for Target -> Listing，如下图：</strong></p>
+                        <img src="./index04-map/mapfile-image-program-config.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　<strong>主要包含配置：</strong></p>
+                        <p>　　。<strong style="color: #6AADD4;">Memory Map</strong>：内存映射</p>
+                        <p>　　。<strong style="color: #6AADD4;">Callgraph</strong>：图像映射</p>
+                        <p>　　。<strong style="color: #6AADD4;">Symbols</strong>：符号</p>
+                        <p>　　。<strong style="color: #6AADD4;">Cross Reference</strong>：交叉引用</p>
+                        <p>　　。<strong style="color: #6AADD4;">Size Info</strong>：大小信息</p>
+                        <p>　　。<strong style="color: #6AADD4;">Totals Info</strong>：统计信息</p>
+                        <p>　　。<strong style="color: #6AADD4;">Unused Section Info</strong>：未调用模块信息</p>
+                        <p>　　。<strong style="color: #6AADD4;">Veneers Info</strong>：装饰信息</p>
+                        <p>　　我们可根据自己情况，想要输出什么信息，勾选对应信息即可。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="section-cross-references">二、Section Cross References</h3>
+                        <p>　　这部分内容描述了各个文件(.c/.s 等)之间函数(程序段)的调用关系，如下图所示：</p>
+                        <img src="./index04-map/mapfile-image-section-cross-references.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　<strong>比如下面这段：</strong></p>
+                        <p style="font-family: Consolas, 'Courier New', monospace; background-color: #f5f5f5; padding: 8px 12px; border-radius: 4px; font-size: 13px; color: red; font-weight: bold; word-break: break-all; margin-top: 8px; text-align: center;">board.o(i.board_lowlevel_init) refers to stm32f4xx_rcc.o(i.RCC_AHB1PeriphClockCmd) for RCC_AHB1PeriphClockCmd</p>
+                        <p>　　<strong>表示的意思是：</strong>board.c文件中的 board_lowlevel_init 函数调用了stm32f4xx_rcc.c 文件中的 RCC_AHB1PeriphClockCmd 函数。</p>
+                        <p>　　　　　　　　　i.board_lowlevel_init 表示 board_lowlevel_init 函数的入口地址，i.RCC_AHB1PeriphClockCmd表示RCC_AHB1PeriphClockCmd 的入口地址</p>
+                        <p>　　　　　　　　　board.o 是 board.c 源文件生成的目标文件模块</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="section-unused-input-sections">三、Removing Unused input sections from the image</h3>
+                        <p>　　<strong>这部分内容描述了工程中由于未被调用而被删除的冗余程序段(函数/数据)：</strong></p>
+                        <img src="./index04-map/mapfile-image-removing-unused-input-sections.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　<strong>在结尾还列出了一个统计数据，表示共移除了 849 个程序段，共 37144 字节:</strong></p>
+                        <img src="./index04-map/mapfile-image-removing-unused-imput-sections-statistics.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                    </div>
+                    <div class="content-card">
+                        <h3 id="memory-map-of-the-image">四、Memory Map of the image</h3>
+                        <p>　　映像符号表(Image Symbol Table)描述了被引用的各个符号（程序段/数据）在存储器中的存储地址、类型、大小等信息。映像符号表分为两类：本地符号(Local Symbols)和全局符号(Global Symbols)。</p>
+                        <p id="sec-local-symbols"><strong>● Local Symbols</strong></p>
+                        <p>　　本地符号(ocal Symbols)记录了用static声明的全局变量地址和大小，c 文件中函数的地址和用static声明的函数代码大小，汇编文件中的标号地址(作用域：限本文件)，见下：</p>
+                        <img src="./index04-map/mapfile-image-local-symbol-table.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　下面红框处，表示 stm32f4x_dma.c 文件中的 DMA_ClearFlag 函数的入口地址为 0x080001ec，类型为：Section(程序段)，大小为 0。</p>
+                        <img src="./index04-map/mapfile-image-local-symbol-table-1.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　因为：i.sys_stm32_clock_init 仅仅表示 sys_stm32_clock_init 函数入口地址，并不是指令，所以没有大小。在全局符号段，会列出sys_stm32_clock_init 函数的大小。</p>
+                        <p id="sec-global-symbols"><strong>● Global Symbols</strong></p>
+                        <p>　　全局符号(Global Symbols)记录了全局变量 的地址和大小，C文件中函数的地址及其代码大小，汇编文件中的标号地址（作用域：全工程），见下：</p>
+                        <img src="./index04-map/mapfile-image-global-symbol-table.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　。<strong style="color: #6AADD4;">Symbol Name</strong>：符号名称，名称命名及分类请看最后给出的官方参考文档。</p>
+                        <p>　　。<strong style="color: #6AADD4;">Value</strong>：存储对应的地址，大家会发现有 0x0800xxxx，0x2000xxxx 这样的地址。0x0800xxxx 指存储在 FLASH 里面的代码、变量等。0x2000xxxx 指存储在内存 RAM 中的变量 Data等。</p>
+                        <p>　　。<strong style="color: #6AADD4;">Ov Type</strong>：符号对应的类型。符号类型大概有几种：Number、Section、Thumb Code、Data等。</p>
+                        <p>　　。<strong style="color: #6AADD4;">Size</strong>：存储大小，就是当前行 Symbol 占用大小。</p>
+                        <p>　　。<strong style="color: #6AADD4;">Object(Section)</strong>：段目标，这里一般指所在模块（源文件）。</p>
+                        <p>　　图中红框框处部分，表示 stm32f4x_dma.c 文件中DMA_ClearFlag 函数的入口地址为：0x080001ed，类型为：Thumb Code（程序段），大小为 38 字节。</p>
+                        <img src="./index04-map/mapfile-image-global-symbol-table-1.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　注意，此处的地址用的 0x08002bc9，和上一节的 0x080001ec 地址不符，这是因为 ARM 规定 Thumb 指令集的所有指令（Thumb 指令集更节省空间），其最低位必须为 1，0x080001ed = 0x080001ec + 1，所以才会有 2 个不同的地址，且总是差 1，实际上就是同一个函数。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-image-symbol-table">五、Image Symbol Table</h3>
+                        <p>　　映像文件分为加载域(Load Region)和运行域(Execution Region)，一个加载域必须有至少一个运行域(可以有多个运行域)，而一个程序又可以有多个加载域。加载域为映像程序的实际存储区域，而运行域则是 MCU 上电后的运行状态。加载域和运行域的简化关系（这里仅表示一个加载域的情况）图如下图：</p>
+                        <img src="./index04-map/mapfile-image-load-region-execution-region.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　由图可知：RW 区也是存放在 ROM(FLASH)里面的，在执行 main 函数之前，RW(有初值且不为 0 的变量)数据会被拷贝到 RAM 区，同时还会在 RAM 里面创建 ZI 区(初始化为 0 的变量)。</p>
+                        <p>　　Image Entry point : 0x08000189 表示映射入口地址。</p>
+                        <p>　　Load Region LR_IROM1 (Base: 0x08000000, Size: 0x00001068, Max: 0x00080000, ABSOLUTE) 表示加载区域位于 LR_IROM1 开始地址0x08000000，大小有 0x00001068，这块区域最大为 0x00080000</p>
+                        <p>　　<strong>执行区域有两段：</strong></p>
+                        <p>　　。Execution Region ER_IROM1：在内部 SRAM 运行域，所有 RAM（包括 RW 和 ZI）都是放在这个运行域里面</p>
+                        <p>　　。Execution Region RW_IRAM1：在内部FLASH 运行域，所有需要放内部 FLASH 的代码，都应该放到这个运行域里面</p>
+                        <p>　　<strong>这个区域，其实就是对应我们目标配置中的区域，如下所示：</strong></p>
+                        <img src="./index04-map/mapfile-image-load-region-execution-region-config.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　。<strong style="color: #6AADD4;">Exec Addr</strong>：执行地址</p>
+                        <p>　　。<strong style="color: #6AADD4;">Load Addr</strong>：加载地址</p>
+                        <p>　　。<strong style="color: #6AADD4;">Size</strong>：存储大小</p>
+                        <p>　　。<strong style="color: #6AADD4;">Type</strong>：类型</p>
+                        <p>　　　　-<strong style="color: #6AADD4;">Data</strong>：数据类型</p>
+                        <p>　　　　-<strong style="color: #6AADD4;">Code</strong>：代码类</p>
+                        <p>　　　　-<strong style="color: #6AADD4;">Zero</strong>：未初始化变量类型</p>
+                        <p>　　　　-<strong style="color: #6AADD4;">PAD</strong>：这个类型在 map 文件中放在这个位置，其实它不能算这里的类型。要翻译的话，只能说的“补充类型”。ARM 处理器是 32 位的，如果定义一个 8 位或者 16 位变量就会剩余一部分，这里就是指的“补充”的那部分，会发现后面的其他几个选项都没有对应的值。</p>
+                        <p>　　。<strong style="color: #6AADD4;">Attr</strong>：属性</p>
+                        <p>　　　　-<strong style="color: #6AADD4;">RO</strong>：存储在 ROM 中的段</p>
+                        <p>　　　　-<strong style="color: #6AADD4;">RW</strong>：存储在 RAM 中的段</p>
+                        <p>　　。<strong style="color: #6AADD4;">Section Name</strong>：段名。这里也可以说为入口分类名，大概包含：RESET、ARM、.text、i、.data、.bss、HEAP、STACK 等。</p>
+                        <p>　　。<strong style="color: #6AADD4;">Object</strong>：目标</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-image-component-sizes">六、镜像组件大小</h3>
+                        <p>　　映像组件大小(Image component sizes)给出了整个映像所有代码（.o）占用空间的汇总信息，对我们比较有用，如图所示：</p>
+                        <img src="./index04-map/mapfile-image-component-size.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　。<strong style="color: #6AADD4;">Code</strong>：指代码的大小；</p>
+                        <p>　　。<strong style="color: #6AADD4;">RO-data</strong>：指除了内联数据(inline data)之外的常量数据；</p>
+                        <p>　　。<strong style="color: #6AADD4;">RW-data</strong>：指可读写（RW）、已初始化的变量数据；</p>
+                        <p>　　。<strong style="color: #6AADD4;">ZI-data</strong>：指未初始化（ZI）的变量数据；</p>
+                        <p>　　。<strong style="color: #6AADD4;">Debug</strong>：表示调试数据所占的空间大小，如调试输入节及符号和字符串。</p>
+                        <p>　　。<strong style="color: #6AADD4;">Object Totals</strong>：表示以上部分链接到一起后，所占映像空间的大小。</p>
+                        <p>　　。<strong style="color: #6AADD4;">(incl.Generated)</strong>：表示链接器生产的映像内容大小，它包含在 。Object Totals 里面了，这里仅仅是单独列出，我们一般不需要关心。</p>
+                        <p>　　。<strong style="color: #6AADD4;">(incl.Padding)</strong>：表示链接器根据需要插入填充以保证字节对齐的数据所占空间的大小，它也包含在 Object Totals 里面了，这里单独列出，一般无需关心。</p>
+                        <img src="./index04-map/mapfile-image-component-laylout-calacuate.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <img src="./index04-map/mapfile-image-component-laylout-calacuate-1.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　这里表示被提取的库成员（.lib 添加到映像中的部分所占空间大小。各项意义同前面提到的说明。我们一般只用看 Library Totals 来分析库所占空间的大小即可。</p>
+                        <img src="./index04-map/mapfile-image-component-laylout-calacuate-2.jpg" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　。<strong style="color: #6AADD4;">Grand Totals</strong>：表示整个映像所占空间大小。</p>
+                        <p>　　。<strong style="color: #6AADD4;">ELF Image Totals</strong>：表示 ELF 可执行链接格式映像文件的大小，一般和 Grand Totals 一样大小。</p>
+                        <p>　　。<strong style="color: #6AADD4;">ROM Totals</strong>：表示整个映像所需要的 ROM 空间大小，不含 ZI 和 Debug 数据。</p>
+                        <p>　　。<strong style="color: #6AADD4;">Total RO Size</strong>：表示 Code 和 RO 数据所占空间大小，本例程为：4172 字节。</p>
+                        <p>　　。<strong style="color: #6AADD4;">Total RW Size</strong>：表示 RW 和 ZI 数据所占空间大小，即本映像所需 SRAM 空间的大小，本例程为：6816 字节。</p>
+                        <p>　　。<strong style="color: #6AADD4;">Total ROM Size</strong>：表示 Code、RO 和 RW 数据所占空间大小，即本映像所需 FLASH 空间的大小，本例程为：4200 字节。</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 侧边栏菜单点击跳转
+        var menuItems = document.querySelectorAll('.sidebar-menu li');
+        var contentBody = document.querySelector('.content-body');
+
+        menuItems.forEach(function(item) {
+            item.addEventListener('click', function() {
+                var targetId = this.getAttribute('data-target');
+                var targetEl = document.getElementById(targetId);
+                if (targetEl) {
+                    targetEl.scrollIntoView({ behavior: 'smooth' });
+                }
+                menuItems.forEach(function(li) { li.classList.remove('active'); });
+                this.classList.add('active');
+            });
+        });
+
+        // 滚动联动侧边栏高亮
+        contentBody.addEventListener('scroll', function() {
+            var cards = document.querySelectorAll('.content-card');
+            var currentId = '';
+            cards.forEach(function(card) {
+                if (card.offsetTop - contentBody.scrollTop <= 80) {
+                    currentId = card.querySelector('h3').id;
+                }
+            });
+            if (currentId) {
+                menuItems.forEach(function(li) {
+                    li.classList.remove('active');
+                    if (li.getAttribute('data-target') === currentId) {
+                        li.classList.add('active');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

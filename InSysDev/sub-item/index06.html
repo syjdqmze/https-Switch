@@ -1,0 +1,1693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Sub-Item 管理页面</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        .sidebar-menu li {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        /* ===== 目录展开 / 收缩 ===== */
+        .sidebar-menu li.has-children > .icon,
+        .sidebar-menu li.has-children .caret {
+            cursor: pointer;
+        }
+
+        .sidebar-menu li.has-children > .icon:hover,
+        .sidebar-menu li.has-children .caret:hover {
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.expanded > .icon,
+        .sidebar-menu li.expanded .caret {
+            transform: rotate(90deg);
+        }
+
+        .sidebar-menu li.collapsed > .icon,
+        .sidebar-menu li.collapsed .caret {
+            transform: rotate(0deg);
+        }
+
+        /* 二级父项的折叠箭头 */
+        .sidebar-menu li.menu-sub .caret {
+            display: inline-block;
+            width: 12px;
+            margin-left: -15px;
+            margin-right: 3px;
+            font-size: 10px;
+            color: #bbb;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .sidebar-menu li.hidden-item {
+            display: none;
+        }
+
+        /* 无子项的一级条目隐藏装饰三角，避免与可折叠箭头混淆 */
+        .sidebar-menu li.menu-group.no-kids > .icon {
+            visibility: hidden;
+        }
+
+        /* 二级目录条目 */
+        .sidebar-menu li.menu-sub {
+            padding: 6px 20px 6px 46px;
+            font-size: 12px;
+            color: #888;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-menu li.menu-group {
+            padding: 8px 20px 4px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-menu li.menu-group:hover {
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.menu-group.active {
+            color: #1890ff;
+            border-left-color: #1890ff;
+        }
+
+        .sidebar-menu li.menu-sub:hover {
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.menu-sub.active {
+            color: #1890ff;
+            border-left-color: #1890ff;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 18px 0 28px;
+            overflow: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #e8ebef;
+            background-image: linear-gradient(#eef1f4, #dfe3e8);
+        }
+
+        /* ===== 书页（A4 纸张）===== */
+        .book-page {
+            width: 210mm;
+            height: 297mm;
+            background-color: #fff;
+            border: 1px solid #d5d9de;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.18);
+            margin: 0 auto 18px;
+            padding: 16mm 16mm 12mm;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .page-header {
+            flex-shrink: 0;
+            height: 20px;
+            line-height: 20px;
+            font-size: 11px;
+            color: #9aa5b1;
+            border-bottom: 1px solid #e3e8ee;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .page-content {
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .page-fit {
+            width: 100%;
+            display: flow-root;
+            transform-origin: top center;
+        }
+
+        .page-footer {
+            flex-shrink: 0;
+            height: 20px;
+            line-height: 20px;
+            margin-top: 12px;
+            padding-top: 6px;
+            border-top: 1px solid #e3e8ee;
+            font-size: 11px;
+            color: #9aa5b1;
+            text-align: center;
+        }
+
+        .page-content h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .page-content p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+
+        /* 三级目录与图/表注样式 */
+        .sidebar-menu li.menu-sub2 {
+            padding: 5px 20px 5px 62px;
+            font-size: 12px;
+            color: #999;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-menu li.menu-sub2:hover {
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.menu-sub2.active {
+            color: #1890ff;
+            border-left-color: #1890ff;
+        }
+
+        .h-l2 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #3a6ea5;
+            margin: 18px 0 10px;
+        }
+
+        .h-l3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #556677;
+            margin: 14px 0 8px;
+        }
+
+        .fig-cap {
+            text-align: center;
+            color: #8a9bab;
+            font-size: 12px;
+            margin: 6px 0 14px;
+        }
+
+        /* 文档表格样式 */
+        .page-content table.doc-table {
+            border-collapse: collapse;
+            margin: 12px 0 4px 2em;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .page-content table.doc-table th,
+        .page-content table.doc-table td {
+            border: 1px solid #c8d8e8;
+            padding: 6px 12px;
+            text-align: left;
+            vertical-align: middle;
+            line-height: 1.6;
+        }
+
+        .page-content table.doc-table th {
+            background-color: #eaf2fa;
+            color: #3a6ea5;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .page-content table.doc-table td.label {
+            background-color: #f5f9fd;
+            color: #3a6ea5;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">正点原子DAP使用教程</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <ul class="sidebar-menu">
+                    <li class="menu-group" data-target="sec-dap-tutorial"><span class="icon">&#9654;</span>第一章 正点原子DAP 使用教程</li>
+                    <li class="menu-group" data-target="sec-1-1"><span class="icon">&#9654;</span>1.1 正点原子DAP 仿真器介绍</li>
+                    <li class="menu-sub" data-target="sec-1-1-1">1.1.1 DAP 仿真器</li>
+                    <li class="menu-sub2" data-target="sec-1-1-1-1">1.1.1.1 实物图</li>
+                    <li class="menu-sub2" data-target="sec-1-1-1-2">1.1.1.2 基本参数</li>
+                    <li class="menu-sub2" data-target="sec-1-1-1-3">1.1.1.3 指示灯说明</li>
+                    <li class="menu-sub" data-target="sec-1-1-2">1.1.2 高速DAP 仿真器</li>
+                    <li class="menu-sub2" data-target="sec-1-1-2-1">1.1.2.1 实物图</li>
+                    <li class="menu-sub2" data-target="sec-1-1-2-2">1.1.2.2 基本参数</li>
+                    <li class="menu-sub2" data-target="sec-1-1-2-3">1.1.2.3 指示灯说明</li>
+                    <li class="menu-sub" data-target="sec-1-1-3">1.1.3 高速无线调试器</li>
+                    <li class="menu-sub2" data-target="sec-1-1-3-1">1.1.3.1 实物图</li>
+                    <li class="menu-sub2" data-target="sec-1-1-3-2">1.1.3.2 基本参数</li>
+                    <li class="menu-sub2" data-target="sec-1-1-3-3">1.1.3.3 指示灯说明</li>
+                    <li class="menu-sub2" data-target="sec-1-1-3-4">1.1.3.4 工作原理示意图</li>
+                    <li class="menu-sub2" data-target="sec-1-1-3-5">1.1.3.5 接线示意图</li>
+                    <li class="menu-group" data-target="sec-1-2"><span class="icon">&#9654;</span>1.2 MDK 配置教程</li>
+                    <li class="menu-sub" data-target="sec-1-2-1">1.2.1 正确连接好仿真器</li>
+                    <li class="menu-sub2" data-target="sec-1-2-1-1">1.2.1.1 DAP 仿真器的连接</li>
+                    <li class="menu-sub2" data-target="sec-1-2-1-2">1.2.1.2 高速DAP 仿真器的连接</li>
+                    <li class="menu-sub2" data-target="sec-1-2-1-3">1.2.1.3 高速无线调试器的连接</li>
+                    <li class="menu-sub" data-target="sec-1-2-2">1.2.2 配置MDK</li>
+                    <li class="menu-group" data-target="sec-1-3"><span class="icon">&#9654;</span>1.3 DAP 固件升级</li>
+                    <li class="menu-sub" data-target="sec-1-3-1">1.3.1 DAP 仿真器固件更新</li>
+                    <li class="menu-sub" data-target="sec-1-3-2">1.3.2 高速DAP 仿真器固件更新</li>
+                    <li class="menu-sub" data-target="sec-1-3-3">1.3.3 高速无线调试器固件更新</li>
+                    <li class="menu-group" data-target="sec-1-4"><span class="icon">&#9654;</span>1.4 复位兼容模式设置</li>
+                    <li class="menu-sub" data-target="sec-1-4-1">1.4.1 DAP 仿真器设置方法</li>
+                    <li class="menu-sub" data-target="sec-1-4-2">1.4.2 高速DAP 仿真器设置方法</li>
+                    <li class="menu-sub" data-target="sec-1-4-3">1.4.3 高速无线调试器设置方法</li>
+                    <li class="menu-group" data-target="sec-1-5"><span class="icon">&#9654;</span>1.5 电压模式设置</li>
+                    <li class="menu-sub" data-target="sec-1-5-1">1.5.1 高速DAP 仿真器</li>
+                    <li class="menu-sub2" data-target="sec-1-5-1-2">1.5.1 高速DAP 仿真器输出电压说明</li>
+                    <li class="menu-sub2" data-target="sec-1-5-2">1.5.2 高速DAP 仿真器输出电压设置方法</li>
+                    <li class="menu-sub" data-target="sec-1-5-2-2">1.5.2 高速无线调试器</li>
+                    <li class="menu-sub2" data-target="sec-1-5-1-3">1.5.1 高速无线调试器输出电压说明</li>
+                    <li class="menu-sub2" data-target="sec-1-5-2-3">1.5.2 高速无线调试器输出电压设置方法</li>
+                    <li class="menu-group" data-target="sec-1-6"><span class="icon">&#9654;</span>1.6 序列号（SN）设置</li>
+                    <li class="menu-sub" data-target="sec-1-6-1">1.6.1 高速DAP 仿真器SN 设置方法</li>
+                    <li class="menu-sub" data-target="sec-1-6-2">1.6.2 高速无线调试器SN 设置方法</li>
+                    <li class="menu-group" data-target="sec-1-7"><span class="icon">&#9654;</span>1.7 高速无线调试器无线参数</li>
+                    <li class="menu-sub" data-target="sec-1-7-1">1.7.1 高速无线调试器无线参数说明</li>
+                    <li class="menu-sub" data-target="sec-1-7-2">1.7.2 高速无线调试器无线参数配置</li>
+                    <li class="menu-sub2" data-target="sec-1-7-2-1">1.7.2.1 自动频率模式配置</li>
+                    <li class="menu-sub2" data-target="sec-1-7-2-2">1.7.2.2 手动频率模式配置</li>
+                    <li class="menu-group" data-target="sec-1-8"><span class="icon">&#9654;</span>1.8 串口使用</li>
+                    <li class="menu-sub" data-target="sec-1-8-1">1.8.1 串口功能说明</li>
+                    <li class="menu-sub" data-target="sec-1-8-2">1.8.2 虚拟串口驱动安装</li>
+                    <li class="menu-group" data-target="sec-1-9"><span class="icon">&#9654;</span>1.9 读保护设置</li>
+                    <li class="menu-group" data-target="sec-1-10"><span class="icon">&#9654;</span>1.10 bin 文件下载</li>
+                    <li class="menu-group" data-target="sec-faq"><span class="icon">&#9654;</span>第二章 常见问题汇总</li>
+                    <li class="menu-sub" data-target="sec-2-1">2.1 正点原子DAP 简单问题查找步骤</li>
+                    <li class="menu-sub" data-target="sec-2-2">2.2 高速DAP 仿真器问题汇总</li>
+                    <li class="menu-sub" data-target="sec-2-3">2.3 无线调试器问题汇总</li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+                        <h3 data-page="1" id="sec-dap-tutorial">第一章 正点原子DAP 使用教程</h3>
+                        <p data-page="1">　　之前所有正点原子 STM32 教程讲解的调试工具都是以JLINK 或者是ST-LINK 为例。由于性价比，缺芯等等因素呢，现在我们给大家介绍JTAG/SWD 调试工具中另外一个主流仿真器DAP 的使用方法，让大家在今后的 STM32 学习中，能熟练掌握 JTAG/SWD 调试配置方法。</p>
+                        <p data-page="1">　　如果你已经了解了JLINK 或者ST-Link 的使用方法，那么DAP 的使用方法将会非常简单，几乎99%的操作方法都是一模一样的。几乎所有JTAG/SWD 仿真器的使用都有下面三个方面的知识：</p>
+                        <p data-page="1">　　1、驱动的安装。<br>2、编程软件(MDK)配置。<br>3、固件升级方法<br>如果使用DAP 仿真器是不用安装驱动的，因为CMSIS DAP 是ARM 官方推出的开源仿真<br>器，具有免驱的特点。正点原子根据用户的不同需求，在普通的DAP 仿真器的基础上加上许多<br>不同的功能，速度上也有比普通的DAP 仿真器更快的产品，从而衍生了下面介绍的三款DAP<br>仿真器产品。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 data-page="1" id="sec-1-1">1.1 正点原子DAP 仿真器介绍</h3>
+                        <p data-page="1">　　正点原子的DAP 仿真器可以分为有线和无线两种，根据速度可以分为普速和高速两种，结合这两个分类特点，总共推出了三种对应的DAP 仿真器产品，以满足不同客户应用场景不同的各种需求，大家可以根据自己的情况来选用不同的DAP 仿真器。用一个思维导图展示三种仿真器的关系，如图1.1.1 所示：</p>
+                        <img data-page="1" src="./index06-map/fig-001.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="1" class="fig-cap">图1.1.1 正点原子DAP 仿真器分类</p>
+                        <p data-page="1">　　下面简单的介绍一下正点原子DAP 仿真器的特点：<br>1、支持MDK/IAR 编译器，无需驱动，不丢固件<br>2、支持Cortex M0/M1/M3/M4/M7 等内核ARM 芯片<br>3、支持仿真调试，支持代码下载、支持虚拟串口<br>4、提供20P 标准JTAG 接口、提供4P 简化SWD 接口<br>5、支持XP/WIN7/WIN8/WIN10 等操作系统<br>6、尺寸小巧，携带方便<br>以上6 个特点是这三种仿真器的共同特点，根据产品分类不同，它们还有其他的不同特点，<br>如高速DAP 仿真器还有以下特点：</p>
+                        <p data-page="1">　　7、支持 1.8V~5V 设备，自动检测<br>8、支持 1.8V/3.3V/5V 电源输出，需上位机设置<br>9、下载速度快，超越 jlink V9，接近 jlink V10<br>而高速无线调试器还有以下特点：<br>7、采用 2.4G 无线通信，自动跳频<br>8、支持 1.8V~5V 设备，自动检测<br>9、支持 1.8V/3.3V/5V 电源输出，需上位机设置，且小型接收端不支持<br>10、下载速度快，超越 JLINK V8，接近 JLINK V9<br>下面给大家介绍一下这三款仿真器的基本参数以及实物图。</p>
+                        <p data-page="2" class="h-l2" id="sec-1-1-1"><strong>1.1.1 DAP 仿真器</strong></p>
+                        <p data-page="2" class="h-l3" id="sec-1-1-1-1"><strong>1.1.1.1 实物图</strong></p>
+                        <img data-page="2" src="./index06-map/fig-002.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="2" class="fig-cap">图1.1.1.1.1 DAP 仿真器实物图</p>
+                        <p data-page="2" class="h-l3" id="sec-1-1-1-2"><strong>1.1.1.2 基本参数</strong></p>
+                        <table data-page="2" class="doc-table">
+                            <tr>
+                                <td class="label">产品名称</td>
+                                <td>ATK-DAP 调试器</td>
+                            </tr>
+                            <tr>
+                                <td class="label">产品型号</td>
+                                <td>ATK-DAP</td>
+                            </tr>
+                            <tr>
+                                <td class="label">支持芯片</td>
+                                <td>ARM Cortex M0/M1/M3/M4/M7 全系列</td>
+                            </tr>
+                            <tr>
+                                <td class="label">通信方式</td>
+                                <td>USB（免驱）</td>
+                            </tr>
+                            <tr>
+                                <td class="label">仿真接口</td>
+                                <td>JTAG、SWD</td>
+                            </tr>
+                            <tr>
+                                <td class="label">支持编译器</td>
+                                <td>MDK、IAR</td>
+                            </tr>
+                            <tr>
+                                <td class="label">串口速度</td>
+                                <td>460800bps（max）</td>
+                            </tr>
+                            <tr>
+                                <td class="label">烧录速度</td>
+                                <td>10M</td>
+                            </tr>
+                            <tr>
+                                <td class="label">工作电压</td>
+                                <td>5V（USB 供电）</td>
+                            </tr>
+                            <tr>
+                                <td class="label">工作电流</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td class="label">工作温度</td>
+                                <td>-40℃~+85℃</td>
+                            </tr>
+                            <tr>
+                                <td class="label">尺寸</td>
+                                <td>66.5mm*40mm*17mm</td>
+                            </tr>
+                        </table>
+                        <p data-page="2" class="fig-cap">表1.1.1.2.1 DAP 仿真器基本参数</p>
+                        <p data-page="2" class="h-l3" id="sec-1-1-1-3"><strong>1.1.1.3 指示灯说明</strong></p>
+                        <table data-page="2" class="doc-table">
+                            <tr>
+                                <th>状态</th>
+                                <th>描述</th>
+                            </tr>
+                            <tr>
+                                <td>蓝色</td>
+                                <td>普通状态</td>
+                            </tr>
+                            <tr>
+                                <td>红色</td>
+                                <td>正在调试，并且 MCU 在运行状态</td>
+                            </tr>
+                            <tr>
+                                <td>灭</td>
+                                <td>异常情况</td>
+                            </tr>
+                        </table>
+                        <p data-page="2" class="fig-cap">表1.1.1.3.1 DAP 仿真器指示灯说明</p>
+                        <p data-page="3" class="h-l2" id="sec-1-1-2"><strong>1.1.2 高速DAP 仿真器</strong></p>
+                        <p data-page="3" class="h-l3" id="sec-1-1-2-1"><strong>1.1.2.1 实物图</strong></p>
+                        <img data-page="3" src="./index06-map/fig-003.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="3" class="fig-cap">图1.1.2.1.1 高速DAP 仿真器实物图</p>
+                        <p data-page="3" class="h-l3" id="sec-1-1-2-2"><strong>1.1.2.2 基本参数</strong></p>
+                        <table data-page="3" class="doc-table">
+                            <tr>
+                                <td class="label">产品名称</td>
+                                <td>ATK-HSDAP 调试器</td>
+                            </tr>
+                            <tr>
+                                <td class="label">产品型号</td>
+                                <td>ATK-HSDAP</td>
+                            </tr>
+                            <tr>
+                                <td class="label">支持芯片</td>
+                                <td>ARM Cortex M0/M1/M3/M4/M7 全系列</td>
+                            </tr>
+                            <tr>
+                                <td class="label">通信方式</td>
+                                <td>USB（免驱）</td>
+                            </tr>
+                            <tr>
+                                <td class="label">仿真接口</td>
+                                <td>JTAG、SWD</td>
+                            </tr>
+                            <tr>
+                                <td class="label">支持编译器</td>
+                                <td>MDK、IAR</td>
+                            </tr>
+                            <tr>
+                                <td class="label">串口速度</td>
+                                <td>1Mbps（max）</td>
+                            </tr>
+                            <tr>
+                                <td class="label">烧录速度</td>
+                                <td>10M</td>
+                            </tr>
+                            <tr>
+                                <td class="label">工作电压</td>
+                                <td>5V（USB 供电）</td>
+                            </tr>
+                            <tr>
+                                <td class="label">工作电流</td>
+                                <td>97mA</td>
+                            </tr>
+                            <tr>
+                                <td class="label">工作温度</td>
+                                <td>-40℃~+85℃</td>
+                            </tr>
+                            <tr>
+                                <td class="label">尺寸</td>
+                                <td>66.5mm*40mm*17mm</td>
+                            </tr>
+                        </table>
+                        <p data-page="3" class="fig-cap">表1.1.2.2.1 高速DAP 仿真器基本参数</p>
+                        <p data-page="3" class="h-l3" id="sec-1-1-2-3"><strong>1.1.2.3 指示灯说明</strong></p>
+                        <table data-page="3" class="doc-table">
+                            <tr>
+                                <th>状态</th>
+                                <th>描述</th>
+                            </tr>
+                            <tr>
+                                <td>蓝色</td>
+                                <td>普通状态</td>
+                            </tr>
+                            <tr>
+                                <td>红色</td>
+                                <td>正在调试，并且 MCU 在运行状态</td>
+                            </tr>
+                            <tr>
+                                <td>红蓝色闪烁</td>
+                                <td>一般在单步调试时，才会出现</td>
+                            </tr>
+                            <tr>
+                                <td>灭</td>
+                                <td>异常情况</td>
+                            </tr>
+                        </table>
+                        <p data-page="3" class="fig-cap">表1.1.2.3.1 高速DAP 仿真器指示灯说明</p>
+                        <p data-page="4" class="h-l2" id="sec-1-1-3"><strong>1.1.3 高速无线调试器</strong></p>
+                        <p data-page="4" class="h-l3" id="sec-1-1-3-1"><strong>1.1.3.1 实物图</strong></p>
+                        <img data-page="4" src="./index06-map/fig-004.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="4" class="fig-cap">图1.1.3.1.1 高速无线调试器实物图</p>
+                        <p data-page="4">　　这里的使用组合可以是：发送端和接收端，或者发送端和小型接收端。</p>
+                        <p data-page="4" class="h-l3" id="sec-1-1-3-2"><strong>1.1.3.2 基本参数</strong></p>
+                        <table data-page="4" class="doc-table">
+                            <tr>
+                                <td class="label">产品名称</td>
+                                <td>ATK-HSWLDBG 高速无线调试器</td>
+                            </tr>
+                            <tr>
+                                <td class="label">产品型号</td>
+                                <td>ATK-HSWLDBG</td>
+                            </tr>
+                            <tr>
+                                <td class="label">支持芯片</td>
+                                <td>ARM Cortex M0/M1/M3/M4/M7 全系列</td>
+                            </tr>
+                            <tr>
+                                <td class="label">通信方式</td>
+                                <td>USB（免驱）</td>
+                            </tr>
+                            <tr>
+                                <td class="label">仿真接口</td>
+                                <td>JTAG、SWD</td>
+                            </tr>
+                            <tr>
+                                <td class="label">支持编译器</td>
+                                <td>MDK、IAR</td>
+                            </tr>
+                            <tr>
+                                <td class="label">串口速度</td>
+                                <td>10Mbps（max）</td>
+                            </tr>
+                            <tr>
+                                <td class="label">烧录速度</td>
+                                <td>10M</td>
+                            </tr>
+                            <tr>
+                                <td class="label">通信距离</td>
+                                <td>≥10 米(使用 RXmin 端的时候，≥5 米)</td>
+                            </tr>
+                            <tr>
+                                <td class="label">TX 端工作电压</td>
+                                <td>5V（USB 供电）</td>
+                            </tr>
+                            <tr>
+                                <td class="label">TX 端工作电流</td>
+                                <td>151mA</td>
+                            </tr>
+                            <tr>
+                                <td class="label">RX 端工作电压</td>
+                                <td>3.3V/5V(USB 或者 JTAG 或者 SWD 供电)</td>
+                            </tr>
+                            <tr>
+                                <td class="label">RX 端工作电流</td>
+                                <td>132mA@5V</td>
+                            </tr>
+                            <tr>
+                                <td class="label">RXmin 端工作电压</td>
+                                <td>3.3V/5V(USB 或者 JTAG 或者 SWD 供电)</td>
+                            </tr>
+                            <tr>
+                                <td class="label">RXmin 端工作电流</td>
+                                <td>150mA@5V</td>
+                            </tr>
+                            <tr>
+                                <td class="label">工作温度</td>
+                                <td>-40℃~+85℃</td>
+                            </tr>
+                            <tr>
+                                <td class="label">尺寸</td>
+                                <td>66.5mm*40mm*17mm</td>
+                            </tr>
+                            <tr>
+                                <td class="label">RXmin 尺寸</td>
+                                <td>40mm*20mm</td>
+                            </tr>
+                        </table>
+                        <p data-page="4" class="fig-cap">表1.1.3.2.1 高速无线调试器基本参数</p>
+                        <p data-page="4" class="h-l3" id="sec-1-1-3-3"><strong>1.1.3.3 指示灯说明</strong></p>
+                        <p data-page="4">　　（1）发送端指示灯，说明如下表：</p>
+                        <table data-page="4" class="doc-table">
+                            <tr>
+                                <th>状态</th>
+                                <th>描述</th>
+                            </tr>
+                            <tr>
+                                <td>蓝色（蓝亮，红灭）</td>
+                                <td>发送端和接收端通信正确</td>
+                            </tr>
+                            <tr>
+                                <td>红蓝色（蓝亮，红亮）</td>
+                                <td>正在进行下载、调试或者串口传输数据</td>
+                            </tr>
+                            <tr>
+                                <td>蓝色闪烁（蓝闪，红灭）</td>
+                                <td>通信时断时续，可能可以正常使用</td>
+                            </tr>
+                            <tr>
+                                <td>红蓝色闪烁（蓝亮，红闪）</td>
+                                <td>正在进行下载、调试或者串口传输数据</td>
+                            </tr>
+                            <tr>
+                                <td>灭（蓝灭，红灭）</td>
+                                <td>通信中断，无法使用</td>
+                            </tr>
+                            <tr>
+                                <td>红色闪烁（蓝灭，红闪）</td>
+                                <td>进入了更新模式</td>
+                            </tr>
+                        </table>
+                        <p data-page="5" class="fig-cap">表1.1.3.3.1 高速无线调试器发送端指示灯说明</p>
+                        <p data-page="5">　　（2）接收端指示灯，说明如下表：</p>
+                        <table data-page="5" class="doc-table">
+                            <tr>
+                                <th>状态</th>
+                                <th>描述</th>
+                            </tr>
+                            <tr>
+                                <td>蓝色（蓝亮，红灭）</td>
+                                <td>发送端和接收端通信正确</td>
+                            </tr>
+                            <tr>
+                                <td>红蓝色（蓝亮，红亮）</td>
+                                <td>正在调试，并且 MCU 在运行状态</td>
+                            </tr>
+                            <tr>
+                                <td>蓝色闪烁（蓝闪，红灭）</td>
+                                <td>通信时断时续，可能可以正常使用</td>
+                            </tr>
+                            <tr>
+                                <td>红蓝色闪烁（蓝亮，红闪）</td>
+                                <td>一般在单步调试时，才会出现</td>
+                            </tr>
+                            <tr>
+                                <td>灭（蓝灭，红灭）</td>
+                                <td>通信中断，无法使用</td>
+                            </tr>
+                            <tr>
+                                <td>红色闪烁（蓝灭，红闪）</td>
+                                <td>进入了更新模式</td>
+                            </tr>
+                        </table>
+                        <p data-page="5" class="fig-cap">表1.1.3.3.2 高速无线调试器接收端指示灯说明</p>
+                        <p data-page="5" class="h-l3" id="sec-1-1-3-4"><strong>1.1.3.4 工作原理示意图</strong></p>
+                        <img data-page="5" src="./index06-map/fig-005.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="5" class="fig-cap">图1.1.3.4.1 高速无线调试器工作原理示意图</p>
+                        <p data-page="5" class="h-l3" id="sec-1-1-3-5"><strong>1.1.3.5 接线示意图</strong></p>
+                        <p data-page="5">　　高速无线调试器发送端，接线图：</p>
+                        <img data-page="5" src="./index06-map/fig-006.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="5" class="fig-cap">图1.1.3.5.1 发送端接线示意图</p>
+                        <p data-page="5">　　高速无线调试器接收端，JTAG/SWD 接口供电，接线示意图：</p>
+                        <img data-page="5" src="./index06-map/fig-007.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="5" class="fig-cap">图1.1.3.5.2 接收端接线示意图</p>
+                        <p data-page="5">　　高速无线调试器接收端，USB 接口供电，接线示意图：</p>
+                        <img data-page="6" src="./index06-map/fig-008.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="6" class="fig-cap">图1.1.3.5.3 接收端用USB 接口供电接线示意图</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 data-page="6" id="sec-1-2">1.2 MDK 配置教程</h3>
+                        <p data-page="6" class="h-l2" id="sec-1-2-1"><strong>1.2.1 正确连接好仿真器</strong></p>
+                        <p data-page="6" class="h-l3" id="sec-1-2-1-1"><strong>1.2.1.1 DAP 仿真器的连接</strong></p>
+                        <p data-page="6">　　（1）通过USB 线把DAP 仿真器和电脑连接起来。（2）通过JTAG 接口或者SWD 接口，连接上目标MCU。</p>
+                        <p data-page="6">　　如下图所示，注意指示灯必须是蓝色常亮。</p>
+                        <img data-page="6" src="./index06-map/fig-009.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="6" class="fig-cap">图1.2.1.1.1 DAP 仿真器连接示意图</p>
+                        <p data-page="6">　　注意：DAP 仿真器不对外输出电压的，所以需要给目标板子另外供电。</p>
+                        <p data-page="7" class="h-l3" id="sec-1-2-1-2"><strong>1.2.1.2 高速DAP 仿真器的连接</strong></p>
+                        <p data-page="7">　　（1）通过USB 线把高速DAP 仿真器和电脑连接起来。（2）通过JTAG 接口或者SWD 接口，连接上目标MCU。</p>
+                        <p data-page="7">　　如下图所示，注意指示灯必须是蓝色常亮。</p>
+                        <img data-page="7" src="./index06-map/fig-010.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="7" class="fig-cap">图1.2.1.2.1 高速DAP 仿真器连接示意图</p>
+                        <p data-page="7">　　注意：高速DAP 仿真器可以对外输出电压，所以下载调试程序的时候，目标板子可以不用接电源，但是一般不建议。因为高速DAP 仿真器对外的承载能力有限，对于有大电流需求的目标，会驱动不起来，容易造成不稳定，所以建议还是给目标板子另外供电。</p>
+                        <p data-page="7" class="h-l3" id="sec-1-2-1-3"><strong>1.2.1.3 高速无线调试器的连接</strong></p>
+                        <p data-page="7">　　（1）通过USB 线把高速无线调试器的发送端和电脑连接起来。（2）高速无线调试器的接收端通过JTAG 接口或者SWD 接口，连接上目标MCU。</p>
+                        <p data-page="7">　　如下图所示，注意发送端和接收端的指示灯必须是蓝色常亮。</p>
+                        <img data-page="8" src="./index06-map/fig-011.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="8" class="fig-cap">图1.2.1.3.1 高速无线调试器连接示意图</p>
+                        <p data-page="8">　　还可以通过高速无线调试器接收端给目标板子供电，如下图所示：</p>
+                        <img data-page="8" src="./index06-map/fig-012.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="8" class="fig-cap">图1.2.1.3.2 高速无线调试器接收端给目标板子供电连接示意图</p>
+                        <p data-page="8">　　注意：高速无线调试器接收端可以对外输出电压，所以下载调试程序的时候，目标板子可</p>
+                        <p data-page="9">　　以不用接电源，但是一般不建议。因为高速无线调试器接收端对外的承载能力有限，对于有大电流需求的目标，会驱动不起来，容易造成不稳定，所以建议还是给目标板子另外供电。</p>
+                        <p data-page="9" class="h-l2" id="sec-1-2-2"><strong>1.2.2 配置MDK</strong></p>
+                        <p data-page="9">　　注意：低版本MDK 对DAP 仿真器、高速DAP 仿真器和高速无线调试器的支持不完善，推荐使用MDK5.23 以上的版本。</p>
+                        <p data-page="9">　　在MDK5.23~MDK5.26 编译环境下，高速DAP 仿真器和高速无线调试器对部分芯片支持有bug，必须打补丁。请参考路径：【正点原子】DAP 仿真器【高速版】ATK-HSDAP 资料\3，MDK&amp;IAR bug 解决办法\mdk 的bug 解决方法解决，或者参考路径【正点原子】无线调试器【高速版】ATL-HSWLDBG 资料\mdk 补丁。</p>
+                        <p data-page="9">　　下面开始对MDK 进行配置，来选择使用DAP 仿真器。如果你之前使用的是ST-Link，那么只需要修改下列2 个地方的配置就可以变成用DAP 仿真器。</p>
+                        <p data-page="9">　　首先是选择调试器，如果要使用的是DAP，点击魔术棒，在 Debug 选项卡中，请按照</p>
+                        <p data-page="9" class="fig-cap">图1.2.1 操作来选择“CMSIS-DAP Debugger”，如果要选择其他的调试器也是在这里选择。比如</p>
+                        <p data-page="9">　　要用JLINK，那么需要选择“J-LINK/J-Trace Cortex”，用ST-Link 则选择“ST-Link Debugger”。</p>
+                        <img data-page="9" src="./index06-map/fig-013.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="9" class="fig-cap">图1.2.2.1 选择CMSIS-DAP Debugger</p>
+                        <p data-page="9">　　选择好调试器之后，点击图中框的Settings，设置DAP 的一些参数，这里首先介绍设置为SWD 模式调试配置方法，如图1.2.2.2 所示。</p>
+                        <img data-page="9" src="./index06-map/fig-014.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="9" class="fig-cap">图1.2.2.2 SWD 模式DAP 仿真器参数设置</p>
+                        <p data-page="10">　　① 表示 MDK 找到了 ATK CMSIS-DAP 仿真器，如果这里显示为空，则表示没有仿真器被找到，请检查你的电脑是否接了仿真器？</p>
+                        <p data-page="10">　　② 设置接口方式，这里选择SW，通信速度设置为 10Mhz（实际上大概只有4M 的速度，MDK 会自动匹配）。如果不能正常工作，可以尝试调低一些速度。</p>
+                        <p data-page="10">　　③ 表示MDK 通过仿真器的SW 接口找到了目标芯片，ID 为：0x1BA01477。如果这里显示：No target connected，则表示没找到任何器件，请检查仿真器和开发板连接是否正常？开发板是否供电了？</p>
+                        <p data-page="10">　　其他部分使用默认设置，设置完成以后单击“确定”按钮，完成此部分设置。一般我们建议用SWD 模式，因为JTAG 模式和SWD 模式使用方法都是一样的，不同的是，SWD 接口调试更加节省IO 端口。</p>
+                        <p data-page="10">　　如果要选择JTAG 模式调试对应的配置方法，如图1.2.2.3 所示。</p>
+                        <img data-page="10" src="./index06-map/fig-015.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="10" class="fig-cap">图1.2.2.3 JTAG 模式DAP 仿真器参数设置</p>
+                        <p data-page="10">　　如上图所示，我们只需要在红框中的Port 里下拉选择JTAG，就选择了JTAG 模式，通信速度设置为5Mhz 即可，一般在1~5M 之前。如果不能正常工作，可以尝试调低一些速度。</p>
+                        <p data-page="10">　　最后，我们需要在Utilities 选项卡里面设置下载时的目标编程器，如图1.2.2.4 所示。</p>
+                        <img data-page="10" src="./index06-map/fig-016.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="10" class="fig-cap">图1.2.2.4 FLASH 编程器选择</p>
+                        <p data-page="10" class="fig-cap">图1.2.4 中，我们直接勾选 Use Debug Driver，即和调试一样，选择DAP 来给目标器件的</p>
+                        <p data-page="10">　　FLASH 编程，然后点击Settings，进入FLASH 算法设置，设置如图1.2.2.5 所示。</p>
+                        <img data-page="11" src="./index06-map/fig-017.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="11" class="fig-cap">图1.2.2.5 FLASH 算法设置</p>
+                        <p data-page="11">　　这里我们使用的是战舰开发板的例程为例，芯片型号为STM32F103ZET6，FLASH 容量为512K 字节，所以Programming Algorithm 里面默认会有512K 型号的STM32F10x High-densityFlash 算法。如果大家用的是其他开发板，这里没有flash 算法，大家可以点击 Add 按钮，自行添加即可。如果是北极星开发板例程，还要添加正点原子提供的算法，设置RAM for Algorithm栏的算法大小，这个大家参考对应的教程添加即可。最后，选中 Reset and Run 选项，以实现在编程后自动运行，不需要按复位键，其他默认设置即可。</p>
+                        <p data-page="11">　　到这里，DAP 仿真器的配置就完成了，其他配置和ST-Link 没什么区别，大家看对应的开发板教程即可。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 data-page="11" id="sec-1-3">1.3 DAP 固件升级</h3>
+                        <p data-page="11" class="h-l2" id="sec-1-3-1"><strong>1.3.1 DAP 仿真器固件更新</strong></p>
+                        <p data-page="11">　　注意：如果更新失败，请检查电脑网络连接是否正常，因为服务器连接不好会导致更新失败，请多尝试几遍。</p>
+                        <p data-page="11">　　首先通过USB 线，把DAP 仿真器连接到电脑，注意指示灯蓝灯常亮，表示正常。然后打开“ATK-DAP 配置软件”最后在配置软件上按照下面几个步骤进行更新。</p>
+                        <p data-page="11">　　（1）点击“刷新”，扫描设备。</p>
+                        <img data-page="11" src="./index06-map/fig-018.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="11" class="fig-cap">图1.3.1.1 点击“刷新”，扫描设备</p>
+                        <p data-page="12">　　（2）设备被成功扫描出来，然后点击“更新”。</p>
+                        <img data-page="12" src="./index06-map/fig-019.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="12" class="fig-cap">图1.3.1.2 点击“更新”</p>
+                        <p data-page="12">　　（3）点击“开始更新”。</p>
+                        <img data-page="12" src="./index06-map/fig-020.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="12" class="fig-cap">图1.3.1.3 点击“开始更新”</p>
+                        <p data-page="12">　　（4）更新成功后，点击“确认”。</p>
+                        <img data-page="12" src="./index06-map/fig-021.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="12" class="fig-cap">图1.3.1.4 固件写入完成，点击“确认”</p>
+                        <p data-page="12">　　更新成功，如下图1.3.1.4 所示。其他提示，均为失败了。如果失败了，按照步骤重试一下，还是失败，请联系我们。</p>
+                        <p data-page="12">　　（5）点击“断开设备”。</p>
+                        <img data-page="13" src="./index06-map/fig-022.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="13" class="fig-cap">图1.3.1.5 断开设备</p>
+                        <p data-page="13">　　完成了配置软件的使用后，要点击“断开设备”，以便MDK 等IDE 使用。</p>
+                        <p data-page="13" class="h-l2" id="sec-1-3-2"><strong>1.3.2 高速DAP 仿真器固件更新</strong></p>
+                        <p data-page="13">　　首先通过USB 线，把高速DAP 仿真器连接到电脑，注意指示灯蓝灯常亮，表示正常。然后打开“高速dap 配置软件”最后在配置软件上按照下面几个步骤进行更新。</p>
+                        <p data-page="13">　　（1）点击“刷新图标”，扫描设备。</p>
+                        <img data-page="13" src="./index06-map/fig-023.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="13" class="fig-cap">图1.3.2.1 点击刷新图标，扫描设备</p>
+                        <p data-page="13">　　（2）查看设备是否被成功扫描出来，如果成功如下图所示。</p>
+                        <img data-page="13" src="./index06-map/fig-024.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="13" class="fig-cap">图1.3.2.2 设备被成功扫描</p>
+                        <p data-page="13">　　（3）点击“开始更新”。</p>
+                        <img data-page="14" src="./index06-map/fig-025.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="14" class="fig-cap">图1.3.2.3 点击“开始更新”</p>
+                        <p data-page="14">　　（4）更新成功后，点击“确认”。</p>
+                        <img data-page="14" src="./index06-map/fig-026.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="14" class="fig-cap">图1.3.2.4 固件写入完成，点击“确认”</p>
+                        <p data-page="14">　　更新成功，如下图1.3.1.4 所示。其他提示，均为失败了。如果失败了，按照步骤重试一下，还是失败，请联系我们。</p>
+                        <p data-page="14">　　（5）点击“断开设备图标”。</p>
+                        <img data-page="14" src="./index06-map/fig-027.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="14" class="fig-cap">图1.3.2.5 点击“断开设备图标”</p>
+                        <p data-page="14">　　完成了配置软件的使用后，要点击“断开设备”，以便MDK 等IDE 使用。</p>
+                        <p data-page="14" class="h-l2" id="sec-1-3-3"><strong>1.3.3 高速无线调试器固件更新</strong></p>
+                        <p data-page="14">　　首先通过两条USB 线，分别把高速无线调试器的发送端TX 和接收端RX 都连接到电脑，注意发送端和接收端的指示灯都是蓝灯常亮，表示正常。如果连接的是发送端和小型接收端，小型接收端是绿灯常亮，发送端蓝灯常亮。然后打开“高速无线调试器配置软件”最后在配置软件上按照下面几个步骤进行更新。</p>
+                        <p data-page="14">　　（1）点击“刷新图标”，扫描设备。</p>
+                        <img data-page="15" src="./index06-map/fig-028.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="15" class="fig-cap">图1.3.3.1 点击刷新图标，扫描设备</p>
+                        <p data-page="15">　　（2）查看设备是否被成功扫描出来，如果成功如下图所示。</p>
+                        <img data-page="15" src="./index06-map/fig-029.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="15" class="fig-cap">图1.3.3.2 设备被成功扫描</p>
+                        <p data-page="15">　　如果设备没有连接成功，检测一下发送端TX 和接收端RX 是否都连接到电脑了。（3）选择要更新的设备。</p>
+                        <img data-page="15" src="./index06-map/fig-030.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="15" class="fig-cap">图1.3.3.3 选择要更新的设备</p>
+                        <p data-page="15">　　如图1.3.3.3 所示，总共有三个可以选择的设备，由上往下分别是：TX（发送端）、RX（接收端）、RXmin（小型接收端）。使用的时候可以有两种组合，发送端和接收端，以及发送端和小型接收端，这两种组合都可以下载调试程序。更新固件的时候，这三个设备是要分开更新的。比如首先更新TX（发送端）的固件，那么就下拉选择TX。</p>
+                        <p data-page="15">　　（4）点击“开始更新”。</p>
+                        <img data-page="15" src="./index06-map/fig-031.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="15" class="fig-cap">图1.3.3.4 点击“开始更新”</p>
+                        <p data-page="16">　　（5）更新成功后，点击“确认”。</p>
+                        <img data-page="16" src="./index06-map/fig-032.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="16" class="fig-cap">图1.3.3.5 更新固件成功，点击“确认”</p>
+                        <p data-page="16">　　更新成功，如下图1.3.4.5 所示。其他提示，均为失败了。如果失败了，按照步骤重试一下，还是失败，请联系我们。</p>
+                        <p data-page="16">　　更新成功后，如果还需要更新其它两个设备，下拉设备类型栏选择其它两个设备中的一个，然后继续点击“开始更新”，等待更新完成即可。然后再把最后一个设备也按照此方法更新。</p>
+                        <p data-page="16">　　（6）点击“断开设备的图标”。</p>
+                        <img data-page="16" src="./index06-map/fig-033.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="16" class="fig-cap">图1.3.3.6 点击“断开设备的图标”</p>
+                        <p data-page="16">　　完成了配置软件的使用后，要点击“断开设备”，以便MDK 等IDE 使用。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 data-page="16" id="sec-1-4">1.4 复位兼容模式设置</h3>
+                        <p data-page="16">　　注意：产品出厂前配置好了相关参数，一般无须配置。出厂值为：下载运行。</p>
+                        <table data-page="16" class="doc-table">
+                            <tr>
+                                <th>兼容模式参数</th>
+                                <th>描述</th>
+                                <th>备注</th>
+                            </tr>
+                            <tr>
+                                <td>下载运行</td>
+                                <td>不接NRST 引脚，MDK 也能下载自动运行</td>
+                                <td>可能影响稳定性</td>
+                            </tr>
+                            <tr>
+                                <td>普通</td>
+                                <td>不接NRST 引脚，MDK 不能下载自动运行</td>
+                                <td>更好的稳定性</td>
+                            </tr>
+                        </table>
+                        <p data-page="16" class="fig-cap">表1.4.1 DAP 仿真器兼容模式说明</p>
+                        <p data-page="16">　　上表列出兼容模式的参数说明，下面分别介绍每个DAP 仿真器的复位兼容模式设置方法。</p>
+                        <p data-page="16" class="h-l2" id="sec-1-4-1"><strong>1.4.1 DAP 仿真器设置方法</strong></p>
+                        <p data-page="16">　　首先通过USB 线，把DAP 仿真器连接到电脑，注意指示灯蓝灯常亮，表示正常。然后打开“ATK-DAP 配置软件”最后在配置软件上按照下面几个步骤进行设置。</p>
+                        <p data-page="16">　　（1）点击“刷新”，扫描设备。</p>
+                        <img data-page="16" src="./index06-map/fig-034.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="16" class="fig-cap">图1.4.1.1 点击“刷新”，扫描设备</p>
+                        <p data-page="16">　　（2）设备被成功扫描出来，如下图两个红色框框所示。</p>
+                        <img data-page="17" src="./index06-map/fig-035.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="17" class="fig-cap">图1.4.1.2 查看扫描是否成功</p>
+                        <p data-page="17">　　（3）选择兼容模式参数，并设置。</p>
+                        <img data-page="17" src="./index06-map/fig-036.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="17" class="fig-cap">图1.4.1.3 选择兼容模式参数，并设置</p>
+                        <p data-page="17">　　在兼容模式栏，下拉选择“下载运行”或者“普通”，然后点击“设置模式”。（4）设置兼容模式成功后，点击“确认”。</p>
+                        <img data-page="17" src="./index06-map/fig-037.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="17" class="fig-cap">图1.4.1.4 点击“确认”</p>
+                        <p data-page="17">　　（5）点击“断开设备”。</p>
+                        <img data-page="17" src="./index06-map/fig-038.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="17" class="fig-cap">图1.4.1.5 断开设备</p>
+                        <p data-page="17">　　完成了配置软件的使用后，要点击“断开设备”，以便MDK 等IDE 使用。</p>
+                        <p data-page="17" class="h-l2" id="sec-1-4-2"><strong>1.4.2 高速DAP 仿真器设置方法</strong></p>
+                        <p data-page="17">　　首先通过USB 线，把高速DAP 仿真器连接到电脑，注意指示灯蓝灯常亮，表示正常。然后打开“高速dap 配置软件”最后在配置软件上按照下面几个步骤进行设置。</p>
+                        <p data-page="17">　　（1）点击“刷新图标”，扫描设备。</p>
+                        <img data-page="18" src="./index06-map/fig-039.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="18" class="fig-cap">图1.4.2.1 点击“刷新图标”，扫描设备</p>
+                        <p data-page="18">　　（2）设备被成功扫描出来，如下图两个红色框框所示。</p>
+                        <img data-page="18" src="./index06-map/fig-040.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="18" class="fig-cap">图1.4.2.2 查看扫描是否成功</p>
+                        <p data-page="18">　　（3）选择兼容模式参数，并设置。</p>
+                        <img data-page="18" src="./index06-map/fig-041.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="18" class="fig-cap">图1.4.2.3 选择兼容模式参数，并设置</p>
+                        <p data-page="18">　　在兼容模式栏，下拉选择“下载运行”或者“普通”，然后点击“设置模式”。（4）设置兼容模式成功后，点击“确认”。</p>
+                        <img data-page="18" src="./index06-map/fig-042.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="18" class="fig-cap">图1.4.2.4 点击“确认”</p>
+                        <p data-page="18">　　（5）点击“断开设备图标”。</p>
+                        <img data-page="19" src="./index06-map/fig-043.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="19" class="fig-cap">图1.4.2.5 断开设备</p>
+                        <p data-page="19">　　完成了配置软件的使用后，要点击“断开设备图标”，以便MDK 等IDE 使用。</p>
+                        <p data-page="19" class="h-l2" id="sec-1-4-3"><strong>1.4.3 高速无线调试器设置方法</strong></p>
+                        <p data-page="19">　　首先通过两条USB 线，分别把高速无线调试器的发送端TX 和接收端RX 都连接到电脑，注意发送端和接收端的指示灯都是蓝灯常亮，表示正常。如果连接的是发送端和小型接收端，小型接收端是绿灯常亮，发送端蓝灯常亮。然后打开“高速无线调试器配置软件”最后在配置软件上按照下面几个步骤进行设置。</p>
+                        <p data-page="19">　　（1）点击“刷新图标”，扫描设备。</p>
+                        <img data-page="19" src="./index06-map/fig-044.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="19" class="fig-cap">图1.4.3.1 点击刷新图标，扫描设备</p>
+                        <p data-page="19">　　（2）查看设备是否被成功扫描出来，如果成功如下图所示。</p>
+                        <img data-page="19" src="./index06-map/fig-045.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="19" class="fig-cap">图1.4.3.2 设备被成功扫描</p>
+                        <p data-page="19">　　如果设备没有连接成功，检测一下发送端TX 和接收端RX 是否都连接到电脑了。（3）选择要设置的设备。</p>
+                        <img data-page="19" src="./index06-map/fig-046.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="19" class="fig-cap">图1.4.3.3 选择要更新的设备</p>
+                        <p data-page="19">　　如图1.4.3.3 所示，总共有三个可以选择的设备，由上往下分别是：TX（发送端）、RX（接收端）、RXmin（小型接收端）。这里我们只能对RX（接收端）或者RXmin（小型接收端）进行复位兼容模式设置，TX（发送端）是不需要设置的。比如设置RX（接收端），那么就下拉选择</p>
+                        <p data-page="20">　　RX 即可。</p>
+                        <p data-page="20">　　（4）选择兼容模式参数，并设置。</p>
+                        <img data-page="20" src="./index06-map/fig-047.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="20" class="fig-cap">图1.4.3.4 选择兼容模式参数，并设置</p>
+                        <p data-page="20">　　在复位兼容模式栏，下拉选择“下载运行”或者“普通”，然后点击“设置”。（5）设置兼容模式成功后，点击“确认”。</p>
+                        <img data-page="20" src="./index06-map/fig-048.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="20" class="fig-cap">图1.4.3.5 点击“确认”</p>
+                        <p data-page="20">　　（6）点击“断开设备图标”。</p>
+                        <img data-page="20" src="./index06-map/fig-049.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="20" class="fig-cap">图1.4.3.6 点击“断开设备图标”</p>
+                        <p data-page="20">　　完成了配置软件的使用后，要点击“断开设备”，以便MDK 等IDE 使用。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 data-page="20" id="sec-1-5">1.5 电压模式设置</h3>
+                        <p data-page="20">　　DAP 仿真器不支持电压输出，所以它是没有电压模式设置功能。高速DAP 仿真器和高速无线调试器都支持电压输出，所以该功能是针对这两者设置使用的。但是它们的电压输出有差异的地方，请继续往下阅读。</p>
+                        <p data-page="21" class="h-l2" id="sec-1-5-1"><strong>1.5.1 高速DAP 仿真器</strong></p>
+                        <p data-page="21" class="h-l3" id="sec-1-5-1-2"><strong>1.5.1 高速DAP 仿真器输出电压说明</strong></p>
+                        <p data-page="21">　　注意：所有Vext 引脚都是相连的，出厂前配置好了相关参数，一般无须配置。出厂值为：输出3.3V。</p>
+                        <table data-page="21" class="doc-table">
+                            <tr>
+                                <th>电压设置</th>
+                                <th>描述</th>
+                                <th>备注</th>
+                            </tr>
+                            <tr>
+                                <td>输入</td>
+                                <td>没有电压输出，可以根据目标MCU的电压适配 1.8V~5V 工作电压范围</td>
+                                <td>串口使用需要提供电压输入才能正常工作</td>
+                            </tr>
+                            <tr>
+                                <td>输出1.8V</td>
+                                <td>输出 1.8V 如果检测到电源电路，会切换到输出 0V</td>
+                                <td>检测电源短路，所有 IO 引脚电压变为 1.8V</td>
+                            </tr>
+                            <tr>
+                                <td>输出3.3V</td>
+                                <td>输出 3.3V 如果检测到电源电路，会切换到输出 0V</td>
+                                <td>检测电源短路，所有 IO 引脚电压变为 3.3V</td>
+                            </tr>
+                            <tr>
+                                <td>输出5V</td>
+                                <td>输出 5V 如果检测到电源电路，会切换到输出 0V</td>
+                                <td>这个检测短路功能不可靠</td>
+                            </tr>
+                            <tr>
+                                <td>强制1.8V</td>
+                                <td>输出 1.8V</td>
+                                <td>不检测电源短路，用户需要注意电压是否匹配，所有 IO 引脚电压变为 1.8V</td>
+                            </tr>
+                            <tr>
+                                <td>强制3.3V</td>
+                                <td>输出 3.3V</td>
+                                <td>不检测电源短路，用户需要注意电压是否匹配，所有 IO 引脚电压变为 3.3V</td>
+                            </tr>
+                            <tr>
+                                <td>强制5V</td>
+                                <td>输出 5V</td>
+                                <td>不检测电源短路，用户需要注意电压是否匹配，所有 IO 引脚电压变为 5V</td>
+                            </tr>
+                        </table>
+                        <p data-page="21" class="fig-cap">表1.5.1.1 DAP 仿真器输出电压说明</p>
+                        <p data-page="21" class="h-l3" id="sec-1-5-2"><strong>1.5.2 高速DAP 仿真器输出电压设置方法</strong></p>
+                        <p data-page="21">　　首先通过USB 线，把高速DAP 仿真器连接到电脑，注意指示灯蓝灯常亮，表示正常。然后打开“高速dap 配置软件”最后在配置软件上按照下面几个步骤进行设置。</p>
+                        <p data-page="21">　　（1）点击“刷新图标”，扫描设备。</p>
+                        <img data-page="21" src="./index06-map/fig-050.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="21" class="fig-cap">图1.5.2.1 点击“刷新图标”，扫描设备</p>
+                        <p data-page="21">　　（2）设备被成功扫描出来，如下图两个红色框框所示。</p>
+                        <img data-page="21" src="./index06-map/fig-051.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="21" class="fig-cap">图1.5.2.2 查看扫描是否成功</p>
+                        <p data-page="21">　　（3）选择电压参数，并设置。</p>
+                        <img data-page="22" src="./index06-map/fig-052.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="22" class="fig-cap">图1.5.2.3 选择兼容模式参数，并设置</p>
+                        <p data-page="22">　　在电压栏，下拉选择，这里以“输出3.3V”为例，然后点击“设置电压”。（4）设置电压成功后，点击“确认”。</p>
+                        <img data-page="22" src="./index06-map/fig-053.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="22" class="fig-cap">图1.5.2.4 点击“确认”</p>
+                        <p data-page="22">　　（5）点击“断开设备图标”。</p>
+                        <img data-page="22" src="./index06-map/fig-054.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="22" class="fig-cap">图1.5.2.5 断开设备</p>
+                        <p data-page="22">　　完成了配置软件的使用后，要点击“断开设备图标”，以便MDK 等IDE 使用。</p>
+                        <p data-page="22" class="h-l2" id="sec-1-5-2-2"><strong>1.5.2 高速无线调试器</strong></p>
+                        <p data-page="22" class="h-l3" id="sec-1-5-1-3"><strong>1.5.1 高速无线调试器输出电压说明</strong></p>
+                        <p data-page="22">　　注意：所有Vext 引脚都是相连的，出厂前配置好了相关参数，一般无须配置。出厂值为：输入。小型接收端只支持3.3V 工作电压，不支持配置其他值。</p>
+                        <table data-page="22" class="doc-table">
+                            <tr>
+                                <th>电压设置</th>
+                                <th>描述</th>
+                                <th>备注</th>
+                            </tr>
+                            <tr>
+                                <td>输入</td>
+                                <td>没有电压输出，可以根据 Vext 引脚的电压适配 1.8V~5V 工作电压范围</td>
+                                <td>串口或者 SWD 接 3 线的时候，需要在 Vext 引脚提供电压输入才能正常工作</td>
+                            </tr>
+                            <tr>
+                                <td>输出1.8V</td>
+                                <td>上电时，Vext 引脚输出 1.8V，并且所有 IO 引脚高电平电压变为 1.8V 电压</td>
+                                <td>用户需要注意电压是否匹配</td>
+                            </tr>
+                            <tr>
+                                <td>输出3.3V</td>
+                                <td>上电时，Vext 引脚输出 3.3V，并且所有 IO 引脚高电平电压变为 3.3V 电压</td>
+                                <td>用户需要注意电压是否匹配</td>
+                            </tr>
+                            <tr>
+                                <td>输出5V</td>
+                                <td>上电时，Vext 引脚输出 5V，并且所有 IO 引脚高电平电压变为 5V 电压</td>
+                                <td>用户需要注意电压是否匹配</td>
+                            </tr>
+                        </table>
+                        <p data-page="23" class="fig-cap">表1.5.1.1 DAP 仿真器输出电压说明</p>
+                        <p data-page="23">　　电压输出能力如下图所示：</p>
+                        <img data-page="23" src="./index06-map/fig-055.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="23" class="fig-cap">图1.5.1.1 电压输出能力</p>
+                        <p data-page="23" class="h-l3" id="sec-1-5-2-3"><strong>1.5.2 高速无线调试器输出电压设置方法</strong></p>
+                        <p data-page="23">　　首先通过两条USB 线，分别把高速无线调试器的发送端TX 和接收端RX 都连接到电脑，注意发送端和接收端的指示灯都是蓝灯常亮，表示正常。然后打开“高速无线调试器配置软件”最后在配置软件上按照下面几个步骤进行设置。</p>
+                        <p data-page="23">　　（1）点击“刷新图标”，扫描设备。</p>
+                        <img data-page="23" src="./index06-map/fig-056.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="23" class="fig-cap">图1.5.2.1 点击刷新图标，扫描设备</p>
+                        <p data-page="23">　　（2）查看设备是否被成功扫描出来，如果成功如下图所示。</p>
+                        <img data-page="23" src="./index06-map/fig-057.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="23" class="fig-cap">图1.5.2.2 设备被成功扫描</p>
+                        <p data-page="24">　　如果设备没有连接成功，检测一下发送端TX 和接收端RX 是否都连接到电脑了。（3）选择要配置的设备。</p>
+                        <img data-page="24" src="./index06-map/fig-058.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="24" class="fig-cap">图1.5.2.3 选择要配置的设备</p>
+                        <p data-page="24">　　这里我们只能选择RX 进行配置，另外两个都不支持配置输出电压。（4）选择电压模式参数，并设置。</p>
+                        <img data-page="24" src="./index06-map/fig-059.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="24" class="fig-cap">图1.5.2.4 选择兼容模式参数，并设置</p>
+                        <p data-page="24">　　在电压模式栏，下拉选择需要配置的电压模式，然后点击“设置”。（5）设置电压模式成功后，点击“确认”。</p>
+                        <img data-page="24" src="./index06-map/fig-060.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="24" class="fig-cap">图1.5.2.5 点击“确认”</p>
+                        <p data-page="24">　　（6）点击“断开设备图标”。</p>
+                        <img data-page="25" src="./index06-map/fig-061.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="25" class="fig-cap">图1.5.2.6 点击“断开设备图标”</p>
+                        <p data-page="25">　　完成了配置软件的使用后，要点击“断开设备”，以便MDK 等IDE 使用。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 data-page="25" id="sec-1-6">1.6 序列号（SN）设置</h3>
+                        <p data-page="25">　　DAP 仿真器不支持序列号设置，高速DAP 仿真器需要固件版本 1.4 及以上（配置软件 1.1以上）才支持序列号设置，高速无线调试器只有发送端可以设置序列号。</p>
+                        <p data-page="25">　　大多数用户都是不需要用到序列号设置这个功能的，该功能主要是针对用户在一台电脑连接多个高速DAP 仿真器或者高速无线调试器，导致下载程序时，MDK 无法判断用哪个仿真器进行下载，从而出现问题，因为出厂时仿真器的序列号是一样的。如果使用一台电脑使用多个仿真器，请先给每个仿真器设置不同的序列号，方法如下。</p>
+                        <p data-page="25" class="h-l2" id="sec-1-6-1"><strong>1.6.1 高速DAP 仿真器SN 设置方法</strong></p>
+                        <p data-page="25">　　首先通过USB 线，把高速DAP 仿真器连接到电脑，注意指示灯蓝灯常亮，表示正常。然后打开“高速dap 配置软件”最后在配置软件上按照下面几个步骤进行设置。</p>
+                        <p data-page="25">　　（1）点击“刷新图标”，扫描设备。</p>
+                        <img data-page="25" src="./index06-map/fig-062.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="25" class="fig-cap">图1.6.1.1 点击“刷新图标”，扫描设备</p>
+                        <p data-page="25">　　（2）设备被成功扫描出来，如下图两个红色框框所示。</p>
+                        <img data-page="25" src="./index06-map/fig-063.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="25" class="fig-cap">图1.6.1.2 查看扫描是否成功</p>
+                        <p data-page="25">　　（3）刷新序列号，然后点击“设置SN”。</p>
+                        <img data-page="26" src="./index06-map/fig-064.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="26" class="fig-cap">图1.6.1.3 刷新序列号，并设置</p>
+                        <p data-page="26">　　（4）设置SN 成功后，点击“确认”。</p>
+                        <img data-page="26" src="./index06-map/fig-065.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="26" class="fig-cap">图1.6.1.4 点击“确认”</p>
+                        <p data-page="26">　　（5）点击“断开设备图标”。</p>
+                        <img data-page="26" src="./index06-map/fig-066.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="26" class="fig-cap">图1.6.1.5 断开设备</p>
+                        <p data-page="26">　　完成了配置软件的使用后，要点击“断开设备图标”，以便MDK 等IDE 使用。按照上面的方法，我们给仿真器设置了不同的序列号，怎么使用呢？举个例子，这里我们在一台电脑上连接了两个高速DAP 仿真器，并且这两个仿真器连接在两块不同的板子上。我们用MDK 怎么指定我们的工程程序下载到哪个板子上呢？方法如下。</p>
+                        <p data-page="26">　　按照上述连接好两块板子后，我们点击魔术棒，按照下图的步骤进行操作。</p>
+                        <img data-page="27" src="./index06-map/fig-067.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="27" class="fig-cap">图1.6.1.6 查看仿真器序列号</p>
+                        <p data-page="27">　　通过这个序列号我们就知道我们这个工程选择了哪个仿真器进行下载仿真的。如果要选择另外一个仿真器，通过上图中步骤4 下拉进行选择。比如现在这个仿真器的序列号为：ATK-0650D949，我们选择另外一个看看，操作如下图所示。</p>
+                        <img data-page="27" src="./index06-map/fig-068.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="27" class="fig-cap">图1.6.1.7 选择不同的仿真器</p>
+                        <p data-page="27">　　另一个仿真器的序列号如下图所示。</p>
+                        <img data-page="27" src="./index06-map/fig-069.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="27" class="fig-cap">图1.6.1.7 选择不同的仿真器</p>
+                        <p data-page="27">　　可以看到我们选择另外一个仿真器的序列号为ATK-064CD5AB。这些序列号我们可以通过上位机设置。</p>
+                        <p data-page="27" class="h-l2" id="sec-1-6-2"><strong>1.6.2 高速无线调试器SN 设置方法</strong></p>
+                        <p data-page="27">　　首先通过两条USB 线，分别把高速无线调试器的发送端TX 和接收端RX 都连接到电脑，注意发送端和接收端的指示灯都是蓝灯常亮，表示正常。如果连接的是发送端和小型接收端，小型接收端是绿灯常亮，发送端蓝灯常亮。然后打开“高速无线调试器配置软件”最后在配置软件上按照下面几个步骤进行设置。</p>
+                        <p data-page="27">　　（1）点击“刷新图标”，扫描设备。</p>
+                        <img data-page="28" src="./index06-map/fig-070.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="28" class="fig-cap">图1.6.2.1 点击刷新图标，扫描设备</p>
+                        <p data-page="28">　　（2）查看设备是否被成功扫描出来，如果成功如下图所示。</p>
+                        <img data-page="28" src="./index06-map/fig-071.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="28" class="fig-cap">图1.6.2.2 设备被成功扫描</p>
+                        <p data-page="28">　　如果设备没有连接成功，检测一下发送端TX 和接收端RX 是否都连接到电脑了。（3）选择要配置的设备。</p>
+                        <img data-page="28" src="./index06-map/fig-072.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="28" class="fig-cap">图1.6.2.3 选择要配置的设备</p>
+                        <p data-page="28">　　这里我们只能选择TX 进行配置，另外两个都不需要配置，也不支持配置SN。（4）刷新序列号，然后点击“设置”。</p>
+                        <img data-page="28" src="./index06-map/fig-073.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="28" class="fig-cap">图1.6.2.4 刷新序列号，并设置</p>
+                        <p data-page="29">　　（5）设置SN 成功后，点击“确认”。</p>
+                        <img data-page="29" src="./index06-map/fig-074.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="29" class="fig-cap">图1.6.2.5 点击“确认”</p>
+                        <p data-page="29">　　（6）点击“断开设备图标”。</p>
+                        <img data-page="29" src="./index06-map/fig-075.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="29" class="fig-cap">图1.6.2.6 点击“断开设备图标”</p>
+                        <p data-page="29">　　完成了配置软件的使用后，要点击“断开设备”，以便MDK 等IDE 使用。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 data-page="29" id="sec-1-7">1.7 高速无线调试器无线参数</h3>
+                        <p data-page="29" class="h-l2" id="sec-1-7-1"><strong>1.7.1 高速无线调试器无线参数说明</strong></p>
+                        <p data-page="29">　　注意：产品出厂前配置好了相关参数，一般无须配置。</p>
+                        <table data-page="29" class="doc-table">
+                            <tr>
+                                <th>参数</th>
+                                <th>描述</th>
+                                <th>备注</th>
+                            </tr>
+                            <tr>
+                                <td>频率模式</td>
+                                <td>发送端和接收端通信的频率模式</td>
+                                <td>发送端和接收端必须相同，默认“自动”频率模式</td>
+                            </tr>
+                            <tr>
+                                <td>频率</td>
+                                <td>发送端和接收端通信的频率，只在手动频率模式下有用</td>
+                                <td>发送端和接收端必须相同</td>
+                            </tr>
+                            <tr>
+                                <td>ID</td>
+                                <td>发送端和接收端通信的识别 ID</td>
+                                <td>发送端和接收端必须相同</td>
+                            </tr>
+                            <tr>
+                                <td>包大小</td>
+                                <td>发送端和接收端通信的单个包的最大大小</td>
+                                <td>发送端和接收端必须相同，默认“小包”模式</td>
+                            </tr>
+                        </table>
+                        <p data-page="29" class="fig-cap">表1.7.1.1 高速无线调试器无线参数说明</p>
+                        <p data-page="29">　　频率模式说明</p>
+                        <table data-page="29" class="doc-table">
+                            <tr>
+                                <th>频率模式</th>
+                                <th>描述</th>
+                                <th>备注</th>
+                            </tr>
+                            <tr>
+                                <td>自动频率</td>
+                                <td>自动选择无线通信频率</td>
+                                <td>最多可以5 个高速无线调试器一起工作</td>
+                            </tr>
+                            <tr>
+                                <td>手动频率</td>
+                                <td>手动固定无线通信频率</td>
+                                <td>范围 2406MHz~2480MHz，由频率参数指定</td>
+                            </tr>
+                        </table>
+                        <p data-page="29" class="fig-cap">表1.7.1.2 频率模式说明</p>
+                        <p data-page="29">　　包大小说明</p>
+                        <table data-page="29" class="doc-table">
+                            <tr>
+                                <th>包大小</th>
+                                <th>描述</th>
+                                <th>备注</th>
+                            </tr>
+                            <tr>
+                                <td>大包</td>
+                                <td>无线通信时，使用大包</td>
+                                <td>在所有包大小选项中，无线传输速度最快，但是稳定性最差</td>
+                            </tr>
+                            <tr>
+                                <td>中包</td>
+                                <td>无线通信时，使用中包</td>
+                                <td>在所有包大小选项中，无线传输速度适中，稳定性适中</td>
+                            </tr>
+                            <tr>
+                                <td>小包</td>
+                                <td>无线通信时，使用小包</td>
+                                <td>在所有包大小选项中，无线传输速度最慢，但是稳定性最好</td>
+                            </tr>
+                        </table>
+                        <p data-page="29" class="fig-cap">表1.7.1.3 包大小说明</p>
+                        <p data-page="30" class="h-l2" id="sec-1-7-2"><strong>1.7.2 高速无线调试器无线参数配置</strong></p>
+                        <p data-page="30" class="h-l3" id="sec-1-7-2-1"><strong>1.7.2.1 自动频率模式配置</strong></p>
+                        <p data-page="30">　　首先通过两条USB 线，分别把高速无线调试器的发送端TX 和接收端RX 都连接到电脑，注意发送端和接收端的指示灯都是蓝灯常亮，表示正常。如果连接的是发送端和小型接收端，小型接收端是绿灯常亮，发送端蓝灯常亮。然后打开“高速无线调试器配置软件”最后在配置软件上按照下面几个步骤进行设置。</p>
+                        <p data-page="30">　　（1）点击“刷新图标”，扫描设备。</p>
+                        <img data-page="30" src="./index06-map/fig-076.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="30" class="fig-cap">图1.7.2.1.1 点击刷新图标，扫描设备</p>
+                        <p data-page="30">　　（2）查看设备是否被成功扫描出来，如果成功如下图所示。</p>
+                        <img data-page="30" src="./index06-map/fig-077.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="30" class="fig-cap">图1.7.2.1.2 设备被成功扫描</p>
+                        <p data-page="30">　　如果设备没有连接成功，检测一下发送端TX 和接收端RX 是否都连接到电脑了。（3）选择要配置的设备。</p>
+                        <img data-page="30" src="./index06-map/fig-078.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="30" class="fig-cap">图1.7.2.1.3 选择要配置的设备</p>
+                        <p data-page="30">　　（4）设置选择无线参数，并设置。</p>
+                        <img data-page="31" src="./index06-map/fig-079.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="31" class="fig-cap">图1.7.2.1.4 刷新序列号，并设置</p>
+                        <p data-page="31">　　注意：发送端TX 和接收端RX，或者发送端TX 和小型接收端Rxmin 的频率模式、ID 和包大小要设置为一样的，否则通信会失败。</p>
+                        <p data-page="31">　　这里如果我们设置了自动模式，那么发送端TX 和接收端RX，或者发送端TX 和小型接收端Rxmin 都必须一起设置为自动。当然ID 和包大小也不用每次都设置，只要保证发送端和接收端，或发送端和小型接收端一样就行。</p>
+                        <p data-page="31">　　（5）设置无线参数成功后，点击“确认”。</p>
+                        <img data-page="31" src="./index06-map/fig-080.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="31" class="fig-cap">图1.7.2.1.5 点击“确认”</p>
+                        <p data-page="31">　　比如这里我们设置好TX，那么RX 和Rxmin 的设置很简单，只需要在图1.7.2.1.3 中的设备类型栏选择RX 或者Rxmin，然后再点击图1.7.2.1.4 中的设置参数即可。这样发送端TX 和接收端RX，或者发送端TX 和小型接收端Rxmin 的参数就可以设置为一样的。</p>
+                        <p data-page="31">　　（6）点击“断开设备图标”。</p>
+                        <img data-page="31" src="./index06-map/fig-081.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="31" class="fig-cap">图1.7.2.1.6 点击“断开设备图标”</p>
+                        <p data-page="31">　　完成了配置软件的使用后，要点击“断开设备”，以便MDK 等IDE 使用。</p>
+                        <p data-page="31" class="h-l3" id="sec-1-7-2-2"><strong>1.7.2.2 手动频率模式配置</strong></p>
+                        <p data-page="31">　　首先通过两条USB 线，分别把高速无线调试器的发送端TX 和接收端RX 都连接到电脑，注意发送端和接收端的指示灯都是蓝灯常亮，表示正常。如果连接的是发送端和小型接收端，小型接收端是绿灯常亮，发送端蓝灯常亮。然后打开“高速无线调试器配置软件”最后在配置软件上按照下面几个步骤进行设置。</p>
+                        <p data-page="32">　　（1）点击“刷新图标”，扫描设备。</p>
+                        <img data-page="32" src="./index06-map/fig-082.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="32" class="fig-cap">图1.7.2.2.1 点击刷新图标，扫描设备</p>
+                        <p data-page="32">　　（2）查看设备是否被成功扫描出来，如果成功如下图所示。</p>
+                        <img data-page="32" src="./index06-map/fig-083.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="32" class="fig-cap">图1.7.2.2.2 设备被成功扫描</p>
+                        <p data-page="32">　　如果设备没有连接成功，检测一下发送端TX 和接收端RX 是否都连接到电脑了。（3）选择要配置的设备。</p>
+                        <img data-page="32" src="./index06-map/fig-084.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="32" class="fig-cap">图1.7.2.2.3 选择要配置的设备</p>
+                        <p data-page="32">　　（4）设置选择无线参数，并设置。</p>
+                        <img data-page="32" src="./index06-map/fig-085.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="32" class="fig-cap">图1.7.2.2.4 刷新序列号，并设置</p>
+                        <p data-page="32">　　注意：发送端TX 和接收端RX，或者发送端TX 和小型接收端Rxmin 的频率模式、频率、ID 和包大小要设置为一样的，否则通信会失败。</p>
+                        <p data-page="32">　　（5）设置无线参数成功后，点击“确认”。</p>
+                        <img data-page="33" src="./index06-map/fig-086.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="33" class="fig-cap">图1.7.2.2.5 点击“确认”</p>
+                        <p data-page="33">　　比如这里我们设置好TX，那么RX 和Rxmin 的设置很简单，只需要在图1.7.2.2.3 中的设备类型栏选择RX 或者Rxmin，然后再点击图1.7.2.2.4 中的设置参数即可。这样发送端TX 和接收端RX，或者发送端TX 和小型接收端Rxmin 的参数就可以设置为一样的。</p>
+                        <p data-page="33">　　（6）点击“断开设备图标”。</p>
+                        <img data-page="33" src="./index06-map/fig-087.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="33" class="fig-cap">图1.7.2.2.6 点击“断开设备图标”</p>
+                        <p data-page="33">　　完成了配置软件的使用后，要点击“断开设备”，以便MDK 等IDE 使用。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 data-page="33" id="sec-1-8">1.8 串口使用</h3>
+                        <p data-page="33" class="h-l2" id="sec-1-8-1"><strong>1.8.1 串口功能说明</strong></p>
+                        <p data-page="33">　　如相关实物示意图所示，这里介绍的三款仿真器都是有虚拟串口的。<br>注意：串口的使用是必须接入Vext，并且只支持 8 位数据位。<br>在串口打开的时候，如果正在使用dap 功能，注意配置软件也是在使用dap 功能，可能会<br>导致重新插上之后串口无法使用。</p>
+                        <p data-page="33">　　解决方法：<br>1、把高速 dap 所有相关的软件关闭，把高速 dap 在电脑上拔出来，<br>2、把串口助手打开和关闭，连续 3 次。<br>3、再重新插上高速 dap。正常情况可以继续使用串口功能。<br>4、如果还是不行只能重启电脑。<br>无线调试器的串口也是无线的，需要配合发送端使用。无线调试器串口数据发送过程如下：<br>电脑->TX 端->无线->RX 端->RX 端的串口引脚<br>接收过程则路径相反。</p>
+                        <p data-page="33" class="h-l2" id="sec-1-8-2"><strong>1.8.2 虚拟串口驱动安装</strong></p>
+                        <p data-page="33">　　一般电脑在联网的状态会自动安装串口驱动。如果没有，请按照“串口驱动/串口驱动安装教程.pdf”安装。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 data-page="33" id="sec-1-9">1.9 读保护设置</h3>
+                        <p data-page="33">　　MDK 等IDE 不支持DAP 仿真器、高速DAP 仿真器和无线调试器解除flash 读保护，这里提供一个读保护设置软件。注意如果在固件中设置了flash 读保护，有些情况下无法下载自动运行，得把 mcu 断电重启。</p>
+                        <p data-page="33">　　现在支持的芯片系列：STM32F1xx（不包含 xl 系列）、STM32F2xx、STM32F4xx</p>
+                        <p data-page="34">　　读保护等级说明：<br>LEVEL_0：没有读保护<br>LEVEL_1: 对应芯片的 LEVEL1 等级读保护<br>设置步骤：<br>1、按前面章节连接好DAP 仿真器（高速DAP 仿真器或者无线调试器）和MCU。<br>2、打开”atkflash”文件夹下的”atkflash.exe”软件，如下图，并在对应的红框 1 下选择<br>对应的调试器型号、芯片和读保护等级，然后点击红框2 的“设置”按钮。注意”STM32F2xx”<br>和”STM32F4xx”设置读保护的时间可能较长，请耐心等待。</p>
+                        <img data-page="34" src="./index06-map/fig-088.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="34" class="fig-cap">图1.9.1 atkflash.exe 读保护设置</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 data-page="34" id="sec-1-10">1.10 bin 文件下载</h3>
+                        <p data-page="34">　　1、运行“coflash/CoFlash-1.4.8.exe”安装 coflash。2、打开安装后的coflash.exe，如下图，在红框1 选择 config 页面，在红框2 选择对应的芯片（这里以 STM32F103ZE 为例），在红框3 选择对应的调试器参数。</p>
+                        <img data-page="34" src="./index06-map/fig-089.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="34" class="fig-cap">图1.10.1 coflash.exe 设置</p>
+                        <p data-page="35">　　3、如下图，点击红框的按钮，选择对应要下载的固件。注意 coflash 只支持 bin 格式和 elf格式文件。参考“coflash/MDk 如何生成 bin 文件.doc”，可以使用 mdk 生成 bin 文件。其他情况请把文件格式转为bin。</p>
+                        <img data-page="35" src="./index06-map/fig-090.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="35" class="fig-cap">图1.10.2 选择要下载的固件</p>
+                        <p data-page="35">　　4、在红框 1 勾上对应的扇区，一般默认就好。红框 2 选择对应的参数，一般默认就好。最后点击红框 3 的按钮。一切正常就能下载成功。</p>
+                        <img data-page="35" src="./index06-map/fig-091.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="35" class="fig-cap">图1.10.3 设置参数并下载</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 data-page="36" id="sec-faq">第二章 常见问题汇总</h3>
+                        <p data-page="36" class="h-l2" id="sec-2-1"><strong>2.1 正点原子DAP 简单问题查找步骤</strong></p>
+                        <p data-page="36">　　如果一时无法确定调试器问题所在，可初步尝试以下步骤查找问题所在。</p>
+                        <p data-page="36">　　步骤一</p>
+                        <p data-page="36">　　1、用配置软件把电压模式设置为“输入”（DAP 仿真器不支持）<br>2、接 4 引脚 SWD 或者 20 引脚的 JTAG<br>3、把时钟设置成 1M<br>4、用配置软件把兼容模式设置成“普通”</p>
+                        <p data-page="36">　　步骤二</p>
+                        <p data-page="36">　　如果步骤一无效，把固件更新到最新版本，再尝试步骤一。</p>
+                        <p data-page="36">　　步骤三</p>
+                        <p data-page="36">　　配合 MDK 问题的查找出现如下图红框所示情况，表示找不到调试</p>
+                        <img data-page="36" src="./index06-map/fig-092.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="36">　　可能原因：<br>1) usb 线连接有问题。<br>解决方法：用配置软件查找设备，如果能查找到表示 usb 连线没有问题，否则可能有问题。<br>2) 其他驱动占用了<br>解决方法：请检查驱动。如下图，正常插上会多 2 个人体输入学设备。注意：设备名称可<br>能不一样。</p>
+                        <img data-page="37" src="./index06-map/fig-093.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="37">　　3) 其他软件占用了<br>解决方法：关闭相关软件。如配置软件就会占用调试器<br>4) 如果是无线调试器，有可能是无线参数不一致<br>解决方法：用配置软件配置成一样的无线参数。TX 端和 RX 正常通信的时候，蓝色 led<br>灯会同时常亮。</p>
+                        <p data-page="37">　　步骤四</p>
+                        <p data-page="37">　　配合 MDK 问题的查找。<br>出现如下面两个图红框所示情况中的一个，表示调试器与芯片连接异常，就是SWD/JTAG<br>连线那里出了问题。先参考步骤一解决，如果不行参考下面的解决方法。</p>
+                        <img data-page="37" src="./index06-map/fig-094.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <img data-page="37" src="./index06-map/fig-095.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="37">　　1) SWD 或者 JTAG 接口的接线不正确、不稳定、太长。</p>
+                        <p data-page="38">　　解决方法：接好线。线长度最好不超过 30 厘米。<br>2) 板子的 IO 电平与调试器的 IO 电平不匹配。<br>解决方法：用配置软件进行工作电压设置。<br>3) JTAG/SWD 的调试接口是被关闭。<br>解决方法 1：具体芯片需要具体分析。如用串口下载功能，下载一个没有关闭调试接口的<br>代码到芯片。解决方法 2：接上调试接口的 NRST 引脚，然后如下图配置 MDK，对应选<br>项选择“under Reset”。</p>
+                        <img data-page="38" src="./index06-map/fig-096.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="38" class="h-l2" id="sec-2-2"><strong>2.2 高速DAP 仿真器问题汇总</strong></p>
+                        <p data-page="38">　　1、无法读芯片ID<br>答：把电压设置为输入，并把兼容模式设置为“普通”。如果还是不行请检查接线。<br>2、可以读芯片ID，无法下载。<br>答：请检查芯片是否设置了flash 读保护。还可以尝试降低时钟频率<br>3、某些板子不能下载。<br>答：一、请检查供电，已经与高速DAP 的电压是否匹配。</p>
+                        <p data-page="38">　　二、请检查JTAG/SWD 的调试接口是否被关闭。<br>三、请检查芯片是否设置了flash 读保护。<br>4、usb 无法识别<br>答：在JTAG、SWD、串口什么都不要接的情况下，通过 usb 口连接电脑。还有尝试换usb<br>线，以及换 usb 接口。</p>
+                        <p data-page="38">　　5、在 MDK 勾选了下载自动运行还是无法自动运行答：如果是接 4 线或者 3 线 SWD，用配置软件把兼容模式改为“下载运行”。</p>
+                        <p data-page="39" class="h-l2" id="sec-2-3"><strong>2.3 无线调试器问题汇总</strong></p>
+                        <p data-page="39">　　1、SWD 接3 线，怎么处理？答：设置接收端输出电压为对应的工作电压，1.8V、3.3V、或者 5V。例如MCU 的IO 工作电压为 3.3V，则设置输出电压为 3.3V。设置电压的方式请按照1.5 节步骤操作。</p>
+                        <p data-page="39">　　2、串口不接 Vext，怎么处理？答：设置接收端输出电压为对应的工作电压，1.8V、3.3V、或者 5V。例如MCU 的IO 工作电压为 3.3V，则设置输出电压为 3.3V。设置电压的方式请按照1.5 节步骤操作。注意所有的 Vext 都是相连的，不一定必须连 4P 串口的 Vext。3、无线调试器接收端无法使用 JTAG/SWD 接口供电。答：接收端需要 0.8W 的功率，电压范围是 3.3V~5V。大概是（5V，151mA）或者（3.3V，240mA）。接上后可以测试 Vext 跟 GND 的引脚电压，检测供电电压是否正常。4、无线通信不稳定。答：可以通过以下方法提升无线通信的稳定性：</p>
+                        <p data-page="39">　　1) 设置无线通信参数的包大小为“小包”模式。<br>2) 如果知道哪个频率无线通信干扰少，则使用“手动”频率模式，固定在干扰少的频<br>率上。<br>3) 接收端使用 usb 供电。<br>4) 发送端与接收端尽可能靠近，而且中间无遮挡。<br>5、MDK 退出调试时卡死，出现如下提示 ：</p>
+                        <img data-page="39" src="./index06-map/fig-097.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="39">　　答：这是MDK 的 bug，在 5.24~5.28 都存在。解决方法如下</p>
+                        <p data-page="39">　　1) 使用 mdk5.23<br>2) 所有文件名，文件夹（包括整个路径）的名都要用英文，还有“.c”和“.h”文件<br>也只用英文，不能用中文注释。<br>6、会与 2.4wifi 或者 2.4G 蓝牙等设备互相干扰吗？<br>答：由于 2.4G 无线频段带宽有限，会与其他 2.4Gwifi、2.4G 蓝牙等无线设备干扰。<br>7、多个高速无线调试器同时使用要怎么设置？<br>答：两个或以上高速无线调试器同时使用，需要确保高速无线调试器在不同的频率工作。<br>出厂默认设置即可。<br>8、自动选择频率的模式之下，最多可以多少个设备同时一起工作？<br>答：在自动选择频率的模式之下，最多同时 5 个高速无线调试器一起工作。<br>9、插上 TX 端或者 RX 端，配置软件识别不到设备。<br>答：请检查驱动。如下图所示，正常插上会多2 个人体输入学设备。注意：设备名称可能<br>不一样。</p>
+                        <img data-page="40" src="./index06-map/fig-098.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="40">　　10、可以读芯片 ID，无法下载。<br>答：请检查芯片是否设置了 flash 读保护。还可以尝试降低时钟频率<br>11、某些板子不能下载。<br>答：检查以下几个方面</p>
+                        <p data-page="40">　　1) 供电与高速无线调试器的电压是否匹配。<br>2) JTAG/SWD 的调试接口是否被关闭。<br>3) 芯片是否设置了 flash 读保护。<br>12、IDCODE 读取出错，出现如下错误：</p>
+                        <img data-page="41" src="./index06-map/fig-099.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p data-page="41">　　答：检查以下几方面</p>
+                        <p data-page="41">　　1) SWD 或者 JTAG 接口的接线是否正确。<br>2) 板子的 IO 电平与调试器的 IO 电平是否匹配。用配置软件进行工作电压设置。<br>3) JTAG/SWD 的调试接口是否被关闭。</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 侧边栏目录点击平滑滚动
+        document.querySelectorAll('.sidebar-menu li').forEach(function(item) {
+            item.addEventListener('click', function() {
+                var targetId = this.getAttribute('data-target');
+                if (!targetId) return;
+                var target = document.getElementById(targetId);
+                if (target) {
+                    var body = document.querySelector('.content-body');
+                    var rt = target.getBoundingClientRect();
+                    var rb = body.getBoundingClientRect();
+                    body.scrollTo({ top: body.scrollTop + (rt.top - rb.top) - 24, behavior: 'smooth' });
+                }
+                // 更新 active 状态
+                document.querySelectorAll('.sidebar-menu li').forEach(function(li) {
+                    li.classList.remove('active');
+                });
+                this.classList.add('active');
+            });
+        });
+
+        // ===== 目录展开 / 收缩 =====
+        (function() {
+            var items = Array.prototype.slice.call(document.querySelectorAll('.sidebar-menu li'));
+            function level(li) {
+                if (li.classList.contains('menu-group')) return 1;
+                if (li.classList.contains('menu-sub')) return 2;
+                if (li.classList.contains('menu-sub2')) return 3;
+                return 0;
+            }
+            // 计算每个条目的父级（最近的上一级条目）
+            var parentOf = new Map();
+            items.forEach(function(li, idx) {
+                var lv = level(li), par = null;
+                if (lv > 1) {
+                    for (var j = idx - 1; j >= 0; j--) {
+                        var lj = level(items[j]);
+                        if (lj === lv - 1) { par = items[j]; break; }
+                        if (lj < lv - 1) break;
+                    }
+                }
+                parentOf.set(li, par);
+            });
+            var hasKids = new Set();
+            parentOf.forEach(function(p) { if (p) hasKids.add(p); });
+            items.forEach(function(li) {
+                if (level(li) === 1 && !hasKids.has(li)) li.classList.add('no-kids');
+            });
+
+            function isHidden(li) {
+                var p = parentOf.get(li);
+                while (p) { if (p.classList.contains('collapsed')) return true; p = parentOf.get(p); }
+                return false;
+            }
+            function refresh() {
+                items.forEach(function(li) { li.classList.toggle('hidden-item', isHidden(li)); });
+            }
+            function toggle(li) {
+                var collapsed = li.classList.toggle('collapsed');
+                li.classList.toggle('expanded', !collapsed);
+                refresh();
+            }
+
+            hasKids.forEach(function(li) {
+                li.classList.add('has-children', 'expanded');
+                var caret;
+                if (level(li) === 1) {
+                    caret = li.querySelector('.icon');
+                } else {
+                    caret = document.createElement('span');
+                    caret.className = 'caret';
+                    caret.innerHTML = '&#9654;';
+                    li.insertBefore(caret, li.firstChild);
+                }
+                if (caret) caret.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggle(li);
+                });
+            });
+        })();
+
+        // ===== 书页分页（按 PDF 页边界 data-page 分组，共 41 页）=====
+        var __srcElems = null;
+        function collectSrc() {
+            if (__srcElems) return __srcElems;
+            __srcElems = Array.prototype.slice.call(
+                document.querySelectorAll('.content-body [data-page]'));
+            return __srcElems;
+        }
+
+        function paginate() {
+            var body = document.querySelector('.content-body');
+            if (!body) return;
+            var src = collectSrc();
+            if (!src.length) return;
+
+            var maxPage = 0;
+            src.forEach(function(el) {
+                var n = parseInt(el.getAttribute('data-page'), 10) || 0;
+                if (n > maxPage) maxPage = n;
+            });
+
+            // 每页所属章节（页眉用）：文档顺序中最近一个 h3
+            var chapterByPage = [];
+            var cur = '';
+            src.forEach(function(el) {
+                var n = parseInt(el.getAttribute('data-page'), 10) || 1;
+                if (el.tagName === 'H3') cur = el.textContent.trim();
+                chapterByPage[n] = cur;
+            });
+            for (var p = 1; p <= maxPage; p++) {
+                if (!chapterByPage[p]) chapterByPage[p] = chapterByPage[p - 1] || '';
+            }
+
+            body.innerHTML = '';
+            var pages = [];
+            for (var i = 1; i <= maxPage; i++) {
+                var pg = document.createElement('div');
+                pg.className = 'book-page';
+                pg.innerHTML =
+                    '<div class="page-header"><span>正点原子DAP 使用教程</span><span class="ph-sec"></span></div>' +
+                    '<div class="page-content"><div class="page-fit"></div></div>' +
+                    '<div class="page-footer"><span class="page-no"></span></div>';
+                body.appendChild(pg);
+                pages.push(pg);
+            }
+
+            src.forEach(function(el) {
+                var n = parseInt(el.getAttribute('data-page'), 10) || 1;
+                var fit = pages[n - 1].querySelector('.page-fit');
+                fit.appendChild(el);
+            });
+
+            pages.forEach(function(pg, idx) {
+                pg.querySelector('.page-no').textContent = '第 ' + (idx + 1) + ' 页 / 共 ' + maxPage + ' 页';
+                pg.querySelector('.ph-sec').textContent = chapterByPage[idx + 1] || '';
+            });
+
+            fitPages();
+        }
+
+        // 缩放每页内容以恰好装入 A4 版心（调整图片/表格大小与位置）
+        function fitPages() {
+            var pages = document.querySelectorAll('.book-page');
+            Array.prototype.forEach.call(pages, function(pg) {
+                var content = pg.querySelector('.page-content');
+                var fit = pg.querySelector('.page-fit');
+                if (!content || !fit) return;
+                fit.style.transform = '';
+                var availH = content.clientHeight;
+                var availW = content.clientWidth;
+                var natH = fit.scrollHeight;
+                var natW = fit.scrollWidth;
+                var s = 1;
+                if (availH > 0 && natH > availH) s = Math.min(s, availH / natH);
+                if (availW > 0 && natW > availW) s = Math.min(s, availW / natW);
+                if (s < 1) fit.style.transform = 'scale(' + s + ')';
+            });
+        }
+
+        paginate();
+        window.addEventListener('load', function() {
+            fitPages();
+            Array.prototype.forEach.call(document.querySelectorAll('.page-fit img'), function(im) {
+                if (!im.complete) im.addEventListener('load', fitPages);
+            });
+        });
+        setTimeout(fitPages, 300);
+        setTimeout(fitPages, 1000);
+    </script>
+</body>
+</html>

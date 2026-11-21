@@ -1,0 +1,527 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Sub-Item 管理页面</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgb(255, 255, 255);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+        }
+
+        .sidebar-menu li {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+        }
+
+        /* 二级目录条目 */
+        .sidebar-menu li.menu-sub {
+            padding-left: 46px;
+            font-size: 13px;
+            color: #777;
+        }
+
+        .sidebar-menu li.menu-sub::before {
+            content: "·";
+            margin-right: 6px;
+            color: #aab;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* 锚点定位时避免标题被卡片顶部遮挡 */
+        [id] {
+            scroll-margin-top: 8px;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+    </style>
+    <link rel="stylesheet" href="./a4-print-template.css">
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">STM32F429芯片系统架构</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <ul class="sidebar-menu">
+                    <li data-target="sec-arch"><span class="icon">&#9654;</span>系统架构</li>
+                    <li data-target="sec-mem"><span class="icon">&#9654;</span>存储器</li>
+                    <li class="menu-sub" data-target="sec-mem-org">存储器组织结构</li>
+                    <li class="menu-sub" data-target="sec-mem-map">存储器映射</li>
+                    <li class="menu-sub" data-target="sec-sram">嵌入式 SRAM</li>
+                    <li class="menu-sub" data-target="sec-flash">Flash 概述</li>
+                    <li class="menu-sub" data-target="sec-bitband">位段</li>
+                    <li data-target="sec-boot"><span class="icon">&#9654;</span>自举配置</li>
+                    <li class="menu-sub" data-target="sec-boot-mode">自举模式</li>
+                    <li class="menu-sub" data-target="sec-bootloader">嵌入式自举程序</li>
+                    <li class="menu-sub" data-target="sec-remap">物理重映射</li>
+                    <li data-target="sec-demo"><span class="icon">&#9654;</span>示例</li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+                        <h3 id="sec-arch">系统架构</h3>
+                        <p>主系统由 32 位多层 AHB 总线矩阵构成，可实现以下部分的互连：</p>
+                        <p><strong>● 八条主控总线：</strong></p>
+                        <p>　　— Cortex™-M4F 内核 I 总线、D 总线和 S 总线</p>
+                        <p>　　— DMA1 存储器总线</p>
+                        <p>　　— DMA2 存储器总线</p>
+                        <p>　　— DMA2 外设总线</p>
+                        <p>　　— 以太网 DMA 总线</p>
+                        <p>　　— USB OTG HS DMA 总线</p>
+                        <p><strong>● 七条被控总线：</strong></p>
+                        <p>　　— 内部 Flash ICode 总线</p>
+                        <p>　　— 内部 Flash DCode 总线</p>
+                        <p>　　— 主要内部 SRAM1 (112 KB)</p>
+                        <p>　　— 辅助内部 SRAM2 (16 KB)</p>
+                        <p>　　— 辅助内部 SRAM3 (64 KB)（仅适用于 STM32F42xxx 和 STM32F43xxx 器件）</p>
+                        <p>　　— AHB1 外设（包括 AHB-APB 总线桥和 APB 外设）</p>
+                        <p>　　— AHB2 外设</p>
+                        <p>　　— FSMC</p>
+                        <img src="./index01-map/stm32f429-bus-matrix.jpg" alt="总线矩阵架构图" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p><strong>● S0：I 总线</strong></p>
+                        <p>此总线用于将 Cortex™-M4F 内核的指令总线连接到总线矩阵。内核通过此总线获取指令。此总线访问的对象是包含代码的存储器（内部 Flash/SRAM 或通过 FSMC 的外部存储器）。</p>
+                        <p><strong>● S1：D 总线</strong></p>
+                        <p>此总线用于将 Cortex™-M4F 数据总线和 64 KB CCM 数据 RAM 连接到总线矩阵。内核通过此总线进行立即数加载和调试访问。此总线访问的对象是包含代码或数据的存储器（内部 Flash 或通过 FSMC 的外部存储器）。</p>
+                        <p><strong>● S2：S 总线</strong></p>
+                        <p>此总线用于将 Cortex™-M4F 内核的系统总线连接到总线矩阵。此总线用于访问位于外设或 SRAM 中的数据。也可通过此总线获取指令（效率低于 ICode）。此总线访问的对象是 112 KB、64 KB 和 16 KB 的内部 SRAM、包括 APB 外设在内的 AHB1 外设、AHB2 外设以及通过 FSMC 的外部存储器。</p>
+                        <p><strong>● S3、S4：DMA 存储器总线</strong></p>
+                        <p>此总线用于将 DMA 存储器总线主接口连接到总线矩阵。DMA 通过此总线来执行存储器数据的传入和传出。此总线访问的对象是数据存储器：内部 SRAM（112 KB、64 KB、16 KB）以及通过 FSMC 的外部存储器。</p>
+                        <p><strong>● S5：DMA 外设总线</strong></p>
+                        <p>此总线用于将 DMA 外设主总线接口连接到总线矩阵。DMA 通过此总线访问 AHB 外设或执行存储器间的数据传输。此总线访问的对象是 AHB 和 APB 外设以及数据存储器：内部 SRAM 以及通过 FSMC 的外部存储器。</p>
+                        <p><strong>● S6：以太网 DMA 总线</strong></p>
+                        <p>此总线用于将以太网 DMA 主接口连接到总线矩阵。以太网 DMA 通过此总线向存储器存取数据。此总线访问的对象是数据存储器：内部 SRAM（112 KB、64 KB 和 16 KB）以及通过 FSMC 的外部存储器。</p>
+                        <p><strong>● S7：USB OTG HS DMA 总线</strong></p>
+                        <p>此总线用于将 USB OTG HS DMA 主接口连接到总线矩阵。USB OTG DMA 通过此总线向存储器加载/存储数据。此总线访问的对象是数据存储器：内部 SRAM（112 KB、64 KB 和 16 KB）以及通过 FSMC 的外部存储器。</p>
+                        <p><strong>● 总线矩阵</strong></p>
+                        <p>总线矩阵用于主控总线之间的访问仲裁管理。仲裁采用循环调度算法。</p>
+                        <p><strong>● AHB/APB 总线桥（APB）</strong></p>
+                        <p>借助两个 AHB/APB 总线桥 APB1 和 APB2，可在 AHB 总线与两个 APB 总线之间实现完全同步的连接，从而灵活选择外设频率。有关 APB1 和 APB2 最大频率的详细信息，请参见器件数据手册；有关 AHB 和 APB 外设地址映射的信息。每次芯片复位后，所有外设时钟都被关闭（SRAM 和 Flash 接口除外）。使用外设前，必须在 RCC_AHBxENR 或 RCC_APBxENR 寄存器中使能其时钟。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-mem">存储器</h3>
+                        <p id="sec-mem-org"><strong>● 存储器组织结构</strong></p>
+                        <p>　　程序存储器、数据存储器、寄存器和 I/O 端口排列在同一个顺序的 4 GB 地址空间内。</p>
+                        <p>　　各字节按小端格式在存储器中编码。字中编号最低的字节被视为该字的最低有效字节，而编号最高的字节被视为最高有效字节。</p>
+                        <p>　　有关外设寄存器映射的详细信息，请参见相关章节。</p>
+                        <p>　　可寻址的存储空间分为 8 个主要块，每个块为 512 MB。</p>
+                        <p>　　未分配给片上存储器和外设的所有存储区域均视为“保留区”。请参见产品数据手册中的存储器映射图。</p>
+                        <p id="sec-mem-map"><strong>● 存储器映射</strong></p>
+                        <p>　　有关综合存储器映射图，请参见相应器件的数据手册。表 2 提供了所有 STM32F4xx 器件中可用外设的边界地址。</p>
+                        <img src="./index01-map/stm32f429-memory-mapping.jpg" alt="存储器映射图" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <img src="./index01-map/4G-space-partition.jpg" alt="4G-space-partition" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p id="sec-sram"><strong>● 嵌入式 SRAM</strong></p>
+                        <p>　　STM32F405xx/07xx 和 STM32F415xx/17xx 带有 4 KB 备份 SRAM 和 192 KB 系统 SRAM。STM32F42xxx 和 STM32F43xxx 带有 4 KB 备份 SRAM 和 256 KB 系统 SRAM。</p>
+                        <p>　　系统 SRAM 可按字节、半字（16 位）或全字（32 位）访问。读写操作以 CPU 速度执行，且等待周期为 0。系统 SRAM 分为三个块：</p>
+                        <p>　　— 映射在地址 0x2000 0000 的 112 KB 和 16 KB 块，可供所有 AHB 主控总线访问。</p>
+                        <p>　　— 映射在地址 0x2002 0000 的 64 KB 块，可供所有 AHB 主控总线访问（适用于 STM32F42xxx 和 STM32F43xxx）。AHB 主总线支持并发 SRAM 访问（通过以太网或 USB OTG HS）：例如，当 CPU 对 112 KB 或 64 KB SRAM 进行读/写操作时，以太网 MAC 可以同时对 16 KB SRAM 进行读/写操作。</p>
+                        <p>　　— 在地址 0x1000 0000 映射的 64 KB 块，只能供 CPU 通过数据总线访问。</p>
+                        <p>　　如果选择从 SRAM 自举或选择物理重映射（SYSCFG 控制器中的 SYSCFG 存储器重映射寄存器 SYSCFG_MEMRMP），则 CPU 可通过系统总线或 I-Code/D-Code 总线访问系统 SRAM。要在 SRAM 执行期间获得最佳的性能，应选择物理重映射（通过自举管脚及软件配置来选择）。</p>
+                        <p id="sec-flash"><strong>● Flash 概述</strong></p>
+                        <p>　　Flash 接口可管理 CPU 通过 AHB I-Code 和 D-Code 对 Flash 进行的访问。该接口可针对 Flash 执行擦除和编程操作，并实施读写保护机制。Flash 接口通过指令预取和缓存机制加速代码执行。Flash 结构如下：</p>
+                        <p>　　— 主存储器块分为多个扇区。</p>
+                        <p>　　— 系统存储器，器件在系统存储器自举模式下从该存储器启动。</p>
+                        <p>　　— 512 OTP（一次性可编程）字节，用于存储用户数据。</p>
+                        <p>　　— 选项字节，用于配置读写保护、BOR 级别、软件/硬件看门狗以及器件处于待机或停止模式下的复位。</p>
+                        <p id="sec-bitband"><strong>● 位段</strong></p>
+                        <p>　　Cortex™-M4F 存储器映射包括两个位段区域。这些区域将存储器别名区域中的每个字映射到存储器位段区域中的相应位。在别名区域写入字时，相当于对位段区域的目标位执行读-修改-写操作。</p>
+                        <p>　　在 STM32F4xx 器件中，外设寄存器和 SRAM 均映射到一个位段区域，这样可实现单个位段的读写操作。这些操作仅适用于 Cortex™-M4F 访问，对于其它总线主接口（如 DMA）无效。可通过一个映射公式说明别名区域中的每个字与位段区域中各个位之间的对应关系。映射公式为：</p>
+                        <p>　　<strong>bit_word_addr = bit_band_base + (byte_offset × 32) + (bit_number × 4)</strong></p>
+                        <p>　　— bit_word_addr 代表别名区域中将映射到目标位的字的地址</p>
+                        <p>　　— bit_band_base 代表别名区域的起始地址</p>
+                        <p>　　— byte_offset 代表目标位所在位段区域中的字节编号</p>
+                        <p>　　— bit_number 代表目标位的位位置 (0-7)</p>
+                        <p>　　<strong>示例：下例说明如何将 SRAM 地址 0x20000300 处字节的位 2 映射到别名区域：</strong></p>
+                        <p>　　— 0x22006008 = 0x22000000 + (0x300 × 32) + (2 × 4)</p>
+                        <p>　　— 对地址 0x22006008 执行写操作相当于在 SRAM 地址 0x20000300 处字节的位 2 执行读-修改-写操作。</p>
+                        <p>　　— 对地址 0x22006008 执行读操作将返回 SRAM 地址 0x20000300 处字节的位 2 的值（0x01 表示位置位，0x00 表示位复位）。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-boot">自举配置</h3>
+                        <p>　　存储器采用固定的存储器映射，代码区域起始地址为 0x0000 0000（通过 ICode/DCode 总线访问），而数据区域起始地址为 0x2000 0000（通过系统总线访问）。Cortex™-M4F CPU 始终通过 ICode 总线获取复位向量，这意味着只有代码区域（通常为 Flash）可以提供自举空间。STM32F4xx 微控制器实施一种特殊机制，可以从其它存储器（如内部 SRAM）进行自举。</p>
+                        <p id="sec-boot-mode">　　在 STM32F4xx 中，可通过 BOOT[1:0] 引脚选择三种不同的自举模式，如表 3 所示。</p>
+                        <img src="./index01-map/Self-starting-mode.jpg" alt="自举模式表" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                        <p>　　复位后，在 SYSCLK 的第四个上升沿锁存 BOOT 引脚的值。复位后，用户可以通过设置 BOOT1 和 BOOT0 引脚来选择需要的自举模式。</p>
+                        <p>　　BOOT0 为专用引脚，而 BOOT1 则与 GPIO 引脚共用。一旦完成对 BOOT1 的采样，相应 GPIO 引脚即进入空闲状态，可用于其它用途。</p>
+                        <p>　　器件退出待机模式时，还会对 BOOT 引脚重新采样。因此，当器件处于待机模式时，这些引脚必须保持所需的自举模式配置。这样的启动延迟结束后，CPU 将从地址 0x0000 0000 获取栈顶值，然后从始于 0x0000 0004 的自举存储器开始执行代码。</p>
+                        <p id="sec-bootloader"><strong>● 嵌入式自举程序</strong></p>
+                        <p>　　嵌入式自举程序模式用于通过以下串行接口重新编程 Flash：</p>
+                        <p>　　— USART1（PA9/PA10）</p>
+                        <p>　　— USART3（PB10/11 和 PC10/11）</p>
+                        <p>　　— CAN2（PB5/13）</p>
+                        <p>　　— USB OTG FS（PA11/12）从设备模式（DFU：器件固件升级）</p>
+                        <p>　　USART 外设以内部 16 MHz 振荡器 (HSI) 频率运行，而 CAN 和 USB OTG FS 则需要相当于 1 MHz 数倍（4 MHz 到 26 MHz 之间）的外部时钟 (HSE) 频率。</p>
+                        <p>　　嵌入式自举程序代码位于系统存储器中，在芯片生产期间由 ST 编程。有关详细信息，请参见应用笔记 AN2606。</p>
+                        <p id="sec-remap"><strong>● 物理重映射</strong></p>
+                        <p>　　选择自举引脚后，应用程序软件可以将某些存储器设定为从代码空间进行访问（这样，可通过 ICode 总线而非系统总线执行代码）。这样的修改通过在 SYSCFG 控制器中编程 SYSCFG 存储器重映射寄存器 (SYSCFG_MEMRMP) 来实现。</p>
+                        <p>　　因此可重映射以下存储器：</p>
+                        <p>　　— 主 Flash</p>
+                        <p>　　— 系统存储器</p>
+                        <p>　　— 嵌入式 SRAM1 (112 KB)</p>
+                        <p>　　— FSMC 块 1（NOR/PSRAM 1 和 2）</p>
+                        <img src="./index01-map/stm32f429-boot-memory-mapping.jpg" alt="自举后的存储器映射图" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-demo">示例</h3>
+                        <img src="./index01-map/stm32f429-system-architecture.jpg" alt="STM32F4xx 系统架构图" style="display: block; margin: 16px auto 0; max-width: 100%;">
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 侧边栏目录点击跳转：平滑滚动到对应内容位置
+        var menuItems = document.querySelectorAll('.sidebar-menu li[data-target]');
+        menuItems.forEach(function(item) {
+            item.addEventListener('click', function() {
+                // 高亮当前目录项
+                menuItems.forEach(function(m) { m.classList.remove('active'); });
+                item.classList.add('active');
+                // 平滑滚动到目标锚点（content-body 为滚动容器）
+                var target = document.getElementById(item.getAttribute('data-target'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+    <script src="./a4-pagination.js"></script>
+</body>
+</html>

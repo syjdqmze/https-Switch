@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验12 TFTLCD 显示实验</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验12 · TFTLCD显示实验</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">STM32F429 + HAL：从复位向量、180MHz 时钟链，到 FMC 并口寻址与 12 色刷屏。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验概述与硬件资源">
+                    <h2>01　实验概述与硬件资源</h2>
+                    <div class="sec-sub">实验12 用 FMC 并口驱动 MCU 屏，启动链路的终点是「点亮背光 + 清成白色」</div>
+
+                    <p>本实验接在实验11 OLED 之后，把显示从 I2C 小屏换成了 16 位并口 TFT。相比前几个实验，它多了一条完整的外设总线初始化链路：FMC 时钟 → GPIO 复用 → FMC 时序 → 读 ID → 写初始化序列。复位、时钟、时基、串口、LED 这些环节与之前实验一致。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚 / 参数</th><th>作用</th></tr>
+                        <tr><td>LED0</td><td>PB1，推挽输出</td><td>运行指示灯，低电平点亮</td></tr>
+                        <tr><td>LED1</td><td>PB0，推挽输出</td><td>本例未使用，初始化时一并置高</td></tr>
+                        <tr><td>背光</td><td>PB5，推挽输出</td><td><code>LCD_LED=1</code> 点亮</td></tr>
+                        <tr><td>LCD 数据线</td><td>PD14/PD15、PD0/PD1、PD8/PD9/PD10、PE7~PE15</td><td>D0~D15，16 位并口</td></tr>
+                        <tr><td>LCD 控制线</td><td>PD7=NE1、PD5=NWE、PD4=NOE、PD13=A18</td><td>片选、写、读、命令/数据选择</td></tr>
+                        <tr><td>总线</td><td>FMC Bank1 / NE1 / 16 位 / 基址 0x60000000</td><td>把屏当成一片 NOR-SRAM</td></tr>
+                        <tr><td>调试串口</td><td>USART1：PA9/PA10，115200-8-N-1</td><td>printf 打印 LCD ID</td></tr>
+                        <tr><td>主频</td><td>HSE 25MHz → SYSCLK 180MHz</td><td>FMC 时序的计数基准</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">25MHz HSE</span>
+                        <span class="chip">180MHz SYSCLK</span>
+                        <span class="chip">45MHz APB1</span>
+                        <span class="chip">90MHz APB2</span>
+                        <span class="chip">FMC 16 位</span>
+                    </div>
+
+                    <div class="note">板上屏可能是 ILI9341 / NT35310 / NT35510 / SSD1963 中的一种，代码靠读 ID 自动识别，所以同一份程序能点亮多种屏。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">启动链路上每一环都能落到具体文件，读源码时按这张表定位</div>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>负责什么</th><th>本页关注点</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化顺序与主循环</td><td>while(1) 12 色刷屏、LED 翻转</td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>SystemInit：FPU、VTOR、RCC 复位</td><td>只做复位级配置，不配 PLL</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>SysTick_Handler → HAL_IncTick</td><td>1ms 时基中断</td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>栈堆、向量表、Reset_Handler</td><td>复位入口</td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td>Stm32_Clock_Init：PLL 与总线分频</td><td>180MHz 的来源</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>SysTick 轮询延时</td><td>delay_ms(1000) 的实现</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>USART1 初始化与 printf 重定向</td><td>打印 LCD ID</td></tr>
+                        <tr><td><code>HARDWARE/LED/led.c</code></td><td>PB0 / PB1 推挽输出</td><td>上电熄灭、运行翻转</td></tr>
+                        <tr><td><code>HARDWARE/LCD/lcd.c / lcd.h</code></td><td>FMC 配置、ID 识别、绘图接口</td><td>本实验的核心</td></tr>
+                        <tr><td><code>HALLIB/STM32F4xx_HAL_Driver</code></td><td>HAL 库实现，不逐行读</td><td>只看 HAL_Init、HAL_SRAM_Init、HAL_RCC_ClockConfig</td></tr>
+                    </table>
+
+                    <div class="note">这是老工程（GBK 编码），用编辑工具直接改 <code>.c</code> / <code>.h</code> 会把中文注释写成乱码；确需修改时要按 GBK 读入再按 GBK 回写。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电复位到 while(1)，初始化顺序决定了后面每个功能是否可用</div>
+
+                    <figure class="figure">
+                        <img src="./index26-map/boot-flow.png" alt="从上电复位到主循环的启动流程图">
+                        <figcaption>图 3-1　上电复位 → SystemInit → __main → main → 主循环</figcaption>
+                    </figure>
+                    <figure class="figure"><img src="./index26-map/lcd-fmc-timing.png" alt="LCD 8080 并口写时序图"><figcaption>图 3-2　LCD 8080 并口写时序（FMC Bank1）</figcaption></figure>
+                    <p>写命令或像素时，片选拉低 → RS(A18) 选择命令/数据 → 数据放上 D0~D15 → WR 产生低脉冲 → 上升沿锁存。FMC 把地址线 A18 当 RS 用，读写时序参数在 <code class="inline">LCD_Init</code> 里按屏型号配置，参数不对会花屏或读不到 ID。</p>
+
+                    <h3>main 函数全文</h3>
+                    <pre class="code">int main(void)
+{
+    u8 x=0;
+    u8 lcd_id[12];
+    HAL_Init();                     <span class="cmt">//初始化HAL库</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">//设置时钟,180Mhz</span>
+    delay_init(180);                <span class="cmt">//初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">//初始化USART</span>
+    LED_Init();                     <span class="cmt">//初始化LED</span>
+    LCD_Init();                     <span class="cmt">//初始化LCD</span>
+    POINT_COLOR=RED;
+    sprintf((char*)lcd_id,"LCD ID:%04X",lcddev.id);<span class="cmt">//将LCD ID打印到lcd_id数组。</span>
+    while(1)
+    {
+        switch(x)
+        {
+            case 0:LCD_Clear(WHITE);break;
+            case 1:LCD_Clear(BLACK);break;
+            <span class="cmt">// case 2~10：BLUE / RED / MAGENTA / GREEN / CYAN / YELLOW / BRRED / GRAY / LGRAY</span>
+            case 11:LCD_Clear(BROWN);break;
+        }
+        POINT_COLOR=RED;
+        LCD_ShowString(10,40,240,32,32,"Apollo STM32F4/F7");
+        LCD_ShowString(10,80,240,24,24,"TFTLCD TEST");
+        LCD_ShowString(10,110,240,16,16,"ATOM@ALIENTEK");
+        LCD_ShowString(10,130,240,16,16,lcd_id);   <span class="cmt">//显示LCD ID</span>
+        LCD_ShowString(10,150,240,12,12,"2016/1/6");
+        x++;
+        if(x==12)x=0;
+        LED0=!LED0;
+        delay_ms(1000);
+    }
+}</pre>
+
+                    <h3>顺序为什么不能换</h3>
+                    <ul>
+                        <li><strong>HAL_Init 必须最先</strong>：它建立 1ms 时基、开 Flash cache / 预取、设置中断优先级分组 2，后面的 HAL 函数都依赖这些前提。</li>
+                        <li><strong>时钟必须在 delay_init 之前</strong>：<code>delay_init(180)</code> 把 180 写进 <code>fac_us</code>，如果先延时后配时钟，1ms 会被算短或算长。</li>
+                        <li><strong>串口在 LCD 之前</strong>：<code>LCD_Init</code> 内部会 <code>printf(" LCD ID:%x\r\n")</code>，串口没初始化就看不到这行关键信息。</li>
+                        <li><strong>LCD_Init 最后</strong>：它依赖系统时钟（FMC 时序按 180MHz 算）和 <code>delay_ms(50)</code>（等屏上电稳定）。</li>
+                    </ul>
+
+                    <div class="note blue">上面的代码来自 <code>USER/main.c</code>，只把 case 2~10 合并成一行注释，其余保持原样。</div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">复位那一刻 CPU 只认两个值：栈顶地址和复位向量</div>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>源码中的值</th><th>含义</th></tr>
+                        <tr><td><code>Stack_Size</code></td><td><code>EQU 0x400</code></td><td>主栈 1KB，<code>__initial_sp</code> 指向栈顶</td></tr>
+                        <tr><td><code>Heap_Size</code></td><td><code>EQU 0x200</code></td><td>堆 512B，仅 malloc 使用</td></tr>
+                        <tr><td><code>__Vectors[0]</code></td><td><code>DCD __initial_sp</code></td><td>复位后 MSP 取此值</td></tr>
+                        <tr><td><code>__Vectors[1]</code></td><td><code>DCD Reset_Handler</code></td><td>复位后 PC 取此值</td></tr>
+                        <tr><td><code>VECT_TAB_OFFSET</code></td><td><code>0x00</code></td><td>SystemInit 中 VTOR = FLASH_BASE</td></tr>
+                    </table>
+
+                    <pre class="code">                AREA    RESET, DATA, READONLY
+                EXPORT  __Vectors
+__Vectors       DCD     __initial_sp               <span class="cmt">; Top of Stack</span>
+                DCD     Reset_Handler              <span class="cmt">; Reset Handler</span>
+                DCD     NMI_Handler                <span class="cmt">; NMI Handler</span>
+                ...
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit
+                 BLX     R0
+                 LDR     R0, =__main
+                 BX      R0
+                 ENDP</pre>
+
+                    <p>启动文件只做三件事：定义栈堆空间、摆放向量表、把执行流交给 <code>SystemInit</code> 再交给 <code>__main</code>。全局变量初值的搬运（<code>.data</code> 从 Flash 复制到 RAM）和 <code>.bss</code> 清零不在这个汇编文件里，而由 <code>__main</code> 调用的 C 库初始化代码完成。</p>
+
+                    <div class="note">向量表位于 Flash 起始 <code>0x08000000</code>，本工程 <code>VECT_TAB_OFFSET=0</code>，没有为 Bootloader 做偏移重定位；如果把程序放到别的地址运行，这里必须同步改。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">一个只做复位级配置，一个建立 HAL 的时基与中断分组</div>
+
+                    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">/* CP10/CP11 全权限 */</span>
+  #endif
+    RCC-&gt;CR |= (uint32_t)0x00000001;   <span class="cmt">// 打开 HSI</span>
+    RCC-&gt;CFGR = 0x00000000;            <span class="cmt">// 复位总线分频</span>
+    RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;   <span class="cmt">// 关 HSEON / CSSON / PLLON</span>
+    RCC-&gt;PLLCFGR = 0x24003010;         <span class="cmt">// PLL 复位值</span>
+    RCC-&gt;CIR = 0x00000000;             <span class="cmt">// 关所有 RCC 中断</span>
+    SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;  <span class="cmt">// 0x08000000</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>动作</th><th>位置</th><th>影响</th></tr>
+                        <tr><td>FPU CP10/CP11 全权限</td><td>SystemInit</td><td>后续浮点指令不会触发 UsageFault</td></tr>
+                        <tr><td>VTOR = FLASH_BASE</td><td>SystemInit</td><td>向量表固定在 0x08000000</td></tr>
+                        <tr><td>HSION、CFGR 清零</td><td>SystemInit</td><td>复位后先跑 HSI 16MHz</td></tr>
+                        <tr><td>I-Cache / D-Cache / 预取</td><td>HAL_Init</td><td>提高 180MHz 下的取指与取数效率</td></tr>
+                        <tr><td>优先级分组 2</td><td>HAL_Init</td><td>2 位抢占 + 2 位子优先级</td></tr>
+                        <tr><td>SysTick 1ms</td><td>HAL_Init → HAL_InitTick</td><td>在 16MHz 下重装 16000 个计数</td></tr>
+                    </table>
+
+                    <p><code>HAL_Init</code> 依次开指令缓存、数据缓存、预取，然后 <code>HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2)</code>，最后 <code>HAL_InitTick(TICK_INT_PRIORITY)</code> 用 <code>HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000)</code> 建 1ms 中断。此时时钟还是 HSI，所以第一次装的是 16000。</p>
+
+                    <div class="note">SystemInit 不配 PLL，<code>SystemCoreClock</code> 此时仍是 16000000。真正把它改成 180000000 的是 main 里的 <code>HAL_RCC_ClockConfig()</code>，它同时会以新主频重装 SysTick。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟链：25MHz → 180MHz">
+                    <h2>06　时钟链：25MHz → 180MHz</h2>
+                    <div class="sec-sub">PLL 三个参数 + 三条总线分频，决定了 FMC 与串口的所有时间基准</div>
+
+                    <figure class="figure">
+                        <img src="./index26-map/clock-tree.png" alt="从 25MHz 晶振到 180MHz 系统时钟的时钟树">
+                        <figcaption>图 6-1　HSE → PLL → SYSCLK → AHB / APB1 / APB2</figcaption>
+                    </figure>
+
+                    <pre class="code">__HAL_RCC_PWR_CLK_ENABLE();
+__HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);  <span class="cmt">// 电压等级 1</span>
+
+RCC_OscInitStructure.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+RCC_OscInitStructure.HSEState       = RCC_HSE_ON;
+RCC_OscInitStructure.PLL.PLLState   = RCC_PLL_ON;
+RCC_OscInitStructure.PLL.PLLSource  = RCC_PLLSOURCE_HSE;
+RCC_OscInitStructure.PLL.PLLM = pllm;   <span class="cmt">// 25 → 1MHz</span>
+RCC_OscInitStructure.PLL.PLLN = plln;   <span class="cmt">// ×360 → 360MHz</span>
+RCC_OscInitStructure.PLL.PLLP = pllp;   <span class="cmt">// ÷2  → 180MHz</span>
+RCC_OscInitStructure.PLL.PLLQ = pllq;   <span class="cmt">// ÷8  → 45MHz</span>
+HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+HAL_PWREx_EnableOverDrive();            <span class="cmt">// 180MHz 必须开 Over-Drive</span>
+
+RCC_ClkInitStructure.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
+RCC_ClkInitStructure.AHBCLKDivider  = RCC_SYSCLK_DIV1;
+RCC_ClkInitStructure.APB1CLKDivider = RCC_HCLK_DIV4;
+RCC_ClkInitStructure.APB2CLKDivider = RCC_HCLK_DIV2;
+HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure, FLASH_LATENCY_5);</pre>
+
+                    <table class="data">
+                        <tr><th>参数</th><th>源码</th><th>计算</th><th>结果</th></tr>
+                        <tr><td>PLL 输入</td><td>PLLM = 25</td><td>25MHz ÷ 25</td><td>1MHz</td></tr>
+                        <tr><td>VCO</td><td>PLLN = 360</td><td>1MHz × 360</td><td>360MHz</td></tr>
+                        <tr><td>SYSCLK</td><td>PLLP = 2</td><td>360MHz ÷ 2</td><td>180MHz</td></tr>
+                        <tr><td>HCLK</td><td>AHB ÷1</td><td>180 ÷ 1</td><td>180MHz</td></tr>
+                        <tr><td>PCLK1</td><td>APB1 ÷4</td><td>180 ÷ 4</td><td>45MHz</td></tr>
+                        <tr><td>PCLK2</td><td>APB2 ÷2</td><td>180 ÷ 2</td><td>90MHz</td></tr>
+                        <tr><td>USB / SDIO / RNG</td><td>PLLQ = 8</td><td>360 ÷ 8</td><td>45MHz</td></tr>
+                        <tr><td>Flash 等待</td><td>FLASH_LATENCY_5</td><td>5 个等待周期</td><td>6 个 CPU 周期</td></tr>
+                    </table>
+
+                    <div class="note">180MHz 超过 168MHz，必须先开 Over-Drive 才能稳定运行；<code>HAL_RCC_ClockConfig</code> 末尾会调用 <code>HAL_InitTick</code>，以 180MHz 重装 SysTick 为 180000，得到真正的 1ms。</div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="延时、串口与 LED">
+                    <h2>07　延时、串口与 LED</h2>
+                    <div class="sec-sub">三个看起来简单的初始化，决定了主循环的时间基准与调试手段</div>
+
+                    <h3>延时：SysTick 轮询，不依赖中断</h3>
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">// SysTick 时钟 = HCLK</span>
+    fac_us=SYSCLK;                       <span class="cmt">// 180MHz → 1us = 180 个计数</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks; u32 told,tnow,tcnt=0;
+    u32 reload=SysTick-&gt;LOAD;
+    ticks=nus*fac_us;
+    told=SysTick-&gt;VAL;
+    while(1)
+    {
+        tnow=SysTick-&gt;VAL;
+        if(tnow!=told)
+        {
+            if(tnow&lt;told)tcnt+=told-tnow;
+            else tcnt+=reload-tnow+told;
+            told=tnow;
+            if(tcnt&gt;=ticks)break;
+        }
+    }
+}
+
+void delay_ms(u16 nms)
+{
+    u32 i;
+    for(i=0;i&lt;nms;i++) delay_us(1000);
+}</pre>
+
+                    <p>非 OS 模式下 <code>delay_init</code> 只做两件事：把 SysTick 时钟源设为 HCLK、记下 <code>fac_us=180</code>。<code>delay_us</code> 直接读 <code>SysTick-&gt;VAL</code> 的递减计数，所以即使 SysTick 中断被关掉也不会卡死；代价是忙等，CPU 在这段时间不做别的事。</p>
+
+                    <h3>串口：printf 重定向到 USART1</h3>
+                    <pre class="code">int fputc(int ch, FILE *f)
+{
+    while((USART1-&gt;SR&amp;0X40)==0);  <span class="cmt">// 等 TC（发送完成）置位</span>
+    USART1-&gt;DR = (u8) ch;
+    return ch;
+}
+
+<span class="cmt">// HAL_UART_MspInit 中</span>
+GPIO_Initure.Pin=GPIO_PIN_9;              <span class="cmt">// PA9  TX</span>
+GPIO_Initure.Mode=GPIO_MODE_AF_PP;
+GPIO_Initure.Pull=GPIO_PULLUP;
+GPIO_Initure.Speed=GPIO_SPEED_FAST;
+GPIO_Initure.Alternate=GPIO_AF7_USART1;
+HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+GPIO_Initure.Pin=GPIO_PIN_10;             <span class="cmt">// PA10 RX</span>
+HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+__HAL_UART_ENABLE_IT(huart,UART_IT_RXNE);
+HAL_NVIC_EnableIRQ(USART1_IRQn);
+HAL_NVIC_SetPriority(USART1_IRQn,3,3);    <span class="cmt">// 抢占 3，子优先级 3</span></pre>
+
+                    <p><code>printf</code> 是阻塞输出：每写一个字节都要等发送完成。所以 <code>LCD_Init</code> 里那行 LCD ID 会占用一点启动时间，但换来的是不依赖中断、不会丢字的调试输出。</p>
+
+                    <h3>LED：上电先熄灭</h3>
+                    <pre class="code">void LED_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    GPIO_Initure.Pin=GPIO_PIN_0|GPIO_PIN_1;  <span class="cmt">// PB0 / PB1</span>
+    GPIO_Initure.Mode=GPIO_MODE_OUTPUT_PP;
+    GPIO_Initure.Pull=GPIO_PULLUP;
+    GPIO_Initure.Speed=GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOB,&amp;GPIO_Initure);
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_0,GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,GPIO_PIN_SET); <span class="cmt">// 高电平 → 熄灭</span>
+}</pre>
+
+                    <div class="note">HAL 库自己用 SysTick 中断维护 <code>uwTick</code>（<code>HAL_Delay</code> 依赖它），而本工程的 <code>delay_ms</code> 走轮询。两套机制共用同一个 SysTick，互不干扰，但别把 <code>HAL_Delay</code> 和 <code>delay_ms</code> 的精度混为一谈。</div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="位带操作与 LCD 背光">
+                    <h2>08　位带操作与 LCD 背光</h2>
+                    <div class="sec-sub">背光只有一根 PB5，用位带写一次就够，不需要读改写整个 ODR</div>
+
+                    <pre class="code"><span class="cmt">// SYSTEM/sys/sys.h</span>
+#define BITBAND(addr, bitnum) ((addr &amp; 0xF0000000)+0x2000000+((addr &amp;0xFFFFF)&lt;&lt;5)+(bitnum&lt;&lt;2))
+#define BIT_ADDR(addr, bitnum) MEM_ADDR(BITBAND(addr, bitnum))
+#define PBout(n)   BIT_ADDR(GPIOB_ODR_Addr,n)   <span class="cmt">// 输出</span>
+
+<span class="cmt">// HARDWARE/LCD/lcd.h</span>
+#define LCD_LED PBout(5)   <span class="cmt">// 背光，PB5，高电平点亮</span></pre>
+
+                    <p>Cortex-M4 的位带把外设寄存器的某一位映射到别名区的一个字，写这个字就等于原子地置位或清零原寄存器。所以 <code>LCD_LED=1</code> 编译出来是一条普通的存储指令，不会影响 GPIOB 其它引脚。</p>
+
+                    <table class="data">
+                        <tr><th>宏</th><th>展开含义</th><th>用途</th></tr>
+                        <tr><td><code>BITBAND(addr,bit)</code></td><td>把外设地址映射到 0x42000000 别名区</td><td>位带地址算法</td></tr>
+                        <tr><td><code>PBout(n)</code></td><td>GPIOB ODR 第 n 位的别名地址</td><td>写引脚输出电平</td></tr>
+                        <tr><td><code>LCD_LED</code></td><td>PBout(5)</td><td>1 = 背光亮，0 = 背光灭</td></tr>
+                    </table>
+
+                    <pre class="code"><span class="cmt">// LCD_Init 开头：先把 PB5 配成推挽输出</span>
+__HAL_RCC_GPIOB_CLK_ENABLE();
+GPIO_Initure.Pin=GPIO_PIN_5;
+GPIO_Initure.Mode=GPIO_MODE_OUTPUT_PP;
+GPIO_Initure.Pull=GPIO_PULLUP;
+GPIO_Initure.Speed=GPIO_SPEED_HIGH;
+HAL_GPIO_Init(GPIOB,&amp;GPIO_Initure);
+
+<span class="cmt">// LCD_Init 末尾：初始化成功后再点背光</span>
+LCD_Display_Dir(0);
+LCD_LED=1;
+LCD_Clear(WHITE);</pre>
+
+                    <div class="note">背光放在初始化最后才打开，是为了避免屏还没配置好就先亮出一片雪花；调试白屏时先量 PB5 电平，再怀疑 FMC 时序。</div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="FMC 总线与地址映射">
+                    <h2>09　FMC 总线与地址映射</h2>
+                    <div class="sec-sub">命令和数据共用 16 根数据线，靠 A18 的电平区分——这就是 LCD_REG / LCD_RAM 的由来</div>
+
+                    <figure class="figure">
+                        <img src="./index26-map/fmc-addr.png" alt="FMC Bank1 地址映射与 LCD 结构体关系图">
+                        <figcaption>图 9-1　0x6007FFFE 与 0x60080000 只差 A18 一位</figcaption>
+                    </figure>
+
+                    <pre class="code"><span class="cmt">// HARDWARE/LCD/lcd.h</span>
+typedef struct
+{
+    vu16 LCD_REG;
+    vu16 LCD_RAM;
+} LCD_TypeDef;
+
+<span class="cmt">// Bank1.sector1，HADDR[27,26]=00，A18 作为命令/数据区分线</span>
+#define LCD_BASE  ((u32)(0x60000000 | 0x0007FFFE))
+#define LCD       ((LCD_TypeDef *) LCD_BASE)</pre>
+
+                    <table class="data">
+                        <tr><th>访问</th><th>地址</th><th>A18</th><th>屏上实际动作</th></tr>
+                        <tr><td><code>LCD-&gt;LCD_REG</code></td><td>0x6007FFFE</td><td>0</td><td>写命令号（<code>LCD_WR_REG</code>）</td></tr>
+                        <tr><td><code>LCD-&gt;LCD_RAM</code></td><td>0x60080000</td><td>1</td><td>写参数 / 像素数据（<code>LCD_WR_DATA</code>）</td></tr>
+                    </table>
+
+                    <p>片选 NE1、写使能 NWE、读使能 NOE 由 FMC 自动产生，CPU 只需要对上面两个地址做 16 位读写。这样驱动代码里就出现了 <code>LCD-&gt;LCD_REG = cmd;</code> 这种「像访问内存一样访问屏」的写法。</p>
+
+                    <div class="note">为什么基址不是 0x60080000：16 位访问时 FMC 内部把地址右移一位，A18 实际由 HADDR[19] 驱动。基址写成 0x6007FFFE 后，结构体第二个成员 +2 字节正好落在 0x60080000，A18 被拉高。低位全 1 只是为了凑这个偏移。</div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="LCD_Init：总线、引脚与时序">
+                    <h2>10　LCD_Init：总线、引脚与时序</h2>
+                    <div class="sec-sub">HAL_SRAM_Init 负责参数下发，HAL_SRAM_MspInit 负责时钟与引脚，分工不能混</div>
+
+                    <figure class="figure">
+                        <img src="./index26-map/lcd-init.png" alt="LCD_Init 调用链与 FMC 时序参数">
+                        <figcaption>图 10-1　LCD_Init → HAL_SRAM_Init → MspInit → 读 ID → 初始化 → 提速</figcaption>
+                    </figure>
+
+                    <pre class="code">SRAM_Handler.Init.NSBank          = FMC_NORSRAM_BANK1;              <span class="cmt">// 使用 NE1</span>
+SRAM_Handler.Init.DataAddressMux  = FMC_DATA_ADDRESS_MUX_DISABLE;   <span class="cmt">// 地址/数据不复用</span>
+SRAM_Handler.Init.MemoryType      = FMC_MEMORY_TYPE_SRAM;
+SRAM_Handler.Init.MemoryDataWidth = FMC_NORSRAM_MEM_BUS_WIDTH_16;   <span class="cmt">// 16 位</span>
+SRAM_Handler.Init.WriteOperation  = FMC_WRITE_OPERATION_ENABLE;
+SRAM_Handler.Init.ExtendedMode    = FMC_EXTENDED_MODE_ENABLE;       <span class="cmt">// 读写分开时序</span>
+
+FMC_ReadWriteTim.AddressSetupTime = 0x0F;   <span class="cmt">// ADDSET = 15 → 82.5ns</span>
+FMC_ReadWriteTim.DataSetupTime    = 0x46;   <span class="cmt">// DATAST = 70 → 385ns</span>
+FMC_ReadWriteTim.AccessMode       = FMC_ACCESS_MODE_A;
+FMC_WriteTim.AddressSetupTime     = 0x0F;
+FMC_WriteTim.DataSetupTime        = 0x0F;   <span class="cmt">// DATAST = 15 → 82.5ns</span>
+HAL_SRAM_Init(&amp;SRAM_Handler,&amp;FMC_ReadWriteTim,&amp;FMC_WriteTim);
+delay_ms(50);                               <span class="cmt">// 等屏上电稳定</span></pre>
+
+                    <table class="data">
+                        <tr><th>时序</th><th>ADDSET</th><th>DATAST</th><th>折算（1 HCLK ≈ 5.55ns）</th></tr>
+                        <tr><td>读</td><td>15</td><td>70</td><td>82.5ns / 385ns</td></tr>
+                        <tr><td>写（初始化前）</td><td>15</td><td>15</td><td>82.5ns / 82.5ns</td></tr>
+                        <tr><td>写（初始化后）</td><td>4</td><td>4</td><td>21ns / 21ns</td></tr>
+                    </table>
+
+                    <p><code>HAL_SRAM_Init</code> 先回调 <code>HAL_SRAM_MspInit</code>：开 FMC / GPIOD / GPIOE 时钟，把 PD0/1/4/5/7/8/9/10/13/14/15 与 PE7~PE15 配成 <code>GPIO_MODE_AF_PP</code>、<code>GPIO_AF12_FMC</code>；随后才写 FMC 控制寄存器与时序寄存器。顺序反了，时序参数会写进一个时钟还没打开的控制器。</p>
+
+                    <div class="note">读时序 DATAST 给到 70，是为了读 ID 时数据建立时间足够；写可以很快，但读写共用一组寄存器时不能分开提速，所以初始化完成后只改写时序寄存器 <code>FMC_Bank1E-&gt;BWTR[0]</code>。</div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="LCD ID 识别与驱动初始化">
+                    <h2>11　LCD ID 识别与驱动初始化</h2>
+                    <div class="sec-sub">同一份固件兼容四种驱动 IC，全靠上电后读回的三字节 ID</div>
+
+                    <pre class="code"><span class="cmt">// 尝试 9341</span>
+LCD_WR_REG(0XD3);
+lcddev.id=LCD_RD_DATA();   <span class="cmt">// dummy read</span>
+lcddev.id=LCD_RD_DATA();   <span class="cmt">// 读到 0x00</span>
+lcddev.id=LCD_RD_DATA();   <span class="cmt">// 读取 0x93</span>
+lcddev.id&lt;&lt;=8;
+lcddev.id|=LCD_RD_DATA();  <span class="cmt">// 读取 0x41 → 0x9341</span>
+
+<span class="cmt">// 不是 9341 再依次试 0xD4 / 0xDA00+0xDB00+0xDC00 / 0xA1</span>
+if(lcddev.id==0x8000)lcddev.id=0x5510;  <span class="cmt">// NT35510 读回 0x8000，强制改 5510</span>
+if(lcddev.id==0X5761)lcddev.id=0X1963;  <span class="cmt">// SSD1963 读回 0x5761，强制改 1963</span>
+printf(" LCD ID:%x\r\n",lcddev.id);</pre>
+
+                    <table class="data">
+                        <tr><th>读命令</th><th>回读</th><th>判定</th><th>后续处理</th></tr>
+                        <tr><td>0xD3</td><td>0x9341</td><td>ILI9341</td><td>按 9341 序列初始化，240×320</td></tr>
+                        <tr><td>0xD4</td><td>0x5310</td><td>NT35310</td><td>按 5310 序列初始化，320×480</td></tr>
+                        <tr><td>0xDA00 / 0xDB00 / 0xDC00</td><td>0x8000 → 强制 5510</td><td>NT35510</td><td>按 5510 序列初始化，480×800</td></tr>
+                        <tr><td>0xA1</td><td>0x5761 → 强制 1963</td><td>SSD1963</td><td>特殊初始化 + 背光设置，480×800</td></tr>
+                    </table>
+
+                    <p>四段读 ID 代码结构完全一样：发命令 → 丢弃第一次读（dummy）→ 读高字节 → 左移 8 位 → 读低字节。前半段各 IC 的回读字节数不同，所以第一次读的用处也不同，但最终都拼成一个 16 位 <code>lcddev.id</code>。</p>
+
+                    <div class="note">把 0x8000 改成 0x5510、0x5761 改成 0x1963，只是为了后续分支好写，不代表屏真的返回了这个值；<code>lcddev.id</code> 一旦被改写，后面所有判断都以改写后的值为准。</div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="分辨率、扫描方向与写提速">
+                    <h2>12　分辨率、扫描方向与写提速</h2>
+                    <div class="sec-sub">LCD_Display_Dir(0) 决定 width/height 与三条指令，写提速决定刷屏速度</div>
+
+                    <pre class="code">void LCD_Display_Dir(u8 dir)
+{
+    lcddev.dir=dir;
+    if(dir==0)                     <span class="cmt">// 竖屏</span>
+    {
+        lcddev.width=240;
+        lcddev.height=320;
+        if(lcddev.id==0X9341||lcddev.id==0X5310)
+        {
+            lcddev.wramcmd=0X2C;
+            lcddev.setxcmd=0X2A;
+            lcddev.setycmd=0X2B;
+            if(lcddev.id==0X5310){ lcddev.width=320; lcddev.height=480; }
+        }else if(lcddev.id==0x5510){ <span class="cmt">/* width=480, height=800；指令 0x2C00/0x2A00/0x2B00 */</span> }
+        else if(lcddev.id==0X1963){ <span class="cmt">/* width=480, height=800；X/Y 指令互换 */</span> }
+    }
+    LCD_Scan_Dir(DFT_SCAN_DIR);
+}</pre>
+
+                    <table class="data">
+                        <tr><th>LCD ID</th><th>竖屏 width × height</th><th>wramcmd</th><th>setxcmd / setycmd</th></tr>
+                        <tr><td>0x9341</td><td>240 × 320</td><td>0x2C</td><td>0x2A / 0x2B</td></tr>
+                        <tr><td>0x5310</td><td>320 × 480</td><td>0x2C</td><td>0x2A / 0x2B</td></tr>
+                        <tr><td>0x5510</td><td>480 × 800</td><td>0x2C00</td><td>0x2A00 / 0x2B00</td></tr>
+                        <tr><td>0x1963</td><td>480 × 800</td><td>0x2C</td><td>0x2B / 0x2A（互换）</td></tr>
+                    </table>
+
+                    <pre class="code"><span class="cmt">// 初始化完成后把写时序压到最快</span>
+if(lcddev.id==0X9341||lcddev.id==0X5310||lcddev.id==0X5510||lcddev.id==0X1963)
+{
+    FMC_Bank1E-&gt;BWTR[0]&amp;=~(0XF&lt;&lt;0);   <span class="cmt">// ADDSET 清零</span>
+    FMC_Bank1E-&gt;BWTR[0]&amp;=~(0XF&lt;&lt;8);   <span class="cmt">// DATAST 清零</span>
+    FMC_Bank1E-&gt;BWTR[0]|=4&lt;&lt;0;        <span class="cmt">// ADDSET = 4 → 21ns</span>
+    FMC_Bank1E-&gt;BWTR[0]|=4&lt;&lt;8;        <span class="cmt">// DATAST = 4 → 21ns</span>
+}
+LCD_Display_Dir(0);   <span class="cmt">// 默认竖屏</span>
+LCD_LED=1;            <span class="cmt">// 点亮背光</span>
+LCD_Clear(WHITE);     <span class="cmt">// 清成白色</span></pre>
+
+                    <p>main 里的 5 行文字按 240 宽排布：x 固定 10，y 从 40 到 150，字号依次 32/24/16/16/12。换成 480 宽的屏时这段代码仍然能跑，只是内容只占左上角一块。</p>
+
+                    <div class="note">1963 竖屏时 <code>setxcmd</code> / <code>setycmd</code> 与其它 IC 相反，这是驱动里唯一需要交换 X/Y 指令的型号；只改分辨率不改指令，会出现坐标错位。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="主循环与现象">
+                    <h2>13　主循环与现象</h2>
+                    <div class="sec-sub">12 种颜色 × 1 秒 = 一轮 12 秒，LED0 与颜色同步推进</div>
+
+                    <figure class="figure">
+                        <img src="./index26-map/main-loop.png" alt="主循环一轮的执行顺序与 12 色时间轴">
+                        <figcaption>图 13-1　一轮 12 秒的刷屏节拍</figcaption>
+                    </figure>
+
+                    <pre class="code">while(1)
+{
+    switch(x)
+    {
+        case 0:LCD_Clear(WHITE);break;
+        case 1:LCD_Clear(BLACK);break;
+        <span class="cmt">// case 2~10 依次为 BLUE、RED、MAGENTA、GREEN、CYAN、YELLOW、BRRED、GRAY、LGRAY</span>
+        case 11:LCD_Clear(BROWN);break;
+    }
+    POINT_COLOR=RED;
+    LCD_ShowString(10,40,240,32,32,"Apollo STM32F4/F7");
+    LCD_ShowString(10,80,240,24,24,"TFTLCD TEST");
+    LCD_ShowString(10,110,240,16,16,"ATOM@ALIENTEK");
+    LCD_ShowString(10,130,240,16,16,lcd_id);
+    LCD_ShowString(10,150,240,12,12,"2016/1/6");
+    x++;
+    if(x==12)x=0;
+    LED0=!LED0;
+    delay_ms(1000);
+}</pre>
+
+                    <div class="sim">
+                        <div class="sim-title">主循环一轮演示（仅演示逻辑，不涉及真实硬件）</div>
+                        <div class="sim-buttons">
+                            <button id="btnStep">走一轮</button>
+                            <button id="btnAuto">自动播放 1s/轮</button>
+                            <button id="btnReset">复位到 x=0</button>
+                        </div>
+                        <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;">
+                            <div id="lcdPanel" style="width:168px;height:216px;border:5px solid #33566d;border-radius:6px;background:#FFFFFF;padding:10px;flex-shrink:0;transition:background .25s;">
+                                <div style="font:700 11px/1.35 Consolas,monospace;color:#F800;">Apollo STM32F4/F7</div>
+                                <div style="font:700 10px/1.35 Consolas,monospace;color:#F800;margin-top:5px;">TFTLCD TEST</div>
+                                <div style="font:9px/1.35 Consolas,monospace;color:#F800;margin-top:5px;">ATOM@ALIENTEK</div>
+                                <div id="simLcdId" style="font:9px/1.35 Consolas,monospace;color:#F800;margin-top:5px;">LCD ID:9341</div>
+                                <div style="font:9px/1.35 Consolas,monospace;color:#F800;margin-top:5px;">2016/1/6</div>
+                            </div>
+                            <div style="flex:1;min-width:240px;">
+                                <div class="led-row">
+                                    <div class="led-item"><span class="led-dot" id="dot0"></span>LED0（PB1）</div>
+                                    <div class="led-item"><span class="led-dot" id="dot1"></span>LED1（PB0，本例不用）</div>
+                                </div>
+                                <div class="sim-log" id="simLog">x=0　白色背景　LED0 熄灭（PB1=1）</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>可观察现象</th></tr>
+                        <tr><td>x 从 0 走到 11</td><td>屏底色依次：白 → 黑 → 蓝 → 红 → 品红 → 绿 → 青 → 黄 → 棕红 → 灰 → 浅灰 → 棕</td></tr>
+                        <tr><td>每轮重画 5 行</td><td>标题、TFTLCD TEST、ATOM@ALIENTEK、LCD ID、日期，都是红色字</td></tr>
+                        <tr><td><code>LED0=!LED0</code></td><td>PB1 每秒翻转一次，LED0 亮灭交替</td></tr>
+                        <tr><td><code>delay_ms(1000)</code></td><td>每种颜色停留 1 秒，一轮 12 秒后回到白色</td></tr>
+                        <tr><td>串口输出</td><td>上电时打印一次 <code>LCD ID:9341</code>（随实际屏型号变化）</td></tr>
+                    </table>
+
+                    <div class="note">文字颜色始终是 <code>POINT_COLOR=RED</code>，即使背景清成红色也不改色，所以 case 3 那一秒红底红字几乎看不见——这是源码本来的行为，不是故障。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="总结与排查">
+                    <h2>14　总结与排查</h2>
+                    <div class="sec-sub">把链路收成一张证据表，再给常见故障的排查顺序</div>
+
+                    <table class="data">
+                        <tr><th>结论</th><th>文件</th><th>函数 / 宏</th><th>关键语句</th></tr>
+                        <tr><td>复位入口</td><td><code>CORE/startup_stm32f429xx.s</code></td><td><code>Reset_Handler</code></td><td>LDR R0,=SystemInit → BLX → __main</td></tr>
+                        <tr><td>栈 1KB / 堆 512B</td><td>同上</td><td><code>Stack_Size</code> / <code>Heap_Size</code></td><td>0x400 / 0x200</td></tr>
+                        <tr><td>FPU 与向量表</td><td><code>USER/system_stm32f4xx.c</code></td><td><code>SystemInit</code></td><td>SCB-&gt;CPACR；SCB-&gt;VTOR=FLASH_BASE</td></tr>
+                        <tr><td>优先级分组 2</td><td><code>HALLIB/.../stm32f4xx_hal.c</code></td><td><code>HAL_Init</code></td><td>HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2)</td></tr>
+                        <tr><td>主频 180MHz</td><td><code>SYSTEM/sys/sys.c</code></td><td><code>Stm32_Clock_Init</code></td><td>PLLN=360、PLLM=25、PLLP=2；FLASH_LATENCY_5</td></tr>
+                        <tr><td>1ms 时基</td><td><code>USER/stm32f4xx_it.c</code></td><td><code>SysTick_Handler</code></td><td>HAL_IncTick()</td></tr>
+                        <tr><td>命令 / 数据选择</td><td><code>HARDWARE/LCD/lcd.h</code></td><td><code>LCD_BASE</code></td><td>0x60000000 | 0x0007FFFE，A18</td></tr>
+                        <tr><td>写时序提速</td><td><code>HARDWARE/LCD/lcd.c</code></td><td><code>LCD_Init</code></td><td>BWTR[0] ADDSET=4、DATAST=4</td></tr>
+                        <tr><td>主循环</td><td><code>USER/main.c</code></td><td><code>main</code></td><td>switch(x) 12 色；delay_ms(1000)</td></tr>
+                    </table>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>最可能的原因</th><th>排查顺序</th></tr>
+                        <tr><td>白屏、无背光</td><td>PB5 没置高或 LCD_Init 没执行完</td><td>量 PB5 电平 → 查 LCD_Init 是否卡在读 ID → 查 FMC 时钟使能</td></tr>
+                        <tr><td>花屏、颜色错乱</td><td>16 位配置或地址线不对</td><td>确认 MemoryDataWidth=16、A18=PD13、ADDSET/DATAST 未被改小</td></tr>
+                        <tr><td>读不到 ID</td><td>屏未上电稳定或读时序太短</td><td>加大 delay_ms(50) → 加大 DATAST → 示波器看 NE1/NWE 波形</td></tr>
+                        <tr><td>死在 while(1)</td><td>时钟或 Over-Drive 配置失败</td><td>看 HAL_RCC_OscConfig / ClockConfig 返回值 → 确认 HSE 为 25MHz</td></tr>
+                        <tr><td>看起来每 12 秒「卡」一次</td><td>主循环本来就是 1 秒一轮</td><td>delay_ms(1000) 是忙等，不是死机；用 LED0 翻转是否规律来确认</td></tr>
+                    </table>
+
+                    <div class="note">本页所有结论都能在上面的证据表里找到对应的文件与语句；源码里没有体现的内容（例如手上这块屏的具体型号）不要当成事实。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-10 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示：主循环 12 色刷屏（仅演示逻辑） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+    var lcdPanel = document.getElementById('lcdPanel');
+
+    if (dot0 && dot1 && simLog && lcdPanel) {
+        var names = ['白色', '黑色', '蓝色', '红色', '品红', '绿色', '青色', '黄色', '棕红色', '灰色', '浅灰色', '棕色'];
+        var hex = ['#FFFFFF', '#000000', '#0000FF', '#FF0000', '#FF00FF', '#00FF00', '#00FFFF', '#FFFF00', '#FF8000', '#808080', '#C0C0C0', '#8B4513'];
+        var x = 0;
+        var led0On = false;
+        var timer = null;
+
+        function paintPanel(idx) {
+            lcdPanel.style.background = hex[idx];
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.remove('on');
+        }
+
+        function step() {
+            // 与源码顺序一致：按 x 清屏 → 重画文字 → x++ 回绕 → LED0 翻转 → delay_ms(1000)
+            paintPanel(x);
+            var shown = x;
+            led0On = !led0On;
+            dot0.classList.toggle('on', led0On);
+            x = (x + 1) % 12;
+            simLog.textContent = '本轮：清屏 ' + names[shown] + ' → 重画 5 行文字 → LED0 ' +
+                (led0On ? '点亮' : '熄灭') + ' → delay_ms(1000)，下一轮 x=' + x;
+        }
+
+        document.getElementById('btnStep').addEventListener('click', step);
+
+        var btnAuto = document.getElementById('btnAuto');
+        function stopAuto() {
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+                btnAuto.textContent = '自动播放 1s/轮';
+            }
+        }
+        btnAuto.addEventListener('click', function () {
+            if (timer) { stopAuto(); return; }
+            btnAuto.textContent = '暂停';
+            timer = setInterval(step, 1000);
+        });
+
+        document.getElementById('btnReset').addEventListener('click', function () {
+            stopAuto();
+            x = 0;
+            led0On = false;
+            paintPanel(0);
+            simLog.textContent = '复位：x=0　白色背景　LED0 熄灭（PB1=1）';
+        });
+
+        paintPanel(0);
+    }
+</script>
+</body>
+</html>

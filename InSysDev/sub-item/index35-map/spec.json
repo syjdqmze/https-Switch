@@ -1,0 +1,320 @@
+{
+  "figures": [
+    {
+      "name": "boot-flow",
+      "size": [1800, 1010],
+      "bg": "#ffffff",
+      "elements": [
+        {"type": "text", "x": 70, "y": 44, "text": "实验21 DAC实验：从上电复位到 while(1)", "font": "msyhbd", "size": 30, "color": "dark"},
+        {"type": "text", "x": 70, "y": 92, "text": "顺序即依赖：时钟与 GPIO 没配好之前，往 DAC 写码值不会在 PA4 上出现电压。", "font": "msyh", "size": 18, "color": "muted"},
+
+        {"type": "box", "x": 70, "y": 140, "w": 370, "h": 120, "rich": [
+          {"text": "01　上电复位", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "MSP 取 __initial_sp，PC 取 Reset_Handler", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[440, 200], [498, 200]]},
+        {"type": "box", "x": 500, "y": 140, "w": 370, "h": 120, "rich": [
+          {"text": "02　Reset_Handler", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "LDR SystemInit，再 BX __main", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[870, 200], [928, 200]]},
+        {"type": "box", "x": 930, "y": 140, "w": 370, "h": 120, "rich": [
+          {"text": "03　SystemInit", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "开 FPU、设 SCB->VTOR", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[1300, 200], [1358, 200]]},
+        {"type": "box", "x": 1360, "y": 140, "w": 370, "h": 120, "rich": [
+          {"text": "04　__main", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "复制 .data、清零 .bss，跳 main", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+
+        {"type": "arrow", "points": [[1545, 260], [1545, 310], [255, 310], [255, 386]]},
+        {"type": "text", "x": 900, "y": 284, "text": "进入用户 main()", "font": "msyh", "size": 16, "color": "orange", "align": "center"},
+
+        {"type": "box", "x": 70, "y": 390, "w": 370, "h": 120, "rich": [
+          {"text": "05　HAL_Init", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "优先级分组 2、1ms 时基、Cache", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[440, 450], [498, 450]]},
+        {"type": "box", "x": 500, "y": 390, "w": 370, "h": 120, "rich": [
+          {"text": "06　Stm32_Clock_Init", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "HSE 25M → SYSCLK 180MHz", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[870, 450], [928, 450]]},
+        {"type": "box", "x": 930, "y": 390, "w": 370, "h": 120, "rich": [
+          {"text": "07　delay_init(180)", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "fac_us=180，轮询 SysTick", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[1300, 450], [1358, 450]]},
+        {"type": "box", "x": 1360, "y": 390, "w": 370, "h": 120, "rich": [
+          {"text": "08　uart_init(115200)", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "USART1：PA9 / PA10，AF7", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+
+        {"type": "arrow", "points": [[1545, 510], [1545, 560], [255, 560], [255, 636]]},
+        {"type": "text", "x": 900, "y": 534, "text": "外设逐个初始化", "font": "msyh", "size": 16, "color": "orange", "align": "center"},
+
+        {"type": "box", "x": 70, "y": 640, "w": 370, "h": 120, "rich": [
+          {"text": "09　板级外设", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "USMART、LED、KEY、SDRAM、LCD", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[440, 700], [498, 700]]},
+        {"type": "box", "x": 500, "y": 640, "w": 370, "h": 120, "rich": [
+          {"text": "10　MY_ADC_Init", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "ADC1 通道5（PA5），回读用", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[870, 700], [928, 700]]},
+        {"type": "box", "x": 930, "y": 640, "w": 370, "h": 120, "fill": "#F1F8FD", "stroke": "primary", "rich": [
+          {"text": "11　DAC1_Init", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "DAC 通道1（PA4）", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[1300, 700], [1358, 700]]},
+        {"type": "box", "x": 1360, "y": 640, "w": 370, "h": 120, "fill": "#F1F8FD", "stroke": "primary", "rich": [
+          {"text": "12　HAL_DAC_SetValue", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "码值 0，12 位右对齐", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+
+        {"type": "arrow", "points": [[1545, 760], [1545, 848]]},
+        {"type": "box", "x": 70, "y": 850, "w": 1660, "h": 120, "fill": "#F4FBF7", "stroke": "green", "rich": [
+          {"text": "13　while(1)：KEY_Scan(0) 改码值 → 换算电压 → LCD 显示 → delay_ms(10)", "font": "msyhbd", "size": 23, "color": "dark"},
+          {"text": "WK_UP 每次 +200，KEY1 每次 -200；每 10 轮或按键时才刷新一次显示", "font": "msyh", "size": 16, "color": "muted"}
+        ]}
+      ]
+    },
+
+    {
+      "name": "dac-clock",
+      "size": [1760, 950],
+      "bg": "#ffffff",
+      "elements": [
+        {"type": "text", "x": 60, "y": 44, "text": "DAC 的两条时钟路径：APB1 供外设，AHB1 供引脚", "font": "msyhbd", "size": 30, "color": "dark"},
+        {"type": "text", "x": 60, "y": 92, "text": "main 先 Stm32_Clock_Init(360,25,2,8)，后面才有 45MHz 的 PCLK1 和 180MHz 的 HCLK。", "font": "msyh", "size": 18, "color": "muted"},
+
+        {"type": "box", "x": 60, "y": 140, "w": 280, "h": 100, "rich": [
+          {"text": "HSE", "font": "monobd", "size": 22, "color": "dark"},
+          {"text": "25MHz 晶振", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[340, 190], [398, 190]]},
+        {"type": "box", "x": 400, "y": 140, "w": 400, "h": 100, "rich": [
+          {"text": "主 PLL", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "M=25，N=360，P=2，Q=8", "font": "msyh", "size": 16, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[800, 190], [858, 190]]},
+        {"type": "box", "x": 860, "y": 140, "w": 300, "h": 100, "rich": [
+          {"text": "SYSCLK", "font": "monobd", "size": 21, "color": "dark"},
+          {"text": "25 × 360/25 ÷ 2 = 180MHz", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[1160, 190], [1218, 190]]},
+        {"type": "box", "x": 1220, "y": 140, "w": 440, "h": 100, "rich": [
+          {"text": "HCLK（AHB1）", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "AHB 不分频 = 180MHz，Flash 5WS", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+
+        {"type": "arrow", "points": [[1440, 240], [1440, 388]]},
+        {"type": "arrow", "points": [[1440, 330], [540, 330], [540, 388]]},
+
+        {"type": "box", "x": 300, "y": 390, "w": 480, "h": 100, "rich": [
+          {"text": "APB1 = HCLK / 4", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "PCLK1 = 45MHz，DAC 挂在这条总线上", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1170, "y": 390, "w": 480, "h": 100, "rich": [
+          {"text": "AHB1 = HCLK / 1", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "180MHz，GPIOA 挂在这条总线上", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+
+        {"type": "arrow", "points": [[540, 490], [540, 558]]},
+        {"type": "arrow", "points": [[1410, 490], [1410, 558]]},
+
+        {"type": "box", "x": 300, "y": 560, "w": 480, "h": 100, "fill": "#F4FBF7", "stroke": "green", "rich": [
+          {"text": "__HAL_RCC_DAC_CLK_ENABLE()", "font": "monobd", "size": 16, "color": "dark"},
+          {"text": "置 RCC_APB1ENR 的 DACEN = 1", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1170, "y": 560, "w": 480, "h": 100, "fill": "#F4FBF7", "stroke": "green", "rich": [
+          {"text": "__HAL_RCC_GPIOA_CLK_ENABLE()", "font": "monobd", "size": 16, "color": "dark"},
+          {"text": "置 RCC_AHB1ENR 的 GPIOAEN = 1", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+
+        {"type": "arrow", "points": [[540, 660], [540, 728]]},
+        {"type": "arrow", "points": [[1410, 660], [1410, 728]]},
+
+        {"type": "box", "x": 300, "y": 730, "w": 480, "h": 100, "rich": [
+          {"text": "DAC 外设可访问", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "CR / DHR12R1 / DOR1 才写得进", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1170, "y": 730, "w": 480, "h": 100, "rich": [
+          {"text": "PA4 配成模拟模式", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "GPIO_MODE_ANALOG + GPIO_NOPULL", "font": "msyh", "size": 15, "color": "muted"}
+        ]},
+
+        {"type": "note", "x": 300, "y": 860, "w": 1350, "text": "两处时钟缺一不可：只开 DAC 不开 GPIOA，PA4 还是输入态；只配 GPIO 不开 DAC，写 DHR 也不会改变引脚电压。", "font": "msyh", "size": 17, "color": "text", "fill": "yellow", "accent": "orange"}
+      ]
+    },
+
+    {
+      "name": "dac-init",
+      "size": [1800, 870],
+      "bg": "#ffffff",
+      "elements": [
+        {"type": "text", "x": 60, "y": 42, "text": "DAC1_Init()：结构体字段如何落到 DAC_CR 的位上", "font": "msyhbd", "size": 30, "color": "dark"},
+        {"type": "text", "x": 60, "y": 96, "text": "用户配置（HARDWARE/DAC/dac.c）", "font": "msyhbd", "size": 18, "color": "primary"},
+        {"type": "text", "x": 900, "y": 96, "text": "通道 1 对应的寄存器状态", "font": "msyhbd", "size": 18, "color": "primary"},
+
+        {"type": "box", "x": 60, "y": 136, "w": 640, "h": 88, "rich": [
+          {"text": "① 指定实例", "font": "msyhbd", "size": 18, "color": "dark"},
+          {"text": "DAC1_Handler.Instance = DAC", "font": "mono", "size": 16, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[700, 180], [888, 180]]},
+        {"type": "box", "x": 900, "y": 136, "w": 300, "h": 88, "fill": "#EEF6FC", "rich": [
+          {"text": "DAC->CR", "font": "monobd", "size": 17, "color": "dark"}
+        ]},
+        {"type": "box", "x": 1230, "y": 136, "w": 500, "h": 88, "rich": [
+          {"text": "通道 1 的位都在低半字，通道 2 由 <<16 得到", "font": "msyh", "size": 16, "color": "muted"}
+        ]},
+
+        {"type": "box", "x": 60, "y": 246, "w": 640, "h": 88, "rich": [
+          {"text": "② 触发源：不用外部触发", "font": "msyhbd", "size": 18, "color": "dark"},
+          {"text": "DAC_Trigger = DAC_TRIGGER_NONE", "font": "mono", "size": 16, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[700, 290], [888, 290]]},
+        {"type": "box", "x": 900, "y": 246, "w": 300, "h": 88, "fill": "#EEF6FC", "rich": [
+          {"text": "TEN1 = 0", "font": "monobd", "size": 17, "color": "dark"},
+          {"text": "TSEL1 = 000", "font": "mono", "size": 16, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1230, "y": 246, "w": 500, "h": 88, "rich": [
+          {"text": "DHR 写入后自动更新 DOR，不需要 SWTRIGR", "font": "msyh", "size": 16, "color": "muted"}
+        ]},
+
+        {"type": "box", "x": 60, "y": 356, "w": 640, "h": 88, "rich": [
+          {"text": "③ 输出缓冲：关闭", "font": "msyhbd", "size": 18, "color": "dark"},
+          {"text": "DAC_OutputBuffer = DAC_OUTPUTBUFFER_DISABLE", "font": "mono", "size": 14, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[700, 400], [888, 400]]},
+        {"type": "box", "x": 900, "y": 356, "w": 300, "h": 88, "fill": "#EEF6FC", "rich": [
+          {"text": "BOFF1 = 1", "font": "monobd", "size": 17, "color": "dark"},
+          {"text": "bit1 = 0x2", "font": "mono", "size": 16, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1230, "y": 356, "w": 500, "h": 88, "rich": [
+          {"text": "缓冲关闭后驱动能力变弱，适合高阻负载或自测回读", "font": "msyh", "size": 16, "color": "muted"}
+        ]},
+
+        {"type": "box", "x": 60, "y": 466, "w": 640, "h": 88, "rich": [
+          {"text": "④ 通道选择：通道 1", "font": "msyhbd", "size": 18, "color": "dark"},
+          {"text": "HAL_DAC_ConfigChannel(&DAC1_Handler, &DACCH1_Config, DAC_CHANNEL_1)", "font": "mono", "size": 13, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[700, 510], [888, 510]]},
+        {"type": "box", "x": 900, "y": 466, "w": 300, "h": 88, "fill": "#EEF6FC", "rich": [
+          {"text": "WAVE1 = 0", "font": "monobd", "size": 17, "color": "dark"},
+          {"text": "MAMP1 = 0", "font": "mono", "size": 16, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1230, "y": 466, "w": 500, "h": 88, "rich": [
+          {"text": "HAL_DAC_ConfigChannel 末尾清波形发生位，保持普通输出", "font": "msyh", "size": 16, "color": "muted"}
+        ]},
+
+        {"type": "box", "x": 60, "y": 576, "w": 640, "h": 88, "fill": "#F4FBF7", "stroke": "green", "rich": [
+          {"text": "⑤ 启动通道 1", "font": "msyhbd", "size": 18, "color": "dark"},
+          {"text": "HAL_DAC_Start(&DAC1_Handler, DAC_CHANNEL_1)", "font": "mono", "size": 15, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[700, 620], [888, 620]]},
+        {"type": "box", "x": 900, "y": 576, "w": 300, "h": 88, "fill": "#F4FBF7", "stroke": "green", "rich": [
+          {"text": "EN1 = 1", "font": "monobd", "size": 17, "color": "dark"},
+          {"text": "bit0 = 0x1", "font": "mono", "size": 16, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1230, "y": 576, "w": 500, "h": 88, "rich": [
+          {"text": "__HAL_DAC_ENABLE，通道上电，DOR 开始驱动 PA4", "font": "msyh", "size": 16, "color": "muted"}
+        ]},
+
+        {"type": "note", "x": 60, "y": 700, "w": 1680, "text": "易错点：EN1 是 bit0（0x1），BOFF1 是 bit1（0x2），两者不是同一位；先 ConfigChannel 再 Start，反序则启动时 CR 里的触发/缓冲配置还没写好。", "font": "msyh", "size": 17, "color": "text", "fill": "yellow", "accent": "orange"}
+      ]
+    },
+
+    {
+      "name": "dac-write",
+      "size": [1760, 800],
+      "bg": "#ffffff",
+      "elements": [
+        {"type": "text", "x": 60, "y": 44, "text": "从 12 位码值到 PA4 电压：HAL_DAC_SetValue() 只写一个寄存器", "font": "msyhbd", "size": 29, "color": "dark"},
+        {"type": "text", "x": 450, "y": 158, "text": "写入", "font": "msyh", "size": 16, "color": "orange", "align": "center"},
+        {"type": "text", "x": 890, "y": 158, "text": "硬件搬运", "font": "msyh", "size": 16, "color": "orange", "align": "center"},
+        {"type": "text", "x": 1330, "y": 158, "text": "电阻网络分压", "font": "msyh", "size": 16, "color": "orange", "align": "center"},
+
+        {"type": "box", "x": 60, "y": 190, "w": 340, "h": 150, "rich": [
+          {"text": "Data（码值）", "font": "msyhbd", "size": 21, "color": "dark"},
+          {"text": "0 ~ 4095，12 位", "font": "msyh", "size": 16, "color": "muted"},
+          {"text": "DAC_ALIGN_12B_R", "font": "mono", "size": 15, "color": "primary"}
+        ]},
+        {"type": "arrow", "points": [[400, 265], [498, 265]]},
+        {"type": "box", "x": 500, "y": 190, "w": 340, "h": 150, "fill": "#EEF6FC", "rich": [
+          {"text": "DAC_DHR12R1", "font": "monobd", "size": 20, "color": "dark"},
+          {"text": "0x40007400 + 0x08", "font": "mono", "size": 15, "color": "muted"},
+          {"text": "12 位右对齐数据保持寄存器", "font": "msyh", "size": 14, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[840, 265], [938, 265]]},
+        {"type": "box", "x": 940, "y": 190, "w": 340, "h": 150, "fill": "#EEF6FC", "rich": [
+          {"text": "DOR1", "font": "monobd", "size": 20, "color": "dark"},
+          {"text": "由 DHR12R1 自动更新", "font": "msyh", "size": 14, "color": "muted"}
+        ]},
+        {"type": "arrow", "points": [[1280, 265], [1378, 265]]},
+        {"type": "box", "x": 1380, "y": 190, "w": 340, "h": 150, "fill": "#F4FBF7", "stroke": "green", "rich": [
+          {"text": "Vout", "font": "monobd", "size": 20, "color": "dark"},
+          {"text": "3.3V × Data / 4096", "font": "msyh", "size": 16, "color": "muted"},
+          {"text": "每 LSB 约 0.806mV", "font": "msyh", "size": 14, "color": "muted"}
+        ]},
+
+        {"type": "box", "x": 60, "y": 420, "w": 520, "h": 110, "rich": [
+          {"text": "dacval = 1241", "font": "monobd", "size": 19, "color": "dark"},
+          {"text": "1241 × 3.3 ÷ 4096 ≈ 0.9998V", "font": "msyh", "size": 16, "color": "muted"}
+        ]},
+        {"type": "box", "x": 620, "y": 420, "w": 520, "h": 110, "rich": [
+          {"text": "dacval = 2048", "font": "monobd", "size": 19, "color": "dark"},
+          {"text": "2048 × 3.3 ÷ 4096 = 1.6500V", "font": "msyh", "size": 16, "color": "muted"}
+        ]},
+        {"type": "box", "x": 1180, "y": 420, "w": 520, "h": 110, "rich": [
+          {"text": "dacval = 4000", "font": "monobd", "size": 19, "color": "dark"},
+          {"text": "4000 × 3.3 ÷ 4096 ≈ 3.2227V", "font": "msyh", "size": 16, "color": "muted"}
+        ]},
+
+        {"type": "note", "x": 60, "y": 570, "w": 1640, "text": "换算只在显示时做：main 里 temp=(float)adcx*(3.3/4096)，adcx=temp 只留整数部分，temp-=adcx; temp*=1000 再取三位小数。写进 DAC 的始终是整数码值。", "font": "msyh", "size": 17, "color": "text", "fill": "yellow", "accent": "orange"}
+      ]
+    },
+
+    {
+      "name": "dac-stair",
+      "size": [1700, 800],
+      "bg": "#ffffff",
+      "elements": [
+        {"type": "text", "x": 60, "y": 40, "text": "按键输出的档位序列：一次一级，每级 200 个码值", "font": "msyhbd", "size": 29, "color": "dark"},
+        {"type": "text", "x": 60, "y": 92, "text": "WK_UP 加到 4000 为止，KEY1 减到 0 为止；每次改值都重新调用 HAL_DAC_SetValue。", "font": "msyh", "size": 17, "color": "muted"},
+
+        {"type": "box", "x": 1000, "y": 140, "w": 640, "h": 96, "fill": "#EEF6FC", "rich": [
+          {"text": "WK_UP：dacval += 200（上限 4000）", "font": "msyh", "size": 17, "color": "dark"},
+          {"text": "KEY1：dacval -= 200（低于 200 归零）", "font": "msyh", "size": 17, "color": "dark"}
+        ]},
+
+        {"type": "text", "x": 118, "y": 246, "text": "0.806V", "font": "mono", "size": 15, "color": "muted", "align": "right"},
+        {"type": "text", "x": 118, "y": 320, "text": "0.645V", "font": "mono", "size": 15, "color": "muted", "align": "right"},
+        {"type": "text", "x": 118, "y": 393, "text": "0.483V", "font": "mono", "size": 15, "color": "muted", "align": "right"},
+        {"type": "text", "x": 118, "y": 466, "text": "0.322V", "font": "mono", "size": 15, "color": "muted", "align": "right"},
+        {"type": "text", "x": 118, "y": 540, "text": "0.161V", "font": "mono", "size": 15, "color": "muted", "align": "right"},
+        {"type": "text", "x": 118, "y": 613, "text": "0.000V", "font": "mono", "size": 15, "color": "muted", "align": "right"},
+
+        {"type": "dashed", "points": [[150, 620], [1580, 620]], "color": "border"},
+        {"type": "dashed", "points": [[150, 253], [1580, 253]], "color": "border"},
+
+        {"type": "line", "points": [[150, 620], [380, 620], [380, 547], [610, 547], [610, 473], [840, 473], [840, 400], [1070, 400], [1070, 327], [1300, 327], [1300, 253], [1560, 253]], "color": "primary", "width": 5},
+
+        {"type": "text", "x": 380, "y": 646, "text": "200", "font": "mono", "size": 15, "color": "muted", "align": "center"},
+        {"type": "text", "x": 610, "y": 646, "text": "400", "font": "mono", "size": 15, "color": "muted", "align": "center"},
+        {"type": "text", "x": 840, "y": 646, "text": "600", "font": "mono", "size": 15, "color": "muted", "align": "center"},
+        {"type": "text", "x": 1070, "y": 646, "text": "800", "font": "mono", "size": 15, "color": "muted", "align": "center"},
+        {"type": "text", "x": 1300, "y": 646, "text": "1000", "font": "mono", "size": 15, "color": "muted", "align": "center"},
+        {"type": "text", "x": 150, "y": 646, "text": "0", "font": "mono", "size": 15, "color": "muted", "align": "left"},
+
+        {"type": "text", "x": 150, "y": 690, "text": "横轴：DAC 码值（每级 +200）；纵轴：按 3.3V 参考电压换算的输出电压", "font": "msyh", "size": 16, "color": "muted"},
+
+        {"type": "box", "x": 150, "y": 736, "w": 1490, "h": 52, "fill": "#F4FBF7", "stroke": "green", "rich": [
+          {"text": "4000 码值 ≈ 3.2227V，已接近参考电压；再往上按不再增加，避免顶到轨。", "font": "msyh", "size": 16, "color": "text"}
+        ]}
+      ]
+    }
+  ]
+}

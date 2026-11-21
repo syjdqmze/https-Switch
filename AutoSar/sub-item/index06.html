@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Sub-Item 管理页面</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+            margin: 0;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background-color: #c5d8e8; border-radius: 3px; }
+        .sidebar-menu::-webkit-scrollbar-track { background-color: transparent; }
+
+        .sidebar-actions {
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid #dce8f2;
+            flex-shrink: 0;
+        }
+
+        .sidebar-actions button {
+            flex: 1;
+            padding: 5px 0;
+            font-size: 12px;
+            border: 1px solid #dce8f2;
+            background: #fff;
+            color: #999;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .sidebar-actions button:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+            background: #e6f7ff;
+        }
+
+        .sidebar-menu > li {
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu > li > .menu-title {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .sidebar-menu > li > .menu-title:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu > li.active > .menu-title {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu > li.active {
+            border-left-color: #1890ff;
+        }
+
+        .sidebar-menu .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-menu .arrow {
+            margin-left: auto;
+            font-size: 10px;
+            transition: transform .25s;
+            color: #999;
+        }
+
+        .sidebar-menu > li.open > .menu-title .arrow {
+            transform: rotate(90deg);
+        }
+
+        .submenu {
+            list-style: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .3s ease;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu > li.open > .submenu {
+            max-height: 800px;
+        }
+
+        .submenu li {
+            padding: 8px 20px 8px 44px;
+            cursor: pointer;
+            color: #999;
+            font-size: 13px;
+            transition: all .2s;
+            border-left: 3px solid transparent;
+            margin-left: 3px;
+        }
+
+        .submenu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .submenu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .content-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #2c5f8a;
+            margin: 22px 0 12px;
+            padding-left: 10px;
+            border-left: 4px solid #1890ff;
+            line-height: 1.4;
+        }
+
+        .content-card img {
+            display: block;
+            max-width: 88%;
+            height: auto;
+            margin: 14px auto;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+        }
+
+        .img-caption {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin: -6px 0 16px;
+        }
+
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0 18px;
+            font-size: 13px;
+        }
+
+        .api-table th {
+            background-color: #1890ff;
+            color: #fff;
+            padding: 9px 10px;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .api-table td {
+            padding: 8px 10px;
+            border: 1px solid #e8eef4;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .api-table tr:nth-child(even) td {
+            background-color: #f8fbfe;
+        }
+
+        .cm {
+            color: #999;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">AutoSar方法论与项目流程</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <div class="sidebar-actions">
+                    <button class="btn-expand-all">全部展开</button>
+                    <button class="btn-collapse-all">全部收起</button>
+                </div>
+                <ul class="sidebar-menu">
+                    <li class="open" data-target="sec-method">
+                        <div class="menu-title"><span class="icon">&#9654;</span>方法论概述<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-1-1">1.1 供应链上的称呼</li>
+                            <li data-target="sec-1-2">1.2 什么是方法论</li>
+                            <li data-target="sec-1-3">1.3 工作流程</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-descriptor">
+                        <div class="menu-title"><span class="icon">&#9654;</span>描述文件<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-2-1">2.1 主要流程</li>
+                            <li data-target="sec-2-2">2.2 五种描述文件</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-ecuex">
+                        <div class="menu-title"><span class="icon">&#9654;</span>ECUEX文件<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-3-1">3.1 ECUEX简介</li>
+                            <li data-target="sec-3-2">3.2 内容涵盖等级</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-project">
+                        <div class="menu-title"><span class="icon">&#9654;</span>ECU的项目流程<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-4-1">4.1 团队介绍</li>
+                            <li data-target="sec-4-2">4.2 AutoSAR开发流程</li>
+                        </ul>
+                    </li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+
+                        <h3 id="sec-method">一、方法论概述</h3>
+
+                        <h4 id="sec-1-1">1.1 供应链上的称呼</h4>
+                        <p>讲解方法论之前，先澄清汽车行业供应链上常见的几个称呼：</p>
+                        <table class="api-table">
+                            <tr><th>简称</th><th>OEM</th><th>TIER1</th><th>TIER2</th></tr>
+                            <tr><td>中文名</td><td>代工厂（整车厂）</td><td>一级供应商</td><td>二级供应商</td></tr>
+                            <tr><td>例子</td><td>奔驰、宝马、奥迪等（主要做整车的装配工作）</td><td>大陆、博世等（主要给 OEM 供应 ECU、钣金件等）</td><td>英飞凌、NXP 等（主要给 TIER1 供应零件，比如 ECU 上的芯片、MOS 管和电路板等）</td></tr>
+                        </table>
+                        <p>TIER1 生产制造 ECU，需要受到 OEM 的一系列规定和约束，才能提供 OEM 所需要的 ECU 设备。而 AutoSAR 把一辆汽车设计 ECU 软件的几乎所有流程都囊括在内了。</p>
+
+                        <h4 id="sec-1-2">1.2 什么是方法论</h4>
+                        <p>通俗地说，方法论就是<strong>搭建符合 AutoSAR 架构的 ECU 软件的详细工作流程</strong>。它就像一本<strong>菜谱</strong>：只要按照菜谱上写好的原料、工具和步骤，就能做出一道好菜。方法论主要规定了以下内容：</p>
+                        <p>（1）<strong>具体工作流程</strong>（做菜的步骤）——从 OEM 开始设计汽车电子架构，到各 TIER1 完成每个 ECU 的软件设计的一整套流程（见下节）；</p>
+                        <p>（2）<strong>具体的交换文件</strong>（做菜的原料）——OEM 和 TIER1 之间、TIER1 内 AutoSAR 底层和应用层之间、MCAL 与 BSW 之间都需要文件交互。用 Word 交换这些信息费时费力，所以 AutoSAR 规定了一种新的文件格式 <strong>.arxml</strong>：基于 .xml 文件，加上 AutoSAR 的缩写 ar 就成了 arxml，可以由 DaVinci 等软件自动生成。比如整车厂用一套软件设计好整车的 CAN 通信矩阵，直接导出 .arxml 发给 TIER1；TIER1 在 DaVinci 中打开后所有内容一目了然，并自动将 CAN、CAN IF、PDU Router 等模块配置好。不过现在很多厂商仍沿用 DBC 文件，其实也都差不多，但 AutoSAR 建议使用 arxml；</p>
+                        <p>（3）<strong>具体的工具链</strong>（做菜的工具）——符合 AutoSAR 的工具链，比如 DaVinci、ETAS 等。</p>
+
+                        <h4 id="sec-1-3">1.3 工作流程</h4>
+                        <p>（1）<strong>普通流程</strong>（目前大部分车企还停留在这个阶段）：OEM 通过一些软件设计出整车的通信矩阵，并导出 DBC、FIBEX 或 LDF 文件 → OEM 将这些文件发送给 TIER1 → TIER1 如果有 DaVinci 这样的软件，可以导入进去直接自动配置 Communication 的大部分功能。</p>
+                        <p>（2）<strong>AutoSAR 标准流程</strong>（目前能做到这个程度的还太少），共四步：</p>
+                        <p>① <strong>列出需求</strong>：OEM 设计整车需要哪些 ECU、需要哪些功能、要哪些 SWC，在这一步先列出来。以控制车顶灯为例：OEM 需要两个 ECU（车门 ECU 和车顶灯 ECU），共 7 个 SWC：</p>
+                        <img src="index06-map/c5-01.png" alt="车顶灯例子的7个SWC">
+                        <div class="img-caption">图1-1 车顶灯例子的 SWC 划分（此图未画出 ECU 边界）：传感器SWC（右门开关、左门开关）、车门开关逻辑SWC、调光控制器SWC、执行器SWC（右顶灯、左顶灯）、传感器SWC（车灯开关），共 7 个 SWC 及其端口连接关系</div>
+                        <p>② <strong>分配需求</strong>：OEM 将所有列出来的 SWC 分配到各 ECU 中。可以看出车门 ECU 和车顶灯 ECU 之间是有通信的，通过总线传输，所以这一步也包含了通信矩阵的信息（下图的例子比较简单，只有一条总线）：</p>
+                        <img src="index06-map/c5-02.png" alt="SWC分配到ECU">
+                        <div class="img-caption">图1-2 SWC 分配到各 ECU（红框为 ECU 边界）：车门 ECU 包含右/左门开关传感器SWC与车门开关逻辑SWC，车顶灯 ECU 包含调光控制器SWC、右/左顶灯执行器SWC与车灯开关传感器SWC，两个 ECU 之间通过总线通信</div>
+                        <p>③ <strong>将需求交给 TIER1 实现</strong>：OEM 将各个 ECU 的需求（通信矩阵、需要哪些 SWC 等）生成对应的 arxml 文件交给 TIER1（每个 arxml 中只包含该 ECU 需要的内容，比如车门 ECU 拿到的 arxml 中就不会有执行器 SWC 的内容）；</p>
+                        <p>④ <strong>TIER1 开发</strong>：TIER1 拿到需求后导入 DaVinci，自动配置好 AppL 层与 Communication 的那些内容，然后将 SWC 填上具体实现的代码，再配置一下其他必要内容，就搞定了。</p>
+                        <p>四步中每一步的责任主体、具体实施过程与使用工具如下表所示：</p>
+                        <table class="api-table">
+                            <tr><th>步骤</th><th>责任主体</th><th>具体实施过程</th><th>使用工具与输出</th></tr>
+                            <tr><td>① 列出需求</td><td>OEM（整车电子电气架构团队）</td><td>定义整车需要哪些 ECU、每个 ECU 需要哪些功能，并把功能拆解为一个个 SWC（如车顶灯例子：2 个 ECU、7 个 SWC），同时明确 SWC 之间的接口与连接关系</td><td>PREEvision 等整车架构设计软件；输出 SWC 描述文件、系统约束描述文件、ECU 资源描述文件（见第二章）</td></tr>
+                            <tr><td>② 分配需求</td><td>OEM</td><td>按"功能与资源相匹配"的原则把 SWC 分配到具体 ECU（如读取温度传感器的 SWC 应分给带温度传感器的 ECU），并确定哪些 SWC 之间存在跨 ECU 通信，这一步隐含了通信矩阵的信息</td><td>PREEvision 等整车架构设计软件；输出整车 SWC 分配视图（ECU Composition）</td></tr>
+                            <tr><td>③ 交接需求文件</td><td>OEM 生成并交接，TIER1 接收</td><td>从整车系统配置描述文件中为每个 ECU 提取所需信息（通信矩阵、该 ECU 涉及的 SWC 等），过滤掉无关内容（车门 ECU 拿到的 arxml 中就不会有执行器 SWC 的内容），以 .arxml 形式交接；交接内容的多少取决于 ECUEX 的涵盖等级（见 3.2 节）</td><td>系统配置提取工具（System Configuration Extractor）；输出各 ECU 的 ECUEX 提取文件（见第三章）</td></tr>
+                            <tr><td>④ TIER1 开发</td><td>TIER1（AutoSAR 底层与应用层工程师分工协作）</td><td>将 ECUEX 导入 DaVinci 自动配置 AppL 与 Communication，为各 SWC 填充具体实现代码，再配置 BSW、RTE、MCAL 等底层内容，最后集成调试生成可执行代码</td><td>DaVinci Developer（AppL 框架）、DaVinci Configurator（BSW/RTE 配置与代码生成）、EB tresos（MCAL 配置）、MATLAB/Simulink（应用层模型）、Tasking 编译器；输出 .hex / .elf 可执行代码（完整流程见 4.2 节）</td></tr>
+                        </table>
+
+                        <h3 id="sec-descriptor">二、描述文件</h3>
+
+                        <h4 id="sec-2-1">2.1 主要流程</h4>
+                        <p>下图是在标准 AutoSAR 流程中，OEM 从需求到生成最终文件（交给每个 ECU 制造厂商）的主要流程，需要软件工具的支持（比如 Vector 的 PREEvision）才能自动生成相应的描述文件。图中绿色虚线的含义是：<strong>在设计之初可能需要反复修改</strong>（循环往复）：</p>
+                        <img src="index06-map/c5-03.png" alt="描述文件主要流程">
+                        <div class="img-caption">图2-1 OEM 侧描述文件的主要流程：SWC描述文件、系统约束描述文件、ECU资源描述文件三种文件导入系统配置编辑软件工具（AUTOSAR System Configuration Editor）生成系统配置描述文件（System Configuration Description），再经系统配置提取软件工具（AUTOSAR System Configuration Extractor）导出 ECU1/ECU2/ECU3 各自的提取文件；绿色虚线表示设计之初循环往复、可能反复修改</div>
+                        <p>流程归纳为三步（主要由 OEM 来做）：首先列出需求和资源，用三种文件来描述——<strong>SWC 描述文件、系统约束描述文件、ECU 资源描述文件</strong>；然后将这三种文件导入系统配置编辑工具，生成<strong>系统配置描述文件</strong>，它就是整车的描述文件；最后将系统配置描述文件导入系统配置提取工具，导出每个 ECU 相应的<strong>提取文件</strong>，其中只包含该 ECU 会用到的信息（如通信矩阵、SWC 等）。</p>
+
+                        <h4 id="sec-2-2">2.2 五种描述文件</h4>
+                        <p>（1）<strong>SWC 描述文件</strong>（可能有多个）：包含每个 SWC 的 Data 和 Operations、每个软件组件需要的资源（存储、CPU 时间等）、SWC 的接口（Repetition rate）、运行机制——其实就是之前 AppL 章节讲过的那些内容；</p>
+                        <p>（2）<strong>系统约束描述文件</strong>：包含网络拓扑、通信矩阵、总线波特率与定时、协议——即对整车公共信息的描述；</p>
+                        <p>（3）<strong>ECU 资源描述文件</strong>：说明哪些 ECU 能实现哪些具体功能、具有哪些资源，让系统设计者将不同功能的 SWC 分配到对应的 ECU 中（比如一个 SWC 的功能是读取温度传感器的值，就要分配给具有温度传感器的 ECU）。主要包含：传感器、执行器，存储器，处理器，通信外部设备（如外置收发器），引脚分配；</p>
+                        <p>（4）<strong>系统配置描述文件</strong>：对上述三种文件的汇总，包含整车的上述所有信息；</p>
+                        <p>（5）<strong>ECU 提取文件</strong>：将系统配置描述文件的信息分配给单个 ECU，使每个 ECU 得到自己需要的信息、过滤掉不需要的信息。ECU 通过这些信息就能搭建起自己的软件（当然还需要 RTE 配置文件、BSW 各模块配置文件、MCAL 配置文件和源代码等）。</p>
+
+                        <h3 id="sec-ecuex">三、ECUEX文件</h3>
+
+                        <h4 id="sec-3-1">3.1 ECUEX简介</h4>
+                        <p>ECUEX 文件（全称 <strong>ECU Extract of System Description</strong>）就是上一节流程图中最终生成的"ECU 提取文件"，简单说就是 <strong>OEM 和 TIER1 交接的文件</strong>：由 OEM 在设计整车时生成，并根据不同的 ECU 提取出对应的 ECUEX 文件交接给 TIER1；TIER1 拿到文件后便可以根据其中的信息来设计和开发 ECU。ECUEX 文件是 arxml 文件；如果只做通信矩阵这些内容，DBC 这类文件也可以胜任（不过随着时代进步，以后还是慢慢改成 arxml 最好）。</p>
+                        <p>ECUEX 文件主要可以包含以下内容（也可以只包含其中一部分）：</p>
+                        <p>（1）<strong>通信矩阵</strong>：比如 CAN 总线包含的信息，像 CAN ID 号、signals、扩展帧还是普通帧、波特率之类的信息；</p>
+                        <p>（2）<strong>SWCs、Ports 等</strong>：SWC 以及内部的 runnable 都可以在 ECUEX 文件中给出，还包含其 Ports，以及 SWC 之间的连接关系（Connecters）——说白了第一章 AppL 中的内容基本都可以包含；</p>
+                        <p>（3）<strong>数据映射（Data Mapping）</strong>：将总线上的信号（Network Signals）映射到 SWC 中，具体将在实践篇中讲解。</p>
+
+                        <h4 id="sec-3-2">3.2 内容涵盖等级</h4>
+                        <p>ECUEX 文件可以很简单（简单到只有通信矩阵），也可以很复杂（复杂到连一部分代码都要 OEM 写）。按 OEM 参与程度分为三个等级——等级 1 是目前普遍状态；等级 2 中 OEM 做了更多工作，好处是整车设计更加协调一致、更容易把控；等级 3 中 OEM 甚至参与了部分功能的设计与实现（表中"双方"表示 OEM 和 TIER1 都会负责一部分）：</p>
+                        <table class="api-table">
+                            <tr><th>内容项</th><th>解释</th><th>等级1（普遍状态）</th><th>等级2（进阶状态）</th><th>等级3（终极状态）</th></tr>
+                            <tr><td>Communication</td><td>通信矩阵</td><td>OEM 负责</td><td>OEM 负责</td><td>OEM 负责</td></tr>
+                            <tr><td>ECU Composition</td><td>需要哪些 SWC</td><td>TIER1 负责</td><td>OEM 负责</td><td>OEM 负责</td></tr>
+                            <tr><td>Data Mapping</td><td>连接 Network Signals 到 SWCs 中</td><td>TIER1 负责</td><td>OEM 负责</td><td>OEM 负责</td></tr>
+                            <tr><td>Compositions</td><td>每个 SWC 上需要哪些 Port、连接器之类的</td><td>TIER1 负责</td><td>OEM 负责</td><td>OEM 负责</td></tr>
+                            <tr><td>Atomics</td><td>功能的具体实现</td><td>TIER1 负责</td><td>TIER1 负责</td><td>双方共同负责</td></tr>
+                            <tr><td>Service Mapping</td><td>连接 SWCs 和 Service Components</td><td>TIER1 负责</td><td>TIER1 负责</td><td>TIER1 负责</td></tr>
+                            <tr><td>Service Components</td><td>为 SWCs 提供实际使用的 BSW 服务的接口（需要在 BSW 中配置过）</td><td>TIER1 负责</td><td>TIER1 负责</td><td>TIER1 负责</td></tr>
+                        </table>
+
+                        <h3 id="sec-project">四、ECU的项目流程</h3>
+
+                        <h4 id="sec-4-1">4.1 团队介绍</h4>
+                        <p>一个简单的 ECU 开发团队构成如下（仅供参考——人员经验不同安排会有变化，团队中的人员也可能同时参与其他项目）：</p>
+                        <img src="index06-map/c5-04.png" alt="ECU开发项目团队构成">
+                        <div class="img-caption">图4-1 ECU 开发项目团队构成（依原文文字描述绘制）：项目经理统筹，下设软件、硬件、测试、结构、功能安全五个组；软件组含应用层软件工程师（看复杂度 1-2 人）与 AutoSAR 底层工程师（看经验 1-3 人），功能安全建议单独分组</div>
+                        <p>几点说明：<strong>功能安全</strong>如果要做，最好将功能安全组单独分出来专心做，不然就要给到功能安全组足够的权力，否则功能安全很可能烂尾；图中的 <strong>1-3 人</strong>一般指 AutoSAR 底层工程师——如果有 8-10 年以上经验的丰富工程师，1 人可以接管，如果只有 1-2 年经验就需要人手多一点，但经验丰富的工程师价格也比较高（某招聘网站上 AutoSAR 工程师一般都是 25-60w 不等，还有些面议的可能会更高）；<strong>硬件、结构</strong>之类与 AutoSAR 关系不大，不再展开介绍。</p>
+
+                        <h4 id="sec-4-2">4.2 AutoSAR开发流程</h4>
+                        <p>从 OEM 交接 ECUEX 文件开始，到最终生成可执行代码，整个 AutoSAR 开发流程如下：</p>
+                        <img src="index06-map/c5-05.png" alt="AutoSAR开发流程">
+                        <div class="img-caption">图4-2 AutoSAR 开发流程（依原文文字描述绘制）：OEM 交接 ECUEX文件（.arxml）导入 DaVinci Configurator；EB tresos 配置 MCAL 并生成 MCAL 信息的 .arxml 导入 Configurator；DaVinci Developer 搭建 AppL 框架并与 Configurator 双向同步工程，同时把 AppL 信息的 .arxml 给到 MATLAB/Simulink 自动生成软件框架并填模型代码；Configurator 生成 AutoSAR 底层代码，Simulink 生成应用层代码，最终经 Tasking 编译器编译/链接为 .hex/.elf 可执行代码</div>
+                        <p>几个细节说明：</p>
+                        <p>（1）<strong>EB tresos</strong> 用来配置 MCAL：它可以直接生成代码，也可以生成 arxml 导入 DaVinci Configurator 中生成代码——建议用后者，更方便；直接生成代码在集成的时候很容易出 bug；</p>
+                        <p>（2）<strong>DaVinci Developer</strong> 用来配置 AppL，即搭建 SWC、Ports 之类的框架，然后导入 DaVinci Configurator 生成代码。由于 Developer 和 Configurator 共享一个工程，其实不需要导入，直接点一下同步就导入了；也可以反向同步，在 Configurator 中配置的内容同样可以同步到 Developer 中；</p>
+                        <p>（3）DaVinci Developer 生成的 arxml 还会给一份到做应用层的工程师那里，导入 <strong>MATLAB/Simulink</strong> 后自动生成一个软件框架，工程师在里面添加模型代码即可；</p>
+                        <p>（4）做 EB tresos、DaVinci Developer、DaVinci Configurator 和 Simulink 的工程师是<strong>可以同步开发</strong>的，最终只需要集成一下就可以了（当然最后集成的时候还是有可能出现 bug，需要大家一起调试）；</p>
+                        <p>（5）开发<strong>可以自上而下，也可以自下而上</strong>：可以在 Developer 中设计好 AppL 层的框架导入 Simulink 中做代码填充；也可以在 Simulink 中直接搭建符合 AutoSAR 规范的模型代码，然后导出 arxml，再导入 Developer 中，也能自动生成框架。</p>
+
+                        <p style="margin-top:28px; padding-top:12px; border-top:1px dashed #dce8f2; color:#999; font-size:12px;">参考来源：CSDN 博主 雪云飞星《AutoSAR系列讲解（入门篇）》5.1 方法论概述 / 5.2 描述文件 / 5.3 ECUEX文件 / 5.4 ECU的项目流程</p>
+
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 侧边栏两级菜单交互
+        (function () {
+            'use strict';
+            var topItems = document.querySelectorAll('.sidebar-menu > li');
+            var subItems = document.querySelectorAll('.submenu li');
+
+            function clearActive() {
+                document.querySelectorAll('.sidebar-menu .active').forEach(function (el) {
+                    el.classList.remove('active');
+                });
+            }
+
+            function scrollToTarget(targetId) {
+                if (!targetId) { return; }
+                var target = document.getElementById(targetId);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+
+            // 展开按钮：一键展开所有一级目录
+            var btnExpand = document.querySelector('.btn-expand-all');
+            if (btnExpand) {
+                btnExpand.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    topItems.forEach(function (li) { li.classList.add('open'); });
+                });
+            }
+
+            // 折叠按钮：一键折叠所有一级目录
+            var btnCollapse = document.querySelector('.btn-collapse-all');
+            if (btnCollapse) {
+                btnCollapse.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    topItems.forEach(function (li) { li.classList.remove('open'); });
+                });
+            }
+
+            // 一级目录：点击独立展开/折叠 + 跳转 + 高亮
+            topItems.forEach(function (li) {
+                var title = li.querySelector('.menu-title');
+                if (!title) { return; }
+                title.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    li.classList.toggle('open');
+                    clearActive();
+                    li.classList.add('active');
+                    scrollToTarget(li.getAttribute('data-target'));
+                });
+            });
+
+            // 二级目录：点击跳转 + 高亮自身与父级
+            subItems.forEach(function (li) {
+                li.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    clearActive();
+                    li.classList.add('active');
+                    var parentLi = li.closest('.sidebar-menu > li');
+                    if (parentLi) {
+                        parentLi.classList.add('open');
+                        parentLi.classList.add('active');
+                    }
+                    scrollToTarget(li.getAttribute('data-target'));
+                });
+            });
+        })();
+
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

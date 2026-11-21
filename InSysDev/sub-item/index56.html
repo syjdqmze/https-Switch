@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验42 汉字显示实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验42 汉字显示实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">字库不在 MCU 里：汉字点阵存在 W25Q256 的 25MB 之后，靠 FATFS 从 SD 卡搬进去。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+                <section class="content-card" id="s01" data-title="实验目标与依赖资源">
+                    <h2>01　实验目标与依赖资源</h2>
+                    <div class="sec-sub">把 SD 卡里的 GBK 字库搬进 W25Q256，再用 12/16/24/32 四种点阵把汉字画到 LCD 上</div>
+
+                    <p>前面几个实验解决了“块设备读写”和“文件系统”，本实验解决“中文怎么显示”。STM32 内部 Flash 装不下 GBK 全部汉字点阵（四个字号合计约 6MB），所以工程的做法是：字库文件放在 SD 卡的 <code class="inline">/SYSTEM/FONT/</code> 目录，第一次上电时通过 FATFS 读出来，写进 W25Q256 的 25MB 之后区域；之后每次上电只读 W25Q256，不再依赖 SD 卡。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>在本实验中的角色</th><th>关键代码 / 地址</th></tr>
+                        <tr><td>SD 卡</td><td>字库文件的来源，FATFS 卷 <code>0:</code></td><td><code>SD_Init()</code> + <code>f_mount(fs[0],"0:",1)</code></td></tr>
+                        <tr><td>W25Q256</td><td>字库的最终存放地，前 25MB 给 FATFS 卷 <code>1:</code></td><td><code>FONTINFOADDR = 1024*1024*25</code></td></tr>
+                        <tr><td>外部 SDRAM</td><td>外部内存池，供 <code>mymalloc(SRAMEX,…)</code> 使用</td><td><code>SDRAM_Init()</code>，<code>MEM2_MAX_SIZE = 28912*1024</code></td></tr>
+                        <tr><td>LCD（LTDC）</td><td>汉字最终显示的位置</td><td><code>LCD_Init()</code>、<code>LCD_Fast_DrawPoint()</code></td></tr>
+                        <tr><td>内部 SRAM / CCM</td><td>内部内存池与 CCM 内存池</td><td><code>MEM1_MAX_SIZE = 160*1024</code>、<code>MEM3_MAX_SIZE = 60*1024</code></td></tr>
+                    </table>
+
+                    <p>字库共 5 个文件：<code class="inline">UNIGBK.BIN</code>（Unicode 与 GBK 的转换表）、<code class="inline">GBK12.FON</code>、<code class="inline">GBK16.FON</code>、<code class="inline">GBK24.FON</code>、<code class="inline">GBK32.FON</code>。源码注释给出总大小 <strong>6302984 字节</strong>，按 4KB 一个扇区算占 <strong>1539 个扇区</strong>，这就是 <code class="inline">FONTSECSIZE</code> 的来历。</p>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（为什么要“搬运”）</div><ol>
+                        <li><strong>为什么不能放内部 Flash：</strong>STM32F429 的片内 Flash 只有 1MB 左右，四个字号 GBK 点阵合计 6MB，物理上放不下。</li>
+                        <li><strong>为什么不每次从 SD 卡读：</strong>SD 卡可能被拔走，而且随机读一个字模要走 FATFS 的簇链查找，速度远慢于直接读 SPI Flash 的连续地址。</li>
+                        <li><strong>为什么起始地址是 25MB：</strong>W25Q256 共 32MB，前 25MB 已经被 FATFS 卷 <code>1:</code> 占用，字库只能放在 25MB 之后，二者互不覆盖。</li>
+                        <li><strong>为什么要有 <code>ftinfo</code>：</strong>它是字库的“目录”，记录每个字号在 Flash 中的起始地址与长度；<code>fontok==0xAA</code> 表示字库已经就绪，否则必须重新更新。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="GBK 编码与字库布局">
+                    <h2>02　GBK 编码与字库布局</h2>
+                    <div class="sec-sub">两个字节的内码，如何换算成一个点阵在字库文件中的字节偏移</div>
+
+                    <p>GBK 用两个字节表示一个汉字：高字节（区码）范围 <code class="inline">0x81~0xFE</code>，低字节（位码）范围 <code class="inline">0x40~0xFE</code> 且跳过 <code class="inline">0x7F</code>。每个区固定 190 个汉字，所以“第几个汉字”可以用 <code class="inline">190 × (高字节 - 0x81) + (低字节换算值)</code> 算出来，再乘以单个字模的字节数，就得到文件内的偏移。</p>
+
+                    <figure class="figure">
+                        <img src="./index56-map/gbk-offset-map.png" alt="GBK 内码到字库偏移的换算关系">
+                        <figcaption>图 2-1　GBK 内码、区位数与字库字节偏移的换算关系</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>字号</th><th>单字模字节数 csize</th><th>在 W25Q256 中的起始地址</th></tr>
+                        <tr><td><code>UNIGBK.BIN</code></td><td>转换表</td><td>—</td><td><code>ftinfo.ugbkaddr = FONTINFOADDR + sizeof(ftinfo)</code></td></tr>
+                        <tr><td><code>GBK12.FON</code></td><td>12×12</td><td><code>(12/8+1)*12 = 24</code></td><td><code>ftinfo.f12addr</code></td></tr>
+                        <tr><td><code>GBK16.FON</code></td><td>16×16</td><td><code>(16/8)*16 = 32</code></td><td><code>ftinfo.f16addr</code></td></tr>
+                        <tr><td><code>GBK24.FON</code></td><td>24×24</td><td><code>(24/8)*24 = 72</code></td><td><code>ftinfo.f24addr</code></td></tr>
+                        <tr><td><code>GBK32.FON</code></td><td>32×32</td><td><code>(32/8)*32 = 128</code></td><td><code>ftinfo.f32addr</code></td></tr>
+                    </table>
+
+                    <pre class="code">// 字库信息结构体：保存 5 个文件在 Flash 中的地址与大小
+__packed typedef struct
+{
+    u8  fontok;        <span class="cmt">// 0xAA：字库正常；其他：字库不存在</span>
+    u32 ugbkaddr;      <span class="cmt">// UNIGBK 的起始地址</span>
+    u32 ugbksize;      <span class="cmt">// UNIGBK 的大小</span>
+    u32 f12addr;       <span class="cmt">// GBK12 起始地址</span>
+    u32 gbk12size;     <span class="cmt">// GBK12 大小</span>
+    u32 f16addr;       <span class="cmt">// GBK16 起始地址</span>
+    u32 gbk16size;
+    u32 f24addr;
+    u32 gbk24size;
+    u32 f32addr;
+    u32 gbk32size;
+}_font_info;
+
+// 字库文件在 SD 卡中的路径（调用时前面拼上 "0:"）
+u8* const GBK_PATH[5] =
+{
+    "/SYSTEM/FONT/UNIGBK.BIN",   <span class="cmt">// Unicode 与 GBK 的转换表</span>
+    "/SYSTEM/FONT/GBK12.FON",    <span class="cmt">// 12×12 点阵</span>
+    "/SYSTEM/FONT/GBK16.FON",
+    "/SYSTEM/FONT/GBK24.FON",
+    "/SYSTEM/FONT/GBK32.FON",
+};</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（内码与偏移）</div><ol>
+                        <li><strong>为什么每个区是 190 个字：</strong>低字节从 <code>0x40</code> 到 <code>0xFE</code> 共 191 个值，其中 <code>0x7F</code> 不可用，实际 190 个，代码里就用 <code>190*qh+ql</code>。</li>
+                        <li><strong>低字节为什么要分两种减：</strong><code>ql&lt;0x7F</code> 时减 <code>0x40</code>；<code>ql&gt;0x7F</code> 时减 <code>0x41</code>，因为中间那个 <code>0x7F</code> 要跳过，不减 0x41 会整体错位一个字。</li>
+                        <li><strong><code>csize</code> 为什么向上取整：</strong>点阵每行按字节对齐，12 点宽需要 <code>(12+7)/8 = 2</code> 字节，所以 12 号字每行 2 字节、共 12 行 = 24 字节。</li>
+                        <li><strong><code>__packed</code> 的作用：</strong>结构体要原样写进 Flash 再原样读回，必须紧凑排列（共 41 字节），否则编译器插入的对齐填充会让地址与大小对不上。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从复位到第一行汉字出现，中间只有一条主线</div>
+
+                    <figure class="figure">
+                        <img src="./index56-map/boot-flow.png" alt="汉字显示实验启动流程图">
+                        <figcaption>图 3-1　汉字显示实验从上电到主循环的启动流程</figcaption>
+                    </figure>
+
+                    <p>整个启动过程可以概括为四段：<strong>内核与时钟</strong>（HAL_Init、Stm32_Clock_Init）→ <strong>基础外设</strong>（delay、串口、LED、按键）→ <strong>存储与显示</strong>（SDRAM、LCD、W25Q256、三个内存池、FATFS）→ <strong>字库检查</strong>（<code class="inline">font_init()</code> 为 0 才进入正常显示，否则跳去更新）。</p>
+
+                    <pre class="code">int main(void)
+{
+    u32 fontcnt;
+    u8 i, j;
+    u8 fontx[2];                     <span class="cmt">// gbk 码：fontx[0] 高字节，fontx[1] 低字节</span>
+    u8 key, t;
+
+    HAL_Init();                      <span class="cmt">// 初始化 HAL 库：SysTick、NVIC 分组</span>
+    Stm32_Clock_Init(360, 25, 2, 8); <span class="cmt">// PLLN=360, PLLM=25, PLLP=2, PLLQ=8 → 180MHz</span>
+    delay_init(180);                 <span class="cmt">// 用 180MHz 作为延时基准</span>
+    uart_init(115200);               <span class="cmt">// USART1，PA9/PA10</span>
+    LED_Init();                      <span class="cmt">// DS0=PB1，DS1=PB0</span>
+    KEY_Init();                      <span class="cmt">// KEY0=PH3 等</span>
+    SDRAM_Init();                    <span class="cmt">// 外部 SDRAM，供内存池与 LCD 帧缓存使用</span>
+    LCD_Init();                      <span class="cmt">// LTDC 屏初始化，确定分辨率与像素格式</span>
+    W25QXX_Init();                   <span class="cmt">// SPI5 + PF6 片选，读 ID 并进入 4 字节地址模式</span>
+    my_mem_init(SRAMIN);             <span class="cmt">// 内部 SRAM 内存池（160KB）</span>
+    my_mem_init(SRAMEX);             <span class="cmt">// 外部 SDRAM 内存池（28912KB）</span>
+    my_mem_init(SRAMCCM);            <span class="cmt">// CCM 内存池（60KB，仅 CPU 可访问）</span>
+    exfuns_init();                   <span class="cmt">// 为 FATFS 相关指针申请内存</span>
+    f_mount(fs[0], "0:", 1);         <span class="cmt">// 挂载 SD 卡</span>
+    f_mount(fs[1], "1:", 1);         <span class="cmt">// 挂载 SPI FLASH</span>
+
+    while (font_init())              <span class="cmt">// 0：字库完好；非 0：字库丢失</span>
+    {
+UPD:
+        LCD_Clear(WHITE);            <span class="cmt">// 清屏，准备显示更新提示</span>
+        POINT_COLOR = RED;
+        LCD_ShowString(30, 50, 200, 16, 16, "Apollo STM32F4/F7");
+        while (SD_Init())            <span class="cmt">// 0：SD 卡就绪；非 0：初始化失败</span>
+        {
+            LCD_ShowString(30, 70, 200, 16, 16, "SD Card Failed!");
+            delay_ms(200);
+            LCD_Fill(30, 70, 230, 86, WHITE);   <span class="cmt">// 闪烁提示</span>
+            delay_ms(200);
+        }
+        LCD_ShowString(30, 70, 200, 16, 16, "SD Card OK");
+        LCD_ShowString(30, 90, 200, 16, 16, "Font Updating...");
+        key = update_font(20, 110, 16, "0:");   <span class="cmt">// 从 SD 卡 0: 更新全部字库</span>
+        while (key)                  <span class="cmt">// 非 0：更新失败，闪屏重试</span>
+        {
+            LCD_ShowString(30, 110, 200, 16, 16, "Font Update Failed!");
+            delay_ms(200);
+            LCD_Fill(20, 110, 220, 126, WHITE);
+            delay_ms(200);
+        }
+        LCD_ShowString(30, 110, 200, 16, 16, "Font Update Success!   ");
+        delay_ms(1500);
+        LCD_Clear(WHITE);
+    }
+
+    POINT_COLOR = RED;
+    Show_Str(30, 30, 200, 16, "阿波罗STM32F4/F7开发板", 16, 0);
+    Show_Str(30, 50, 200, 16, "GBK字库测试程序", 16, 0);
+    Show_Str(30, 70, 200, 16, "正点原子@ALIENTEK", 16, 0);
+    Show_Str(30, 90, 200, 16, "2016年1月16日", 16, 0);
+    Show_Str(30, 110, 200, 16, "按KEY0,更新字库", 16, 0);
+    POINT_COLOR = BLUE;
+    Show_Str(30, 130, 200, 16, "内码高字节:", 16, 0);
+    Show_Str(30, 150, 200, 16, "内码低字节:", 16, 0);
+    Show_Str(30, 170, 200, 16, "汉字计数器:", 16, 0);
+
+    Show_Str(30, 200, 200, 32, "对应汉字为:", 32, 0);
+    Show_Str(30, 232, 200, 24, "对应汉字为:", 24, 0);
+    Show_Str(30, 256, 200, 16, "对应汉字(16*16)为:", 16, 0);
+    Show_Str(30, 272, 200, 12, "对应汉字(12*12)为:", 12, 0);
+    while (1)
+    {
+        fontcnt = 0;
+        for (i = 0x81; i &lt; 0xff; i++)   <span class="cmt">// 遍历 GBK 高字节</span>
+        {
+            fontx[0] = i;
+            LCD_ShowNum(118, 150, i, 3, 16);        <span class="cmt">// 显示内码高字节</span>
+            for (j = 0x40; j &lt; 0xfe; j++)           <span class="cmt">// 遍历 GBK 低字节</span>
+            {
+                if (j == 0x7f) continue;            <span class="cmt">// 0x7F 不是有效汉字</span>
+                fontcnt++;
+                LCD_ShowNum(118, 150, j, 3, 16);    <span class="cmt">// 显示内码低字节</span>
+                LCD_ShowNum(118, 170, fontcnt, 5, 16); <span class="cmt">// 汉字计数器</span>
+                fontx[1] = j;
+                Show_Font(206, 200, fontx, 32, 0);  <span class="cmt">// 30+176</span>
+                Show_Font(162, 232, fontx, 24, 0);  <span class="cmt">// 30+132</span>
+                Show_Font(174, 256, fontx, 16, 0);  <span class="cmt">// 30+144</span>
+                Show_Font(138, 272, fontx, 12, 0);  <span class="cmt">// 30+108</span>
+                t = 200;
+                while (t--)             <span class="cmt">// 延时 200ms，同时扫描按键</span>
+                {
+                    delay_ms(1);
+                    key = KEY_Scan(0);
+                    if (key == KEY0_PRES) goto UPD;  <span class="cmt">// KEY0 触发字库更新</span>
+                }
+                LED0 = !LED0;           <span class="cmt">// 每换一个汉字翻转一次 DS0</span>
+            }
+        }
+    }
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（主流程）</div><ol>
+                        <li><strong>为什么 <code>font_init()</code> 写在 <code>while</code> 里：</strong>它的返回值 0 表示“字库完好”，非 0 表示“需要更新”；只有更新成功后再次检查为 0 才会跳出循环，形成“检查—更新—再检查”的闭环。</li>
+                        <li><strong><code>goto UPD</code> 为什么要跳到循环内部：</strong>UPD 标签位于 <code>while</code> 循环体开头，跳过去相当于“立即重新执行一次更新”，避免重复写一遍更新代码。</li>
+                        <li><strong>两次 <code>f_mount</code> 的顺序：</strong>先挂 SD 卡（字库来源），再挂 SPI FLASH（字库去处）；<code>f_mount</code> 的第 3 参数 1 表示“立即挂载”，0 表示“延迟到第一次访问”。</li>
+                        <li><strong>四种字号同屏显示：</strong>200/232/256/272 四行分别用 32/24/16/12 号字，x 坐标按 <code>30+字宽偏移</code> 手工错开，保证左边界对齐文字标签。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">复位后第一段代码不是 main，而是启动文件里的 Reset_Handler</div>
+
+                    <p>工程使用 MDK 版本的 <code class="inline">startup_stm32f429xx.s</code>。它定义栈 <code class="inline">Stack_Size = 0x400</code>（1KB）、堆 <code class="inline">Heap_Size = 0x200</code>（512B），并建立向量表：第 0 项是初始栈顶 <code class="inline">__initial_sp</code>，第 1 项是 <code class="inline">Reset_Handler</code>。复位后硬件自动取这两项，PC 跳到 Reset_Handler。</p>
+
+                    <pre class="code">Stack_Size      EQU     0x400           <span class="cmt">; 栈 1KB，中断嵌套与局部数组都在这里</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp                            <span class="cmt">; 向量表第 0 项：初始栈顶</span>
+
+Heap_Size       EQU     0x200           <span class="cmt">; 堆 512B，只给 C 库 malloc 用（本工程用 mymalloc）</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit
+
+__Vectors       DCD     __initial_sp    <span class="cmt">; 0x0000 0000 初始 MSP</span>
+                DCD     Reset_Handler   <span class="cmt">; 0x0000 0004 复位入口</span>
+                DCD     NMI_Handler
+                DCD     HardFault_Handler
+                ...
+                DCD     SysTick_Handler <span class="cmt">; 内核异常 15：1ms 时基</span>
+
+                ; External Interrupts
+                DCD     TIM4_IRQHandler <span class="cmt">; 外部中断 30</span>
+                DCD     SPI1_IRQHandler
+                DCD     USART1_IRQHandler <span class="cmt">; 外部中断 37</span>
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler              [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+                 LDR     R0, =SystemInit   <span class="cmt">; 先跑 SystemInit（时钟、向量表偏移）</span>
+                 BLX     R0
+                 LDR     R0, =__main       <span class="cmt">; 再进 C 库：初始化 RW/ZI 段后调用 main</span>
+                 BX      R0
+                 ENDP</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（启动文件）</div><ol>
+                        <li><strong>为什么向量表第 0 项是栈顶而不是函数：</strong>Cortex-M4 复位时硬件从地址 0 取 MSP 初值、从地址 4 取 PC 初值，这是内核规定，不是软件约定。</li>
+                        <li><strong><code>[WEAK]</code> 的意义：</strong>启动文件给每个中断都定义了“弱符号”死循环版本，只要 <code>stm32f4xx_it.c</code> 或 <code>usart.c</code> 里出现同名强符号，链接时就会覆盖它。</li>
+                        <li><strong>为什么本工程只需要 SysTick 与 USART1：</strong>汉字显示只用 SPI 查询、FMC 查询、SDIO 查询，没有任何外设靠中断搬运数据，<code>stm32f4xx_it.c</code> 里实际只有 <code>SysTick_Handler</code>，USART1 的 ISR 写在 <code>usart.c</code>。</li>
+                        <li><strong>堆为什么可以很小：</strong>工程所有动态内存都走 <code>mymalloc</code> 管理的大数组池，标准库 <code>malloc</code> 基本不用，512B 堆只是为了让 C 库链接通过。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">一个配时钟与向量表，一个起时基与中断分组</div>
+
+                    <p><code class="inline">SystemInit()</code> 由启动文件调用，做两件事：把 <code class="inline">SCB-&gt;VTOR</code> 指向向量表基址、打开 FPU（<code class="inline">CPACR</code> 的 CP10/CP11）。真正的 180MHz 时钟并不在这里设置，而是 <code class="inline">main</code> 里的 <code class="inline">Stm32_Clock_Init()</code> 完成。随后 <code class="inline">HAL_Init()</code> 把 SysTick 配成 1ms 中断，并设置 NVIC 优先级分组为 4 位抢占、0 位子优先级。</p>
+
+                    <pre class="code">// system_stm32f4xx.c
+void SystemInit(void)
+{
+    RCC-&gt;CR |= (uint32_t)0x00000001;   <span class="cmt">// 打开 HSION</span>
+    RCC-&gt;CFGR = 0x00000000;            <span class="cmt">// 复位时钟配置</span>
+    RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;   <span class="cmt">// 关闭 PLL、CSS、HSEON</span>
+    RCC-&gt;PLLCFGR = 0x24003010;
+    RCC-&gt;CR &amp;= ~(1 &lt;&lt; 18);             <span class="cmt">// 关闭 HSE Bypass</span>
+    RCC-&gt;CIR = 0x00000000;             <span class="cmt">// 清中断标志</span>
+#ifdef VECT_TAB_SRAM
+    SCB-&gt;VTOR = SRAM_BASE | VECT_TAB_OFFSET;   <span class="cmt">// 向量表放 SRAM</span>
+#else
+    SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;  <span class="cmt">// 向量表放 Flash 0x08000000</span>
+#endif
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2) | (3UL &lt;&lt; 11*2)); <span class="cmt">// 使能 FPU（CP10/CP11）</span>
+}
+
+// stm32f4xx_hal.c（节选）
+HAL_StatusTypeDef HAL_Init(void)
+{
+    HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4); <span class="cmt">// 4 位抢占优先级</span>
+    HAL_InitTick(TICK_INT_PRIORITY);                    <span class="cmt">// SysTick 1ms，优先级 0x0F</span>
+    HAL_MspInit();                                      <span class="cmt">// 底层初始化（本工程为空实现）</span>
+    return HAL_OK;
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（内核初始化）</div><ol>
+                        <li><strong>为什么 <code>SystemInit</code> 里不配 180MHz：</strong>它是 ST 提供的通用模板，只保证内核处于可控状态；板级时钟由正点原子的 <code>Stm32_Clock_Init</code> 负责，便于换晶振时只改一处。</li>
+                        <li><strong>为什么要开 FPU：</strong><code>fupd_prog</code> 里用 <code>float prog</code> 计算百分比，不开 FPU 会走软件浮点，速度慢且占用栈。</li>
+                        <li><strong><code>HAL_InitTick</code> 的优先级 0x0F：</strong>SysTick 设为最低抢占优先级，保证串口等外设中断不会被 1ms 时基打断。</li>
+                        <li><strong>本工程 <code>HAL_MspInit</code> 是空的：</strong>没有需要 HAL 统一打开的全局外设时钟，各驱动自己在 <code>MspInit</code> 里开对应 GPIO/RCC 时钟。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟树与延时基准">
+                    <h2>06　时钟树与延时基准</h2>
+                    <div class="sec-sub">一个 PLL 同时喂饱内核、SDRAM、SPI5 与 SDIO</div>
+
+                    <p>开发板晶振 25MHz，<code class="inline">Stm32_Clock_Init(360,25,2,8)</code> 的四个参数依次是 <code class="inline">PLLN / PLLM / PLLP / PLLQ</code>：VCO 输入 <code class="inline">25/25 = 1MHz</code>，VCO 输出 <code class="inline">1×360 = 360MHz</code>，SYSCLK <code class="inline">360/2 = 180MHz</code>，PLL48CK <code class="inline">360/8 = 45MHz</code>。</p>
+
+                    <table class="data">
+                        <tr><th>时钟</th><th>来源与分频</th><th>频率</th><th>用途</th></tr>
+                        <tr><td>SYSCLK</td><td>PLL VCO 360MHz ÷ PLLP=2</td><td>180MHz</td><td>内核、SysTick</td></tr>
+                        <tr><td>HCLK</td><td>SYSCLK ÷ AHB 预分频=1</td><td>180MHz</td><td>FMC、DMA、内核总线</td></tr>
+                        <tr><td>PCLK1</td><td>HCLK ÷ 4</td><td>45MHz</td><td>APB1 外设</td></tr>
+                        <tr><td>PCLK2</td><td>HCLK ÷ 2</td><td>90MHz</td><td>APB2 外设（SPI5 挂 APB2）</td></tr>
+                        <tr><td>PLL48CK</td><td>PLL VCO ÷ PLLQ=8</td><td>45MHz</td><td>SDIO 时钟源</td></tr>
+                        <tr><td>SDRAM SDCLK</td><td>HCLK ÷ 2</td><td>90MHz</td><td>外部 SDRAM</td></tr>
+                    </table>
+
+                    <pre class="code">// main 中的调用
+Stm32_Clock_Init(360, 25, 2, 8);   <span class="cmt">// 180MHz，PLL48CK=45MHz</span>
+delay_init(180);                   <span class="cmt">// 告诉延时函数每次 SysTick 是 1/180 微秒</span>
+
+// delay.c
+void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">// SysTick 用 HCLK</span>
+    fac_us = SYSCLK;                                     <span class="cmt">// 1us 需要的 SysTick 计数 = 180</span>
+    fac_ms = (u16)SYSCLK * 1000;                         <span class="cmt">// 1ms = 180000</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks = nus * fac_us;      <span class="cmt">// 折算成 SysTick 计数</span>
+    u32 told = SysTick-&gt;VAL, tnow, tcnt = 0;
+    while (1)
+    {
+        tnow = SysTick-&gt;VAL;
+        if (tnow != told)
+        {
+            if (tnow &lt; told) tcnt += told - tnow;  <span class="cmt">// 未跨过重装值</span>
+            else tcnt += SysTick-&gt;LOAD - tnow + told; <span class="cmt">// 跨过重装值</span>
+            told = tnow;
+            if (tcnt &gt;= ticks) break;              <span class="cmt">// 计满即退出</span>
+        }
+    }
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（时钟与延时）</div><ol>
+                        <li><strong>为什么 FLASH 要等 5 个周期：</strong>180MHz 下 CPU 取指速度远超 Flash，HAL 在 <code>Stm32_Clock_Init</code> 里设置 <code>FLASH_LATENCY_5</code> 并打开 OverDrive，否则读 Flash 会取到错误指令。</li>
+                        <li><strong>为什么 <code>delay_us</code> 直接读 <code>SysTick-&gt;VAL</code>：</strong>不占用中断、不依赖 <code>HAL_Delay</code> 的 1ms 粒度，能实现微秒级短延时（SDRAM 初始化就需要 500us）。</li>
+                        <li><strong>为什么要注意重装值：</strong>SysTick 是递减计数器，减到 0 会自动重装 <code>LOAD</code>，所以计数要分“未跨零”和“跨零”两种情况累加。</li>
+                        <li><strong>45MHz 的 PLL48CK 有什么用：</strong>SDIO 的卡时钟由它分频得到，<code>SDIO_INIT_CLK_DIV</code> 分频后初始化阶段约 375kHz，识别完成后切到 22.5MHz。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="外设与内存池初始化">
+                    <h2>07　外设与内存池初始化</h2>
+                    <div class="sec-sub">SDRAM 给内存池与显存，W25Q256 给字库，FATFS 给文件</div>
+
+                    <p>这一串初始化有严格顺序：先 SDRAM（后面 <code class="inline">my_mem_init(SRAMEX)</code> 要用它），再 LCD（LTDC 需要 SDRAM 做帧缓存），再 W25Q256（字库载体），最后才是三个内存池和 FATFS。顺序颠倒会出现“内存池指向未初始化的 SDRAM”这类隐蔽问题。</p>
+
+                    <pre class="code">SDRAM_Init();              <span class="cmt">// FMC Bank5：9 位列、13 位行、16 位数据、CAS=3</span>
+LCD_Init();                <span class="cmt">// 先读面板 ID，RGB 屏走 LTDC 分支</span>
+W25QXX_Init();             <span class="cmt">// SPI5 + PF6 片选；W25Q256 需切换到 4 字节地址模式</span>
+
+my_mem_init(SRAMIN);       <span class="cmt">// 内部 SRAM 池：块 64B，共 160KB</span>
+my_mem_init(SRAMEX);       <span class="cmt">// 外部 SDRAM 池：块 64B，共 28912KB</span>
+my_mem_init(SRAMCCM);      <span class="cmt">// CCM 池：块 64B，共 60KB，仅 CPU 可访问</span>
+
+exfuns_init();             <span class="cmt">// 申请 FATFS 用到的 FIL/FATFS 指针</span>
+f_mount(fs[0], "0:", 1);   <span class="cmt">// 挂载 SD 卡</span>
+f_mount(fs[1], "1:", 1);   <span class="cmt">// 挂载 SPI FLASH（字库的最终存放地）</span>
+
+// malloc.c：内存池初始化（以内部池为例）
+void my_mem_init(u8 memx)
+{
+    mymemset(mallco_dev.memrdy[memx], 0, memtblsize[memx]); <span class="cmt">// 分配表清零</span>
+    mymemset(mallco_dev.membase[memx], 0, memsize[memx]);   <span class="cmt">// 内存池清零</span>
+    mallco_dev.memrdy[memx] = 1;                            <span class="cmt">// 标记已初始化</span>
+}
+
+// malloc.c：内存分配（首次适配）
+void *mymalloc(u8 memx, u32 size)
+{
+    signed long offset;
+    u32 nmemb, cmemb = 0, i;
+    if (!mallco_dev.memrdy[memx]) mallco_dev.init(memx);     <span class="cmt">// 未初始化则先初始化</span>
+    if (size == 0) return NULL;
+    nmemb = size / memblksize[memx];                        <span class="cmt">// 需要多少个 64B 块</span>
+    if (size % memblksize[memx]) nmemb++;
+    for (offset = memtblsize[memx] - 1; offset &gt;= 0; offset--)
+    {
+        if (!mallco_dev.memmap[memx][offset]) cmemb++;      <span class="cmt">// 连续空闲块计数</span>
+        else cmemb = 0;
+        if (cmemb == nmemb)                                 <span class="cmt">// 找到足够连续块</span>
+        {
+            for (i = 0; i &lt; nmemb; i++) mallco_dev.memmap[memx][offset + i] = nmemb;
+            return (void *)((offset * memblksize[memx]) + (u32)mallco_dev.membase[memx]);
+        }
+    }
+    return NULL;                                            <span class="cmt">// 没有足够空间</span>
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（初始化顺序与内存池）</div><ol>
+                        <li><strong>为什么 SDRAM 必须最先：</strong><code>my_mem_init(SRAMEX)</code> 里的 <code>mymemset</code> 会直接写 SDRAM 地址空间，SDRAM 控制器没初始化时写进去的数据会丢失甚至触发总线错误。</li>
+                        <li><strong>为什么 LCD 在 SDRAM 之后：</strong>RGB 屏的显存在 SDRAM 中，LTDC 初始化时要告诉控制器帧缓存地址，地址空间必须先可用。</li>
+                        <li><strong>内存池用“块”而不是字节：</strong>64B 一块、分配表记录每块被谁占用，实现简单、碎片可控；代价是 1 字节的申请也要占 64B。</li>
+                        <li><strong>字库更新为什么要 4KB 缓冲：</strong><code>update_font</code> 申请 4096 字节的 <code>buf</code> 用于整扇区读取校验，正好等于 W25Q256 一个扇区。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="字库检查与更新">
+                    <h2>08　字库检查与更新</h2>
+                    <div class="sec-sub">font_init 判断有没有，update_font 决定搬不搬</div>
+
+                    <figure class="figure">
+                        <img src="./index56-map/font-update-flow.png" alt="字库检查与更新流程">
+                        <figcaption>图 8-1　字库检查、扇区擦除与逐文件搬运的流程</figcaption>
+                    </figure>
+
+                    <p><code class="inline">font_init()</code> 只做一件事：从 <code class="inline">FONTINFOADDR</code> 读出 <code class="inline">ftinfo</code> 结构体，看 <code class="inline">fontok</code> 是否等于 <code class="inline">0xAA</code>。为了避免 SPI 偶发读错，它连续读 10 次，任意一次成功就认为字库完好。若 10 次都失败，返回 1，主流程进入更新分支。</p>
+
+                    <pre class="code">u8 font_init(void)
+{
+    u8 t = 0;
+    W25QXX_Init();                    <span class="cmt">// 重新初始化 SPI FLASH，防止引脚状态异常</span>
+    while (t &lt; 10)                    <span class="cmt">// 连续读 10 次，容忍偶发错误</span>
+    {
+        t++;
+        W25QXX_Read((u8 *)&amp;ftinfo, FONTINFOADDR, sizeof(ftinfo)); <span class="cmt">// 读字库信息头（41 字节）</span>
+        if (ftinfo.fontok == 0XAA) break;   <span class="cmt">// 标志正确，字库可用</span>
+        delay_ms(20);
+    }
+    if (ftinfo.fontok != 0XAA) return 1;    <span class="cmt">// 确实没有字库</span>
+    return 0;                               <span class="cmt">// 字库完好</span>
+}</pre>
+
+                    <pre class="code">u8 update_font(u16 x, u16 y, u8 size, u8 *src)
+{
+    u8 *pname;
+    u32 *buf;
+    u8 res = 0, rval = 0;
+    u16 i, j;
+    FIL *fftemp;
+
+    res = 0XFF;
+    ftinfo.fontok = 0XFF;                  <span class="cmt">// 先标记“无效”，防止中途掉电被误判为有效</span>
+    pname = mymalloc(SRAMIN, 100);         <span class="cmt">// 拼路径用，100 字节足够</span>
+    buf   = mymalloc(SRAMIN, 4096);        <span class="cmt">// 整扇区校验缓冲</span>
+    fftemp = (FIL *)mymalloc(SRAMIN, sizeof(FIL));
+    if (buf == NULL || pname == NULL || fftemp == NULL)
+    {
+        myfree(SRAMIN, fftemp); myfree(SRAMIN, pname); myfree(SRAMIN, buf);
+        return 5;                          <span class="cmt">// 内存申请失败</span>
+    }
+
+    for (i = 0; i &lt; 5; i++)                <span class="cmt">// 先确认 5 个字库文件都在</span>
+    {
+        strcpy((char *)pname, (char *)src);        <span class="cmt">// "0:"</span>
+        strcat((char *)pname, (char *)GBK_PATH[i]); <span class="cmt">// 追加 /SYSTEM/FONT/xxx</span>
+        res = f_open(fftemp, (const TCHAR *)pname, FA_READ);
+        if (res) { rval |= 1 &lt;&lt; 7; break; }        <span class="cmt">// 打开失败，置错误标志</span>
+    }
+    myfree(SRAMIN, fftemp);
+
+    if (rval == 0)                          <span class="cmt">// 文件齐全，开始搬</span>
+    {
+        LCD_ShowString(x, y, 240, 320, size, "Erasing sectors... ");
+        for (i = 0; i &lt; FONTSECSIZE; i++)   <span class="cmt">// 1539 个 4KB 扇区</span>
+        {
+            fupd_prog(x + 20 * size / 2, y, size, FONTSECSIZE, i); <span class="cmt">// 更新进度条</span>
+            W25QXX_Read((u8 *)buf, ((FONTINFOADDR / 4096) + i) * 4096, 4096);
+            for (j = 0; j &lt; 1024; j++)      <span class="cmt">// 用 32 位字判断是否全 0xFF</span>
+            {
+                if (buf[j] != 0XFFFFFFFF) break; <span class="cmt">// 有非空数据，需要擦除</span>
+            }
+            if (j != 1024) W25QXX_Erase_Sector((FONTINFOADDR / 4096) + i);
+        }
+        for (i = 0; i &lt; 5; i++)             <span class="cmt">// 依次搬 5 个文件</span>
+        {
+            LCD_ShowString(x, y, 240, 320, size, UPDATE_REMIND_TBL[i]);
+            strcpy((char *)pname, (char *)src);
+            strcat((char *)pname, (char *)GBK_PATH[i]);
+            res = updata_fontx(x + 20 * size / 2, y, size, pname, i);
+            if (res) { myfree(SRAMIN, buf); myfree(SRAMIN, pname); return 1 + i; }
+        }
+        ftinfo.fontok = 0XAA;               <span class="cmt">// 全部成功，写有效标志</span>
+        W25QXX_Write((u8 *)&amp;ftinfo, FONTINFOADDR, sizeof(ftinfo)); <span class="cmt">// 保存信息头</span>
+    }
+    myfree(SRAMIN, pname);
+    myfree(SRAMIN, buf);
+    return rval;
+}</pre>
+
+                    <pre class="code">// 搬运单个字库文件：按 4KB 分块读 SD 卡、写 SPI FLASH
+u8 updata_fontx(u16 x, u16 y, u8 size, u8 *fxpath, u8 fx)
+{
+    u32 flashaddr = 0, offx = 0;
+    FIL *fftemp;
+    u8 *tempbuf;
+    u8 res, rval = 0;
+    u16 bread;
+
+    fftemp  = (FIL *)mymalloc(SRAMIN, sizeof(FIL));
+    tempbuf = mymalloc(SRAMIN, 4096);       <span class="cmt">// 一次 4KB，和 Flash 扇区对齐</span>
+    if (fftemp == NULL) rval = 1;
+    if (tempbuf == NULL) rval = 1;
+    res = f_open(fftemp, (const TCHAR *)fxpath, FA_READ);
+    if (res) rval = 2;                      <span class="cmt">// 打开失败</span>
+
+    if (rval == 0)
+    {
+        switch (fx)                         <span class="cmt">// 计算该文件在 Flash 中的起始地址</span>
+        {
+            case 0:                         <span class="cmt">// UNIGBK.BIN</span>
+                ftinfo.ugbkaddr = FONTINFOADDR + sizeof(ftinfo);
+                ftinfo.ugbksize = fftemp-&gt;obj.objsize;
+                flashaddr = ftinfo.ugbkaddr;
+                break;
+            case 1:                         <span class="cmt">// GBK12</span>
+                ftinfo.f12addr = ftinfo.ugbkaddr + ftinfo.ugbksize;
+                ftinfo.gbk12size = fftemp-&gt;obj.objsize;
+                flashaddr = ftinfo.f12addr;
+                break;
+            case 2:
+                ftinfo.f16addr = ftinfo.f12addr + ftinfo.gbk12size;
+                ftinfo.gbk16size = fftemp-&gt;obj.objsize;
+                flashaddr = ftinfo.f16addr;
+                break;
+            case 3:
+                ftinfo.f24addr = ftinfo.f16addr + ftinfo.gbk16size;
+                ftinfo.gbk24size = fftemp-&gt;obj.objsize;
+                flashaddr = ftinfo.f24addr;
+                break;
+            case 4:
+                ftinfo.f32addr = ftinfo.f24addr + ftinfo.gbk24size;
+                ftinfo.gbk32size = fftemp-&gt;obj.objsize;
+                flashaddr = ftinfo.f32addr;
+                break;
+        }
+        while (res == FR_OK)
+        {
+            res = f_read(fftemp, tempbuf, 4096, (UINT *)&amp;bread); <span class="cmt">// 从 SD 卡读 4KB</span>
+            if (res != FR_OK) break;
+            W25QXX_Write(tempbuf, offx + flashaddr, 4096);         <span class="cmt">// 写入 Flash（内部带擦除）</span>
+            offx += bread;
+            fupd_prog(x, y, size, fftemp-&gt;obj.objsize, offx);     <span class="cmt">// 进度显示</span>
+            if (bread != 4096) break;                              <span class="cmt">// 不足 4KB，说明读完了</span>
+        }
+        f_close(fftemp);
+    }
+    myfree(SRAMIN, fftemp);
+    myfree(SRAMIN, tempbuf);
+    return res;
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（检查与更新）</div><ol>
+                        <li><strong><code>updata_fontx</code> 的参数：</strong><code>x,y</code> 进度显示坐标、<code>size</code> 字号、<code>fxpath</code> 完整路径、<code>fx</code> 文件编号 0~4；返回 0 成功，否则为 FATFS 错误码。</li>
+                        <li><strong>为什么要先算地址再写：</strong>5 个文件在 Flash 中是<strong>首尾相接</strong>的，后一个的起始地址 = 前一个起始 + 前一个大小，必须先写 <code>ftinfo</code> 字段再算 <code>flashaddr</code>。</li>
+                        <li><strong>为什么擦除前要先读一遍：</strong>W25Q256 擦除一次至少 150ms，1539 个扇区全擦要几分钟；先判断是否已经是 <code>0xFFFFFFFF</code>，全空的扇区直接跳过，能省大量时间。</li>
+                        <li><strong>为什么最后才写 <code>ftinfo</code>：</strong>它相当于“提交记录”，中途掉电时 <code>fontok</code> 仍是旧值/0xFF，下次上电会重新更新，不会出现“只搬了一半却认为完成”。</li>
+                        <li><strong><code>fftemp-&gt;obj.objsize</code> 是什么：</strong>FATFS 的 <code>FIL</code> 结构里记录的文件大小（字节），用它填 <code>ugbksize/gbk12size…</code>，不需要额外 <code>f_stat</code>。</li>
+                    </ol></div>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（返回值约定）</div><ol>
+                        <li><strong><code>font_init</code>：</strong>0 = 字库完好，1 = 字库缺失。</li>
+                        <li><strong><code>update_font</code>：</strong>0 = 成功；5 = 内存申请失败；<code>1+i</code> = 第 i 个字库文件写入失败（1~5）；<code>1&lt;&lt;7</code> 置位表示有文件打不开。</li>
+                        <li><strong><code>updata_fontx</code>：</strong>返回 <code>res</code>，即最后一次 <code>f_read</code> 的 <code>FRESULT</code>；<code>FR_OK</code> 为 0。</li>
+                        <li><strong>为什么 <code>update_font</code> 失败要释放内存再返回：</strong>这三个缓冲都在内部 SRAM 池里，不释放会一直占着 4KB+，而内部池只有 160KB。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="中断链路">
+                    <h2>09　中断链路</h2>
+                    <div class="sec-sub">只有一个 1ms 时基和一个串口接收，其余全是查询</div>
+
+                    <table class="data">
+                        <tr><th>触发源</th><th>NVIC 优先级</th><th>ISR 位置</th><th>本实验中的作用</th></tr>
+                        <tr><td>SysTick 1ms</td><td>0x0F（最低）</td><td><code>stm32f4xx_it.c</code></td><td><code>HAL_IncTick()</code>，供 <code>HAL_Delay</code> 与超时判断</td></tr>
+                        <tr><td>USART1 RXNE</td><td>3/3</td><td><code>usart.c</code></td><td>接收调试字符，写入 <code>USART_RX_BUF</code></td></tr>
+                        <tr><td>SPI5 / SDIO / FMC</td><td>未配置</td><td>无</td><td>全部查询方式，靠 <code>while</code> 等标志位</td></tr>
+                        <tr><td>TIM4</td><td>未配置</td><td>无</td><td>本实验没有 USMART，不需要 100ms 扫描</td></tr>
+                    </table>
+
+                    <pre class="code">void SysTick_Handler(void)
+{
+    HAL_IncTick();                 <span class="cmt">// 全局 1ms 计数，uwTick 自增</span>
+}
+
+// usart.c：串口接收用状态机拼一帧，必须以 \r\n 结尾
+void USART1_IRQHandler(void)
+{
+    u8 Res;
+    if (__HAL_UART_GET_FLAG(&amp;UART1_Handler, UART_FLAG_RXNE) != RESET)
+    {
+        HAL_UART_Receive(&amp;UART1_Handler, &amp;Res, 1, 1000); <span class="cmt">// 读一个字节</span>
+        if ((USART_RX_STA &amp; 0x8000) == 0)                <span class="cmt">// 上一帧已处理完</span>
+        {
+            if (USART_RX_STA &amp; 0x4000)                   <span class="cmt">// 已经收到过 0x0D</span>
+            {
+                if (Res != 0x0a) USART_RX_STA = 0;       <span class="cmt">// 不是 0x0A，丢弃重来</span>
+                else USART_RX_STA |= 0x8000;             <span class="cmt">// 收到 0x0D 0x0A，一帧完成</span>
+            }
+            else
+            {
+                if (Res == 0x0d) USART_RX_STA |= 0x4000; <span class="cmt">// 记录收到回车</span>
+                else
+                {
+                    USART_RX_BUF[USART_RX_STA &amp; 0X3FFF] = Res; <span class="cmt">// 存入接收缓冲</span>
+                    USART_RX_STA++;
+                    if (USART_RX_STA &gt; (USART_REC_LEN - 1)) USART_RX_STA = 0; <span class="cmt">// 防溢出</span>
+                }
+            }
+        }
+    }
+    HAL_UART_IRQHandler(&amp;UART1_Handler); <span class="cmt">// 清标志</span>
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（中断）</div><ol>
+                        <li><strong>为什么只有两个中断：</strong>本实验没有 DMA 搬运、没有 USMART 定时扫描；SD 卡走 <code>SD_DMA_MODE 0</code> 查询模式，SPI5 和 FMC 也全是同步轮询。</li>
+                        <li><strong><code>USART_RX_STA</code> 的三段含义：</strong>bit15 帧完成、bit14 收到 0x0D、bit13~0 有效字节数，这个约定来自正点原子的串口例程，便于主循环判断“有没有一整行命令”。</li>
+                        <li><strong>为什么 ISR 里不调用 FATFS：</strong>文件操作耗时且不可重入；串口 ISR 只负责收字节，真正的解析和文件操作留在主循环。</li>
+                        <li><strong>SysTick 优先级最低的影响：</strong>更新字库时大量 <code>delay_ms</code> 不会阻塞串口接收，调试信息能正常收到。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="主循环汉字轮播">
+                    <h2>10　主循环汉字轮播</h2>
+                    <div class="sec-sub">两层 for 循环扫完 GBK 全部有效码位，每 200ms 换一个字</div>
+
+                    <figure class="figure">
+                        <img src="./index56-map/gbk-font-timing.png" alt="GBK 点阵显示流程">
+                        <figcaption>图 10-1　从 GBK 内码到四种字号点阵的显示流程</figcaption>
+                    </figure>
+
+                    <p>主循环用 <code class="inline">i</code> 遍历高字节 <code class="inline">0x81~0xFE</code>、<code class="inline">j</code> 遍历低字节 <code class="inline">0x40~0xFD</code> 并跳过 <code class="inline">0x7F</code>，计数变量 <code class="inline">fontcnt</code> 每遇到一个字加一。每个汉字停留约 200ms，期间用 <code class="inline">delay_ms(1)</code> 分 200 次扫描按键，这样既不耽误轮播，又能随时响应 KEY0。</p>
+
+                    <pre class="code">while (1)
+{
+    fontcnt = 0;
+    for (i = 0x81; i &lt; 0xff; i++)          <span class="cmt">// 高字节：GBK 区码</span>
+    {
+        fontx[0] = i;
+        LCD_ShowNum(118, 150, i, 3, 16);   <span class="cmt">// 显示内码高字节（3 位数字）</span>
+        for (j = 0x40; j &lt; 0xfe; j++)      <span class="cmt">// 低字节：位码</span>
+        {
+            if (j == 0x7f) continue;       <span class="cmt">// 0x7F 是保留码位，跳过</span>
+            fontcnt++;
+            LCD_ShowNum(118, 150, j, 3, 16);      <span class="cmt">// 显示内码低字节</span>
+            LCD_ShowNum(118, 170, fontcnt, 5, 16);<span class="cmt">// 显示已轮播的汉字总数</span>
+            fontx[1] = j;
+
+            Show_Font(206, 200, fontx, 32, 0);    <span class="cmt">// 32×32 点阵</span>
+            Show_Font(162, 232, fontx, 24, 0);    <span class="cmt">// 24×24 点阵</span>
+            Show_Font(174, 256, fontx, 16, 0);    <span class="cmt">// 16×16 点阵</span>
+            Show_Font(138, 272, fontx, 12, 0);    <span class="cmt">// 12×12 点阵</span>
+
+            t = 200;
+            while (t--)                    <span class="cmt">// 约 200ms 的“可打断延时”</span>
+            {
+                delay_ms(1);
+                key = KEY_Scan(0);         <span class="cmt">// 0：无按键；KEY0_PRES：KEY0 按下</span>
+                if (key == KEY0_PRES) goto UPD; <span class="cmt">// 跳去重新更新字库</span>
+            }
+            LED0 = !LED0;                  <span class="cmt">// 每次换字翻转 DS0，指示程序在跑</span>
+        }
+    }
+}
+
+// 静态提示文字（进入循环前显示一次）
+Show_Str(30, 130, 200, 16, "内码高字节:", 16, 0);
+Show_Str(30, 150, 200, 16, "内码低字节:", 16, 0);
+Show_Str(30, 170, 200, 16, "汉字计数器:", 16, 0);
+Show_Str(30, 200, 200, 32, "对应汉字为:", 32, 0);
+Show_Str(30, 232, 200, 24, "对应汉字为:", 24, 0);
+Show_Str(30, 256, 200, 16, "对应汉字(16*16)为:", 16, 0);
+Show_Str(30, 272, 200, 12, "对应汉字(12*12)为:", 12, 0);</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（轮播）</div><ol>
+                        <li><strong>为什么低字节上界是 0xFD：</strong>循环条件写的是 <code>j &lt; 0xfe</code>，最后一个有效值是 <code>0xFD</code>；<code>0xFE</code> 本身是合法的 GBK 位码，但代码沿用了这个边界，属于工程既定行为。</li>
+                        <li><strong>为什么用 <code>t=200</code> 的短延时循环：</strong>单个 <code>delay_ms(200)</code> 期间无法响应按键，拆成 200 次 1ms 就能每毫秒检查一次 KEY0。</li>
+                        <li><strong><code>LCD_ShowNum</code> 的第五个参数是字号：</strong>此处统一用 16 号 ASCII 字体显示数字，与汉字字号无关。</li>
+                        <li><strong>为什么四个 <code>Show_Font</code> 的 x 坐标不同：</strong>左侧标签宽度不同，向右错开是为了让汉字左边界与“对应汉字为:”后面的位置对齐。</li>
+                        <li><strong><code>LED0 = !LED0</code> 的观察价值：</strong>每个汉字翻转一次，肉眼看到 DS0 高频闪烁就说明字库读取与绘点都在正常工作，没有卡死在某次 SPI 读。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="点阵提取与逐点绘制">
+                    <h2>11　点阵提取与逐点绘制</h2>
+                    <div class="sec-sub">Get_HzMat 算偏移取 32 字节，Show_Font 按位展开成像素</div>
+
+                    <figure class="figure">
+                        <img src="./index56-map/font-spi-timing.png" alt="SPI 读字库时序图">
+                        <figcaption>图 11-1　SPI5 读字模与逐点写入显存的时序关系</figcaption>
+                    </figure>
+
+                    <p>显示一个汉字分两步：<strong>取模</strong>——根据内码算出该字在 <code class="inline">GBKxx.FON</code> 中的偏移，用 <code class="inline">W25QXX_Read</code> 读出 <code class="inline">csize</code> 字节到栈上数组；<strong>绘点</strong>——把每个字节按位展开，为 1 画前景色、为 0 画背景色（非叠加模式），一行画满 <code class="inline">size</code> 个点后换到下一列。</p>
+
+                    <pre class="code">void Get_HzMat(unsigned char *code, unsigned char *mat, u8 size)
+{
+    unsigned char qh, ql, i;
+    unsigned long foffset;
+    u8 csize = (size / 8 + ((size % 8) ? 1 : 0)) * size; <span class="cmt">// 单字模字节数</span>
+
+    qh = *code;             <span class="cmt">// 高字节（区码）</span>
+    ql = *(++code);         <span class="cmt">// 低字节（位码）</span>
+
+    if (qh &lt; 0x81 || ql &lt; 0x40 || ql == 0xff || qh == 0xff) <span class="cmt">// 非法 GBK 码</span>
+    {
+        for (i = 0; i &lt; csize; i++) *mat++ = 0x00; <span class="cmt">// 填 0，显示为空白格</span>
+        return;
+    }
+    if (ql &lt; 0x7f) ql -= 0x40;   <span class="cmt">// 0x40~0x7E 段</span>
+    else          ql -= 0x41;    <span class="cmt">// 0x80~0xFE 段，跳过 0x7F</span>
+    qh -= 0x81;
+
+    foffset = ((unsigned long)190 * qh + ql) * csize; <span class="cmt">// 第几个汉字 × 单字字节数</span>
+
+    switch (size)
+    {
+        case 12: W25QXX_Read(mat, foffset + ftinfo.f12addr, csize); break;
+        case 16: W25QXX_Read(mat, foffset + ftinfo.f16addr, csize); break;
+        case 24: W25QXX_Read(mat, foffset + ftinfo.f24addr, csize); break;
+        case 32: W25QXX_Read(mat, foffset + ftinfo.f32addr, csize); break;
+    }
+}</pre>
+
+                    <pre class="code">void Show_Font(u16 x, u16 y, u8 *font, u8 size, u8 mode)
+{
+    u8 temp, t, t1;
+    u16 y0 = y;
+    u8 dzk[128];                                        <span class="cmt">// 32×32 最大 128 字节</span>
+    u8 csize = (size / 8 + ((size % 8) ? 1 : 0)) * size;
+    if (size != 12 &amp;&amp; size != 16 &amp;&amp; size != 24 &amp;&amp; size != 32) return; <span class="cmt">// 只支持四种字号</span>
+
+    Get_HzMat(font, dzk, size);                         <span class="cmt">// 先取模到栈上</span>
+    for (t = 0; t &lt; csize; t++)
+    {
+        temp = dzk[t];                                  <span class="cmt">// 一个字节 = 8 个像素</span>
+        for (t1 = 0; t1 &lt; 8; t1++)
+        {
+            if (temp &amp; 0x80) LCD_Fast_DrawPoint(x, y, POINT_COLOR); <span class="cmt">// 位为 1：前景色</span>
+            else if (mode == 0) LCD_Fast_DrawPoint(x, y, BACK_COLOR); <span class="cmt">// 非叠加：背景色</span>
+            temp &lt;&lt;= 1;                                 <span class="cmt">// 左移取下一位</span>
+            y++;
+            if ((y - y0) == size)                       <span class="cmt">// 一列画满 size 个点</span>
+            {
+                y = y0;                                 <span class="cmt">// 回到列顶</span>
+                x++;                                    <span class="cmt">// 移到下一列</span>
+                break;
+            }
+        }
+    }
+}</pre>
+
+                    <pre class="code">void Show_Str(u16 x, u16 y, u16 width, u16 height, u8 *str, u8 size, u8 mode)
+{
+    u16 x0 = x, y0 = y;
+    u8 bHz = 0;                                  <span class="cmt">// 0：当前是 ASCII；1：当前是汉字</span>
+    while (*str != 0)
+    {
+        if (!bHz)
+        {
+            if (*str &gt; 0x80) bHz = 1;            <span class="cmt">// 最高位为 1，说明是 GBK 汉字首字节</span>
+            else
+            {
+                if (x &gt; (x0 + width - size / 2)) { y += size; x = x0; } <span class="cmt">// 超出宽度换行</span>
+                if (y &gt; (y0 + height - size)) break;                  <span class="cmt">// 超出高度结束</span>
+                if (*str == 13) { y += size; x = x0; str++; }         <span class="cmt">// 回车符换行</span>
+                else LCD_ShowChar(x, y, *str, size, mode);            <span class="cmt">// 画 ASCII 字符</span>
+                str++;
+                x += size / 2;                   <span class="cmt">// 半角字符宽度是汉字的一半</span>
+            }
+        }
+        else
+        {
+            bHz = 0;
+            if (x &gt; (x0 + width - size)) { y += size; x = x0; }       <span class="cmt">// 汉字换行</span>
+            if (y &gt; (y0 + height - size)) break;
+            Show_Font(x, y, str, size, mode);    <span class="cmt">// 画一个汉字</span>
+            str += 2;                            <span class="cmt">// 汉字占两个字节</span>
+            x += size;                           <span class="cmt">// 汉字宽度 = 字号</span>
+        }
+    }
+}</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（取模）</div><ol>
+                        <li><strong><code>Get_HzMat</code> 的三个参数：</strong><code>code</code> 指向 2 字节 GBK 内码、<code>mat</code> 是输出缓冲、<code>size</code> 是字号；无返回值，非法码时输出全 0 的空白点阵。</li>
+                        <li><strong>为什么 <code>dzk[128]</code> 够用：</strong>最大字号 32×32，每行 4 字节、共 32 行，正好 128 字节，这是 <code>csize</code> 的上限。</li>
+                        <li><strong>为什么要判断 <code>size</code> 合法性：</strong><code>Show_Str</code> 的 <code>size</code> 由调用者传入，若传 20 这类不支持的值，字库里没有对应文件，读出来是随机数据。</li>
+                        <li><strong><code>foffset</code> 为什么用 <code>unsigned long</code>：</strong>GBK32 字库大小约 5MB，偏移量超过 16 位，必须用 32 位整型，否则会溢出回绕。</li>
+                    </ol></div>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（绘点与字符串）</div><ol>
+                        <li><strong>位序为什么从 <code>0x80</code> 开始：</strong>取模软件约定高位在左，每字节最高位对应最左边的像素。</li>
+                        <li><strong><code>mode=0/1</code> 的区别：</strong>0 为不透明（背景也画），1 为叠加（只画前景），叠加模式用于在图片上写字。</li>
+                        <li><strong>字符串里 ASCII 与汉字宽度不同：</strong>ASCII 用 <code>x += size/2</code>，汉字用 <code>x += size</code>，所以 16 号字下一个汉字占 16 像素、一个字母占 8 像素。</li>
+                        <li><strong>为什么 <code>Show_Str</code> 要传区域宽高：</strong>超宽自动换行、超高停止，避免把内容画到屏幕外造成“看不见”的假故障。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="串口调试与 printf">
+                    <h2>12　串口调试与 printf</h2>
+                    <div class="sec-sub">重定向 fputc 后，printf 直接出到 USART1</div>
+
+                    <p>工程开启了 <code class="inline">#define EN_USART1_RX 1</code>，并在 <code class="inline">usart.c</code> 里重写 <code class="inline">fputc</code>：把每个字符轮询写进 <code class="inline">USART1-&gt;DR</code>。这样 <code class="inline">printf</code> 不需要任何额外配置就能从 PA9 输出，波特率 115200。</p>
+
+                    <pre class="code">// 避免半主机模式：不使用调试器时也能独立运行
+void _sys_exit(int x)
+{
+    x = x;
+}
+
+int fputc(int ch, FILE *f)
+{
+    while ((USART1-&gt;SR &amp; 0X40) == 0);   <span class="cmt">// 等 TXE 置位，发送寄存器空</span>
+    USART1-&gt;DR = (u8)ch;                 <span class="cmt">// 写入数据寄存器</span>
+    return ch;
+}
+
+void uart_init(u32 bound)
+{
+    UART1_Handler.Instance = USART1;
+    UART1_Handler.Init.BaudRate = bound;                  <span class="cmt">// 115200</span>
+    UART1_Handler.Init.WordLength = UART_WORDLENGTH_8B;   <span class="cmt">// 8 位数据</span>
+    UART1_Handler.Init.StopBits = UART_STOPBITS_1;        <span class="cmt">// 1 位停止</span>
+    UART1_Handler.Init.Parity = UART_PARITY_NONE;         <span class="cmt">// 无校验</span>
+    UART1_Handler.Init.HwFlowCtl = UART_HWCONTROL_NONE;   <span class="cmt">// 无硬件流控</span>
+    UART1_Handler.Init.Mode = UART_MODE_TX_RX;            <span class="cmt">// 收发</span>
+    HAL_UART_Init(&amp;UART1_Handler);                        <span class="cmt">// 内部会调用 MspInit 配置 PA9/PA10</span>
+}
+
+// HAL_UART_MspInit：PA9/PA10 复用为 AF7，并使能 RXNE 中断
+__HAL_UART_ENABLE_IT(huart, UART_IT_RXNE);
+HAL_NVIC_SetPriority(USART1_IRQn, 3, 3);
+HAL_NVIC_EnableIRQ(USART1_IRQn);</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（串口）</div><ol>
+                        <li><strong>为什么 <code>while ((USART1-&gt;SR &amp; 0X40) == 0)</code> 能等到发送完成：</strong>SR 的 bit6 是 TXE，发送数据寄存器空时置 1，此时写 DR 不会覆盖未发送的数据。</li>
+                        <li><strong><code>_sys_exit</code> 的作用：</strong>不定义它，MDK 会链接半主机相关代码，脱离调试器运行时可能卡在 <code>BKPT</code> 指令。</li>
+                        <li><strong>为什么 <code>uart_init</code> 里没有 <code>HAL_UART_Receive_IT</code>：</strong>本工程用直接读 DR 的方式在 ISR 里取字节，没有走 HAL 的回调接收链路。</li>
+                        <li><strong>调试建议：</strong>若串口无输出，先确认 PA9 是否被复用为 AF7、波特率是否 115200、<code>EN_USART1_RX</code> 是否打开。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘与排查">
+                    <h2>13　关键逻辑复盘与排查</h2>
+                    <div class="sec-sub">出问题时，先确认字库，再确认屏，最后才怀疑取模算法</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>最可能原因</th><th>定位方法</th></tr>
+                        <tr><td>上电一直显示 “SD Card Failed!”</td><td>SD 卡未插好 / 卡未格式化为 FAT</td><td><code>SD_Init()</code> 返回非 0；换卡或重新格式化</td></tr>
+                        <tr><td>卡在 “Font Updating...” 很久</td><td>正在擦除 1539 个扇区，属正常现象</td><td>观察进度百分比是否在增长</td></tr>
+                        <tr><td>更新后汉字显示为空白格</td><td>字库文件缺失，或 <code>ftinfo</code> 地址错乱</td><td><code>Get_HzMat</code> 对非法码会填 0，先查 <code>/SYSTEM/FONT</code> 五个文件</td></tr>
+                        <tr><td>汉字位置整体错位一个字</td><td>低字节换算减错（0x40 与 0x41）</td><td>对照 <code>ql&lt;0x7f</code> 分支</td></tr>
+                        <tr><td>某些字是乱码方块</td><td>该码位在 GBK 字库中本来就没有字形</td><td>属于正常现象，字库只覆盖常用汉字</td></tr>
+                        <tr><td>每次上电都提示更新</td><td><code>ftinfo.fontok</code> 没写进 Flash，或写保护</td><td>检查 <code>W25QXX_Write</code> 与 25MB 起始地址</td></tr>
+                    </table>
+
+                    <pre class="code">// 排查用的最小检查：直接看字库信息头
+W25QXX_Read((u8 *)&amp;ftinfo, FONTINFOADDR, sizeof(ftinfo));
+printf("fontok = 0x%X\r\n", ftinfo.fontok);          <span class="cmt">// 期望 0xAA</span>
+printf("ugbkaddr = 0x%X, size = %d\r\n", ftinfo.ugbkaddr, ftinfo.ugbksize);
+printf("f12addr = 0x%X, f16addr = 0x%X\r\n", ftinfo.f12addr, ftinfo.f16addr);
+printf("f24addr = 0x%X, f32addr = 0x%X\r\n", ftinfo.f24addr, ftinfo.f32addr);
+
+// 地址关系必须满足：ugbkaddr &lt; f12addr &lt; f16addr &lt; f24addr &lt; f32addr
+// 且相邻两个地址之差，等于前一个字库文件的大小
+
+// 手工验证一个字模偏移（以“阿”为例，内码 B0A2）
+// qh=0xB0-0x81=0x2F，ql=0xA2-0x41=0x61
+// 第几个字 = 190*0x2F + 0x61 = 8943
+// 16 号字偏移 = 8943 * 32 = 286176</pre>
+
+                    <div class="keylogic"><div class="kl-title">关键逻辑说明（排查思路）</div><ol>
+                        <li><strong>先分层再定位：</strong>字库问题看 <code>ftinfo</code>，字体渲染问题看 <code>Show_Font</code>，屏的问题看 <code>LCD_Init</code>，不要一上来就怀疑取模公式。</li>
+                        <li><strong>地址链是自洽性检查的关键：</strong>只要打印出 5 个地址，比一下“前一个地址 + 前一个大小 == 后一个地址”，就能判断 <code>ftinfo</code> 是否被写坏。</li>
+                        <li><strong>为什么“空白格”不是崩溃：</strong><code>Get_HzMat</code> 对非法码主动填 0，这是容错设计，程序会继续跑，只是显示空白。</li>
+                        <li><strong>更新耗时的来源：</strong>6MB 数据经 SPI 写入，再叠加扇区擦除（每扇区 150ms 级），首次更新几十秒到数分钟都属正常。</li>
+                    </ol></div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="交互演示">
+                    <h2>14　交互演示</h2>
+                    <div class="sec-sub">点击按钮复现“字库完好”与“字库丢失→更新”两条分支</div>
+
+                    <div class="sim">
+                        <div class="sim-title">font_init() 返回值分支演示（仅演示逻辑）</div>
+                        <div class="sim-buttons">
+                            <button data-key="key0">fontok = 0xAA（正常）</button>
+                            <button data-key="key1">fontok ≠ 0xAA（去更新）</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0（PB1）</div>
+                            <div class="led-item"><span class="led-dot" id="dot1"></span>DS1（PB0）</div>
+                        </div>
+                        <div class="sim-log" id="simLog">最后按键：无　　当前状态：DS0 灭　DS1 灭</div>
+                    </div>
+
+                    <div class="note">真实代码里 <code>font_init()</code> 返回 0 时直接往下执行 <code>Show_Str</code> 显示提示文字；返回 1 时进入 <code>while</code> 循环，先 <code>SD_Init()</code> 再 <code>update_font(20,110,16,"0:")</code>。演示面板只用两个指示灯表示两条分支被执行，不代表真实 LED 时序。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+
+<script>
+/* sim-wire：把演示按钮接到日志，分支与正文源码说明一致 */
+(function () {
+    var log = document.getElementById('simLog');
+    if (!log) return;
+    var msgs = {"key0": "fontok == 0xAA：字库已存在，跳过 fontupd，直接 text 显示", "key1": "fontok != 0xAA：调用 fontupd 把 GBK 字库写入 W25QXX，再置 0xAA"};
+    Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (b) {
+        b.addEventListener('click', function () {
+            var k = b.getAttribute('data-key') || b.getAttribute('data-act');
+            if (k && msgs[k]) log.textContent = msgs[k];
+        });
+    });
+})();
+</script>
+</body>
+</html>

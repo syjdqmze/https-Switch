@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验53 USB读卡器(Slave)实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验53 USB读卡器(Slave)实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">USB 事务全在中断里完成，主循环只读状态信箱</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+<section class="content-card" id="s01" data-title="实验目标与系统角色">
+                    <h2>01　实验目标与系统角色</h2>
+                    <div class="sec-sub">板子从“主机”变成“U 盘”：PC 枚举出三个逻辑单元，读写全部落到板载存储</div>
+
+                    <p>实验53 把 STM32F429 配置成 USB 大容量存储设备（Mass Storage Class，MSC）。插上 USB 线后，电脑不会把它识别成串口或调试器，而是识别成可移动磁盘：LUN0 是板载 SPI Flash 的前 25 MB，LUN1 是 NAND Flash，LUN2 是 SD 卡。电脑发出的每个读扇区、写扇区命令，最终都由 <code>usbd_storage_msd.c</code> 翻译成 <code>W25QXX_Read</code>、<code>FTL_ReadSectors</code> 或 <code>SD_ReadDisk</code>。</p>
+
+                    <p>与实验52 的串口 IAP 不同，本实验没有“接收缓冲区”和“跳转”概念，主循环只做两件事：刷新 LCD 上的 USB 状态，以及用心跳计数判断 USB 是否还插着。真正的数据搬运全部发生在 OTG_FS 中断里。</p>
+
+                    <table class="data">
+                        <tr><th>逻辑单元</th><th>后端介质</th><th>容量来源</th><th>读写函数</th></tr>
+                        <tr><td>LUN0</td><td>SPI Flash（W25Q256）</td><td>固定 25 MB</td><td><code>W25QXX_Read</code> / <code>W25QXX_Write</code></td></tr>
+                        <tr><td>LUN1</td><td>NAND Flash（FTL 层）</td><td><code>valid_blocknum × block_pagenum × page_mainsize</code></td><td><code>FTL_ReadSectors</code> / <code>FTL_WriteSectors</code></td></tr>
+                        <tr><td>LUN2</td><td>SD 卡（SDIO）</td><td><code>SDCardInfo.CardCapacity</code></td><td><code>SD_ReadDisk</code> / <code>SD_WriteDisk</code></td></tr>
+                        <tr><td>主控</td><td>STM32F429</td><td>—</td><td>OTG FS，全速 12 Mbps</td></tr>
+                        <tr><td>系统时钟</td><td>HSE 25 MHz</td><td>192 MHz</td><td><code>Stm32_Clock_Init(384,25,2,8)</code></td></tr>
+                    </table>
+
+                    <pre class="code">int main(void)
+{
+    u8 offline_cnt=0;
+    u8 tct=0;
+    u8 USB_STA;
+    u8 Divece_STA;
+
+    Stm32_Clock_Init(384,25,2,8);   <span class="cmt">// 192 MHz，PLLQ=8 得 48 MHz 给 USB</span>
+    delay_init(192);                <span class="cmt">// fac_us = 192</span>
+    uart_init(115200);
+    LED_Init();
+    KEY_Init();
+    SDRAM_Init();                   <span class="cmt">// LCD 显存放在外部 SDRAM</span>
+    LCD_Init();
+    W25QXX_Init();                  <span class="cmt">// LUN0 的介质</span>
+    PCF8574_Init();                 <span class="cmt">// USB 电源控制脚在这颗 IO 扩展上</span>
+    my_mem_init(SRAMIN);            <span class="cmt">// 内部 SRAM 内存池</span>
+    my_mem_init(SRAMEX);
+    my_mem_init(SRAMCCM);
+
+    if(SD_Init()) LCD_ShowString(30,130,200,16,16,"SD Card Error!");
+    if(W25QXX_ReadID()!=W25Q256) LCD_ShowString(30,130,200,16,16,"W25Q128 Error!");
+    if(FTL_Init()) LCD_ShowString(30,170,200,16,16,"NAND Error!");
+
+    MSC_BOT_Data=mymalloc(SRAMIN,MSC_MEDIA_PACKET);   <span class="cmt">// 32 KB 传输缓冲</span>
+    USBD_Init(&amp;USB_OTG_dev,USB_OTG_FS_CORE_ID,&amp;USR_desc,&amp;USBD_MSC_cb,&amp;USR_cb);
+    delay_ms(1800);                                    <span class="cmt">// 等主机完成枚举</span>
+}</pre>
+
+                    <div class="note">三个介质中只有 SD 卡可能不存在。SD 卡不在时 <code>STORAGE_GetMaxLun</code> 返回 1，电脑只能看到两个盘；这就是源码里 <code>return STORAGE_LUN_NBR-1</code> 与 <code>return STORAGE_LUN_NBR-2</code> 两个分支的实际含义。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">描述符、类请求、BOT 状态机、SCSI 命令、存储后端分别在五个层次里</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>层次</th><th>关键符号</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>应用</td><td><code>USB_STATUS_REG</code>、<code>offline_cnt</code>、<code>MSC_BOT_Data</code></td></tr>
+                        <tr><td><code>USB/USB_APP/usbd_desc.c</code></td><td>设备描述符</td><td><code>USBD_DeviceDesc</code>、<code>USR_desc</code>、<code>Get_SerialNum</code></td></tr>
+                        <tr><td><code>USB/USB_APP/usbd_conf.h</code></td><td>编译期配置</td><td><code>MSC_IN_EP 0x81</code>、<code>MSC_OUT_EP 0x01</code>、<code>MSC_MEDIA_PACKET</code></td></tr>
+                        <tr><td><code>USB/USB_APP/usb_bsp.c</code></td><td>板级</td><td><code>USB_OTG_BSP_Init</code>、<code>USB_OTG_BSP_EnableInterrupt</code></td></tr>
+                        <tr><td><code>USB/USB_APP/usbd_usr.c</code></td><td>用户回调</td><td><code>OTG_FS_IRQHandler</code>、<code>USR_cb</code></td></tr>
+                        <tr><td><code>USB/USB_APP/usbd_storage_msd.c</code></td><td>存储后端</td><td><code>USBD_STORAGE_fops</code>、<code>STORAGE_Read</code></td></tr>
+                        <tr><td><code>Class/msc/usbd_msc_core.c</code></td><td>类核心</td><td><code>USBD_MSC_Setup</code>、<code>USBD_MSC_CfgDesc</code></td></tr>
+                        <tr><td><code>Class/msc/usbd_msc_bot.c</code></td><td>传输协议</td><td><code>MSC_BOT_CBW_Decode</code>、<code>MSC_BOT_SendCSW</code></td></tr>
+                        <tr><td><code>Class/msc/usbd_msc_scsi.c</code></td><td>命令层</td><td><code>SCSI_Read10</code>、<code>SCSI_Write10</code>、<code>SCSI_ProcessRead</code></td></tr>
+                        <tr><td><code>HARDWARE/SDIO/sdio_sdcard.c</code></td><td>介质驱动</td><td><code>SD_ReadDisk</code>、<code>SD_WriteDisk</code></td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>启动</td><td><code>__initial_sp</code>、<code>OTG_FS_IRQHandler</code> 向量</td></tr>
+                    </table>
+
+                    <p>读这份工程时不要从 <code>main.c</code> 直接跳到 SCSI：中间隔着 USB 设备库。正确的顺序是 <code>USBD_Init</code> → 主机枚举 → <code>USBD_MSC_Init</code> → <code>MSC_BOT_Init</code> → CBW → <code>SCSI_ProcessCmd</code> → <code>STORAGE_Read</code>。每一层只认识下一层的接口，跨层读会看不懂参数从哪来。</p>
+
+                    <p>工程里同时存在 USB Host 库、CDC、HID、DFU 等大量未参与编译的源码。判断“哪些代码真的在跑”，最可靠的方法是看 Keil 工程的文件列表，而不是看目录里有什么。</p>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">上电后先做板级初始化，再让 USB 设备库接管；主循环只剩状态显示</div>
+
+                    <figure class="figure">
+                        <img src="./index67-map/boot-flow.png" alt="USB 读卡器从上电到主循环的启动流程图">
+                        <figcaption>图 3-1　USB 读卡器启动链路总览</figcaption>
+                    </figure>
+
+                    <p>启动顺序体现了一个取舍：LCD、SDRAM、SPI Flash、NAND、SD 卡全部在 USB 初始化之前完成。这样当主机开始枚举时，三个逻辑单元的介质已经可用，<code>SCSI_TestUnitReady</code> 与 <code>SCSI_ReadCapacity10</code> 能立即返回正确结果，不会出现“盘符出来了但容量是 0”的情况。</p>
+
+                    <pre class="code">HAL_Init();                       <span class="cmt">// 时基 + NVIC 分组 + Cache</span>
+Stm32_Clock_Init(384,25,2,8);     <span class="cmt">// 192 MHz / USB 48 MHz</span>
+delay_init(192);
+uart_init(115200);
+LED_Init();
+KEY_Init();
+SDRAM_Init();                     <span class="cmt">// LCD 显存依赖外部 SDRAM</span>
+LCD_Init();
+W25QXX_Init();                    <span class="cmt">// LUN0</span>
+PCF8574_Init();                   <span class="cmt">// USB 电源开关</span>
+my_mem_init(SRAMIN);
+my_mem_init(SRAMEX);
+my_mem_init(SRAMCCM);
+
+LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7");
+LCD_ShowString(30,70,200,16,16,"USB Card Reader TEST");
+LCD_ShowString(30,190,200,16,16,"USB Connecting...");
+
+MSC_BOT_Data=mymalloc(SRAMIN,MSC_MEDIA_PACKET);   <span class="cmt">// 32 KB</span>
+USBD_Init(&amp;USB_OTG_dev,USB_OTG_FS_CORE_ID,&amp;USR_desc,&amp;USBD_MSC_cb,&amp;USR_cb);
+delay_ms(1800);                                   <span class="cmt">// 给主机枚举留时间</span>
+
+while(1)
+{
+    delay_ms(1);                                  <span class="cmt">// 主循环节拍 1 ms</span>
+    <span class="cmt">// 只刷新 LCD 与心跳，不参与数据搬运</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么先初始化介质：</strong>主机枚举后会立刻发 <code>INQUIRY</code> 与 <code>READ CAPACITY</code>；如果这时 SD 卡还没初始化，返回的容量就是 0，Windows 可能直接把盘标成“需要格式化”。</li>
+                            <li><strong>32 KB 缓冲区为什么放 SRAMIN：</strong><code>MSC_MEDIA_PACKET</code> 定义为 <code>32*1024</code>，一次 SCSI 读写最多搬 32 KB。放在内部 SRAM 可以避免外部 SDRAM 与 LCD 扫描争带宽。</li>
+                            <li><strong>delay_ms(1800) 不是协议要求：</strong>它只是给主机枚举和用户看提示留时间；去掉也能工作，但插拔瞬间的状态显示会不完整。</li>
+                            <li><strong>主循环不做 USB 事务：</strong>所有 CBW/CSW 与数据搬运都在 <code>OTG_FS_IRQHandler</code> 里完成，主循环只读 <code>USB_STATUS_REG</code> 这个“状态信箱”。</li>
+                            <li><strong>没有 USBD_Start：</strong>这一版设备库在 <code>USBD_Init</code> 末尾直接调用 <code>USB_OTG_BSP_EnableInterrupt</code>，与新版 HAL 库的“Init + Start”两步式不同。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">USB 中断能在复位后立刻工作，靠的是向量表第 0x3C 项的 OTG_FS_IRQHandler</div>
+
+                    <p>启动文件仍然是 <code>CORE/startup_stm32f429xx.s</code>。它定义栈、堆、向量表与 <code>Reset_Handler</code>；其中 <code>OTG_FS_IRQHandler</code> 的入口地址被固定在向量表偏移 <code>0x3C</code>（中断号 67）。只要 <code>stm32f4xx_it.c</code> 或 <code>usbd_usr.c</code> 提供了同名函数，链接器就会把向量填成实际地址。</p>
+
+                    <pre class="code">Stack_Size      EQU     0x00000400      <span class="cmt">// 主栈 1 KB</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+__initial_sp
+
+Heap_Size       EQU     0x00000200      <span class="cmt">// 堆 512 B</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+
+                AREA    RESET, DATA, READONLY
+                EXPORT  __Vectors
+__Vectors       DCD     __initial_sp    <span class="cmt">// 0x08000000：初始 MSP</span>
+                DCD     Reset_Handler   <span class="cmt">// 0x08000004：复位入口</span>
+                DCD     NMI_Handler
+                DCD     HardFault_Handler
+                <span class="cmt">// …</span>
+                DCD     OTG_FS_IRQHandler   <span class="cmt">// 中断号 67</span></pre>
+
+                    <p>本工程的向量表没有偏移：<code>SystemInit</code> 里 <code>VECT_TAB_OFFSET</code> 为 0，所以 <code>SCB-&gt;VTOR = FLASH_BASE</code>。这一点与实验52 的 Bootloader 相同，但与“APP 必须改 VTOR”的场景不同——这里没有第二个固件。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>OTG_FS 与 OTG_HS 是两个不同中断：</strong>本实验用 <code>USB_OTG_FS_CORE_ID</code>，对应 <code>OTG_FS_IRQHandler</code>；如果误用 HS 内核，中断永远不会进来。</li>
+                            <li><strong>同名函数只能有一个：</strong><code>OTG_FS_IRQHandler</code> 定义在 <code>usbd_usr.c</code> 里，<code>stm32f4xx_it.c</code> 中不能再定义一次，否则链接报重复符号。</li>
+                            <li><strong>栈大小与 USB 无关：</strong>USB 事务用的是静态变量与 32 KB 堆缓冲，不占主栈；1 KB 栈足够，但中断嵌套深时仍要留余量。</li>
+                            <li><strong>堆只有 512 B：</strong>真正的大缓冲由 <code>mymalloc</code> 从自定义内存池分配，不经过 <code>malloc</code> 的 512 B 堆。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">SystemInit 只做“最小复位状态”，真正的时钟在 main 里由 Stm32_Clock_Init 配置</div>
+
+                    <p><code>SystemInit</code> 在 <code>Reset_Handler</code> 里被调用，职责是打开 FPU、把 RCC 恢复到复位默认值、设置向量表。它不配置 PLL，所以从它返回时系统还跑在 HSI 16 MHz。随后 <code>main</code> 先调 <code>HAL_Init</code>，再调 <code>Stm32_Clock_Init</code> 把主频抬到 192 MHz。</p>
+
+                    <pre class="code">void SystemInit(void)
+{
+#if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">// CP10/CP11 全访问</span>
+#endif
+    RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="cmt">// 打开 HSION</span>
+    RCC-&gt;CFGR = 0x00000000;               <span class="cmt">// 清时钟配置</span>
+    RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="cmt">// 关 HSEON/CSSON/PLLON</span>
+    RCC-&gt;PLLCFGR = 0x24003010;
+    RCC-&gt;CIR = 0x00000000;
+
+    SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;   <span class="cmt">// 向量表在 0x08000000</span>
+}</pre>
+
+                    <p><code>HAL_Init</code> 做三件与本实验直接相关的事：打开 Flash 预取与 I/D Cache（192 MHz 下必须开，否则取指等待会拖慢 USB 中断响应）；把 NVIC 优先级分组设为 <code>NVIC_PRIORITYGROUP_2</code>（2 位抢占、2 位子优先级）；用 SysTick 建立 1 ms 时基，<code>TICK_INT_PRIORITY</code> 为 <code>0x0F</code>。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>分组 2 决定了“抢占 0 / 子 3”的含义：</strong><code>HAL_NVIC_SetPriority(OTG_FS_IRQn,0,3)</code> 中 0 是抢占优先级，3 是子优先级；USB 可以打断几乎所有其它中断。</li>
+                            <li><strong>SysTick 优先级最低：</strong>0x0F 意味着 SysTick 可以被 USB 中断打断，<code>HAL_Delay</code> 的计时不会影响 USB 事务。</li>
+                            <li><strong>Cache 与 USB 缓冲：</strong>F429 的 D-Cache 对 SRAM 生效；USB 端点缓冲由 OTG 外设直接访问，本工程未使用需要手动清理 Cache 的 DMA 描述符场景。</li>
+                            <li><strong>OverDrive 必须开：</strong>192 MHz 超过 180 MHz，<code>HAL_PWREx_EnableOverDrive</code> 不成功会停在 <code>while(1)</code>，表现为“上电就死”，与 USB 无关。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="192 MHz 时钟树与延时">
+                    <h2>06　192 MHz 时钟树与延时</h2>
+                    <div class="sec-sub">PLLQ 必须给出 48 MHz：USB 全速对时钟误差很敏感</div>
+
+                    <p><code>Stm32_Clock_Init(384,25,2,8)</code> 的四个参数依次是 PLLN、PLLM、PLLP、PLLQ。HSE 为 25 MHz，先除 PLLM 得到 1 MHz 比较频率，再乘 PLLN 得到 384 MHz VCO，除 PLLP=2 得到 192 MHz 系统时钟，除 PLLQ=8 得到 48 MHz 供 USB 与 SDIO 使用。</p>
+
+                    <table class="data">
+                        <tr><th>节点</th><th>计算</th><th>结果</th><th>用途</th></tr>
+                        <tr><td>HSE</td><td>晶振</td><td>25 MHz</td><td>PLL 输入</td></tr>
+                        <tr><td>PLL 输入</td><td>25 / PLLM(25)</td><td>1 MHz</td><td>VCO 参考</td></tr>
+                        <tr><td>VCO</td><td>1 × PLLN(384)</td><td>384 MHz</td><td>PLL 输出</td></tr>
+                        <tr><td>SYSCLK</td><td>384 / PLLP(2)</td><td>192 MHz</td><td>AHB 时钟</td></tr>
+                        <tr><td>PLLQ</td><td>384 / 8</td><td>48 MHz</td><td>USB OTG FS、SDIO</td></tr>
+                        <tr><td>HCLK</td><td>SYSCLK / 1</td><td>192 MHz</td><td>内核、SRAM、DMA</td></tr>
+                        <tr><td>PCLK1</td><td>HCLK / 4</td><td>48 MHz</td><td>APB1 外设</td></tr>
+                        <tr><td>PCLK2</td><td>HCLK / 2</td><td>96 MHz</td><td>APB2 外设</td></tr>
+                    </table>
+
+                    <pre class="code">RCC_OscInitStructure.PLL.PLLM = pllm;   <span class="cmt">// 25</span>
+RCC_OscInitStructure.PLL.PLLN = plln;   <span class="cmt">// 384</span>
+RCC_OscInitStructure.PLL.PLLP = pllp;   <span class="cmt">// 2 → 192 MHz</span>
+RCC_OscInitStructure.PLL.PLLQ = pllq;   <span class="cmt">// 8 → 48 MHz</span>
+HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+
+HAL_PWREx_EnableOverDrive();            <span class="cmt">// 180 MHz 以上必须开</span>
+
+RCC_ClkInitStructure.AHBCLKDivider  = RCC_SYSCLK_DIV1;
+RCC_ClkInitStructure.APB1CLKDivider = RCC_HCLK_DIV4;
+RCC_ClkInitStructure.APB2CLKDivider = RCC_HCLK_DIV2;
+HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure, FLASH_LATENCY_5);</pre>
+
+                    <p><code>delay_init(192)</code> 把 <code>fac_us</code> 设为 192，之后 <code>delay_us</code> 通过读 <code>SysTick-&gt;VAL</code> 与 <code>SysTick-&gt;LOAD</code> 做轮询延时，不依赖 SysTick 中断。USB BSP 的 <code>USB_OTG_BSP_uDelay</code> / <code>mDelay</code> 直接转调这两个函数。</p>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么必须 48 MHz：</strong>USB 全速要求时钟精度优于 ±0.25%。PLLQ 只能是整数分频，25 MHz 晶振下能整除出 48 MHz 的组合就是 PLLM=25、PLLN=384、PLLQ=8。</li>
+                            <li><strong>192 MHz 不是随便选的：</strong>它同时满足“PLLQ 出 48 MHz”和“主频尽量高”；180 MHz 配 25 MHz 晶振无法得到整数 48 MHz，所以 USB 实验单独用 384/25/2/8。</li>
+                            <li><strong>FLASH_LATENCY_5：</strong>192 MHz 需要 5 个等待周期（6 个 CPU 周期）。等待周期配少了会取指错误，表现为随机 HardFault。</li>
+                            <li><strong>delay_us 不依赖中断：</strong>它读的是 SysTick 当前计数值，所以即使关中断（SD_ReadDisk 内部会关）也能正常延时。</li>
+                            <li><strong>APB1 只有 48 MHz：</strong><code>HAL_RCC_ClockConfig</code> 会自动把 APB1 定时器时钟乘 2，但普通外设仍按 48 MHz 计算分频。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="USB 外设与描述符初始化">
+                    <h2>07　USB 外设与描述符初始化</h2>
+                    <div class="sec-sub">设备描述符告诉主机“我是谁”，配置描述符告诉主机“我怎么传数据”</div>
+
+                    <figure class="figure">
+                        <img src="./index67-map/usb-msc-init-flow.png" alt="USB 读卡器初始化链路图">
+                        <figcaption>图 7-1　从 main 到等待 CBW 的初始化链路</figcaption>
+                    </figure>
+
+                    <pre class="code">void USBD_Init(USB_OTG_CORE_HANDLE *pdev,
+               USB_OTG_CORE_ID_TypeDef coreID,
+               USBD_DEVICE *pDevice,
+               USBD_Class_cb_TypeDef *class_cb,
+               USBD_Usr_cb_TypeDef *usr_cb)
+{
+  USB_OTG_BSP_Init(pdev);         <span class="cmt">// PA11/PA12 + OTG FS 时钟</span>
+  USBD_DeInit(pdev);
+
+  pdev->dev.class_cb = class_cb;  <span class="cmt">// 指向 USBD_MSC_cb</span>
+  pdev->dev.usr_cb = usr_cb;      <span class="cmt">// 指向 USR_cb</span>
+  pdev->dev.usr_device = pDevice; <span class="cmt">// 指向 USR_desc</span>
+
+  DCD_Init(pdev , coreID);        <span class="cmt">// 复位 OTG 内核</span>
+  pdev->dev.usr_cb-&gt;Init();
+  USB_OTG_BSP_EnableInterrupt(pdev);   <span class="cmt">// OTG_FS_IRQn，0/3</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>描述符</th><th>长度</th><th>关键字段</th></tr>
+                        <tr><td>设备描述符</td><td>18 B</td><td><code>bcdUSB=0x0200</code>、VID <code>0x0483</code>、PID <code>0x5720</code>、EP0 最大包</td></tr>
+                        <tr><td>配置描述符</td><td>32 B</td><td>1 个接口、<code>bmAttributes=0xC0</code>、<code>bMaxPower=0x32</code></td></tr>
+                        <tr><td>接口描述符</td><td>9 B</td><td>类 <code>0x08</code>、子类 <code>0x06</code>、协议 <code>0x50</code>、2 个端点</td></tr>
+                        <tr><td>端点 IN</td><td>7 B</td><td><code>0x81</code>、Bulk、64 B</td></tr>
+                        <tr><td>端点 OUT</td><td>7 B</td><td><code>0x01</code>、Bulk、64 B</td></tr>
+                    </table>
+
+                    <pre class="code">__ALIGN_BEGIN uint8_t USBD_MSC_CfgDesc[USB_MSC_CONFIG_DESC_SIZ] __ALIGN_END =
+{
+  0x09, USB_DESC_TYPE_CONFIGURATION, USB_MSC_CONFIG_DESC_SIZ,
+  0x00, 0x01,        <span class="cmt">// 总长 32，1 个接口</span>
+  0x01, 0x04,        <span class="cmt">// bConfigurationValue=1，iConfiguration=4</span>
+  0xC0, 0x32,        <span class="cmt">// 自供电，最大 100 mA</span>
+
+  0x09, 0x04, 0x00, 0x00, 0x02,
+  0x08, 0x06, 0x50, 0x05,   <span class="cmt">// MSC / SCSI transparent / BOT</span>
+
+  0x07, 0x05, MSC_IN_EP,  0x02, LOBYTE(MSC_MAX_PACKET), HIBYTE(MSC_MAX_PACKET), 0x00,
+  0x07, 0x05, MSC_OUT_EP, 0x02, LOBYTE(MSC_MAX_PACKET), HIBYTE(MSC_MAX_PACKET), 0x00
+};</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>VID/PID 是 ST 的默认值：</strong><code>0x0483/0x5720</code> 是 ST 官方 MSC 示例的组合；产品改量产时必须换成自己的 VID/PID，否则可能与其它 ST 设备冲突。</li>
+                            <li><strong>接口三元组 08/06/50：</strong>类 0x08 表示大容量存储，子类 0x06 表示 SCSI 透明命令集，协议 0x50 表示 Bulk-Only Transport。三者共同决定主机加载 <code>usbstor.sys</code>。</li>
+                            <li><strong>两个 Bulk 端点方向固定：</strong><code>0x81</code> 只用于设备到主机（数据与 CSW），<code>0x01</code> 只用于主机到设备（CBW 与写数据）。端点号相同但方向不同，不冲突。</li>
+                            <li><strong>64 B 包长来自全速限制：</strong>OTG FS 的 Bulk 端点最大包就是 64 B；换成 HS 内核才可能到 512 B。</li>
+                            <li><strong>自供电 100 mA：</strong><code>bmAttributes</code> 的 bit6 为 1 表示自供电，<code>0x32</code> 即 100 mA，主机不会因电流请求拒绝枚举。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="枚举与 BOT 事务时序">
+                    <h2>08　枚举与 BOT 事务时序</h2>
+                    <div class="sec-sub">每次读写都是一次 CBW → 数据 → CSW 的三段式事务</div>
+
+                    <figure class="figure">
+                        <img src="./index67-map/usb-msc-flow.png" alt="USB MSC 枚举与类请求处理流程图">
+                        <figcaption>图 8-1　枚举与 MSC 类请求处理流程</figcaption>
+                    </figure>
+
+                    <figure class="figure">
+                        <img src="./index67-map/usb-msc-timing.png" alt="USB MSC Bulk-Only 传输时序图">
+                        <figcaption>图 8-2　CBW、数据包与 CSW 的时序关系</figcaption>
+                    </figure>
+
+                    <p>Bulk-Only Transport 把每个命令封装成 31 字节的 CBW（Command Block Wrapper），其中 <code>dSignature</code> 固定为 <code>0x43425355</code>，<code>bmFlags</code> 的 bit7 表示数据方向，<code>CB[16]</code> 里放 SCSI 命令本身。设备执行完后回 13 字节的 CSW（Command Status Wrapper），签名是 <code>0x53425355</code>。</p>
+
+                    <pre class="code">typedef struct _MSC_BOT_CBW
+{
+  uint32_t dSignature;     <span class="cmt">// 0x43425355，'USBC'</span>
+  uint32_t dTag;           <span class="cmt">// 主机标签，CSW 原样带回</span>
+  uint32_t dDataLength;    <span class="cmt">// 本次要传的字节数</span>
+  uint8_t  bmFlags;        <span class="cmt">// bit7=1 表示 IN</span>
+  uint8_t  bLUN;           <span class="cmt">// 逻辑单元号</span>
+  uint8_t  bCBLength;      <span class="cmt">// 命令块长度 1~16</span>
+  uint8_t  CB[16];         <span class="cmt">// SCSI 命令</span>
+} MSC_BOT_CBW_TypeDef;</pre>
+
+                    <pre class="code">static void MSC_BOT_CBW_Decode(USB_OTG_CORE_HANDLE *pdev)
+{
+  MSC_BOT_csw.dTag = MSC_BOT_cbw.dTag;
+  MSC_BOT_csw.dDataResidue = MSC_BOT_cbw.dDataLength;
+
+  if ((USBD_GetRxCount(pdev, MSC_OUT_EP) != BOT_CBW_LENGTH) ||
+      (MSC_BOT_cbw.dSignature != BOT_CBW_SIGNATURE) ||
+      (MSC_BOT_cbw.bLUN &gt; USBD_MSC_MaxLun) ||      <span class="cmt">// 原版是 &gt;1</span>
+      (MSC_BOT_cbw.bCBLength &lt; 1) ||
+      (MSC_BOT_cbw.bCBLength &gt; 16))
+  {
+    SCSI_SenseCode(MSC_BOT_cbw.bLUN, ILLEGAL_REQUEST, INVALID_CDB);
+    MSC_BOT_Status = BOT_STATE_ERROR;
+    MSC_BOT_Abort(pdev);
+  }
+  else
+  {
+    if(SCSI_ProcessCmd(pdev, MSC_BOT_cbw.bLUN, &amp;MSC_BOT_cbw.CB[0]) &lt; 0)
+      MSC_BOT_Abort(pdev);
+    else if (MSC_BOT_DataLen &gt; 0)
+      MSC_BOT_SendData(pdev, MSC_BOT_Data, MSC_BOT_DataLen);
+    else
+      MSC_BOT_SendCSW(pdev, CSW_CMD_PASSED);
+  }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>31 字节是硬约束：</strong>主机发来的 CBW 必须正好 31 字节，<code>USBD_GetRxCount</code> 不等于 31 就直接判错，避免把畸形包当命令解析。</li>
+                            <li><strong>bLUN 检查被改过：</strong>官方代码写的是 <code>&gt; 1</code>，本工程改成 <code>&gt; USBD_MSC_MaxLun</code>，这样才能支持三个逻辑单元。这是“源码与官方库不同”的关键点。</li>
+                            <li><strong>CSW 的 dDataResidue：</strong>它记录“还剩多少字节没传”。正常完成应为 0；主机用它判断传输是否完整。</li>
+                            <li><strong>DataIn 里再次调 SCSI_ProcessCmd：</strong>一次 Read10 可能被拆成多个 32 KB 块，每发完一块触发一次 IN 中断，继续调 <code>SCSI_ProcessRead</code> 搬下一块，直到 <code>SCSI_blk_len</code> 归零。</li>
+                            <li><strong>出错用 Stall 而不是返回错误码：</strong><code>MSC_BOT_Abort</code> 会让端点 STALL，主机随后发 <code>CLEAR_FEATURE(ENDPOINT_HALT)</code> 恢复，这是 BOT 协议规定的错误恢复方式。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="中断链路">
+                    <h2>09　中断链路</h2>
+                    <div class="sec-sub">从 OTG_FS_IRQHandler 到 SD_ReadDisk，整条链路都在中断上下文里</div>
+
+                    <figure class="figure">
+                        <img src="./index67-map/usb-msc-irq-chain.png" alt="USB MSC 中断链路图">
+                        <figcaption>图 9-1　一次 Read10 的中断调用链</figcaption>
+                    </figure>
+
+                    <p>USB 事务没有“主循环轮询”这一层。<code>OTG_FS_IRQHandler</code> 直接调用 <code>USBD_OTG_ISR_Handler</code>，后者读 <code>GINTSTS</code> 判断是 OUT 还是 IN 端点事件，再分派到 <code>DCD_HandleOutEP_ISR</code> / <code>DCD_HandleInEP_ISR</code>。设备库随后回调 <code>USBD_MSC_cb</code> 里的 <code>DataOut</code> / <code>DataIn</code>。</p>
+
+                    <pre class="code">void OTG_FS_IRQHandler(void)
+{
+    USBD_OTG_ISR_Handler(&amp;USB_OTG_dev);   <span class="cmt">// 所有 USB 中断的总入口</span>
+}
+
+uint32_t USBD_OTG_ISR_Handler(USB_OTG_CORE_HANDLE *pdev)
+{
+  if (USB_OTG_IsDeviceMode(pdev))          <span class="cmt">// 确认处于设备模式</span>
+  {
+    gintr_status.d32 = USB_OTG_ReadCoreItr(pdev);
+    if (!gintr_status.d32) return 0;       <span class="cmt">// 伪中断直接返回</span>
+
+    if (gintr_status.b.outepintr)          <span class="cmt">// OUT 端点事件</span>
+      retval |= DCD_HandleOutEP_ISR(pdev);
+
+    if (gintr_status.b.inepint)            <span class="cmt">// IN 端点事件</span>
+      retval |= DCD_HandleInEP_ISR(pdev);
+  }
+}</pre>
+
+                    <pre class="code">void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)
+{
+    HAL_NVIC_SetPriority(OTG_FS_IRQn,0,3);   <span class="cmt">// 抢占 0，子优先级 3</span>
+    HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么 USB 抢占优先级最高：</strong>全速 Bulk 每 1 ms 一个帧，主机等 CSW 有超时；如果 USB 中断被 LCD 或串口拖住，主机会重试甚至复位设备。</li>
+                            <li><strong>中断里做 32 KB 的 SD 读：</strong><code>SCSI_ProcessRead</code> 在中断上下文里调用 <code>SD_ReadDisk</code>，一次可能持续数毫秒。这会阻塞其它中断，是“插 U 盘时串口偶尔卡顿”的原因。</li>
+                            <li><strong>INTX_DISABLE 的副作用：</strong><code>SD_ReadDisk</code> 内部关全局中断再轮询 SDIO；此时即使 USB 中断来了也进不来，只能等这次读完成。</li>
+                            <li><strong>没有 RTOS：</strong>整个工程是裸机 + 中断，主循环不参与协议；因此不要在主循环里做长耗时操作，否则 LCD 状态会明显滞后。</li>
+                            <li><strong>OTG_FS_IRQn 与 OTG_HS_IRQn：</strong>PA11/PA12 走 FS 内核，中断号 67；用错内核时连枚举都过不去，串口只会打印 <code>USB Connecting...</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="主循环与状态显示">
+                    <h2>10　主循环与状态显示</h2>
+                    <div class="sec-sub">USB_STATUS_REG 是中断与主循环之间唯一的“状态信箱”</div>
+
+                    <p>中断层不直接操作 LCD，而是把状态写进 <code>USB_STATUS_REG</code> 的位；主循环每 1 ms 读一次，变化时刷新屏幕。<code>STORAGE_IsReady</code> 每次被调用都会置 bit4，主循环据此判断“主机还在轮询我”，超过 2 秒没有置位就认为 USB 被拔出。</p>
+
+                    <pre class="code">while(1)
+{
+    delay_ms(1);
+    if(USB_STA != USB_STATUS_REG)          <span class="cmt">// 状态有变化才刷屏</span>
+    {
+        LCD_Fill(30,210,240,210+16,WHITE);
+        if(USB_STATUS_REG &amp; 0x01)          <span class="cmt">// 正在写</span>
+            LCD_ShowString(30,210,200,16,16,"USB Writing...");
+        if(USB_STATUS_REG &amp; 0x02)          <span class="cmt">// 正在读</span>
+            LCD_ShowString(30,210,200,16,16,"USB Reading...");
+        if(USB_STATUS_REG &amp; 0x04)          <span class="cmt">// 写错误</span>
+            LCD_ShowString(30,230,200,16,16,"USB Write Err ");
+        if(USB_STATUS_REG &amp; 0x08)          <span class="cmt">// 读错误</span>
+            LCD_ShowString(30,250,200,16,16,"USB Read  Err ");
+        USB_STA = USB_STATUS_REG;
+    }
+
+    if(Divece_STA != bDeviceState)         <span class="cmt">// 连接状态变化</span>
+    {
+        if(bDeviceState == 1) LCD_ShowString(30,190,200,16,16,"USB Connected    ");
+        else                  LCD_ShowString(30,190,200,16,16,"USB DisConnected ");
+        Divece_STA = bDeviceState;
+    }
+
+    tct++;
+    if(tct == 200)                         <span class="cmt">// 200 ms 一次心跳</span>
+    {
+        tct = 0;
+        LED1 = 1;
+        LED0 = !LED0;
+        if(USB_STATUS_REG &amp; 0x10)          <span class="cmt">// 主机刚轮询过</span>
+            offline_cnt = 0;
+        else
+        {
+            offline_cnt++;
+            if(offline_cnt &gt; 10) bDeviceState = 0;   <span class="cmt">// 约 2 s 没轮询</span>
+        }
+        USB_STATUS_REG = 0;                <span class="cmt">// 清信箱，下一轮重新统计</span>
+    }
+}</pre>
+
+                    <table class="data">
+                        <tr><th>位</th><th>置位者</th><th>含义</th></tr>
+                        <tr><td>bit0</td><td><code>STORAGE_Write</code></td><td>电脑正在写存储介质</td></tr>
+                        <tr><td>bit1</td><td><code>STORAGE_Read</code></td><td>电脑正在读存储介质</td></tr>
+                        <tr><td>bit2</td><td><code>STORAGE_Write</code> 返回非 0</td><td>写失败</td></tr>
+                        <tr><td>bit3</td><td><code>STORAGE_Read</code> 返回非 0</td><td>读失败</td></tr>
+                        <tr><td>bit4</td><td><code>STORAGE_IsReady</code></td><td>主机仍在轮询，连接保持</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么用“信箱”而不是标志变量：</strong>中断可能在一轮循环里同时置读写位，用一个字节的位图可以无损记录多个事件，主循环一次性消费。</li>
+                            <li><strong>bit4 不是 USB 协议位：</strong>它是正点原子自己加的“在线心跳”，主机每次发 <code>TEST UNIT READY</code> 等命令都会经过 <code>IsReady</code>，从而置位。</li>
+                            <li><strong>2 秒掉线判定：</strong>200 ms × (10+1) ≈ 2.2 s；主机正常轮询间隔远小于它，所以拔线后两秒左右 LCD 才会显示 DisConnected。</li>
+                            <li><strong>USB_STATUS_REG 每 200 ms 清零：</strong>所以“USB Writing...”只会在有读写的那一小段时间出现，不会一直停留。</li>
+                            <li><strong>LED1 在读写时被拉低：</strong>写/读分支里 <code>LED1=0</code>，心跳里再置 1，形成一个“有传输就亮”的指示灯。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="MSC 类请求与 SCSI 命令">
+                    <h2>11　MSC 类请求与 SCSI 命令</h2>
+                    <div class="sec-sub">两个类请求（GET_MAX_LUN、BOT_RESET）+ 一组 SCSI 命令，构成整个 U 盘协议</div>
+
+                    <p>标准请求由设备库统一处理，MSC 只需要实现类请求。<code>GET_MAX_LUN</code>（0xFE）让主机知道有几个逻辑单元；<code>BOT_RESET</code>（0xFF）让设备把 BOT 状态机恢复到 IDLE，并重新准备接收 CBW。</p>
+
+                    <pre class="code">uint8_t USBD_MSC_Setup(void *pdev, USB_SETUP_REQ *req)
+{
+  switch (req-&gt;bmRequest &amp; USB_REQ_TYPE_MASK)
+  {
+  case USB_REQ_TYPE_CLASS:
+    switch (req-&gt;bRequest)
+    {
+    case BOT_GET_MAX_LUN:
+      if((req-&gt;wValue == 0) &amp;&amp; (req-&gt;wLength == 1) &amp;&amp;
+         ((req-&gt;bmRequest &amp; 0x80) == 0x80))
+      {
+        USBD_MSC_MaxLun = USBD_STORAGE_fops-&gt;GetMaxLun();
+        if(USBD_MSC_MaxLun &gt; 0)
+          USBD_CtlSendData(pdev, &amp;USBD_MSC_MaxLun, 1);   <span class="cmt">// 返回 LUN 个数-1</span>
+        else
+          return USBD_FAIL;
+      }
+      break;
+
+    case BOT_RESET:
+      if((req-&gt;wValue == 0) &amp;&amp; (req-&gt;wLength == 0))
+        MSC_BOT_Reset(pdev);                              <span class="cmt">// 状态机回 IDLE</span>
+      break;
+    }
+    break;
+  }
+  return USBD_OK;
+}</pre>
+
+                    <pre class="code">int8_t STORAGE_GetMaxLun(void)
+{
+    if(SDCardInfo.CardCapacity) return STORAGE_LUN_NBR-1;   <span class="cmt">// 3-1 = 2</span>
+    else                        return STORAGE_LUN_NBR-2;   <span class="cmt">// 3-2 = 1</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>SCSI 命令</th><th>CB[0]</th><th>处理函数</th><th>返回内容</th></tr>
+                        <tr><td>TEST UNIT READY</td><td>0x00</td><td><code>SCSI_TestUnitReady</code></td><td>介质是否就绪</td></tr>
+                        <tr><td>REQUEST SENSE</td><td>0x03</td><td><code>SCSI_RequestSense</code></td><td>最近一次错误码</td></tr>
+                        <tr><td>INQUIRY</td><td>0x12</td><td><code>SCSI_Inquiry</code></td><td>厂商/型号/版本</td></tr>
+                        <tr><td>READ CAPACITY(10)</td><td>0x25</td><td><code>SCSI_ReadCapacity10</code></td><td>块数-1 与块大小</td></tr>
+                        <tr><td>READ(10)</td><td>0x28</td><td><code>SCSI_Read10</code></td><td>扇区数据</td></tr>
+                        <tr><td>WRITE(10)</td><td>0x2A</td><td><code>SCSI_Write10</code></td><td>CSW 状态</td></tr>
+                        <tr><td>VERIFY(10)</td><td>0x2F</td><td><code>SCSI_Verify10</code></td><td>只检查地址范围</td></tr>
+                    </table>
+
+                    <pre class="code">static int8_t SCSI_Read10(uint8_t lun, uint8_t *params)
+{
+  if(MSC_BOT_State == BOT_IDLE)
+  {
+    if((MSC_BOT_cbw.bmFlags &amp; 0x80) != 0x80) return -1;   <span class="cmt">// 方向必须 IN</span>
+    if(USBD_STORAGE_fops-&gt;IsReady(lun) != 0) return -1;
+
+    SCSI_blk_addr = (params[2]&lt;&lt;24)|(params[3]&lt;&lt;16)|(params[4]&lt;&lt;8)|params[5];
+    SCSI_blk_len  = (params[7]&lt;&lt;8)|params[8];
+
+    if(SCSI_CheckAddressRange(lun, SCSI_blk_addr, SCSI_blk_len) &lt; 0) return -1;
+
+    MSC_BOT_State = BOT_DATA_IN;
+    SCSI_blk_addr *= SCSI_blk_size;      <span class="cmt">// 扇区号 → 字节偏移</span>
+    SCSI_blk_len  *= SCSI_blk_size;
+  }
+  MSC_BOT_DataLen = MSC_MEDIA_PACKET;    <span class="cmt">// 32 KB 一块</span>
+  return SCSI_ProcessRead(lun);
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>GetMaxLun 返回的是“最大编号”：</strong>3 个 LUN 要返回 2。主机据此从 LUN0 枚举到 LUN2；返回 3 会让主机去访问不存在的 LUN3。</li>
+                            <li><strong>LUN 与介质的映射：</strong>0=SPI Flash、1=NAND、2=SD。源码注释写的是“0,SD卡;1,SPI FLASH”，与 <code>switch</code> 实际分支不一致，以代码为准。</li>
+                            <li><strong>READ CAPACITY 返回块数减一：</strong>SCSI 规定最后一个 LBA 是“块数-1”，所以代码里四项都是 <code>SCSI_blk_nbr[lun]-1</code>；写成块数会让主机认为盘尾多一个扇区。</li>
+                            <li><strong>一次 Read10 可能分很多包：</strong><code>SCSI_ProcessRead</code> 每次只搬 <code>min(剩余, 32 KB)</code>，发完触发 IN 中断，再进来搬下一块；32 KB 是吞吐与内存占用的折中。</li>
+                            <li><strong>VERIFY10 不读介质：</strong>它只做地址范围检查并返回成功，所以主机做“快速格式化校验”时不会真的读盘。</li>
+                            <li><strong>INQUIRY 的字符串来自数组：</strong><code>STORAGE_Inquirydata</code> 里每个 LUN 占 36 字节，厂商固定为 <code>ALIENTEK</code>，产品名分别是 <code>SPI Flash Disk</code>、<code>NAND Flash Disk</code>、<code>SD Flash Disk</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="存储后端与 SD 轮询读写">
+                    <h2>12　存储后端与 SD 轮询读写</h2>
+                    <div class="sec-sub">SCSI 只认“扇区”，三个后端把扇区翻译成各自的介质操作</div>
+
+                    <p><code>USBD_STORAGE_fops</code> 是类层与介质层之间的函数表。SCSI 层不关心背后是 SPI Flash 还是 SD 卡，只调用 <code>Init</code>、<code>GetCapacity</code>、<code>IsReady</code>、<code>Read</code>、<code>Write</code>。这张表在 <code>usbd_storage_msd.c</code> 里被填成 <code>USBD_MICRO_SDIO_fops</code>。</p>
+
+                    <pre class="code">USBD_STORAGE_cb_TypeDef USBD_MICRO_SDIO_fops =
+{
+    STORAGE_Init,
+    STORAGE_GetCapacity,
+    STORAGE_IsReady,
+    STORAGE_IsWriteProtected,
+    STORAGE_Read,
+    STORAGE_Write,
+    STORAGE_GetMaxLun,
+    (int8_t *)STORAGE_Inquirydata,
+};
+USBD_STORAGE_cb_TypeDef *USBD_STORAGE_fops = &amp;USBD_MICRO_SDIO_fops;</pre>
+
+                    <pre class="code">int8_t STORAGE_Init(uint8_t lun)
+{
+    u8 res = 0;
+    switch(lun)
+    {
+        case 0: W25QXX_Init(); break;          <span class="cmt">// SPI Flash</span>
+        case 1: res = FTL_Init(); break;       <span class="cmt">// NAND</span>
+        case 2: res = SD_Init(); break;        <span class="cmt">// SD 卡</span>
+    }
+    return res;
+}
+
+int8_t STORAGE_GetCapacity(uint8_t lun, uint32_t *block_num, uint32_t *block_size)
+{
+    switch(lun)
+    {
+        case 0:
+            *block_size = 512;
+            *block_num  = 1024*1024*25/512;   <span class="cmt">// 固定 25 MB</span>
+            break;
+        case 1:
+            *block_size = 512;
+            *block_num  = nand_dev.valid_blocknum*nand_dev.block_pagenum*nand_dev.page_mainsize/512;
+            break;
+        case 2:
+            *block_size = 512;
+            *block_num  = SDCardInfo.CardCapacity/512;
+            break;
+    }
+    return 0;
+}</pre>
+
+                    <pre class="code">int8_t STORAGE_Read(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t blk_len)
+{
+    int8_t res = 0;
+    USB_STATUS_REG |= 0X02;                   <span class="cmt">// 告诉主循环：正在读</span>
+    switch(lun)
+    {
+        case 0: W25QXX_Read(buf, blk_addr*512, blk_len*512); break;
+        case 1: res = FTL_ReadSectors(buf, blk_addr, 512, blk_len); break;
+        case 2: res = SD_ReadDisk(buf, blk_addr, blk_len); break;
+    }
+    if(res) USB_STATUS_REG |= 0X08;           <span class="cmt">// 读错误标志</span>
+    return res;
+}</pre>
+
+                    <pre class="code">u8 SD_ReadDisk(u8 *buf, u32 sector, u32 cnt)
+{
+    u8 sta = SD_OK;
+    long long lsector = sector;
+    u8 n;
+    lsector &lt;&lt;= 9;                            <span class="cmt">// 扇区号 × 512</span>
+    INTX_DISABLE();                           <span class="cmt">// 轮询模式：关全局中断</span>
+    if((u32)buf % 4 != 0)
+    {
+        for(n = 0; n &lt; cnt; n++)
+        {
+            sta = HAL_SD_ReadBlocks(&amp;SDCARD_Handler, (uint32_t*)SDIO_DATA_BUFFER,
+                                    lsector + 512*n, 512, 1);
+            memcpy(buf, SDIO_DATA_BUFFER, 512);
+            buf += 512;
+        }
+    }
+    else
+    {
+        sta = HAL_SD_ReadBlocks(&amp;SDCARD_Handler, (uint32_t*)buf, lsector, 512, cnt);
+    }
+    INTX_ENABLE();                            <span class="cmt">// 恢复中断</span>
+    return sta;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>块大小固定 512 B：</strong>三个后端都按 512 B 扇区报告容量，这是 U 盘文件系统的通用扇区大小；SCSI 层的 <code>SCSI_blk_size</code> 也来自这里。</li>
+                            <li><strong>SPI Flash 只暴露前 25 MB：</strong>W25Q256 实际 32 MB，留出后 7 MB 给其它实验；容量计算写死为 <code>25 MB / 512</code>。</li>
+                            <li><strong>NAND 容量来自 FTL：</strong><code>nand_dev</code> 的坏块信息由 <code>FTL_Init</code> 建立，所以必须先初始化 NAND 再枚举，否则容量为 0。</li>
+                            <li><strong>SD 读写要关中断：</strong><code>INTX_DISABLE</code> 期间 USB 中断无法响应；一次 32 KB 读约 64 个扇区，全速 SD 下也要几毫秒，这是本实验最明显的实时性代价。</li>
+                            <li><strong>缓冲区对齐分支：</strong>如果 <code>buf</code> 不是 4 字节对齐，HAL_SD 不能直接 DMA/轮询到该地址，代码改用内部 <code>SDIO_DATA_BUFFER</code> 中转，每次只读 1 个扇区。</li>
+                            <li><strong>错误只置位不重试：</strong><code>STORAGE_Read</code> 返回非 0 时只置 bit3，SCSI 层再发 <code>HARDWARE_ERROR</code> sense，主机自己决定是否重试。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘与排查">
+                    <h2>13　关键逻辑复盘与排查</h2>
+                    <div class="sec-sub">U 盘类问题通常集中在“枚举、容量、方向、介质初始化”四类</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>可能原因</th><th>排查方向</th></tr>
+                        <tr><td>插上电脑完全没有反应</td><td>PA11/PA12 复用没配对，或 OTG FS 时钟没开</td><td>查 <code>USB_OTG_BSP_Init</code> 的 <code>GPIO_AF10_OTG_FS</code></td></tr>
+                        <tr><td>设备管理器出现未知设备</td><td>描述符长度或 VID/PID 不合法</td><td>用 USB 抓包看 18 字节设备描述符</td></tr>
+                        <tr><td>只出现两个盘</td><td>SD 卡未初始化，<code>GetMaxLun</code> 返回 1</td><td>看 LCD 是否显示 <code>SD Card Error!</code></td></tr>
+                        <tr><td>盘容量显示 0</td><td><code>GetCapacity</code> 时介质还没初始化</td><td>确认 <code>SD_Init</code> / <code>FTL_Init</code> 在 <code>USBD_Init</code> 之前</td></tr>
+                        <tr><td>能读不能写</td><td><code>SCSI_Write10</code> 方向检查失败，或介质写保护</td><td>看 <code>bmFlags</code> bit7 与 <code>IsWriteProtected</code></td></tr>
+                        <tr><td>拷贝大文件卡住</td><td>SD 读期间关中断，USB 主机等 CSW 超时</td><td>降低单次块数或改用 DMA + 中断</td></tr>
+                        <tr><td>拔线后仍显示 Connected</td><td><code>offline_cnt</code> 未超过 10</td><td>等 2 秒以上再观察</td></tr>
+                        <tr><td>写进去的数据读回不对</td><td>LUN 映射与容量不匹配，越界写到别的介质</td><td>核对 <code>SCSI_CheckAddressRange</code> 的块数来源</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>先看枚举，再看数据：</strong>设备管理器能认出“大容量存储设备”说明描述符与 EP0 没问题；此时再排查容量与读写，范围会小很多。</li>
+                            <li><strong>容量来自介质，不来自描述符：</strong>配置描述符里没有容量字段，主机必须发 <code>READ CAPACITY</code>；所以介质初始化顺序错了一定会显示 0。</li>
+                            <li><strong>方向错会直接 STALL：</strong>Read10 要求 <code>bmFlags</code> bit7 为 1，Write10 要求为 0；接反时 <code>SCSI_Read10</code> 返回 -1，主机看到 CSW 失败。</li>
+                            <li><strong>关中断是性能瓶颈：</strong>这不是 bug，而是轮询式 SD 驱动的设计取舍；要提升吞吐应把 SD 改成 DMA + 中断，并让 USB 中断能抢占。</li>
+                            <li><strong>源码注释不可全信：</strong><code>usbd_storage_msd.c</code> 的 LUN 注释与实际 <code>switch</code> 分支相反，<code>usbd_conf.h</code> 的 <code>MSC_MEDIA_PACKET</code> 也与常见示例不同（本工程是 32 KB）。</li>
+                            <li><strong>官方库被局部修改：</strong><code>USBD_MSC_MaxLun</code> 去掉了 static、<code>bLUN</code> 检查改为动态上限、<code>MSC_BOT_Data</code> 改为指针动态分配，这三处都是正点原子为多 LUN 做的改动。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="交互演示">
+                    <h2>14　交互演示</h2>
+                    <div class="sec-sub">用四个动作模拟主机侧行为，观察状态字与 LCD 提示的变化</div>
+
+                    <div class="sim">
+                        <div class="sim-title">USB 读卡器状态演示（仅演示逻辑）</div>
+                        <div class="sim-buttons">
+                            <button data-act="inquiry">主机枚举：GET_MAX_LUN</button>
+                            <button data-act="read">主机读扇区：READ(10)</button>
+                            <button data-act="write">主机写扇区：WRITE(10)</button>
+                            <button data-act="unplug">拔出 USB</button>
+                        </div>
+                        <div class="sim-log" id="simLog">状态：等待主机　MaxLun=2　USB_STATUS_REG=0x00</div>
+                    </div>
+
+                    <p>四个动作对应源码里的四条路径：枚举走 <code>USBD_MSC_Setup</code> 的 <code>BOT_GET_MAX_LUN</code>；读走 <code>SCSI_Read10</code> → <code>STORAGE_Read</code>，置 bit1；写走 <code>SCSI_Write10</code> → <code>STORAGE_Write</code>，置 bit0；拔出后 <code>STORAGE_IsReady</code> 不再被调用，bit4 消失，<code>offline_cnt</code> 累加到 11 就把 <code>bDeviceState</code> 清 0。</p>
+
+                    <div class="note">演示面板不连接真实 USB 主机，也不访问 SD 卡；它只表达“哪个动作会置哪一位、LCD 会显示哪一行”。真实时序以第 8、9、10 节的源码为准。</div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+
+<script>
+/* sim-wire：把演示按钮接到日志，分支与正文源码说明一致 */
+(function () {
+    var log = document.getElementById('simLog');
+    if (!log) return;
+    var msgs = {"inquiry": "主机枚举 → GET_MAX_LUN(0xFE)：返回 USBD_MSC_MaxLun（本工程为 2）", "read": "主机读 → READ(10)：MSC_BOT_Data 调用 storage read，按 LUN 选 SD/NAND/SPI", "write": "主机写 → WRITE(10)：数据经 mymalloc(SRAMIN,32KB) 缓冲后落盘", "unplug": "拔出 USB → USBD_USR_DeviceDisconnected，MSC 停止，LCD 提示断开"};
+    Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (b) {
+        b.addEventListener('click', function () {
+            var k = b.getAttribute('data-key') || b.getAttribute('data-act');
+            if (k && msgs[k]) log.textContent = msgs[k];
+        });
+    });
+})();
+</script>
+</body>
+</html>

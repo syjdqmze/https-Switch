@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验17 随机数发生器实验 · 代码启动过程</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2f7a52;
+            margin-bottom: 6px;
+        }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-item .val {
+            font-family: Consolas, monospace;
+            color: #2f5d7c;
+            font-weight: 600;
+            background: #eef6fc;
+            border-radius: 4px;
+            padding: 1px 7px;
+            min-width: 32px;
+            text-align: center;
+        }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验17 随机数发生器实验 · 启动过程</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">对象：阿波罗 STM32F429 标准例程（HAL 库）<br>取证方式：逐文件读取源码，结论均带文件名与关键语句</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">把芯片内部的硬件随机数发生器跑起来：按键取一个 32 位数，节拍到点在屏幕上刷一个 0~9</div>
+
+                    <p>工程名 <code class="inline">RNG.uvprojx</code>，入口 <code class="inline">USER/main.c</code>。整份代码只有一条主线：
+                        <strong>先让芯片跑在 180MHz，再打开 RNG 的总线时钟和使能位，然后主循环里靠按键和软件节拍各取一次数</strong>，
+                        结果全部用 <code class="inline">LCD_ShowNum</code> 显示到屏幕上。没有中断、没有 DMA，随机数的获取完全是轮询。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>连接 / 参数</th><th>源码位置</th></tr>
+                        <tr><td>DS0 指示灯</td><td>PB1 推挽输出，初始化时置高（灭）</td><td><code>HARDWARE/LED/led.c</code> → <code>LED_Init()</code></td></tr>
+                        <tr><td>KEY0</td><td>PH3 上拉输入，按下为低电平</td><td><code>HARDWARE/KEY/key.c</code> → <code>KEY_Scan()</code></td></tr>
+                        <tr><td>串口 1</td><td>PA9 / PA10，115200-8-N-1，用于 printf</td><td><code>SYSTEM/usart/usart.c</code> → <code>uart_init()</code></td></tr>
+                        <tr><td>RNG</td><td>挂在 AHB2，基址 0x50060800，内核时钟 PLL48CLK = 45MHz</td><td><code>HARDWARE/RNG/rng.c</code></td></tr>
+                        <tr><td>LCD</td><td>RGB 屏由 LTDC 驱动，帧缓存放在外部 SDRAM</td><td><code>HARDWARE/LCD/lcd.c</code>、<code>ltdc.c</code></td></tr>
+                        <tr><td>SDRAM</td><td>FMC 外扩，给 LTDC 提供显存</td><td><code>HARDWARE/SDRAM/sdram.c</code></td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">RNG_BASE = 0x50060800</span>
+                        <span class="chip">RNG_CR_RNGEN = 0x04</span>
+                        <span class="chip">RNG_SR_DRDY = 0x01</span>
+                        <span class="chip">RNG_TIMEOUT_VALUE = 2</span>
+                        <span class="chip">HAL_RNG_STATE_RESET = 0x00</span>
+                        <span class="chip">HSE_VALUE = 25000000</span>
+                    </div>
+
+                    <div class="note">本工程<strong>没有使用 RNG 中断</strong>：HAL_RNG_Init 只置 <code>CR</code> 的 RNGEN（bit2），IE（bit3）保持 0；
+                        <code>USER/stm32f4xx_it.c</code> 里也只有 SysTick_Handler 与几个故障处理，看不到 RNG_IRQHandler。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">搞清楚“谁在启动链的哪一环”，后面看代码时才不会在 HALLIB 里迷路</div>
+
+                    <p>工程沿用正点原子的六目录结构。真正参与编译的文件可以在 <code class="inline">USER/RNG.uvprojx</code> 的
+                        <code class="inline">&lt;FilePath&gt;</code> 列表里逐个核对，下表只列与本实验相关的部分。</p>
+
+                    <table class="data">
+                        <tr><th>目录</th><th>关键文件</th><th>在启动链中的角色</th></tr>
+                        <tr><td>CORE</td><td><code>startup_stm32f429xx.s</code></td><td>向量表、Reset_Handler、栈 0x400 / 堆 0x200</td></tr>
+                        <tr><td>USER</td><td><code>main.c</code>、<code>stm32f4xx_it.c</code>、<code>system_stm32f4xx.c</code>、<code>stm32f4xx_hal_conf.h</code></td><td>应用入口、中断实现、SystemInit 与 SystemCoreClock、HSE_VALUE 与模块开关</td></tr>
+                        <tr><td>SYSTEM</td><td><code>sys.c</code>、<code>delay.c</code>、<code>usart.c</code></td><td>180MHz 时钟、SysTick 微秒级延时、printf 重定向</td></tr>
+                        <tr><td>HARDWARE</td><td><code>led.c</code>、<code>key.c</code>、<code>lcd.c</code>、<code>ltdc.c</code>、<code>sdram.c</code>、<code>rng.c</code></td><td>板级外设，以及本次实验新增的 RNG 驱动</td></tr>
+                        <tr><td>HALLIB</td><td><code>stm32f4xx_hal.c</code>、<code>stm32f4xx_hal_rng.c</code> 等</td><td>HAL_Init、HAL_RNG_Init 等库函数实现，只读不改</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：目录结构不等于编译清单</div>
+                        <ol>
+                            <li><code>HARDWARE/RTC</code> 目录里确实有 <code>rtc.c</code>，但 <code>RNG.uvprojx</code> 的源文件列表中没有它——本实验不参与编译，看目录就下结论会判断错。</li>
+                            <li>RNG 相关的三个文件缺一不可：<code>rng.c</code>（业务封装）、<code>stm32f4xx_hal_rng.c</code>（库实现）、<code>stm32f4xx_hal_conf.h</code> 里的 <code>HAL_RNG_MODULE_ENABLED</code>（第 77 行）。</li>
+                            <li>时钟相关的代码分散在 <code>sys.c</code>（切 PLL）和 <code>system_stm32f4xx.c</code>（复位时的默认时钟）两处，读启动流程必须两边对照。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从上电到 while(1)：六个阶段，前四个阶段都发生在 main 之前</div>
+
+                    <figure class="figure">
+                        <img src="./index31-map/boot-flow.png" alt="从上电复位到 while(1) 的启动链路图">
+                        <figcaption>图 3-1　启动链路总览（箭头为执行顺序）</figcaption>
+                    </figure>
+                    <figure class="figure"><img src="./index31-map/rng-timing.png" alt="RNG 取数 DRDY 握手时序图"><figcaption>图 3-2　RNG 取数：DRDY 握手时序</figcaption></figure>
+                    <p>使能 RNGEN 后硬件持续产生随机数，每得出一个 32 位结果就把 SR 的 DRDY 置 1；软件读 DR 后 DRDY 自动清零，等下一次就绪再读。取数函数必须先等 DRDY，否则读到的是上一次的旧值。</p>
+
+                    <p>main 里的初始化顺序不是随便排的，每一行都在为下一行准备前提。下面是 <code class="inline">USER/main.c</code> 的完整正文，
+                        只加了中文注释，没有删改任何语句（末尾的 <code class="inline">while(1)</code> 在 12 节展开）。</p>
+
+<pre class="code">int main(void)                           <span class="cmt">// 程序入口，复位后由 __main 调用</span>
+{
+    u32 random;                          <span class="cmt">// 存放 32 位随机数</span>
+    u8 t=0,key;                          <span class="cmt">// t：主循环节拍计数；key：按键扫描结果</span>
+    HAL_Init();                     <span class="cmt">// 建立 1ms 时基、开 Cache、设中断优先级分组</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// 设置时钟,180Mhz（N=360, M=25, P=2, Q=8）</span>
+    delay_init(180);                <span class="cmt">// 初始化延时函数，fac_us = 180</span>
+    uart_init(115200);              <span class="cmt">// 初始化USART，printf 依赖它</span>
+    LED_Init();                     <span class="cmt">// 初始化LED，PB0/PB1 置高（灭）</span>
+    KEY_Init();                     <span class="cmt">// 初始化按键，KEY0 = PH3</span>
+    SDRAM_Init();                   <span class="cmt">// 初始化SDRAM，LCD 的显存在这里</span>
+    LCD_Init();                     <span class="cmt">// 初始化LCD，内部会 printf 打印 LCD ID</span>
+
+	POINT_COLOR=RED;                        <span class="cmt">// 设置后续 LCD 文字颜色为红色</span>
+	LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7");  <span class="cmt">// 显示开发板型号标题</span>
+	LCD_ShowString(30,70,200,16,16,"RNG TEST");           <span class="cmt">// 显示实验名称</span>
+	LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");      <span class="cmt">// 显示作者/厂商标识</span>
+	LCD_ShowString(30,110,200,16,16,"2016/1/27");         <span class="cmt">// 显示日期</span>
+    while(RNG_Init())	 		    <span class="cmt">// 初始化随机数发生器，返回 1 表示失败</span>
+	{
+		LCD_ShowString(30,130,200,16,16,"  RNG Error! ");  <span class="cmt">// 失败时在屏幕显示错误提示</span>
+		delay_ms(200);                                      <span class="cmt">// 错误提示停留 200ms</span>
+		LCD_ShowString(30,130,200,16,16,"RNG Trying...");  <span class="cmt">// 显示正在重试</span>
+	}                                                        <span class="cmt">// 失败则循环重试，直到成功</span>
+	LCD_ShowString(30,130,200,16,16,"RNG Ready!   ");   <span class="cmt">// 初始化成功，覆盖错误提示</span>
+	LCD_ShowString(30,150,200,16,16,"KEY0:Get Random Num"); <span class="cmt">// 提示按键 KEY0 取随机数</span>
+	LCD_ShowString(30,180,200,16,16,"Random Num:");      <span class="cmt">// 32 位随机数显示标签</span>
+	LCD_ShowString(30,210,200,16,16,"Random Num[0-9]:"); <span class="cmt">// 0~9 随机数显示标签</span>
+    while(1)                                 <span class="cmt">// 主循环，程序永不退出</span>
+    {
+        <span class="cmt">// 省略：主循环内容见 12 节</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：为什么必须是这个顺序</div>
+                        <ol>
+                            <li><strong>HAL_Init 必须最先</strong>：它把 SysTick 配成 1ms 时基，后面的 <code>delay_ms</code>、<code>delay_us</code>，以及 HAL_RNG 内部的 2ms 超时判断，全都依赖 <code>HAL_GetTick()</code>。</li>
+                            <li><strong>Stm32_Clock_Init 必须在 RNG_Init 之前</strong>：RNG 的内核时钟来自 PLL48CLK，Q=8 时才是 45MHz；PLL 没起来，DRDY 永远不会置位。</li>
+                            <li><strong>uart_init 必须在 LCD_Init 之前</strong>：LCD_Init 内部用 printf 打印 LCD ID，而 printf 的落地实现 fputc 直接写 USART1 寄存器，串口没初始化就什么都看不到。</li>
+                            <li><strong>SDRAM_Init 必须在 LCD_Init 之前</strong>：RGB 屏的帧缓存放在片外 SDRAM，显存还没就绪就去刷屏只会花屏。</li>
+                            <li><code>while(RNG_Init())</code> 是<strong>阻塞重试</strong>：RNG_Init 内部已经等了 10000 次 × 10µs ≈ 100ms，失败后主程序再 delay 200ms 重来，直到成功为止。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">上电第一条指令不是 main，而是硬件按向量表取出来的 Reset_Handler</div>
+
+                    <table class="data">
+                        <tr><th>符号 / 常量</th><th>值</th><th>作用</th></tr>
+                        <tr><td><code>Stack_Size</code></td><td>0x400（1KB）</td><td>主栈容量，复位时栈顶地址装进 MSP</td></tr>
+                        <tr><td><code>Heap_Size</code></td><td>0x200（512B）</td><td>堆容量，供 malloc 使用</td></tr>
+                        <tr><td><code>__initial_sp</code></td><td>栈顶地址</td><td>向量表第 0 个字，复位后自动装入 MSP</td></tr>
+                        <tr><td><code>__Vectors</code></td><td>0x08000000</td><td>向量表起始，第 1 个字是 Reset_Handler</td></tr>
+                        <tr><td><code>Reset_Handler</code></td><td>[WEAK]</td><td>复位入口，先 SystemInit 再 __main</td></tr>
+                    </table>
+
+<pre class="code"><span class="cmt">; ---------- 栈与堆：容量在这里定死 ----------</span>
+Stack_Size      EQU     0x400              <span class="cmt">; 栈大小 = 0x400 = 1KB</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3  <span class="cmt">; 定义栈段：未初始化、可读写、8 字节对齐</span>
+Stack_Mem       SPACE   Stack_Size         <span class="cmt">; 分配 1KB 栈空间</span>
+__initial_sp                    <span class="cmt">; 栈顶，向量表第 0 项</span>
+
+Heap_Size       EQU     0x200              <span class="cmt">; 堆大小 = 0x200 = 512B</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3   <span class="cmt">; 定义堆段：未初始化、可读写、8 字节对齐</span>
+__heap_base                                  <span class="cmt">; 堆起始地址标签</span>
+Heap_Mem        SPACE   Heap_Size          <span class="cmt">; 分配 512B 堆空间</span>
+__heap_limit                                 <span class="cmt">; 堆结束地址标签</span>
+
+                PRESERVE8                   <span class="cmt">; 保证栈 8 字节对齐（AAPCS 要求）</span>
+                THUMB                       <span class="cmt">; 声明以下为 Thumb 指令集</span>
+<span class="cmt">; ---------- 向量表首地址 ----------</span>
+                AREA    RESET, DATA, READONLY  <span class="cmt">; 定义复位向量表段：只读数据</span>
+                EXPORT  __Vectors           <span class="cmt">; 导出向量表符号供链接器使用</span>
+__Vectors       DCD     __initial_sp               <span class="cmt">; 第 0 项：栈顶</span>
+                DCD     Reset_Handler              <span class="cmt">; 第 1 项：复位入口</span>
+                <span class="cmt">; 省略：NMI、HardFault、SysTick、各外设 IRQ 的入口地址</span>
+
+<span class="cmt">; ---------- 复位入口：只做两件事 ----------</span>
+Reset_Handler    PROC                       <span class="cmt">; 定义复位处理函数过程开始</span>
+                 EXPORT  Reset_Handler             [WEAK]  <span class="cmt">; 弱导出，允许用户重写</span>
+        IMPORT  SystemInit                  <span class="cmt">; 引入外部符号 SystemInit（C 函数）</span>
+        IMPORT  __main                      <span class="cmt">; 引入 C 库入口 __main</span>
+
+                 LDR     R0, =SystemInit    <span class="cmt">; 把 SystemInit 地址加载到 R0</span>
+                 BLX     R0                       <span class="cmt">; BLX：调用并返回</span>
+                 LDR     R0, =__main        <span class="cmt">; 把 __main 地址加载到 R0</span>
+                 BX      R0                       <span class="cmt">; BX：跳过去，不返回</span>
+                 ENDP                       <span class="cmt">; 过程结束</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：BLX 与 BX 的区别决定了控制权交接</div>
+                        <ol>
+                            <li>复位时 Cortex-M4 从 0x08000000 取第 0 个字装 MSP、第 1 个字装 PC，所以向量表第 0 项<strong>必须是地址</strong>（__initial_sp），不能写成函数名。</li>
+                            <li><code>BLX R0</code> 调用 SystemInit 后还会回来执行下一条；<code>BX R0</code> 跳到 __main 就再也不回汇编了——这两种指令的差别就是“是否返回”。</li>
+                            <li>启动文件里<strong>看不到拷贝 .data、清零 .bss 的循环</strong>：这些工作由 __main 调用 C 库的分散加载代码完成，所以 __main 才是“C 世界”的真正起点。</li>
+                            <li>栈只有 1KB：本工程调用层次浅（main → LCD_ShowNum → LCD_ShowChar），够用；但不要在中断里再放大数组。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">一个负责“把时钟退回默认”，一个负责“把 HAL 的时基立起来”</div>
+
+                    <h3>SystemInit：回到 HSI 16MHz</h3>
+                    <p>它由 Reset_Handler 调用，函数体里没有任何“配置 180MHz”的代码，做的全是<strong>复位值兜底</strong>。</p>
+
+<pre class="code">void SystemInit(void)                       <span class="cmt">/* 系统初始化，由 Reset_Handler 调用，把时钟退回默认 */</span>
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)  <span class="cmt">/* 仅当芯片带 FPU 且工程启用 FPU 时编译 */</span>
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">/* 开 CP10/CP11，让 FPU 可用 */</span>
+  #endif                                      <span class="cmt">/* 条件编译结束 */</span>
+  RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="cmt">/* 打开 HSI */</span>
+  RCC-&gt;CFGR = 0x00000000;               <span class="cmt">/* 时钟源切回 HSI，各分频归 1 */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="cmt">/* 关 HSEON、CSSON、PLLON */</span>
+  RCC-&gt;PLLCFGR = 0x24003010;            <span class="cmt">/* PLL 参数恢复默认 */</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;      <span class="cmt">/* 清 HSEBYP */</span>
+  RCC-&gt;CIR = 0x00000000;                <span class="cmt">/* 关所有 RCC 中断 */</span>
+
+  <span class="cmt">/* 省略：DATA_IN_ExtSRAM / DATA_IN_ExtSDRAM 均未在工程里定义，
+     SystemInit_ExtMemCtl() 不会被调用，SDRAM 由 main 里的 SDRAM_Init() 负责 */</span>
+
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET;  <span class="cmt">/* 向量表定位到 0x08000000 */</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：SystemInit 只做“复位兜底”，不配置 180MHz</div>
+                        <ol>
+                            <li>函数体内没有任何切 PLL 的语句，只是把 HSI 打开、HSE/PLL 关掉，让主频回到 16MHz 的复位默认值。</li>
+                            <li>FPU 的使能放在最前面且用 <code>#if</code> 保护：如果工程没开 FPU，<code>__FPU_USED</code> 为 0，这段不编译，避免写 CPACR 出问题。</li>
+                            <li><code>SCB-&gt;VTOR</code> 把向量表重定位到 <code>FLASH_BASE</code>（0x08000000），这样中断时 CPU 才会到 Flash 里取向量，而不是默认的 0x00000000。</li>
+                            <li>本工程未定义 <code>DATA_IN_ExtSRAM</code> / <code>DATA_IN_ExtSDRAM</code>，所以 SystemInit 不会碰外部存储器，SDRAM 完全留给 main 里的 <code>SDRAM_Init()</code>。</li>
+                        </ol>
+                    </div>
+
+                    <h3>HAL_Init：时基与分组</h3>
+<pre class="code">HAL_StatusTypeDef HAL_Init(void)          <span class="cmt">/* HAL 库初始化入口，main 里第一个调用 */</span>
+{
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();   <span class="cmt">/* I-Cache */</span>
+  __HAL_FLASH_DATA_CACHE_ENABLE();          <span class="cmt">/* D-Cache */</span>
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();     <span class="cmt">/* 预取缓冲 */</span>
+
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2); <span class="cmt">/* 中断优先级分组 2 */</span>
+
+  HAL_InitTick(TICK_INT_PRIORITY);          <span class="cmt">/* TICK_INT_PRIORITY = 0x0F */</span>
+
+  HAL_MspInit();                            <span class="cmt">/* 本工程未重写，用库里的空实现 */</span>
+  return HAL_OK;                            <span class="cmt">/* 返回初始化成功 */</span>
+}
+
+__weak HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)  <span class="cmt">/* 弱定义的时基初始化，可被用户重写 */</span>
+{
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000);  <span class="cmt">/* 此刻是 HSI：16000000/1000 = 16000 */</span>
+  HAL_NVIC_SetPriority(SysTick_IRQn, TickPriority ,0);  <span class="cmt">/* SysTick 抢占优先级=TickPriority，子优先级=0 */</span>
+  return HAL_OK;                            <span class="cmt">/* 返回成功 */</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：时基在建与重建之间切换了一次频率</div>
+                        <ol>
+                            <li>SystemInit 跑完时主频是 <strong>HSI 16MHz</strong>，<code>SystemCoreClock</code> 的初值也是 16000000，所以 HAL_InitTick 算出的重装值是 16000。</li>
+                            <li>之后 <code>Stm32_Clock_Init</code> 调用 <code>HAL_RCC_ClockConfig</code>，该函数末尾（<code>stm32f4xx_hal_rcc.c</code> 第 813 行）会<strong>再调一次 HAL_InitTick</strong>，重装值变成 180000，1ms 时基依旧准确。</li>
+                            <li>所以 <code>delay_init(180)</code> 里不需要再动 SysTick 的 LOAD / CTRL，它只负责记录 <code>fac_us=180</code> 这个换算系数。</li>
+                            <li>优先级分组被固定为 GROUP_2（2 位抢占 + 2 位子优先级），后面对 SysTick_IRQn 设的优先级 0x0F 都按这个分组解释。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟树：从 HSE 25MHz 到 180MHz">
+                    <h2>06　时钟树：从 HSE 25MHz 到 180MHz</h2>
+                    <div class="sec-sub">四个参数 N/M/P/Q 决定了 CPU、外设和 RNG 各自的频率</div>
+
+                    <p>main 里的 <code class="inline">Stm32_Clock_Init(360,25,2,8)</code> 四个实参依次是 PLLN、PLLM、PLLP、PLLQ，
+                        换算结果如下（<code class="inline">sys.c</code> 的注释里也逐条写明了）。</p>
+
+                    <table class="data">
+                        <tr><th>节点</th><th>计算</th><th>频率</th><th>供给谁</th></tr>
+                        <tr><td>HSE</td><td>板载晶振，<code>HSE_VALUE</code></td><td>25MHz</td><td>PLL 输入</td></tr>
+                        <tr><td>PLL 输入</td><td>25 / PLLM(25)</td><td>1MHz</td><td>VCO 参考</td></tr>
+                        <tr><td>VCO</td><td>1 × PLLN(360)</td><td>360MHz</td><td>PLL 输出源</td></tr>
+                        <tr><td>SYSCLK</td><td>360 / PLLP(2)</td><td>180MHz</td><td>系统时钟</td></tr>
+                        <tr><td>HCLK</td><td>SYSCLK / 1</td><td>180MHz</td><td>CPU、AHB、SysTick</td></tr>
+                        <tr><td>PCLK1</td><td>HCLK / 4</td><td>45MHz</td><td>APB1 外设</td></tr>
+                        <tr><td>PCLK2</td><td>HCLK / 2</td><td>90MHz</td><td>APB2 外设</td></tr>
+                        <tr><td><strong>PLL48CLK</strong></td><td>360 / PLLQ(8)</td><td><strong>45MHz</strong></td><td><strong>USB / SDIO / RNG</strong></td></tr>
+                    </table>
+
+<pre class="code">void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq)  <span class="cmt">// 时钟初始化，四参对应 PLLN/M/P/Q</span>
+{
+    HAL_StatusTypeDef ret = HAL_OK;                <span class="cmt">// 保存 HAL 返回值，用于错误检查</span>
+    RCC_OscInitTypeDef RCC_OscInitStructure;       <span class="cmt">// 振荡器配置结构体</span>
+    RCC_ClkInitTypeDef RCC_ClkInitStructure;       <span class="cmt">// 总线时钟配置结构体</span>
+
+    __HAL_RCC_PWR_CLK_ENABLE();                     <span class="cmt">// 使能PWR时钟，后面要调压</span>
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1); <span class="cmt">// 电压级别1</span>
+
+    RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE;  <span class="cmt">// 时钟源为HSE</span>
+    RCC_OscInitStructure.HSEState=RCC_HSE_ON;                   <span class="cmt">// 打开HSE</span>
+    RCC_OscInitStructure.PLL.PLLState=RCC_PLL_ON;               <span class="cmt">// 打开PLL</span>
+    RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;       <span class="cmt">// PLL 输入源选 HSE</span>
+    RCC_OscInitStructure.PLL.PLLM=pllm;                        <span class="cmt">// PLLM 分频系数</span>
+    RCC_OscInitStructure.PLL.PLLN=plln;                        <span class="cmt">// PLLN 倍频系数</span>
+    RCC_OscInitStructure.PLL.PLLP=pllp;   <span class="cmt">// 系统时钟分频，只能是 2/4/6/8</span>
+    RCC_OscInitStructure.PLL.PLLQ=pllq;   <span class="cmt">// USB/SDIO/随机数产生器等的主PLL分频系数</span>
+    ret=HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);   <span class="cmt">// 配置振荡器（HSE + PLL）</span>
+    if(ret!=HAL_OK) while(1);                       <span class="cmt">// 配置失败则死循环停机</span>
+
+    ret=HAL_PWREx_EnableOverDrive();      <span class="cmt">// 180MHz 属于 over-drive 档，必须先开</span>
+    if(ret!=HAL_OK) while(1);                       <span class="cmt">// over-drive 失败则停机</span>
+
+    RCC_ClkInitStructure.ClockType=(RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2);  <span class="cmt">// 要配置 SYSCLK/HCLK/PCLK1/PCLK2</span>
+    RCC_ClkInitStructure.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK;  <span class="cmt">// 系统时钟源选 PLL 输出</span>
+    RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;   <span class="cmt">// HCLK = 180MHz</span>
+    RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;    <span class="cmt">// PCLK1 = 45MHz</span>
+    RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;    <span class="cmt">// PCLK2 = 90MHz</span>
+    ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5); <span class="cmt">// 同时设 Flash 5WS</span>
+    if(ret!=HAL_OK) while(1);                       <span class="cmt">// 时钟切换失败则停机</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：RNG 的时钟是“顺带”配好的</div>
+                        <ol>
+                            <li>RNG 并不在 APB1/APB2 上，它的内核时钟固定来自 <strong>PLL48CLK</strong>（PLLQ 这一路），所以 sys.c 里的一句注释就决定了 RNG 能不能工作。</li>
+                            <li>切到 180MHz 之前必须先 <code>HAL_PWREx_EnableOverDrive()</code>，这是 F429 的高频档前提；失败就 <code>while(1)</code> 停住，不会继续往下跑。</li>
+                            <li>Flash 等待周期必须随频率抬高：这里用 <code>FLASH_LATENCY_5</code>（5WS，即 6 个 CPU 周期），少了会取指错乱。</li>
+                            <li>每一处 HAL 调用都检查返回值并 <code>while(1)</code>，这是裸机常用的“失败即停”策略：调试时看程序停在哪一行就知道卡在哪一步。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="延时与 printf：SysTick 与 fputc">
+                    <h2>07　延时与 printf：SysTick 与 fputc</h2>
+                    <div class="sec-sub">RNG_Init 里的 delay_us(10) 和 LCD_Init 里的 printf，底层都在这两个文件里</div>
+
+                    <h3>delay_init / delay_us：轮询 SysTick 的递减计数器</h3>
+                    <p><code class="inline">SYSTEM/sys/sys.h</code> 里 <code class="inline">SYSTEM_SUPPORT_OS</code> 定义为 0，所以编译的是
+                        <code class="inline">#else</code> 之后的非 OS 版本。</p>
+
+<pre class="code">void delay_init(u8 SYSCLK)                   <span class="cmt">// 延时初始化，传入系统时钟主频（MHz）</span>
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);  <span class="cmt">// SysTick 时钟源 = HCLK</span>
+    fac_us=SYSCLK;                                        <span class="cmt">// 1µs 需要多少个 HCLK 节拍</span>
+    <span class="cmt">// 省略：#if SYSTEM_SUPPORT_OS 分支里配置 reload / 开中断的代码，本工程不编译</span>
+}
+
+void delay_us(u32 nus)                        <span class="cmt">// 微秒级延时，nus 为要延时的微秒数</span>
+{
+	u32 ticks;                                <span class="cmt">// 需要等待的总节拍数</span>
+	u32 told,tnow,tcnt=0;                     <span class="cmt">// told：旧值；tnow：新值；tcnt：已累计节拍</span>
+	u32 reload=SysTick-&gt;LOAD;       <span class="cmt">// 当前重装值：180000</span>
+	ticks=nus*fac_us;               <span class="cmt">// 1µs → 180 个节拍</span>
+	told=SysTick-&gt;VAL;              <span class="cmt">// 刚进入时的计数器值</span>
+	while(1)                                  <span class="cmt">// 轮询等待循环</span>
+	{
+		tnow=SysTick-&gt;VAL;                    <span class="cmt">// 读取当前计数器值</span>
+		if(tnow!=told)                        <span class="cmt">// 只有计数器变化才累加</span>
+		{
+			if(tnow&lt;told)tcnt+=told-tnow;   <span class="cmt">// 没有跨过重装点</span>
+			else tcnt+=reload-tnow+told;    <span class="cmt">// 计数器已经绕回一圈</span>
+			told=tnow;                        <span class="cmt">// 更新旧值为当前值</span>
+			if(tcnt&gt;=ticks)break;            <span class="cmt">// 达到目标节拍数则退出</span>
+		}
+	};                                        <span class="cmt">// 循环结束</span>
+}
+
+void delay_ms(u16 nms)                        <span class="cmt">// 毫秒级延时，nms 为要延时的毫秒数</span>
+{
+	u32 i;                                    <span class="cmt">// 循环计数变量</span>
+	for(i=0;i&lt;nms;i++) delay_us(1000);   <span class="cmt">// 非 OS 版本：10ms = 10 次 1000µs</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：延时函数并不“启动” SysTick</div>
+                        <ol>
+                            <li>SysTick 是在 <code>HAL_Init → HAL_InitTick → HAL_SYSTICK_Config(180000)</code> 时就配置好的，delay_init 只记录换算系数 <code>fac_us</code>，不碰 LOAD/CTRL。</li>
+                            <li>SysTick 是<strong>递减计数器</strong>，所以 <code>tnow &lt; told</code> 与 <code>tnow &gt; told</code> 要分别累加，后一种情况说明跨过了一次重装点。</li>
+                            <li><code>delay_us</code> 靠轮询 VAL，不进中断，所以能在中断里用；但也意味着这段时间 CPU 是空转的。</li>
+                            <li><code>delay_ms(10)</code> 在非 OS 分支里是 10 次 <code>delay_us(1000)</code>，这决定了主循环一轮至少 20ms（见 12 节）。</li>
+                        </ol>
+                    </div>
+
+                    <h3>fputc：printf 落到 USART1 寄存器</h3>
+<pre class="code">#pragma import(__use_no_semihosting)   <span class="cmt">// 禁止半主机模式</span>
+struct __FILE { int handle; };              <span class="cmt">// 定义 FILE 结构体，满足 stdio 依赖</span>
+FILE __stdout;                              <span class="cmt">// 标准输出文件句柄</span>
+
+void _sys_exit(int x) { x = x; }       <span class="cmt">// 骗过链接器：不依赖调试器</span>
+
+int fputc(int ch, FILE *f)                  <span class="cmt">// printf 底层：输出一个字符到串口</span>
+{
+	while((USART1-&gt;SR&amp;0X40)==0);        <span class="cmt">// 等 TXE（发送数据寄存器空）</span>
+	USART1-&gt;DR = (u8) ch;              <span class="cmt">// 直接写数据寄存器</span>
+	return ch;                             <span class="cmt">// 返回写入的字符</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：printf 绕过了 HAL 的串口状态机</div>
+                        <ol>
+                            <li>fputc 只用 <code>USART1-&gt;SR</code> 和 <code>USART1-&gt;DR</code> 两个寄存器，不走 <code>HAL_UART_Transmit</code>，所以即使 UART 句柄状态不对，printf 也能出字。</li>
+                            <li><code>#pragma import(__use_no_semihosting)</code> 与 <code>_sys_exit</code> 是为了避免半主机：没有它们，没接调试器时一次 printf 就会卡死在 BKPT。</li>
+                            <li>串口必须先 <code>uart_init(115200)</code> 完成 GPIO/波特率配置，否则写 DR 也只是把数据丢进一个没工作的外设。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="RNG 的时钟与总线使能">
+                    <h2>08　RNG 的时钟与总线使能</h2>
+                    <div class="sec-sub">AHB2ENR 的 bit6 打开“寄存器能读写”，PLL48CLK 才是“能产生随机数”</div>
+
+                    <figure class="figure">
+                        <img src="./index31-map/rng-clock.png" alt="RNG 的时钟通路与使能通路示意图">
+                        <figcaption>图 8-1　RNG 的两路依赖：时钟通路与使能通路</figcaption>
+                    </figure>
+
+                    <p>本工程并没有手写 RCC 寄存器，而是重写了 HAL 的弱函数 <code class="inline">HAL_RNG_MspInit</code>。
+                        这个函数名在 <code class="inline">stm32f4xx_hal_rng.c</code> 里是 <code class="inline">__weak</code> 的，<code class="inline">rng.c</code> 里再定义一次就会覆盖库里的空实现。</p>
+
+<pre class="code">void HAL_RNG_MspInit(RNG_HandleTypeDef *hrng)  <span class="cmt">// RNG 底层初始化：只负责开总线时钟</span>
+{
+     __HAL_RCC_RNG_CLK_ENABLE();   <span class="cmt">// 使能RNG时钟（真正展开见下）</span>
+}
+
+<span class="cmt">/* 宏展开后的关键语句，取自 stm32f4xx_hal_rcc_ex.h */</span>
+#define __HAL_RCC_RNG_CLK_ENABLE()    do { \     <span class="cmt">/* do-while(0) 保证宏作为单语句安全 */</span>
+        __IO uint32_t tmpreg = 0x00; \           <span class="cmt">/* 临时变量，用于读回延时 */</span>
+        SET_BIT(RCC-&gt;AHB2ENR, RCC_AHB2ENR_RNGEN);   <span class="cmt">/* bit6 = 1 */</span> \
+        <span class="cmt">/* 使能后读回一次，起到几个周期的延时作用 */</span> \
+        tmpreg = READ_BIT(RCC-&gt;AHB2ENR, RCC_AHB2ENR_RNGEN); \  <span class="cmt">/* 读回刚置的位，确保时钟已生效 */</span>
+        UNUSED(tmpreg); \                        <span class="cmt">/* 消除未使用变量的编译警告 */</span>
+    } while(0)                                   <span class="cmt">/* 宏结束 */</span></pre>
+
+                    <table class="data">
+                        <tr><th>层面</th><th>由谁负责</th><th>寄存器 / 信号</th><th>不做的后果</th></tr>
+                        <tr><td>总线时钟</td><td><code>HAL_RNG_MspInit</code></td><td><code>RCC-&gt;AHB2ENR</code> bit6 RNGEN</td><td>读写 RNG 寄存器全部无效（总线返回错误）</td></tr>
+                        <tr><td>内核时钟</td><td><code>Stm32_Clock_Init</code></td><td>PLL48CLK = 45MHz</td><td>CR.RNGEN 置了也不出数，SR.DRDY 永远为 0</td></tr>
+                        <tr><td>外设使能</td><td><code>HAL_RNG_Init</code></td><td><code>RNG-&gt;CR</code> bit2 RNGEN</td><td>处于关闭态，DR 不更新</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：两路时钟缺一不可</div>
+                        <ol>
+                            <li><code>AHB2ENR</code> 只打开“外设总线的访问权限”，让 CPU 能读写 0x50060800 开始的那几个寄存器；它并不是随机数发生器的时钟源。</li>
+                            <li>随机数发生器的时钟来自 PLL48CLK。本工程 Q=8 得到 45MHz，是 48MHz 域内的合法频率。</li>
+                            <li>正因如此，<strong>调用顺序不能反</strong>：如果先在 PLL 未锁定时调 RNG_Init，RNG 的时钟错误标志（SR.CECS）会上报，DRDY 不置位，rng.c 的 10000 次重试全部失败。</li>
+                            <li>MspInit 命名是 HAL 的约定，不是任意函数：名字写错就不会被调用，表现为“时钟没开、读寄存器全是 0”。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="RNG 初始化与 CR.RNGEN">
+                    <h2>09　RNG 初始化与 CR.RNGEN</h2>
+                    <div class="sec-sub">RNG_Init 先调库函数开外设，再自己轮询 10000 次等第一个数就绪</div>
+
+                    <figure class="figure">
+                        <img src="./index31-map/rng-regs.png" alt="RNG 的 CR、SR、DR 三个寄存器关键位">
+                        <figcaption>图 9-1　CR / SR / DR 的关键位与偏移</figcaption>
+                    </figure>
+
+<pre class="code">u8 RNG_Init(void)                            <span class="cmt">// RNG 初始化，返回 0 成功、1 失败</span>
+{
+    u16 retry=0;                             <span class="cmt">// 等待 DRDY 的重试计数</span>
+
+    RNG_Handler.Instance=RNG;                 <span class="cmt">// 绑定外设基址 0x50060800</span>
+    HAL_RNG_Init(&amp;RNG_Handler);               <span class="cmt">// 初始化RNG：MspInit + 置 RNGEN</span>
+    while(__HAL_RNG_GET_FLAG(&amp;RNG_Handler,RNG_FLAG_DRDY)==RESET&amp;&amp;retry&lt;10000)
+    {                                         <span class="cmt">// 等第一个随机数就绪，最多 10000 次</span>
+        retry++;                              <span class="cmt">// 重试计数加一</span>
+        delay_us(10);                         <span class="cmt">// 每次 10µs，总计约 100ms</span>
+    }
+    if(retry&gt;=10000) return 1;                <span class="cmt">// 随机数产生器工作不正常</span>
+    return 0;                                 <span class="cmt">// 初始化成功</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：RNG_Init 把“库使能”和“硬件就绪”分成两步</div>
+                        <ol>
+                            <li><code>HAL_RNG_Init</code> 只保证 <code>CR.RNGEN</code> 置位、时钟打开，但随机数发生器从使能到产出第一个数需要若干个 PLL48CLK 周期，所以必须单独轮询 <code>DRDY</code>。</li>
+                            <li>10000 × 10µs ≈ 100ms 是软件兜底：正常硬件在几次循环内 DRDY 就会置位，几乎不等待；只有时钟没配好时才会走到超时。</li>
+                            <li>返回值 1 直接被 main 里的 <code>while(RNG_Init())</code> 用来触发重试，因此这里不需要打印或清状态——失败后整个初始化会从头再来。</li>
+                            <li>由于 <code>RNG_Handler.State</code> 在第一次 <code>HAL_RNG_Init</code> 后已变为 READY，重试时不会再开时钟，只会重新轮询 DRDY，开销很小。</li>
+                        </ol>
+                    </div>
+
+                    <p>库函数的实现（<code class="inline">HALLIB/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rng.c</code>）只做三件事：必要时调 MspInit、置 RNGEN、改状态机。</p>
+
+<pre class="code">HAL_StatusTypeDef HAL_RNG_Init(RNG_HandleTypeDef *hrng)  <span class="cmt">/* HAL 库 RNG 初始化函数 */</span>
+{
+  if(hrng == NULL) return HAL_ERROR;              <span class="cmt">/* 空指针保护 */</span>
+
+  __HAL_LOCK(hrng);                              <span class="cmt">/* 加锁，防止重入 */</span>
+
+  if(hrng-&gt;State == HAL_RNG_STATE_RESET)         <span class="cmt">/* 初值 0，第一次必然成立 */</span>
+  {
+    hrng-&gt;Lock = HAL_UNLOCKED;                    <span class="cmt">/* 先解锁，方便 MspInit 内部操作 */</span>
+    HAL_RNG_MspInit(hrng);                       <span class="cmt">/* 用户重写的弱函数：开 AHB2 时钟 */</span>
+  }                                              <span class="cmt">/* 仅首次初始化执行 MspInit */</span>
+
+  hrng-&gt;State = HAL_RNG_STATE_BUSY;              <span class="cmt">/* 置为忙状态 */</span>
+
+  __HAL_RNG_ENABLE(hrng);                        <span class="cmt">/* RNG-&gt;CR |= RNG_CR_RNGEN，即 bit2 */</span>
+
+  hrng-&gt;State = HAL_RNG_STATE_READY;             <span class="cmt">/* 置为就绪状态 */</span>
+
+  __HAL_UNLOCK(hrng);                            <span class="cmt">/* 解锁 */</span>
+  return HAL_OK;                                 <span class="cmt">/* 返回成功 */</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：RNG_Init 的失败返回值有明确含义</div>
+                        <ol>
+                            <li><code>RNG_Handler</code> 是 <code>rng.c</code> 里的全局变量，上电清零后 <code>State = 0 = HAL_RNG_STATE_RESET</code>，所以第一次调用一定进入 MspInit 分支。</li>
+                            <li>重复调用时 State 已是 READY，MspInit 不会再跑；靠这一点，<code>while(RNG_Init())</code> 里的重试不会反复开时钟。</li>
+                            <li><code>HAL_RNG_Init</code> 的返回值在本工程里<strong>被忽略了</strong>：真正决定成败的是后面的 DRDY 轮询，因为 RNGEN 置位并不代表能出数。</li>
+                            <li>10000 × 10µs ≈ 100ms 是“硬件起不来”的兜底：正常情况第一个循环判断时 DRDY 就已经是 SET，几乎不等待。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="等待 DRDY 与读取 DR">
+                    <h2>10　等待 DRDY 与读取 DR</h2>
+                    <div class="sec-sub">HAL 版的取数只有三步：等 DRDY、读 DR、解锁</div>
+
+                    <figure class="figure">
+                        <img src="./index31-map/rng-flow.png" alt="HAL_RNG_GetRandomNumber 内部取数流程图">
+                        <figcaption>图 10-1　HAL_RNG_GetRandomNumber 的完整分支</figcaption>
+                    </figure>
+
+<pre class="code">HAL_StatusTypeDef HAL_RNG_GenerateRandomNumber(RNG_HandleTypeDef *hrng, uint32_t *random32bit)  <span class="cmt">// 生成一个 32 位随机数</span>
+{
+  uint32_t tickstart = 0;                       <span class="cmt">// 记录起始时刻，用于超时判断</span>
+  HAL_StatusTypeDef status = HAL_OK;            <span class="cmt">// 默认返回成功</span>
+
+  __HAL_LOCK(hrng);                             <span class="cmt">// 加锁防重入</span>
+
+  if(hrng-&gt;State == HAL_RNG_STATE_READY)          <span class="cmt">// 已初始化才允许取数</span>
+  {
+    hrng-&gt;State = HAL_RNG_STATE_BUSY;           <span class="cmt">// 置为忙状态</span>
+
+    tickstart = HAL_GetTick();                    <span class="cmt">// 记录进入时刻（ms）</span>
+
+    while(__HAL_RNG_GET_FLAG(hrng, RNG_FLAG_DRDY) == RESET)   <span class="cmt">// 等 SR 的 bit0</span>
+    {
+      if((HAL_GetTick() - tickstart ) &gt; RNG_TIMEOUT_VALUE)    <span class="cmt">// 宏值 2，单位 ms</span>
+      {
+        hrng-&gt;State = HAL_RNG_STATE_ERROR;      <span class="cmt">// 超时置错误态</span>
+        __HAL_UNLOCK(hrng);                     <span class="cmt">// 解锁</span>
+        return HAL_TIMEOUT;                     <span class="cmt">// 返回超时</span>
+      }                                         <span class="cmt">// 超时分支结束</span>
+    }                                           <span class="cmt">// 等待 DRDY 循环结束</span>
+
+    hrng-&gt;RandomNumber = hrng-&gt;Instance-&gt;DR;      <span class="cmt">// 读 DR，硬件自动清 DRDY</span>
+    *random32bit = hrng-&gt;RandomNumber;           <span class="cmt">// 通过指针返回给调用者</span>
+
+    hrng-&gt;State = HAL_RNG_STATE_READY;          <span class="cmt">// 恢复就绪状态</span>
+  }
+  else
+  {
+    status = HAL_ERROR;                           <span class="cmt">// 状态不对：没初始化或上次超时</span>
+  }
+
+  __HAL_UNLOCK(hrng);                            <span class="cmt">// 解锁</span>
+  return status;                                 <span class="cmt">// 返回最终状态</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：2ms 的超时窗口由 SysTick 决定</div>
+                        <ol>
+                            <li><code>RNG_TIMEOUT_VALUE</code> 在 <code>stm32f4xx_hal_rng.c</code> 里定义为 <strong>2</strong>，单位是 ms，判断依据是 <code>HAL_GetTick()</code> 的 1ms 计数。</li>
+                            <li>硬件产生一个数只需要几十个 PLL48CLK 周期，所以正常情况下 <code>while</code> 一次都不会进；这个超时只在时钟异常时生效。</li>
+                            <li>一旦超时，State 被置成 <code>HAL_RNG_STATE_ERROR</code>，<strong>之后每次调用都会直接返回 HAL_ERROR</strong>，直到重新 HAL_RNG_Init。这是本实验最隐蔽的一个状态陷阱。</li>
+                            <li>读 DR 这个动作本身就会清 DRDY，所以循环里不需要写任何清标志的代码；也不需要软件拼接，一次就是 32 位。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="取数与区间映射">
+                    <h2>11　取数与区间映射</h2>
+                    <div class="sec-sub">32 位随机数直接显示；[0,9] 用取模截断</div>
+
+                    <p><code class="inline">rng.c</code> 把库函数包成了两个语义清晰的接口：一个要原始 32 位数，一个要区间内的整数。</p>
+
+<pre class="code">u32 RNG_Get_RandomNum(void)                     <span class="cmt">// 获取 32 位随机数的业务封装</span>
+{
+    return HAL_RNG_GetRandomNumber(&amp;RNG_Handler);   <span class="cmt">// 返回 32 位随机数</span>
+}
+
+int RNG_Get_RandomRange(int min,int max)        <span class="cmt">// 获取 [min,max] 区间内的随机整数</span>
+{
+   return HAL_RNG_GetRandomNumber(&amp;RNG_Handler)%(max-min+1) +min;  <span class="cmt">// 取模后平移</span>
+}
+
+<span class="cmt">/* 库里的“取数”封装：把状态机翻译成数值 */</span>
+uint32_t HAL_RNG_GetRandomNumber(RNG_HandleTypeDef *hrng)  <span class="cmt">/* 库函数：取数并直接返回数值 */</span>
+{
+  if(HAL_RNG_GenerateRandomNumber(hrng, &amp;(hrng-&gt;RandomNumber)) == HAL_OK)
+  {
+    return hrng-&gt;RandomNumber;                 <span class="cmt">// 生成成功，返回随机数</span>
+  }
+  else
+  {
+    return 0;        <span class="cmt">// 失败也返回 0，调用者无法分辨</span>
+  }                                            <span class="cmt">// 失败分支结束</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：两个接口共享一个句柄</div>
+                        <ol>
+                            <li>两个函数都读同一个 <code>RNG_Handler</code>，每调用一次就消耗硬件产生的一个数，不存在“读缓存”的行为。</li>
+                            <li>失败被吞成 <strong>0</strong>：屏幕上出现 0 时，无法区分“真随机到 0”和“取数失败”，这是这份代码最需要注意的地方。</li>
+                            <li><code>%(max-min+1)+min</code> 是标准取模映射：[0,9] 时 <code>max-min+1 = 10</code>，结果落在 0~9。</li>
+                            <li>取模会带来极小的偏差：2³² = 4294967296，除以 10 余 6，意味着 0~5 被多映射一次，相对偏差约 1.4×10⁻⁹，屏幕上完全看不出来。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="主循环与实验现象">
+                    <h2>12　主循环与实验现象</h2>
+                    <div class="sec-sub">两个互不干扰的分支：按键取 32 位数，节拍到取 [0,9] 并翻转 DS0</div>
+
+                    <figure class="figure">
+                        <img src="./index31-map/main-loop.png" alt="主循环一轮的时序与分支示意图">
+                        <figcaption>图 12-1　主循环一轮的五个步骤与两个分支</figcaption>
+                    </figure>
+
+<pre class="code">    while(1)                                    <span class="cmt">// 主循环，程序永不退出</span>
+    {                                           <span class="cmt">// 循环体开始</span>
+        delay_ms(10);                          <span class="cmt">// ① 轮首延时</span>
+		key=KEY_Scan(0);                       <span class="cmt">// ② 扫描按键，不支持连按</span>
+		if(key==KEY0_PRES)                     <span class="cmt">// ③ KEY0_PRES 定义为 1</span>
+		{                                       <span class="cmt">// 按键分支开始</span>
+			random=RNG_Get_RandomNum();        <span class="cmt">// 获得随机数（32 位）</span>
+			LCD_ShowNum(30+8*11,180,random,10,16); <span class="cmt">// x=118，10 位宽，16 号字</span>
+		}                                       <span class="cmt">// 按键分支结束</span>
+		if((t%20)==0)                          <span class="cmt">// 每 20 轮（约 400ms）触发一次</span>
+		{                                       <span class="cmt">// 节拍分支开始</span>
+			LED0=!LED0;	                       <span class="cmt">// 每200ms,翻转一次LED0</span>   <span class="cmt">/* 注释与实测节拍不一致，见 14 节 */</span>
+			random=RNG_Get_RandomRange(0,9);   <span class="cmt">// 获取[0,9]区间的随机数</span>
+			LCD_ShowNum(30+8*16,210,random,1,16); <span class="cmt">// x=158，1 位宽</span>
+		}                                       <span class="cmt">// 节拍分支结束</span>
+		delay_ms(10);                          <span class="cmt">// ④ 轮尾再延时</span>
+		t++;                                   <span class="cmt">// ⑤ u8 自增，255 之后回绕到 0</span>
+	}                                           <span class="cmt">// 循环体结束</span></pre>
+
+                    <table class="data">
+                        <tr><th>屏幕位置</th><th>内容</th><th>更新条件</th></tr>
+                        <tr><td>(30, 50) ~ (30, 110)</td><td>Apollo STM32F4/F7 / RNG TEST / ATOM@ALIENTEK / 2016/1/27</td><td>上电写一次，之后不变</td></tr>
+                        <tr><td>(30, 130)</td><td>RNG Ready!（失败时先闪 RNG Error! / RNG Trying...）</td><td>RNG_Init 返回 0</td></tr>
+                        <tr><td>(30, 150)</td><td>KEY0:Get Random Num</td><td>固定标签</td></tr>
+                        <tr><td>(30, 180) 右侧 x=118</td><td>Random Num: 后面跟 32 位十进制数</td><td>KEY0 按下</td></tr>
+                        <tr><td>(30, 210) 右侧 x=158</td><td>Random Num[0-9]: 后面跟 1 位数</td><td>t%20 == 0</td></tr>
+                        <tr><td>DS0（PB1）</td><td>亮 / 灭交替</td><td>t%20 == 0，约 400ms 一次</td></tr>
+                    </table>
+
+                    <p>下表把源码里的分支逐条映射成可点击的操作，<strong>仅演示判断逻辑</strong>，数值由浏览器随机生成，不代表真实硬件输出。</p>
+
+                    <div class="sim">
+                        <div class="sim-title">主循环分支演示（对应 while(1) 里的 if(key==KEY0_PRES) 与 if((t%20)==0)）</div>
+                        <div class="sim-buttons">
+                            <button data-key="key0">KEY0 按下（取 32 位数）</button>
+                            <button data-key="loop">走一轮主循环（t++）</button>
+                            <button data-key="reset">复位（t=0）</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot0"></span>DS0（PB1）</div>
+                            <div class="led-item">t = <span class="val" id="simT">0</span></div>
+                            <div class="led-item">Random Num = <span class="val" id="simNum">—</span></div>
+                            <div class="led-item">Num[0-9] = <span class="val" id="simRange">—</span></div>
+                        </div>
+                        <div class="sim-log" id="simLog">等待操作：点“走一轮主循环”等效于 while(1) 执行一轮。</div>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：坐标与移位都是算出来的</div>
+                        <ol>
+                            <li><code>30+8*11</code> 的 8 是 16 号字的半宽，11 是标签 <code>"Random Num:"</code> 的字符数，所以数字正好接在冒号后面，不会盖住标签。</li>
+                            <li><code>LCD_ShowNum(x,y,num,len,size)</code> 会把前导零画成空格，len 内每一列都会重画，所以 32 位数的位数变化不会留下残影。</li>
+                            <li>两个 <code>if</code> 是并列关系，不是 else-if：一次循环里同时按键且节拍到点时，两个数字都会更新。</li>
+                            <li>两次 <code>delay_ms(10)</code> 让一轮至少 20ms，<code>t%20==0</code> 因此约 400ms 触发一次；<code>t</code> 是 u8，255→0 回绕时 0%20==0 仍成立，节奏不断。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘">
+                    <h2>13　关键逻辑复盘</h2>
+                    <div class="sec-sub">把散落在各节的“文件 + 函数 + 关键语句”串成一条可核对的链</div>
+
+                    <table class="data">
+                        <tr><th>阶段</th><th>文件 / 函数</th><th>关键语句</th><th>状态变化</th></tr>
+                        <tr><td>复位</td><td><code>startup_stm32f429xx.s</code></td><td><code>DCD __initial_sp</code> / <code>DCD Reset_Handler</code></td><td>MSP ← 栈顶，PC ← Reset_Handler</td></tr>
+                        <tr><td>默认时钟</td><td><code>system_stm32f4xx.c</code> → <code>SystemInit</code></td><td><code>RCC-&gt;CFGR = 0x00000000</code></td><td>HSI 16MHz，VTOR = 0x08000000</td></tr>
+                        <tr><td>时基</td><td><code>stm32f4xx_hal.c</code> → <code>HAL_Init</code></td><td><code>HAL_InitTick(0x0F)</code></td><td>SysTick 1ms，LOAD = 16000</td></tr>
+                        <tr><td>切频</td><td><code>sys.c</code> → <code>Stm32_Clock_Init</code></td><td><code>APB1CLKDivider=RCC_HCLK_DIV4</code>、<code>FLASH_LATENCY_5</code></td><td>SYSCLK/HCLK 180MHz，PLL48 45MHz，LOAD = 180000</td></tr>
+                        <tr><td>延时基准</td><td><code>delay.c</code> → <code>delay_init</code></td><td><code>fac_us=SYSCLK</code></td><td>1µs = 180 节拍</td></tr>
+                        <tr><td>串口</td><td><code>usart.c</code> → <code>uart_init</code> / <code>fputc</code></td><td><code>USART1-&gt;DR = (u8) ch</code></td><td>printf 可用</td></tr>
+                        <tr><td>板级</td><td><code>led.c</code> / <code>key.c</code> / <code>sdram.c</code> / <code>lcd.c</code></td><td><code>HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,GPIO_PIN_SET)</code></td><td>DS0 灭，KEY0 可读，显存就绪</td></tr>
+                        <tr><td>RNG 时钟</td><td><code>rng.c</code> → <code>HAL_RNG_MspInit</code></td><td><code>__HAL_RCC_RNG_CLK_ENABLE()</code></td><td>RCC-&gt;AHB2ENR bit6 = 1</td></tr>
+                        <tr><td>RNG 使能</td><td><code>stm32f4xx_hal_rng.c</code> → <code>HAL_RNG_Init</code></td><td><code>__HAL_RNG_ENABLE(hrng)</code></td><td>CR = 0x04，State = READY</td></tr>
+                        <tr><td>首数就绪</td><td><code>rng.c</code> → <code>RNG_Init</code></td><td><code>__HAL_RNG_GET_FLAG(...,RNG_FLAG_DRDY)</code></td><td>SR bit0 = 1（retry &lt; 10000）</td></tr>
+                        <tr><td>取数</td><td><code>stm32f4xx_hal_rng.c</code> → <code>HAL_RNG_GenerateRandomNumber</code></td><td><code>hrng-&gt;Instance-&gt;DR</code></td><td>DR 读走，DRDY 自动清 0</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：三条不可逆的顺序依赖</div>
+                        <ol>
+                            <li><strong>HAL_Init → 一切延时</strong>：没有 1ms 时基，<code>delay_us</code> 会读到一个永不重装的 SysTick，直接死循环。</li>
+                            <li><strong>Stm32_Clock_Init → RNG_Init</strong>：PLL48CLK 是 RNG 的时钟源，顺序反了 DRDY 永远不来，RNG_Init 返回 1。</li>
+                            <li><strong>RNG_Init → 任何取数</strong>：State 必须从 RESET 走到 READY，否则 <code>HAL_RNG_GenerateRandomNumber</code> 直接返回 HAL_ERROR，再被上层吞成 0。</li>
+                            <li>整个链路里没有任何中断参与，所以这三条依赖都是纯粹的代码顺序问题，改动 main 的初始化顺序就会立刻破坏它们。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="总结与排查">
+                    <h2>14　总结与排查</h2>
+                    <div class="sec-sub">能跑通的关键只有两句：时钟对了，状态机对了</div>
+
+                    <p>把整个实验压缩成一句话：<strong>SystemInit 把时钟退回 16MHz → HAL_Init 立起 1ms 时基 → Stm32_Clock_Init 切到 180MHz 并顺带把 PLL48CLK 配成 45MHz → RNG_Init 打开 AHB2 时钟与 CR.RNGEN 并等一次 DRDY → 主循环轮询取数</strong>。
+                        随机数本身由硬件产生，软件只负责使能、等待和搬运。</p>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>最可能的原因</th><th>定位文件 / 语句</th></tr>
+                        <tr><td>屏幕一直停在 RNG Error!</td><td>PLL48CLK 没起来，或 AHB2ENR 没置位</td><td><code>rng.c</code> 的 retry 计数 / <code>HAL_RNG_MspInit</code></td></tr>
+                        <tr><td>数字一直是 0，按键也没变化</td><td>DRDY 等不到，HAL 返回 TIMEOUT 被吞成 0；State 已变 ERROR</td><td><code>HAL_RNG_GetRandomNumber</code> 的 <code>return 0</code></td></tr>
+                        <tr><td>DS0 不闪</td><td>t%20 分支没进，或 LED0 宏指向的引脚与实际不符</td><td><code>led.c</code> 的 <code>GPIO_PIN_1</code> / <code>sys.h</code> 的 LED0</td></tr>
+                        <tr><td>按键无反应</td><td>KEY_Init 未执行，或 KEY_Scan 的 key_up 未复位</td><td><code>key.c</code> 的 <code>key_up</code> 静态变量</td></tr>
+                        <tr><td>屏幕花屏或无显示</td><td>SDRAM / LTDC 初始化顺序被打乱</td><td><code>main.c</code> 中 <code>SDRAM_Init()</code> 必须在 <code>LCD_Init()</code> 之前</td></tr>
+                        <tr><td>串口没有 printf 输出</td><td>uart_init 未调用，或 fputc 被 MicroLIB 选项裁剪</td><td><code>usart.c</code> 的 <code>#if 1</code> 段</td></tr>
+                    </table>
+
+                    <div class="note">源码里有三处与注释 / 直觉不一致，值得单独记一笔：
+                        <br>① <code>LED0=!LED0;</code> 后面的注释写“每200ms”，但一轮循环有两次 <code>delay_ms(10)</code>，<code>t%20==0</code> 实际约 400ms 一次；
+                        <br>② RNG_Init 失败分支里两条 LCD 文字之间只隔一个 <code>delay_ms(200)</code>，而 “RNG Trying...” 之后立刻回到 while 条件，实际观感是“Error!”常亮、“Trying...”一闪而过；
+                        <br>③ <code>RNG_Get_RandomNum()</code> 失败时返回 0，与真实的随机数 0 无法区分，代码里没有任何错误提示。</div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑：排查时先看状态，再看数据</div>
+                        <ol>
+                            <li>先确认 <code>State</code>：一旦进过 ERROR，除非重新 HAL_RNG_Init，否则永远不会再出数——这比时钟问题更容易被忽略。</li>
+                            <li>再确认 <code>RCC-&gt;AHB2ENR</code> 的 bit6 与 <code>RNG-&gt;CR</code> 的 bit2，两位都为 1 才具备出数条件。</li>
+                            <li>最后才怀疑随机数质量：这是硬件 TRNG，不需要软件做种子或混洗，代码里也确实没有 srand 之类的调用。</li>
+                        </ol>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-10 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示：对应 while(1) 里的两个条件分支 =====
+    var dot0 = document.getElementById('dot0');
+    var simLog = document.getElementById('simLog');
+    var simT = document.getElementById('simT');
+    var simNum = document.getElementById('simNum');
+    var simRange = document.getElementById('simRange');
+
+    if (dot0 && simLog && simT) {
+        var t = 0;
+        var led0On = false;
+        var num = null;
+        var range = null;
+
+        function render(msg) {
+            dot0.classList.toggle('on', led0On);
+            simT.textContent = t;
+            simNum.textContent = (num === null) ? '—' : num;
+            simRange.textContent = (range === null) ? '—' : range;
+            simLog.textContent = msg;
+        }
+
+        function oneLoop() {
+            var fired = (t % 20) === 0;   // 源码：if((t%20)==0)，用的是自增前的 t
+            var msg = '第 ' + t + ' 轮：KEY_Scan 返回 0，两个 if 都不成立';
+            if (fired) {
+                led0On = !led0On;
+                range = String(Math.floor(Math.random() * 10));
+                msg = '第 ' + t + ' 轮：t%20==0 成立，LED0 翻转，RNG_Get_RandomRange(0,9) = ' + range;
+            }
+            t = t + 1;                    // 源码：delay_ms(10); t++;
+            render(msg + '。本轮结束，t 变为 ' + t);
+        }
+
+        var handlers = {
+            key0: function () {
+                num = String(Math.floor(Math.random() * 4294967296));
+                render('KEY0 按下：random = RNG_Get_RandomNum() = ' + num + '，LCD_ShowNum(118,180,...,10,16)');
+            },
+            loop: oneLoop,
+            reset: function () {
+                t = 0;
+                led0On = false;
+                num = null;
+                range = null;
+                render('已复位：t = 0，DS0 灭，两个数值清空');
+            }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+            });
+        });
+
+        render('等待操作：点“走一轮主循环”等效于 while(1) 执行一轮。');
+    }
+</script>
+</body>
+</html>

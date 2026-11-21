@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            height: 110vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 12px 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+
+        .header h1 {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 400;
+            margin-bottom: 16px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-btn:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .nav-btn.active {
+            background-color: #fff;
+            color: #667eea;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .content {
+            flex: 1;
+            position: relative;
+            overflow-y: auto;
+            margin: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            background-color: #fff;
+        }
+
+        .page-content {
+            display: none;
+            padding: 24px;
+            min-height: 100%;
+        }
+
+        .page-content.active {
+            display: block;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 12px;
+        }
+
+        .search-input {
+            padding: 10px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 200px;
+            transition: border-color 0.3s;
+        }
+
+        .sql-input {
+            padding: 10px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 400px;
+            transition: border-color 0.3s;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-select {
+            padding: 10px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 180px;
+            transition: border-color 0.3s;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        .db-select, .table-select {
+            padding: 10px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 180px;
+            transition: border-color 0.3s;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        .search-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-btn {
+            padding: 10px 24px;
+            background-color: #667eea;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .search-btn:hover {
+            background-color: #5a6fd6;
+        }
+
+        .table-container {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        th {
+            background-color: #f8f9fc;
+            font-weight: 600;
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            color: #333;
+            font-size: 14px;
+        }
+
+        tr:hover {
+            background-color: #f8f9fc;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .db-section {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .db-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .db-section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .db-section-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .table-stats {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table-stats th, .table-stats td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .table-stats th {
+            background-color: #f8f9fc;
+            font-weight: 600;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .table-stats td {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .table-row-count {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .empty-stats {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: -3px;
+            height: calc(100vh - 250px);
+            /*min-height: 400px;*/
+        }
+
+        .stat-square.merged {
+            grid-row: span 2;
+            min-height: calc(100% + 30px);
+        }
+
+        .stat-square.merged2 {
+            grid-row: span 2;
+            min-height: calc(100% + 30px);
+        }
+
+        .stat-square.taller {
+            min-height: calc(100% + 30px);
+        }
+
+        .stat-square {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-number {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-title {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .stat-content {
+            padding: 40px 12px 12px;
+            height: calc(100% + 20px);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pie-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            padding: 16px;
+            gap: 0px;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .pie-item {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            padding: 8px;
+            gap: 12px;
+        }
+
+        .pie-info {
+            text-align: left;
+        }
+
+        .pie-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .pie-detail {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .course-bar-container {
+            margin-bottom: 12px;
+        }
+
+        .course-name {
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .bar-row {
+            margin-bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bar-label {
+            font-size: 12px;
+            color: #666;
+            width: 60px;
+            flex-shrink: 0;
+            font-weight: 500;
+        }
+
+        .bar-wrapper {
+            flex: 1;
+            height: 18px;
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+
+        .pass-rate {
+            background-color: #28a745;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            transition: width 0.5s ease;
+            min-width: 40px;
+        }
+
+        .fail-rate {
+            background-color: #dc3545;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            transition: width 0.5s ease;
+            min-width: 40px;
+        }
+
+
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 12px 16px;
+            }
+
+            .header h1 {
+                font-size: 16px;
+                margin-bottom: 12px;
+            }
+
+            .nav-btn {
+                padding: 8px 16px;
+                font-size: 12px;
+            }
+
+            .content {
+                margin: 8px;
+            }
+
+            .page-header {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .search-input, .sql-input {
+                width: 100%;
+            }
+
+            th, td {
+                padding: 12px 8px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📚 学生管理系统</h1>
+        <div class="nav-buttons">
+            <button class="nav-btn active" onclick="switchPage('page1')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                数据库查询
+            </button>
+            <button class="nav-btn" onclick="switchPage('page2')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                数据库统计
+            </button>
+            <button class="nav-btn" onclick="openDatabaseManagement()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                数据库管理
+            </button>
+        </div>
+    </div>
+    <div class="content">
+        <div id="page1" class="page-content active">
+            <div class="page-header">
+                <div class="page-title">👥 学生列表</div>
+                <div class="search-box">
+                    <select class="search-select" id="dbSelect" onchange="loadTables()">
+                        <option value="">选择数据库</option>
+                    </select>
+                    <select class="search-select" id="tableSelect" onchange="fillSqlQuery()">
+                        <option value="">选择表</option>
+                    </select>
+                    <input type="text" class="sql-input" id="sqlQuery" placeholder="输入SQL查询语句">
+                    <button class="search-btn" onclick="executeSqlQuery()">查询</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="queryResultTable">
+                    <thead>
+                        <tr>
+                            <th colspan="100" style="text-align: center;">请选择数据库和表，输入SQL查询语句后点击查询</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="page2" class="page-content">
+            <div class="page-header">
+                <div class="page-title">📊 数据库统计</div>
+                <div class="search-section">
+                    <select class="db-select" id="dbSelect2" onchange="loadTables2()">
+                        <option value="">选择数据库</option>
+                    </select>
+                    <select class="table-select" id="tableSelect2" onchange="fillSqlQuery2()">
+                        <option value="">选择表</option>
+                    </select>
+                    <input type="text" class="sql-input" id="sqlQuery2" placeholder="输入SQL查询语句">
+                    <button class="search-btn" onclick="loadDatabaseStats()">刷新统计</button>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-square merged" id="statSquare1">
+                    <div class="stat-title">及格率(方块图)</div>
+                    <div class="stat-content" id="content1"></div>
+                </div>
+                <div class="stat-square merged2" id="statSquare2">
+                    <div class="stat-title">及格率(饼状图)</div>
+                    <div class="stat-content" id="content2"></div>
+                </div>
+                <div class="stat-square" id="statSquare3">
+                    <div class="stat-title">正态分布</div>
+                    <div class="stat-content" id="content3"></div>
+                </div>
+                <div class="stat-square taller" id="statSquare6">
+                    <div class="stat-title">统计值</div>
+                    <div class="stat-content" id="content4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', function() {
+            loadDatabases();
+        });
+
+        function switchPage(pageId) {
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            document.getElementById(pageId).classList.add('active');
+            event.target.classList.add('active');
+
+            if (pageId === 'page2') {
+                loadDatabases2();
+                loadDatabaseStats();
+            }
+        }
+
+        function loadDatabases() {
+            fetch('api.php?action=listDatabases')
+                .then(response => response.json())
+                .then(data => {
+                    const dbSelect = document.getElementById('dbSelect');
+                    dbSelect.innerHTML = '<option value="">选择数据库</option>';
+                    if (data.success && data.data) {
+                        data.data.forEach(db => {
+                            const option = document.createElement('option');
+                            option.value = db;
+                            option.textContent = db;
+                            dbSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('加载数据库列表失败:', error);
+                });
+        }
+
+        function loadTables() {
+            const dbName = document.getElementById('dbSelect').value;
+            const tableSelect = document.getElementById('tableSelect');
+            tableSelect.innerHTML = '<option value="">选择表</option>';
+            
+            if (!dbName) return;
+            
+            fetch(`api.php?action=listTables&dbName=${encodeURIComponent(dbName)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        data.data.forEach(table => {
+                            const option = document.createElement('option');
+                            option.value = table;
+                            option.textContent = table;
+                            tableSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('加载表列表失败:', error);
+                });
+        }
+
+        function fillSqlQuery() {
+            const tableName = document.getElementById('tableSelect').value;
+            const sqlQuery = document.getElementById('sqlQuery');
+            if (tableName) {
+                sqlQuery.value = `SELECT * FROM ${tableName}`;
+            } else {
+                sqlQuery.value = '';
+            }
+        }
+
+        function loadDatabases2() {
+            fetch('api.php?action=listDatabases')
+                .then(response => response.json())
+                .then(data => {
+                    const dbSelect = document.getElementById('dbSelect2');
+                    dbSelect.innerHTML = '<option value="">选择数据库</option>';
+                    if (data.success && data.data) {
+                        data.data.forEach(db => {
+                            const option = document.createElement('option');
+                            option.value = db;
+                            option.textContent = db;
+                            dbSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('加载数据库列表失败:', error);
+                });
+        }
+
+        function loadTables2() {
+            const dbName = document.getElementById('dbSelect2').value;
+            const tableSelect = document.getElementById('tableSelect2');
+            tableSelect.innerHTML = '<option value="">选择表</option>';
+            
+            if (!dbName) return;
+            
+            fetch(`api.php?action=listTables&dbName=${encodeURIComponent(dbName)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        data.data.forEach(table => {
+                            const option = document.createElement('option');
+                            option.value = table;
+                            option.textContent = table;
+                            tableSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('加载表列表失败:', error);
+                });
+        }
+
+        function fillSqlQuery2() {
+            const tableName = document.getElementById('tableSelect2').value;
+            const sqlQuery = document.getElementById('sqlQuery2');
+            if (tableName) {
+                sqlQuery.value = `SELECT * FROM ${tableName}`;
+            } else {
+                sqlQuery.value = '';
+            }
+        }
+
+        function executeSqlQuery() {
+            const dbName = document.getElementById('dbSelect').value;
+            const sql = document.getElementById('sqlQuery').value.trim();
+            
+            if (!dbName) {
+                alert('请先选择数据库');
+                return;
+            }
+            
+            if (!sql) {
+                alert('请输入SQL查询语句');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('dbName', dbName);
+            formData.append('sql', sql);
+            
+            fetch('api.php?action=query', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        renderTable(data.data.columns, data.data.data);
+                    } else {
+                        alert('查询失败: ' + (data.message || '未知错误'));
+                    }
+                })
+                .catch(error => {
+                    console.error('执行查询失败:', error);
+                    alert('查询失败: ' + error.message);
+                });
+        }
+
+        function renderTable(columns, data) {
+            const table = document.getElementById('queryResultTable');
+            const thead = table.querySelector('thead');
+            const tbody = table.querySelector('tbody');
+            
+            let headerHtml = '<tr>';
+            columns.forEach(col => {
+                headerHtml += `<th>${col}</th>`;
+            });
+            headerHtml += '</tr>';
+            thead.innerHTML = headerHtml;
+            
+            let bodyHtml = '';
+            if (data.length === 0) {
+                bodyHtml = '<tr><td colspan="' + columns.length + '" style="text-align: center;">暂无数据</td></tr>';
+            } else {
+                data.forEach(row => {
+                    bodyHtml += '<tr>';
+                    columns.forEach(col => {
+                        const value = row[col] !== undefined ? row[col] : '';
+                        bodyHtml += `<td>${value}</td>`;
+                    });
+                    bodyHtml += '</tr>';
+                });
+            }
+            tbody.innerHTML = bodyHtml;
+        }
+
+        function loadDatabaseStats() {
+            const dbName = document.getElementById('dbSelect2').value;
+            const sql = document.getElementById('sqlQuery2').value.trim();
+            const content1 = document.getElementById('content1');
+            const content2 = document.getElementById('content2');
+            const content3 = document.getElementById('content3');
+            const content4 = document.getElementById('content4');
+            
+            if (!dbName) {
+                content1.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">请先选择数据库</div>';
+                content2.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">请先选择数据库</div>';
+                content3.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">请先选择数据库</div>';
+                content4.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">请先选择数据库</div>';
+                return;
+            }
+            
+            if (!sql) {
+                content1.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">请输入SQL查询语句</div>';
+                content2.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">请输入SQL查询语句</div>';
+                content3.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">请输入SQL查询语句</div>';
+                content4.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">请输入SQL查询语句</div>';
+                return;
+            }
+            
+            fetch('api.php?action=query', {
+                method: 'POST',
+                body: new URLSearchParams({
+                    dbName: dbName,
+                    sql: sql
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data && data.data.data.length > 0) {
+                    const records = data.data.data;
+                    const columns = Object.keys(records[0]);
+                    
+                    const scoreSubjects = ['语文', '数学', '英语', '化学', '生物', '物理'];
+                    const existingSubjects = scoreSubjects.filter(subject => columns.includes(subject));
+                    
+                    if (existingSubjects.length === 0) {
+                        content1.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">未找到成绩字段（语文、数学、英语、化学、生物、物理）</div>';
+                        content2.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">未找到成绩字段</div>';
+                        content3.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">未找到成绩字段</div>';
+                        content4.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">未找到成绩字段</div>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    let pieHtml = '<div class="pie-container">';
+                    
+                    existingSubjects.forEach(subject => {
+                        const passThreshold = ['语文', '数学', '英语'].includes(subject) ? 90 : 60;
+                        const passCount = records.filter(r => {
+                            const score = parseFloat(r[subject]);
+                            return !isNaN(score) && score >= passThreshold;
+                        }).length;
+                        const totalCount = records.filter(r => {
+                            const score = parseFloat(r[subject]);
+                            return !isNaN(score);
+                        }).length;
+                        const failCount = totalCount - passCount;
+                        const passRate = totalCount > 0 ? Math.round((passCount / totalCount) * 100) : 0;
+                        const failRate = 100 - passRate;
+                        
+                        html += `
+                            <div class="course-bar-container">
+                                <div class="course-name">${subject}</div>
+                                <div class="bar-row">
+                                    <div class="bar-label">及格率</div>
+                                    <div class="bar-wrapper">
+                                        <div class="pass-rate" style="width: ${passRate}%;">${passRate}%</div>
+                                    </div>
+                                </div>
+                                <div class="bar-row">
+                                    <div class="bar-label">不及格率</div>
+                                    <div class="bar-wrapper">
+                                        <div class="fail-rate" style="width: ${failRate}%;">${failRate}%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        pieHtml += `
+                            <div class="pie-item">
+                                <canvas id="pieChart_${subject}" width="120" height="120"></canvas>
+                                <div class="pie-info">
+                                    <div class="pie-title">${subject}</div>
+                                    <div class="pie-detail">总人数: ${totalCount}</div>
+                                    <div class="pie-detail">及格: ${passCount}人(${passRate}%)</div>
+                                    <div class="pie-detail">不及格: ${failCount}人(${failRate}%)</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    pieHtml += '</div>';
+                    
+                    content1.innerHTML = html;
+                    content2.innerHTML = pieHtml;
+                    
+                    content3.innerHTML = '<div style="display:flex;flex-direction:row;align-items:center;padding:5px;"><canvas id="normalChart" width="240" height="180"></canvas><div id="normalParams" style="margin-left:-2px;"></div></div>';
+                    
+                    const subjectColors = {'语文':'#e74c3c','数学':'#3498db','英语':'#2ecc71','物理':'#f39c12','化学':'#9b59b6','生物':'#1abc9c'};
+                    let statsHtml = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:8px;font-size:13px;">';
+                    const row1Subjects = ['语文', '数学', '英语'];
+                    const row2Subjects = ['物理', '化学', '生物'];
+                    [...row1Subjects, ...row2Subjects].forEach(subject => {
+                        if (!columns.includes(subject)) return;
+                        const scores = records.map(r => parseFloat(r[subject])).filter(s => !isNaN(s));
+                        if (scores.length === 0) return;
+                        const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+                        const max = Math.max(...scores);
+                        const min = Math.min(...scores);
+                        const range = max - min;
+                        const color = subjectColors[subject] || '#333';
+                        statsHtml += `<div style="border:1px solid #ddd;border-radius:3px;padding:5px;text-align:center;color:${color};"><strong>${subject}</strong><br/>平均: ${avg.toFixed(1)}<br/>最高: ${max}<br/>最低: ${min}<br/>级差: ${range}</div>`;
+                    });
+                    statsHtml += '</div>';
+                    content4.innerHTML = statsHtml;
+                    
+                    setTimeout(() => {
+                        existingSubjects.forEach(subject => {
+                            const passThreshold = ['语文', '数学', '英语'].includes(subject) ? 90 : 60;
+                            const passCount = records.filter(r => {
+                                const score = parseFloat(r[subject]);
+                                return !isNaN(score) && score >= passThreshold;
+                            }).length;
+                            const totalCount = records.filter(r => {
+                                const score = parseFloat(r[subject]);
+                                return !isNaN(score);
+                            }).length;
+                            const passRate = totalCount > 0 ? Math.round((passCount / totalCount) * 100) : 0;
+                            drawPieChart(`pieChart_${subject}`, passRate);
+                        });
+                        
+                        drawNormalDistribution(existingSubjects, records);
+                    }, 100);
+                } else {
+                    content1.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">暂无数据</div>';
+                    content2.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">暂无数据</div>';
+                    content3.innerHTML = '<div style="text-align: center; color: #999; padding-top: 20px;">暂无数据</div>';
+                }
+            })
+            .catch(error => {
+                console.error('加载及格率统计失败:', error);
+                content1.innerHTML = '<div style="text-align: center; color: #dc3545; padding-top: 20px;">加载失败: ' + error.message + '</div>';
+                content2.innerHTML = '<div style="text-align: center; color: #dc3545; padding-top: 20px;">加载失败</div>';
+            });
+        }
+
+        function drawPieChart(canvasId, passRate) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(centerX, centerY) - 5;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const failRate = 100 - passRate;
+            const passAngle = (passRate / 100) * Math.PI * 2;
+            const failAngle = (failRate / 100) * Math.PI * 2;
+            
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + passAngle);
+            ctx.closePath();
+            ctx.fillStyle = '#28a745';
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, -Math.PI / 2 + passAngle, -Math.PI / 2);
+            ctx.closePath();
+            ctx.fillStyle = '#dc3545';
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 0.6, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${passRate}%`, centerX, centerY);
+        }
+
+        function drawNormalDistribution(subjects, records) {
+            const canvas = document.getElementById('normalChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            const colors = {
+                '语文': '#28a745',
+                '数学': '#dc3545',
+                '英语': '#17a2b8',
+                '物理': '#ffc107',
+                '化学': '#6f42c1',
+                '生物': '#fd7e14'
+            };
+            
+            const maxScores = {
+                '语文': 150,
+                '数学': 150,
+                '英语': 150,
+                '物理': 100,
+                '化学': 100,
+                '生物': 100
+            };
+            
+            const padding = 25;
+            const chartWidth = width - padding * 2;
+            const chartHeight = height - padding * 2;
+            
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = padding + (chartHeight / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+            }
+            
+            ctx.strokeStyle = '#ddd';
+            for (let i = 0; i <= 5; i++) {
+                const x = padding + (chartWidth / 5) * i;
+                ctx.beginPath();
+                ctx.moveTo(x, padding);
+                ctx.lineTo(x, height - padding);
+                ctx.stroke();
+            }
+            
+            ctx.fillStyle = '#666';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            for (let i = 0; i <= 5; i++) {
+                const x = padding + (chartWidth / 5) * i;
+                const percent = Math.round(20 * i);
+                ctx.fillText(percent + '%', x, height - 8);
+            }
+            
+            let paramsHtml = '';
+            
+            subjects.forEach(subject => {
+                const maxScore = maxScores[subject] || 100;
+                const scores = records.map(r => parseFloat(r[subject])).filter(s => !isNaN(s));
+                if (scores.length === 0) return;
+                
+                const normalizedScores = scores.map(s => (s / maxScore) * 100);
+                const mean = normalizedScores.reduce((a, b) => a + b, 0) / normalizedScores.length;
+                const variance = normalizedScores.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / normalizedScores.length;
+                const stdDev = Math.sqrt(variance);
+                
+                const actualMean = scores.reduce((a, b) => a + b, 0) / scores.length;
+                const actualStdDev = Math.sqrt(scores.reduce((a, b) => a + Math.pow(b - actualMean, 2), 0) / scores.length);
+                
+                ctx.strokeStyle = colors[subject] || '#333';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                let firstPoint = true;
+                for (let i = 0; i <= 100; i++) {
+                    const xVal = i;
+                    const yVal = (1 / (stdDev * Math.sqrt(2 * Math.PI))) * Math.exp(-Math.pow(xVal - mean, 2) / (2 * Math.pow(stdDev, 2)));
+                    
+                    const x = padding + (i / 100) * chartWidth;
+                    const y = height - padding - (yVal / 0.08) * chartHeight;
+                    
+                    if (y >= padding && y <= height - padding) {
+                        if (firstPoint) {
+                            ctx.moveTo(x, y);
+                            firstPoint = false;
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                }
+                ctx.stroke();
+                
+                paramsHtml += `<div style="font-size:12px;color:${colors[subject]};margin:3px 0;">${subject}(满分${maxScore}): μ=${actualMean.toFixed(1)}, σ=${actualStdDev.toFixed(1)}</div>`;
+            });
+            
+            document.getElementById('normalParams').innerHTML = paramsHtml;
+        }
+
+        function openDatabaseManagement() {
+            window.open('database_management.html', '_blank');
+        }
+
+    </script>
+</body>
+</html>

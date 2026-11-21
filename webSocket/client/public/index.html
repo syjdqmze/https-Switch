@@ -1,0 +1,2050 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebSocket 客服端</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+    .container { background: white; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 900px; display: flex; flex-direction: column; height: 80vh; overflow: hidden; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 24px; }
+    .status { display: flex; align-items: center; gap: 8px; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+    .status-dot.disconnected { background: #f87171; animation: none; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .reconnect-btn { background: transparent; border: none; color: white; font-size: 16px; cursor: pointer; padding: 4px; border-radius: 4px; }
+    .reconnect-btn:hover { background: rgba(255,255,255,0.2); }
+    .server-info { background: #f3f4f6; padding: 6px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+    .settings-btn { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; }
+    .settings-btn:hover { background: #e5e7eb; }
+    .main-content { flex: 1; display: flex; overflow: hidden; }
+    .sidebar { width: 280px; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column; }
+    .rooms-list { flex: 1; overflow-y: auto; padding: 10px; border: 2px solid #93c5fd; border-radius: 8px; margin: 10px; background: white; }
+    .room-item { padding: 12px 16px; border-radius: 8px; cursor: pointer; margin-bottom: 8px; transition: all 0.2s; border: 2px solid transparent; position: relative; }
+    .room-item:hover { background: #f3f4f6; }
+    .room-item.active { background: #eef2ff; border-color: #6366f1; }
+    .room-item.joined::after { content: ''; position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+    .room-item.flashing { animation: flash 1s ease-in-out infinite; border-color: #f59e0b; }
+    @keyframes flash { 0%,100% { background: #fffbeb; } 50% { background: #fef3c7; } }
+    .room-item h3 { font-size: 14px; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+    .room-item p { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .unread-badge { background: #ef4444; color: white; border-radius: 10px; padding: 2px 6px; font-size: 10px; font-weight: bold; min-width: 18px; text-align: center; }
+    .create-room-btn { margin: 10px; padding: 10px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .create-room-btn:hover { background: #4f46e5; }
+    .chat-area { flex: 1; display: flex; flex-direction: column; background: #f9fafb; }
+    .chat-header { padding: 16px 20px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+    .chat-header h2 { font-size: 18px; }
+    .leave-btn { padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    .leave-btn:hover { background: #dc2626; }
+    .action-btn { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; margin-right: 8px; }
+    .mic-btn { background: #f59e0b; color: white; }
+    .mic-btn:hover { background: #d97706; }
+    .mic-btn.disabled { background: #10b981; }
+    .mic-btn.disabled:hover { background: #059669; }
+    .video-btn { background: #8b5cf6; color: white; }
+    .video-btn:hover { background: #7c3aed; }
+    .video-btn.disabled { background: #10b981; }
+    .video-btn.disabled:hover { background: #059669; }
+    .screen-btn { background: #3b82f6; color: white; }
+    .screen-btn:hover { background: #2563eb; }
+    .screen-btn.disabled { background: #f59e0b; }
+    .chat-actions { display: flex; align-items: center; }
+    #screenShareContainer { position: relative; }
+    #screenShareContainer::before { content: '屏幕共享'; position: absolute; top: 8px; left: 8px; background: rgba(99, 102, 241, 0.9); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; z-index: 1; }
+    .speaking-indicator { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 12px; color: #10b981; }
+    .speaking-indicator .dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; animation: speaking 1s infinite; }
+    @keyframes speaking { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .volume-indicator { display: flex; align-items: center; gap: 2px; margin-left: 8px; }
+    .volume-bar { width: 3px; height: 12px; background: #10b981; border-radius: 2px; transition: height 0.1s; }
+    .volume-bar.active { background: #22c55e; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; border: 2px solid #93c5fd; border-radius: 8px; margin: 5px 5px 5px 5px; background: white; }
+    .message { display: flex; gap: 12px; max-width: 70%; }
+    .message.own { align-self: flex-end; flex-direction: row-reverse; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0; }
+    .message.own .avatar { background: #10b981; }
+    .message-content { flex: 1; max-width: calc(100% - 48px); }
+    .message-header { display: flex; gap: 8px; margin-bottom: 4px; font-size: 12px; }
+    .message-author { font-weight: 600; color: #1f2937; }
+    .message-time { color: #9ca3af; }
+    .message-text { background: white; padding: 10px 14px; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); white-space: pre-wrap; word-break: break-word; font-size: 14px; line-height: 1.5; }
+    .message.own .message-text { background: #eef2ff; }
+    .chat-input { padding: 5px 5px 5px 5px; background: white; border-top: 1px solid #e5e7eb; display: flex; gap: 12px; }
+    .chat-input textarea { flex: 1; padding: 12px 14px; border: 2px solid #93c5fd; border-radius: 8px; font-size: 14px; resize: none; line-height: 1.5; min-height: 72px; max-height: 144px; background: white; }
+    .chat-input textarea:focus { outline: none; border-color: #6366f1; }
+    .chat-input button { padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; flex-shrink: 0; margin: 5px 0; height: 72px; }
+    .chat-input button:hover { background: #4f46e5; }
+    .auth-section { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
+    .auth-section h2 { font-size: 28px; margin-bottom: 8px; color: #1f2937; }
+    .auth-section p { color: #6b7280; margin-bottom: 24px; }
+    .auth-input { width: 100%; max-width: 300px; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 16px; margin-bottom: 16px; }
+    .auth-input:focus { outline: none; border-color: #6366f1; }
+    .auth-button { width: 100%; max-width: 300px; padding: 12px 16px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
+    .auth-button:hover { background: #4f46e5; }
+    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .modal.show { display: flex; }
+    .modal-content { background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; }
+    .modal-content h3 { margin-bottom: 16px; }
+    .modal-content input { width: 100%; padding: 10px 14px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
+    .modal-content input:focus { outline: none; border-color: #6366f1; }
+    .modal-content button { width: 100%; padding: 10px 14px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 8px; }
+    .modal-content button:hover { background: #4f46e5; }
+    .no-room-selected { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #9ca3af; }
+    .no-room-selected p { margin-top: 12px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>WebSocket 客服端</h1>
+      <div class="status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">已断开</span>
+        <button class="reconnect-btn" id="reconnectBtn" onclick="app.reconnect()" title="重新连接">🔄</button>
+      </div>
+    </div>
+    <div class="server-info" id="serverInfo">
+      <span>服务器: <span id="serverUrl">--</span></span>
+      <button class="settings-btn" onclick="app.showServerSettings()">⚙️</button>
+    </div>
+    <div class="main-content" id="mainContent">
+      <div class="auth-section" id="authSection">
+        <h2>欢迎使用客服系统</h2>
+        <p>请输入您的用户ID进行登录</p>
+        <input type="text" id="userIdInput" class="auth-input" placeholder="请输入用户ID">
+        <button class="auth-button" onclick="app.authenticate()">登录</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal" id="createRoomModal">
+    <div class="modal-content">
+      <h3>创建房间</h3>
+      <input type="text" id="roomNameInput" placeholder="房间名称">
+      <input type="text" id="roomTopicInput" placeholder="房间主题（可选）">
+      <button onclick="app.createRoom()">创建房间</button>
+      <button onclick="app.closeModal()" style="background:#9ca3af">取消</button>
+    </div>
+  </div>
+  <script>
+    const app = (() => {
+      let ws;
+      let currentUserId = '';
+      let currentRoomId = '';
+      let rooms = [];
+      let joinedRooms = new Set();
+      let roomMessages = {};
+      let unreadMessages = {};
+      let flashingRooms = new Set();
+      let roomPollingInterval = null;
+      let pendingJoinRoom = null;
+      let connectionAttempts = 0;
+      let maxReconnectAttempts = 10;
+      let isMicOn = false;
+      let isScreenSharing = false;
+      let mediaStream = null;
+      let audioContext = null;
+      let screenStream = null;
+      let audioAnalyser = null;
+      let volumeCheckInterval = null;
+      // WebRTC Connection Manager
+      let rtcConnections = new Map();
+      let rtcMediaStreams = new Map();
+      let localScreenTrack = null;
+      let negotiationTimers = new Map();
+      let localAudioTrack = null;
+      let roomMembers = new Set();
+      let lastRoomsHash = '';
+      const roomMembersCache = new Map();
+      const POLLING_INTERVAL = 5000;
+
+      const getServerUrl = () => {
+        const saved = localStorage.getItem('ws_server_url');
+        if (saved) return saved;
+        const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        if (isLocalhost) {
+          const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+          return `${protocol}//${location.host}/ws`;
+        }
+        if (location.protocol === 'file:') {
+          return 'ws://localhost:8081/ws';
+        }
+        return 'wss://www.studytech.cloud/ws';
+      };
+
+      let SERVER_URL = getServerUrl();
+
+      const log = (msg, data) => console.log('[Client]', msg, data || '');
+
+      const connect = () => {
+        if (ws?.readyState === WebSocket.OPEN) return;
+
+        connectionAttempts++;
+        if (connectionAttempts > maxReconnectAttempts) {
+          log('Max reconnect attempts reached. Please check server configuration.');
+          const statusText = document.getElementById('statusText');
+          if (statusText) {
+            statusText.textContent = '连接失败 - 点击⚙️配置服务器';
+          }
+          return;
+        }
+
+        const statusText = document.getElementById('statusText');
+        if (statusText) statusText.textContent = '连接中...';
+        log(`Connecting to ${SERVER_URL} (attempt ${connectionAttempts}/${maxReconnectAttempts})`);
+
+        try {
+          ws = new WebSocket(SERVER_URL);
+        } catch (e) {
+          log('Failed to create WebSocket:', e.message);
+          setTimeout(connect, 5000);
+          return;
+        }
+
+        ws.onopen = () => {
+          connectionAttempts = 0;
+          updateStatus(true);
+          log('Connected successfully');
+        };
+
+        ws.onclose = (e) => {
+          updateStatus(false);
+          stopPolling();
+          log(`Disconnected (code: ${e.code}, reason: ${e.reason || 'unknown'})`);
+
+          if (e.code === 1006) {
+            log('Connection failed - likely SSL/TLS certificate issue or server unreachable.');
+          } else if (e.code === 1002) {
+            log('Protocol error - check WebSocket protocol compatibility.');
+          } else if (e.code === 1015) {
+            log('TLS handshake failed - check SSL certificate.');
+          } else if (e.code === 1003) {
+            log('Invalid data received.');
+          } else if (e.code === 1001) {
+            log('Server going away or browser navigating away.');
+          }
+
+          setTimeout(connect, 5000);
+        };
+
+        ws.onerror = (e) => {
+          log('WebSocket error occurred');
+          log(`Connection URL: ${SERVER_URL}`);
+          log('Possible causes: 1) Server not running 2) Wrong port 3) Firewall blocked 4) SSL certificate issue 5) Mixed content (https page connecting to ws://)');
+          if (location.protocol === 'https:' && SERVER_URL.startsWith('ws://')) {
+            log('ERROR: Mixed content - HTTPS page cannot connect to WS (use WSS)');
+          }
+        };
+
+        ws.onmessage = (e) => {
+          try {
+            const msg = JSON.parse(e.data);
+            log('Received:', msg.type);
+            handleMessage(msg);
+          } catch (err) { log('Parse error:', err); }
+        };
+      };
+
+      const updateStatus = (c) => {
+        document.getElementById('statusDot').classList.toggle('disconnected', !c);
+        document.getElementById('statusText').textContent = c ? '已连接' : '已断开';
+        const serverUrlEl = document.getElementById('serverUrl');
+        if (serverUrlEl) serverUrlEl.textContent = SERVER_URL;
+      };
+
+      const reconnect = () => {
+        if (ws) {
+          ws.onclose = null;
+          ws.onerror = null;
+          try { ws.close(); } catch (e) {}
+        }
+        connectionAttempts = 0;
+        SERVER_URL = getServerUrl();
+        connect();
+      };
+
+      const showServerSettings = () => {
+        const current = SERVER_URL;
+        const input = prompt('请输入WebSocket服务器地址：', current);
+        if (input && input.trim()) {
+          const url = input.trim();
+          localStorage.setItem('ws_server_url', url);
+          SERVER_URL = url;
+          const serverUrlEl = document.getElementById('serverUrl');
+          if (serverUrlEl) serverUrlEl.textContent = url;
+          if (confirm('服务器地址已更新，是否立即重新连接？')) {
+            reconnect();
+          }
+        }
+      };
+
+      const authenticate = () => {
+        const uid = document.getElementById('userIdInput').value.trim();
+        if (!uid) return alert('请输入用户ID');
+        currentUserId = uid;
+        log('Auth as', uid);
+        send({ type: 'auth', payload: { userId: uid } });
+      };
+
+      const send = (data) => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) { log('Not connected'); return; }
+        const msg = { id: Math.random().toString(36).substr(2, 9), ...data, from: currentUserId, timestamp: Date.now() };
+        log('Sending', msg.type);
+        ws.send(JSON.stringify(msg));
+      };
+
+      // ==================== WebRTC Connection Manager ====================
+      // Use multiple STUN servers for faster ICE gathering
+      const RTC_ICE_SERVERS = [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' }
+      ];
+
+      // Create RTCPeerConnection for a specific user
+      const createRTCConnection = (targetUserId) => {
+        // Prevent creating connection to self
+        if (targetUserId === currentUserId) {
+          log(`[WebRTC] Warning: Attempted to create connection to self (${targetUserId}), skipping`);
+          return null;
+        }
+        
+        if (rtcConnections.has(targetUserId)) {
+          const existingPc = rtcConnections.get(targetUserId);
+          log(`[WebRTC] Connection already exists for ${targetUserId}, state: ${existingPc.connectionState}`);
+          return existingPc;
+        }
+
+        log(`[WebRTC] Creating new connection for ${targetUserId}`);
+        const pc = new RTCPeerConnection({
+          iceServers: RTC_ICE_SERVERS,
+          iceCandidatePoolSize: 15, // Increased for faster gathering
+          bundlePolicy: 'max-bundle',
+          rtcpMuxPolicy: 'require',
+          // Enable low-latency mode
+          iceTransportPolicy: 'all', // Use all available ICE candidates including relay
+          // SDES key management is deprecated and not supported
+          encodedInsertableStreams: false // Disable for better compatibility
+        });
+        
+        // Configure audio codecs - prefer Opus for better quality and noise suppression
+        // This will be applied during offer/answer creation
+        pc.createDataChannel ? pc.createDataChannel('dummy') : null; // Force transceivers to be created
+        
+        // Try to set codec preferences after transceivers are available
+        try {
+          const transceivers = pc.getTransceivers();
+          transceivers.forEach(transceiver => {
+            if (transceiver.sender && transceiver.sender.track?.kind === 'audio') {
+              const capabilities = RTCRtpSender.getCapabilities('audio');
+              if (capabilities && capabilities.codecs) {
+                // Prefer Opus codec for better audio quality
+                const opusIndex = capabilities.codecs.findIndex(codec => codec.mimeType === 'audio/opus');
+                if (opusIndex !== -1) {
+                  const codecs = [...capabilities.codecs];
+                  // Move Opus to front
+                  codecs.splice(0, 0, codecs.splice(opusIndex, 1)[0]);
+                  try {
+                    transceiver.setCodecPreferences(codecs);
+                    log(`[WebRTC] Set Opus as preferred codec for ${targetUserId}`);
+                  } catch (e) {
+                    log(`[WebRTC] Could not set codec preferences:`, e);
+                  }
+                }
+              }
+            }
+          });
+        } catch (e) {
+          log(`[WebRTC] Codec preference setup error:`, e);
+        }
+
+        let iceCandidateCount = 0;
+        let iceConnected = false;
+
+        // Handle ICE candidates
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            iceCandidateCount++;
+            log(`[WebRTC] ICE candidate #${iceCandidateCount} for ${targetUserId}: type=${event.candidate.type}`);
+            if (currentRoomId) {
+              send({
+                type: 'rtc_ice_candidate',
+                payload: {
+                  roomId: currentRoomId,
+                  targetUserId,
+                  candidate: event.candidate.toJSON()
+                }
+              });
+            } else {
+              log(`[WebRTC] Warning: currentRoomId is not set, skipping ICE candidate send`);
+            }
+          } else {
+            log(`[WebRTC] ICE gathering complete for ${targetUserId}, total candidates: ${iceCandidateCount}`);
+          }
+        };
+
+        // Handle ICE connection state changes
+        pc.oniceconnectionstatechange = () => {
+          log(`[WebRTC] ICE connection state with ${targetUserId}: ${pc.iceConnectionState}`);
+          if (pc.iceConnectionState === 'connected') {
+            iceConnected = true;
+            log(`[WebRTC] ✅ ICE connected with ${targetUserId}`);
+          } else if (pc.iceConnectionState === 'failed') {
+            log(`[WebRTC] ❌ ICE connection failed with ${targetUserId}, retrying...`);
+          }
+        };
+
+        // Handle connection state changes
+        pc.onconnectionstatechange = () => {
+          log(`[WebRTC] Connection state with ${targetUserId}: ${pc.connectionState}`);
+          
+          if (pc.connectionState === 'connected') {
+            log(`[WebRTC] ✅ P2P connection established with ${targetUserId}`);
+            const senders = pc.getSenders();
+            const receivers = pc.getReceivers();
+            log(`[WebRTC] Senders: ${senders.length}, Receivers: ${receivers.length}`);
+            senders.forEach(s => log(`[WebRTC]   Sender: kind=${s.track?.kind}`));
+            receivers.forEach(r => log(`[WebRTC]   Receiver: kind=${r.track?.kind}`));
+          } else if (pc.connectionState === 'disconnected') {
+            log(`[WebRTC] ⚠️ Connection disconnected with ${targetUserId}`);
+          } else if (pc.connectionState === 'failed') {
+            log(`[WebRTC] ❌ Connection failed with ${targetUserId}`);
+            closeRTCConnection(targetUserId);
+          } else if (pc.connectionState === 'closed') {
+            log(`[WebRTC] Connection closed with ${targetUserId}`);
+          }
+        };
+
+        // Handle incoming tracks (remote media)
+        pc.ontrack = (event) => {
+          log(`[WebRTC] 🎤 Received track from ${targetUserId}: kind=${event.track.kind}, trackId=${event.track.id}`);
+          const stream = event.streams[0];
+          
+          if (stream) {
+            rtcMediaStreams.set(targetUserId, stream);
+            log(`[WebRTC] Stream has ${stream.getTracks().length} tracks`);
+            
+            // Listen for track removal from stream
+            stream.onremovetrack = (e) => {
+              log(`[WebRTC] Track removed from stream of ${targetUserId}: kind=${e.track.kind}`);
+              if (e.track.kind === 'video') {
+                // Clean up both containers
+                const screenContainer = document.getElementById('screenShareContainer');
+                const videoContainer = document.getElementById('videoCallContainer');
+                if (screenContainer) {
+                  screenContainer.remove();
+                  log(`[WebRTC] screenShareContainer removed after remote video track removed`);
+                }
+                if (videoContainer) {
+                  videoContainer.remove();
+                  log(`[WebRTC] videoCallContainer removed after remote video track removed`);
+                }
+              }
+            };
+            
+            // Handle video track ended event
+            if (event.track.kind === 'video') {
+              event.track.onended = () => {
+                log(`[WebRTC] Remote video track ended for ${targetUserId}`);
+                // Clean up both containers
+                const screenContainer = document.getElementById('screenShareContainer');
+                const videoContainer = document.getElementById('videoCallContainer');
+                if (screenContainer) {
+                  screenContainer.remove();
+                  log(`[WebRTC] screenShareContainer removed after remote video track ended`);
+                }
+                if (videoContainer) {
+                  videoContainer.remove();
+                  log(`[WebRTC] videoCallContainer removed after remote video track ended`);
+                }
+              };
+            }
+            
+            handleRemoteStream(targetUserId, stream, event.track.kind, event.track, pc.remoteIsScreenShare, pc.remoteIsVideoCall);
+          } else {
+            log(`[WebRTC] No stream associated with track from ${targetUserId}`);
+          }
+        };
+
+        // Handle track events on receivers
+        pc.getReceivers().forEach(receiver => {
+          receiver.track?.addEventListener('ended', () => {
+            log(`[WebRTC] Remote track ended for ${targetUserId}, kind=${receiver.track?.kind}`);
+          });
+        });
+
+        // Handle negotiation needed (triggered when tracks are added/removed)
+        pc.onnegotiationneeded = () => {
+          log(`[WebRTC] Negotiation needed for ${targetUserId}, signaling state: ${pc.signalingState}`);
+          if (negotiationTimers.has(targetUserId)) {
+            clearTimeout(negotiationTimers.get(targetUserId));
+          }
+          negotiationTimers.set(targetUserId, setTimeout(async () => {
+            try {
+              if (pc.signalingState !== 'stable') {
+                log(`[WebRTC] Skipping negotiation, signaling state: ${pc.signalingState}`);
+                return;
+              }
+              const offer = await pc.createOffer({
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: true
+              });
+              await pc.setLocalDescription(offer);
+              send({
+                type: 'rtc_offer',
+                payload: {
+                  roomId: currentRoomId,
+                  targetUserId: targetUserId,
+                  offer: offer.toJSON(),
+                  // Add flags to indicate what media types are being sent
+                  isScreenShare: !!localScreenTrack,
+                  isVideoCall: !!localVideoTrack,
+                  isAudioCall: !!localAudioTrack
+                }
+              });
+              log(`[WebRTC] Renegotiation offer sent to ${targetUserId}, isScreenShare=${!!localScreenTrack}, isVideoCall=${!!localVideoTrack}`);
+            } catch (err) {
+              log(`[WebRTC] Negotiation failed for ${targetUserId}:`, err);
+            }
+          }, 100)); // Reduced from 200ms to 100ms for faster renegotiation
+        };
+
+        rtcConnections.set(targetUserId, pc);
+        log(`[WebRTC] Connection object created for ${targetUserId}, total connections: ${rtcConnections.size}`);
+        return pc;
+      };
+
+      // Close RTC connection with a specific user
+      const closeRTCConnection = (targetUserId) => {
+        log(`[WebRTC] Closing connection with ${targetUserId}`);
+        const pc = rtcConnections.get(targetUserId);
+        if (pc) {
+          pc.close();
+          rtcConnections.delete(targetUserId);
+        }
+        if (negotiationTimers.has(targetUserId)) {
+          clearTimeout(negotiationTimers.get(targetUserId));
+          negotiationTimers.delete(targetUserId);
+        }
+        rtcMediaStreams.delete(targetUserId);
+        removeRemoteStreamUI(targetUserId);
+      };
+
+      // Close all RTC connections
+      const closeAllRTCConnections = () => {
+        log('[WebRTC] Closing all connections');
+        for (const userId of rtcConnections.keys()) {
+          closeRTCConnection(userId);
+          // Notify other users about disconnection
+          if (currentRoomId) {
+            send({
+              type: 'rtc_disconnect',
+              payload: { roomId: currentRoomId, targetUserId: userId }
+            });
+          }
+        }
+        rtcConnections.clear();
+        rtcMediaStreams.clear();
+      };
+
+      // Add local tracks to all connections
+      const addLocalTrackToConnections = async (track, stream) => {
+        log(`[WebRTC] Adding local ${track.kind} track to all connections`);
+        for (const [userId, pc] of rtcConnections) {
+          // Skip self connections
+          if (userId === currentUserId) {
+            log(`[WebRTC] Skipping self connection (${userId})`);
+            continue;
+          }
+          
+          try {
+            const senders = pc.getSenders();
+            const existingSender = senders.find(s => s.track && s.track.kind === track.kind);
+            if (existingSender) {
+              await existingSender.replaceTrack(track);
+              log(`[WebRTC] Replaced ${track.kind} track for ${userId}`);
+              // replaceTrack doesn't trigger renegotiation, we need to trigger it manually
+              // But only if connection is stable - onnegotiationneeded will handle it for new tracks
+              if (pc.signalingState === 'stable') {
+                // Trigger renegotiation via onnegotiationneeded
+                log(`[WebRTC] Triggering renegotiation for replaced track with ${userId}`);
+                // Manually trigger negotiation needed handler
+                pc.onnegotiationneeded?.();
+              }
+            } else {
+              pc.addTrack(track, stream);
+              log(`[WebRTC] Added ${track.kind} track to connection with ${userId}`);
+              // addTrack triggers onnegotiationneeded automatically, no manual call needed
+            }
+          } catch (err) {
+            log(`[WebRTC] Failed to add track to ${userId}:`, err);
+          }
+        }
+      };
+
+      const removeLocalTrackFromConnections = async (trackKind) => {
+        log(`[WebRTC] Removing local ${trackKind} track from all connections`);
+        for (const [userId, pc] of rtcConnections) {
+          // Skip self connections
+          if (userId === currentUserId) {
+            log(`[WebRTC] Skipping self connection (${userId})`);
+            continue;
+          }
+          
+          try {
+            const senders = pc.getSenders();
+            const sender = senders.find(s => s.track && s.track.kind === trackKind);
+            if (sender) {
+              await sender.replaceTrack(null);
+              log(`[WebRTC] Removed ${trackKind} track from connection with ${userId}`);
+            }
+          } catch (err) {
+            log(`[WebRTC] Failed to remove track from ${userId}:`, err);
+          }
+        }
+      };
+
+      // Handle remote stream - display in UI
+      const handleRemoteStream = (userId, stream, trackKind, track, remoteIsScreenShare, remoteIsVideoCall) => {
+        log(`[WebRTC] Handling remote ${trackKind} stream from ${userId}, remoteIsScreenShare=${remoteIsScreenShare}, remoteIsVideoCall=${remoteIsVideoCall}`);
+        if (trackKind === 'video') {
+          // Use the signaling flags to determine display location
+          if (remoteIsScreenShare) {
+            log(`[WebRTC] Detected screen share track from ${userId} (by signaling flag)`);
+            displayRemoteScreenShare(userId, stream);
+          } else {
+            log(`[WebRTC] Detected video call track from ${userId} (by signaling flag)`);
+            displayRemoteVideoCall(userId, stream);
+          }
+        } else if (trackKind === 'audio') {
+          playRemoteAudio(userId, stream);
+        }
+      };
+
+      // Display remote screen share - in chat area
+      const displayRemoteScreenShare = (userId, stream) => {
+        log(`[WebRTC] Displaying remote screen share from ${userId}`);
+        let screenContainer = document.getElementById('screenShareContainer');
+        if (!screenContainer) {
+          const chatMessages = document.getElementById('chatMessages');
+          if (!chatMessages) return;
+          screenContainer = document.createElement('div');
+          screenContainer.id = 'screenShareContainer';
+          screenContainer.style.cssText = 'width: 100%; max-width: 800px; margin: 10px auto; border: 2px solid #6366f1; border-radius: 8px; overflow: hidden; background: #000; position: relative;';
+          chatMessages.insertBefore(screenContainer, chatMessages.firstChild);
+        }
+
+        // Remove old content, use video element for WebRTC
+        screenContainer.innerHTML = '';
+        const video = document.createElement('video');
+        video.id = `remoteScreen-${userId}`;
+        video.srcObject = stream;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.style.cssText = 'width: 100%; height: auto; display: block;';
+        video.muted = true;
+        // Enable low-latency mode for video playback
+        video.controls = false;
+        video.disablePictureInPicture = true;
+        screenContainer.appendChild(video);
+
+        // Add control bar with fullscreen/shrink buttons
+        const controlBar = document.createElement('div');
+        controlBar.style.cssText = 'position: absolute; top: 8px; right: 8px; display: flex; gap: 8px;';
+        
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.textContent = '⛶';
+        fullscreenBtn.title = '全屏';
+        fullscreenBtn.style.cssText = 'background: rgba(99, 102, 241, 0.9); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 16px;';
+        fullscreenBtn.onclick = () => {
+          if (screenContainer.requestFullscreen) {
+            screenContainer.requestFullscreen();
+            log('[ScreenShare] Entered fullscreen mode');
+          }
+        };
+        controlBar.appendChild(fullscreenBtn);
+        
+        const shrinkBtn = document.createElement('button');
+        shrinkBtn.textContent = '⛶⤵';
+        shrinkBtn.title = '缩屏';
+        shrinkBtn.style.cssText = 'background: rgba(99, 102, 241, 0.9); color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 16px;';
+        shrinkBtn.onclick = () => {
+          if (document.fullscreenElement) {
+            document.exitFullscreen();
+            log('[ScreenShare] Exited fullscreen mode');
+          }
+        };
+        controlBar.appendChild(shrinkBtn);
+        
+        screenContainer.appendChild(controlBar);
+
+        const label = document.createElement('div');
+        label.style.cssText = 'position: absolute; top: 8px; left: 8px; background: rgba(99, 102, 241, 0.9); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;';
+        label.textContent = `屏幕共享 - ${userId}`;
+        screenContainer.appendChild(label);
+
+        screenContainer.onfullscreenchange = () => {
+          if (document.fullscreenElement === screenContainer) {
+            video.style.cssText = 'width: 100%; height: 100%; object-fit: contain; display: block;';
+            screenContainer.style.cssText = 'width: 100%; height: 100%; border: none; border-radius: 0; overflow: hidden; background: #000; position: relative;';
+          } else {
+            video.style.cssText = 'width: 100%; height: auto; display: block;';
+            screenContainer.style.cssText = 'width: 100%; max-width: 800px; margin: 10px auto; border: 2px solid #6366f1; border-radius: 8px; overflow: hidden; background: #000; position: relative;';
+          }
+        };
+
+        log(`[WebRTC] Remote screen share video element created for ${userId} in chat area`);
+      };
+
+      // Display remote video call - positioned over sidebar
+      const displayRemoteVideoCall = (userId, stream) => {
+        log(`[WebRTC] Displaying remote video call from ${userId}`);
+        let videoContainer = document.getElementById('videoCallContainer');
+        if (!videoContainer) {
+          const sidebar = document.querySelector('.sidebar');
+          if (!sidebar) return;
+          videoContainer = document.createElement('div');
+          videoContainer.id = 'videoCallContainer';
+          videoContainer.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 100; overflow: hidden;';
+          sidebar.style.position = 'relative';
+          sidebar.appendChild(videoContainer);
+        }
+
+        // Remove old content, use video element for WebRTC
+        videoContainer.innerHTML = '';
+        const video = document.createElement('video');
+        video.id = `remoteVideoCall-${userId}`;
+        video.srcObject = stream;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.style.cssText = 'width: 100%; height: 100%; object-fit: contain; display: block;';
+        video.muted = true;
+        // Enable low-latency mode for video playback
+        video.controls = false;
+        video.disablePictureInPicture = true;
+        videoContainer.appendChild(video);
+
+        // Add control bar with fullscreen/shrink buttons
+        const controlBar = document.createElement('div');
+        controlBar.style.cssText = 'position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 101;';
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕';
+        closeBtn.title = '关闭';
+        closeBtn.style.cssText = 'background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-size: 16px;';
+        closeBtn.onclick = () => {
+          if (videoContainer) {
+            videoContainer.remove();
+            log('[VideoCall] Video container closed');
+          }
+        };
+        controlBar.appendChild(closeBtn);
+        
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.textContent = '⛶';
+        fullscreenBtn.title = '全屏';
+        fullscreenBtn.style.cssText = 'background: rgba(99, 102, 241, 0.9); color: white; border: none; border-radius: 4px; padding: 8px 16px; cursor: pointer; font-size: 16px;';
+        fullscreenBtn.onclick = () => {
+          if (videoContainer.requestFullscreen) {
+            videoContainer.requestFullscreen();
+            log('[VideoCall] Entered fullscreen mode');
+          }
+        };
+        controlBar.appendChild(fullscreenBtn);
+        
+        videoContainer.appendChild(controlBar);
+
+        const label = document.createElement('div');
+        label.style.cssText = 'position: absolute; top: 16px; left: 16px; background: rgba(99, 102, 241, 0.9); color: white; padding: 8px 16px; border-radius: 4px; font-size: 14px; font-weight: 600; z-index: 101;';
+        label.textContent = `视频通话 - ${userId}`;
+        videoContainer.appendChild(label);
+
+        videoContainer.onfullscreenchange = () => {
+          if (document.fullscreenElement === videoContainer) {
+            video.style.cssText = 'width: 100%; height: 100%; object-fit: contain; display: block;';
+          } else {
+            video.style.cssText = 'width: 100%; height: 100%; object-fit: contain; display: block;';
+          }
+        };
+
+        log(`[WebRTC] Remote video call video element created for ${userId} in sidebar`);
+      };
+
+      const playRemoteAudio = (userId, stream) => {
+        log(`[WebRTC] Playing remote audio from ${userId}`);
+        const audioId = `remoteAudio-${userId}`;
+        let audioElement = document.getElementById(audioId);
+        
+        if (!audioElement) {
+          audioElement = document.createElement('audio');
+          audioElement.id = audioId;
+          audioElement.autoplay = true;
+          audioElement.playsInline = true;
+          audioElement.crossOrigin = 'anonymous';
+          audioElement.style.display = 'none';
+          // Set moderate volume to avoid distortion and noise
+          audioElement.volume = 0.6;
+          // Disable default audio processing for cleaner sound
+          audioElement.preservesPitch = true;
+          audioElement.playbackRate = 1.0;
+          document.body.appendChild(audioElement);
+          log(`[WebRTC] Created audio element for ${userId}, volume: ${audioElement.volume}`);
+        }
+        
+        if (audioElement.srcObject !== stream) {
+          audioElement.srcObject = stream;
+          log(`[WebRTC] Set audio source for ${userId}, stream tracks: ${stream.getTracks().length}`);
+          
+          stream.getAudioTracks().forEach(track => {
+            log(`[WebRTC] Remote audio track info for ${userId}: kind=${track.kind}, id=${track.id}, enabled=${track.enabled}, muted=${track.muted}`);
+            
+            // Log audio settings for debugging
+            try {
+              const settings = track.getSettings();
+              log(`[WebRTC] Remote audio settings for ${userId}: sampleRate=${settings.sampleRate}, echoCancellation=${settings.echoCancellation}, noiseSuppression=${settings.noiseSuppression}, autoGainControl=${settings.autoGainControl}, channelCount=${settings.channelCount}`);
+              
+              // Try to enable noise suppression on remote track if supported
+              if (settings.noiseSuppression !== true) {
+                track.applyConstraints({
+                  noiseSuppression: true,
+                  echoCancellation: true
+                }).then(() => {
+                  log(`[WebRTC] Applied noise suppression constraints to remote track from ${userId}`);
+                }).catch(e => {
+                  log(`[WebRTC] Could not apply constraints to remote track:`, e);
+                });
+              }
+            } catch (e) {
+              log(`[WebRTC] Could not check remote audio settings:`, e);
+            }
+            
+            track.onended = () => {
+              log(`[WebRTC] Remote audio track ended for ${userId}`);
+            };
+            
+            track.onmute = () => {
+              log(`[WebRTC] Remote audio track muted for ${userId}`);
+            };
+            
+            track.onunmute = () => {
+              log(`[WebRTC] Remote audio track unmuted for ${userId}`);
+            };
+          });
+        }
+        
+        if (audioElement.paused) {
+          audioElement.play().then(() => {
+            log(`[WebRTC] Remote audio started playing for ${userId}`);
+          }).catch(err => {
+            log('[WebRTC] Audio play failed for', userId, ':', err);
+            
+            if (err.name === 'NotAllowedError') {
+              log('[WebRTC] Auto-play blocked by browser policy, will retry on user interaction');
+              const tryPlayOnInteraction = () => {
+                if (!audioElement || !audioElement.paused) return;
+                audioElement.play().then(() => {
+                  log(`[WebRTC] Audio play succeeded after user interaction for ${userId}`);
+                }).catch(e => {
+                  log('[WebRTC] Retry play failed for', userId, ':', e);
+                });
+                document.removeEventListener('click', tryPlayOnInteraction);
+                document.removeEventListener('keydown', tryPlayOnInteraction);
+              };
+              document.addEventListener('click', tryPlayOnInteraction);
+              document.addEventListener('keydown', tryPlayOnInteraction);
+            }
+          });
+        } else {
+          log(`[WebRTC] Remote audio already playing for ${userId}`);
+        }
+        
+        log(`[WebRTC] Remote audio setup complete for ${userId}`);
+      };
+
+      // Remove remote stream UI
+      const removeRemoteStreamUI = (userId) => {
+        log(`[WebRTC] Removing remote stream UI for ${userId}`);
+        // Remove screen
+        const screenVideo = document.getElementById(`remoteScreen-${userId}`);
+        if (screenVideo) {
+          screenVideo.remove();
+        }
+        // Remove audio
+        const audioElement = document.getElementById(`remoteAudio-${userId}`);
+        if (audioElement) {
+          audioElement.remove();
+        }
+        // Check if no more remote screens, remove container
+        const screenContainer = document.getElementById('screenShareContainer');
+        if (screenContainer && !screenContainer.querySelector('video')) {
+          screenContainer.remove();
+        }
+      };
+
+      // Create and send offer to target user
+      const createAndSendOffer = async (targetUserId) => {
+        log(`[WebRTC] Creating offer for ${targetUserId}`);
+        
+        // Check if connection already exists before calling createRTCConnection
+        const connectionAlreadyExisted = rtcConnections.has(targetUserId);
+        const pc = createRTCConnection(targetUserId);
+        
+        // Skip if pc is null (self connection or error)
+        if (!pc) {
+          log(`[WebRTC] No connection for ${targetUserId}, skipping offer`);
+          return;
+        }
+
+        const tracksAdded = [];
+        
+        // Only add tracks if this is a new connection (tracks already added via addLocalTrackToConnections for existing connections)
+        if (!connectionAlreadyExisted) {
+          // Add local tracks if available
+          if (localScreenTrack) {
+            const screenStream = new MediaStream([localScreenTrack]);
+            pc.addTrack(localScreenTrack, screenStream);
+            tracksAdded.push('screen');
+            log(`[WebRTC] Added local screen track to offer for ${targetUserId}`);
+          }
+          if (localVideoTrack) {
+            const videoStream = new MediaStream([localVideoTrack]);
+            pc.addTrack(localVideoTrack, videoStream);
+            tracksAdded.push('video');
+            log(`[WebRTC] Added local video track to offer for ${targetUserId}`);
+          }
+          if (localAudioTrack) {
+            const audioStream = new MediaStream([localAudioTrack]);
+            pc.addTrack(localAudioTrack, audioStream);
+            tracksAdded.push('audio');
+            log(`[WebRTC] Added local audio track to offer for ${targetUserId}, track id: ${localAudioTrack.id}`);
+          }
+        } else {
+          // For existing connections, tracks were already added by addLocalTrackToConnections
+          const senders = pc.getSenders();
+          log(`[WebRTC] Existing connection for ${targetUserId}, senders: ${senders.length}`);
+          senders.forEach((sender, index) => {
+            if (sender.track) {
+              tracksAdded.push(sender.track.kind);
+              log(`[WebRTC] Existing sender ${index}: kind=${sender.track.kind}, trackId=${sender.track.id}`);
+            }
+          });
+        }
+
+        try {
+          const offer = await pc.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true
+          });
+          
+          // Modify SDP to enable Opus DTX and FEC for better audio quality and noise reduction
+          if (offer.sdp && offer.sdp.includes('audio/opus')) {
+            let sdp = offer.sdp;
+            // Find Opus payload type (usually 111 but can vary)
+            const opusMatch = sdp.match(/a=rtpmap:(\d+) opus\/48000\/2/);
+            if (opusMatch && opusMatch[1]) {
+              const opusPt = opusMatch[1];
+              // Remove existing fmtp line for Opus
+              const fmtpRegex = new RegExp(`a=fmtp:${opusPt}[^\r\n]*\r\n`, 'g');
+              sdp = sdp.replace(fmtpRegex, '');
+              // Insert new fmtp line after the rtpmap line
+              const rtpmapRegex = new RegExp(`(a=rtpmap:${opusPt} opus/48000/2\r\n)`);
+              sdp = sdp.replace(rtpmapRegex, `$1a=fmtp:${opusPt} usedtx=1;useinbandfec=1;cbr=0;maxaveragebitrate=24000;maxplaybackrate=48000\r\n`);
+              offer.sdp = sdp;
+              log(`[WebRTC] Modified SDP for Opus (PT=${opusPt}): DTX and FEC enabled for noise reduction`);
+            } else {
+              log(`[WebRTC] Could not find Opus payload type in SDP, skipping Opus optimization`);
+            }
+          }
+          
+          log(`[WebRTC] Offer created for ${targetUserId}, tracks: ${tracksAdded.join(', ') || 'none'}, signaling state: ${pc.signalingState}`);
+          
+          await pc.setLocalDescription(offer);
+          log(`[WebRTC] Local description set for ${targetUserId}`);
+          
+          const senders = pc.getSenders();
+          log(`[WebRTC] Senders count for ${targetUserId}: ${senders.length}`);
+          senders.forEach((sender, index) => {
+            log(`[WebRTC] Sender ${index} for ${targetUserId}: kind=${sender.track?.kind}, trackId=${sender.track?.id}`);
+          });
+          
+          send({
+            type: 'rtc_offer',
+            payload: {
+              roomId: currentRoomId,
+              targetUserId,
+              offer: offer.toJSON(),
+              // Add flags to indicate what media types are being sent
+              isScreenShare: !!localScreenTrack,
+              isVideoCall: !!localVideoTrack,
+              isAudioCall: !!localAudioTrack
+            }
+          });
+          log(`[WebRTC] Offer sent to ${targetUserId}, isScreenShare=${!!localScreenTrack}, isVideoCall=${!!localVideoTrack}`);
+        } catch (err) {
+          log(`[WebRTC] Failed to create offer for ${targetUserId}:`, err);
+        }
+      };
+
+      // Handle incoming offer and create answer
+      // Track pending offer handling to avoid race conditions
+      const pendingOfferHandling = new Map();
+
+      const handleRTCOffer = async (fromUserId, offer, isScreenShare, isVideoCall, isAudioCall) => {
+        log(`[WebRTC] Received offer from ${fromUserId}, isScreenShare=${isScreenShare}, isVideoCall=${isVideoCall}, isAudioCall=${isAudioCall}`);
+        
+        // Check if we're already handling an offer from this user
+        if (pendingOfferHandling.has(fromUserId)) {
+          log(`[WebRTC] Already handling offer from ${fromUserId}, queuing this one`);
+          // Queue this offer to be processed after current one
+          pendingOfferHandling.get(fromUserId).push({ offer, isScreenShare, isVideoCall, isAudioCall });
+          return;
+        }
+        
+        // Mark that we're handling an offer from this user
+        pendingOfferHandling.set(fromUserId, []);
+        
+        // Check if connection already exists
+        const connectionAlreadyExisted = rtcConnections.has(fromUserId);
+        const pc = createRTCConnection(fromUserId);
+        
+        // Skip if pc is null (self connection or error)
+        if (!pc) {
+          log(`[WebRTC] No connection for ${fromUserId}, skipping offer handling`);
+          pendingOfferHandling.delete(fromUserId);
+          return;
+        }
+
+        // Store remote media type flags on the connection object
+        pc.remoteIsScreenShare = isScreenShare;
+        pc.remoteIsVideoCall = isVideoCall;
+        pc.remoteIsAudioCall = isAudioCall;
+
+        try {
+          // Perfect Negotiation pattern:
+          // 1. If signaling state is stable, we can proceed directly
+          // 2. If we have a local offer (have-local-offer), we need to rollback first
+          // 3. If we have a remote offer (have-remote-offer), we shouldn't be here
+          
+          if (pc.signalingState === 'have-local-offer') {
+            // We were trying to send an offer, but received one from remote
+            // Rollback our offer and process the remote offer instead
+            log(`[WebRTC] Perfect Negotiation: rolling back our local offer for ${fromUserId}`);
+            await pc.setLocalDescription({ type: 'rollback' });
+          } else if (pc.signalingState === 'have-remote-offer') {
+            // Already processing an offer, shouldn't happen due to queue
+            log(`[WebRTC] Already processing remote offer for ${fromUserId}, skipping`);
+            pendingOfferHandling.delete(fromUserId);
+            return;
+          } else if (pc.signalingState === 'stable') {
+            // Good, we can proceed
+            log(`[WebRTC] Connection in stable state, proceeding with offer from ${fromUserId}`);
+          }
+
+          await pc.setRemoteDescription(new RTCSessionDescription(offer));
+          log(`[WebRTC] Remote description set`);
+
+          // Only add tracks if this is a new connection
+          if (!connectionAlreadyExisted) {
+            // Add local tracks if available
+            if (localScreenTrack) {
+              const screenStream = new MediaStream([localScreenTrack]);
+              pc.addTrack(localScreenTrack, screenStream);
+              log(`[WebRTC] Added local screen track to answer for ${fromUserId}`);
+            }
+            if (localVideoTrack) {
+              const videoStream = new MediaStream([localVideoTrack]);
+              pc.addTrack(localVideoTrack, videoStream);
+              log(`[WebRTC] Added local video track to answer for ${fromUserId}`);
+            }
+            if (localAudioTrack) {
+              const audioStream = new MediaStream([localAudioTrack]);
+              pc.addTrack(localAudioTrack, audioStream);
+              log(`[WebRTC] Added local audio track to answer for ${fromUserId}`);
+            }
+          } else {
+            log(`[WebRTC] Existing connection for ${fromUserId}, skipping track addition`);
+          }
+
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          log(`[WebRTC] Answer created and set as local description`);
+          send({
+            type: 'rtc_answer',
+            payload: {
+              roomId: currentRoomId,
+              targetUserId: fromUserId,
+              answer: answer.toJSON()
+            }
+          });
+          
+          // Check if there are queued offers to process
+          const queued = pendingOfferHandling.get(fromUserId);
+          pendingOfferHandling.delete(fromUserId);
+          
+          if (queued && queued.length > 0) {
+            log(`[WebRTC] Processing queued offer from ${fromUserId}`);
+            // Process next queued offer after a short delay
+            setTimeout(() => {
+              const nextOffer = queued.shift();
+              if (nextOffer) {
+                handleRTCOffer(fromUserId, nextOffer.offer, nextOffer.isScreenShare, nextOffer.isVideoCall, nextOffer.isAudioCall);
+              }
+            }, 100);
+          }
+        } catch (err) {
+          log(`[WebRTC] Failed to handle offer:`, err);
+          pendingOfferHandling.delete(fromUserId);
+        }
+      };
+
+      // Handle incoming answer
+      const handleRTCAnswer = async (fromUserId, answer) => {
+        log(`[WebRTC] Received answer from ${fromUserId}`);
+        const pc = rtcConnections.get(fromUserId);
+        if (!pc) {
+          log(`[WebRTC] No connection found for ${fromUserId}`);
+          return;
+        }
+
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+          log(`[WebRTC] Remote description set from answer`);
+          
+          // Check if there's pending renegotiation
+          if (pc.pendingRenegotiation) {
+            log(`[WebRTC] Pending renegotiation detected for ${fromUserId}, triggering new offer`);
+            pc.pendingRenegotiation = false;
+            await createAndSendOffer(fromUserId);
+          }
+        } catch (err) {
+          log(`[WebRTC] Failed to handle answer:`, err);
+        }
+      };
+
+      // Handle incoming ICE candidate
+      const handleRTCIceCandidate = async (fromUserId, candidate) => {
+        log(`[WebRTC] Received ICE candidate from ${fromUserId}`);
+        const pc = rtcConnections.get(fromUserId);
+        if (!pc) {
+          log(`[WebRTC] No connection found for ${fromUserId}`);
+          return;
+        }
+
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+          log(`[WebRTC] ICE candidate added`);
+        } catch (err) {
+          log(`[WebRTC] Failed to add ICE candidate:`, err);
+        }
+      };
+
+      // Handle connection request from another user
+      const handleRTCConnectRequest = async (fromUserId, mediaTypes) => {
+        log(`[WebRTC] Connection request from ${fromUserId} for ${JSON.stringify(mediaTypes)}`);
+        // Connection will be established when offer arrives
+      };
+
+      // Handle disconnection notification
+      const handleRTCDisconnect = (fromUserId) => {
+        log(`[WebRTC] Disconnect notification from ${fromUserId}`);
+        closeRTCConnection(fromUserId);
+      };
+
+      // Initialize WebRTC connections with all room members
+      const initRTCConnections = async (members) => {
+        log(`[WebRTC] Initializing connections with members:`, members);
+        roomMembers = new Set(members);
+        
+        const hasLocalTracks = !!(localAudioTrack || localVideoTrack || localScreenTrack);
+        log(`[WebRTC] Has local tracks: ${hasLocalTracks}`);
+        
+        // Create connections with other members (not self)
+        for (const memberId of members) {
+          if (memberId !== currentUserId && !rtcConnections.has(memberId)) {
+            if (hasLocalTracks) {
+              await createAndSendOffer(memberId);
+            } else {
+              log(`[WebRTC] No local tracks yet, creating connection object only for ${memberId}`);
+              createRTCConnection(memberId);
+            }
+          }
+        }
+      };
+
+      // Handle room members update
+      const handleRoomMembersUpdate = async (members) => {
+        log(`[WebRTC] Room members updated:`, members);
+        const newMembers = new Set(members);
+        const oldMembers = roomMembers || new Set();
+
+        // Close connections with users who left
+        for (const userId of rtcConnections.keys()) {
+          if (!newMembers.has(userId) && userId !== currentUserId) {
+            closeRTCConnection(userId);
+          }
+        }
+
+        // Create connections with new members who joined
+        for (const memberId of newMembers) {
+          if (memberId !== currentUserId && !rtcConnections.has(memberId) && !oldMembers.has(memberId)) {
+            log(`[WebRTC] New member ${memberId} joined, creating connection...`);
+            await createAndSendOffer(memberId);
+          }
+        }
+
+        roomMembers = newMembers;
+      };
+
+      // ==================== End WebRTC Connection Manager ====================
+
+      const handleMessage = (msg) => {
+        switch (msg.type) {
+          case 'auth_success': showChat(); startPolling(); break;
+          case 'auth_error': alert(msg.payload.error); break;
+          case 'rooms_list': log('Rooms:', msg.payload.rooms.length); rooms = msg.payload.rooms; renderRooms(); break;
+          case 'room_created': log('Room created', msg.payload.room); rooms.push(msg.payload.room); renderRooms(); closeModal(); break;
+          case 'joined_room':
+            log('Joined', msg.payload.roomId);
+            joinedRooms.add(msg.payload.roomId);
+            pendingJoinRoom = null;
+            if (msg.payload.members && msg.payload.members.length > 0) {
+              roomMembersCache.set(msg.payload.roomId, new Set(msg.payload.members));
+              log('[WebRTC] Cached members for room', msg.payload.roomId, ':', msg.payload.members);
+              switchToRoom(msg.payload.roomId, msg.payload.members);
+            } else {
+              switchToRoom(msg.payload.roomId);
+            }
+            break;
+          case 'room_members_update':
+            log('Room members update:', msg.payload.members);
+            if (currentRoomId) {
+              roomMembersCache.set(currentRoomId, new Set(msg.payload.members));
+              log('[WebRTC] Updated cached members for room', currentRoomId);
+            }
+            handleRoomMembersUpdate(msg.payload.members);
+            break;
+          case 'room_message': log('Got message', msg.payload); handleRoomMsg(msg); break;
+          case 'screen_stop':
+            log('Screen sharing stopped');
+            removeScreenShare();
+            break;
+          // WebRTC Signaling Messages
+          case 'rtc_offer':
+            log('[WebRTC] Received RTC offer from:', msg.payload.fromUserId, 'isScreenShare:', msg.payload.isScreenShare, 'isVideoCall:', msg.payload.isVideoCall, 'isAudioCall:', msg.payload.isAudioCall);
+            handleRTCOffer(msg.payload.fromUserId, msg.payload.offer, msg.payload.isScreenShare, msg.payload.isVideoCall, msg.payload.isAudioCall);
+            break;
+          case 'rtc_answer':
+            log('[WebRTC] Received RTC answer from:', msg.payload.fromUserId);
+            handleRTCAnswer(msg.payload.fromUserId, msg.payload.answer);
+            break;
+          case 'rtc_ice_candidate':
+            log('[WebRTC] Received ICE candidate from:', msg.payload.fromUserId);
+            handleRTCIceCandidate(msg.payload.fromUserId, msg.payload.candidate);
+            break;
+          case 'rtc_connect_request':
+            log('[WebRTC] Received connect request from:', msg.payload.fromUserId);
+            handleRTCConnectRequest(msg.payload.fromUserId, msg.payload.mediaTypes);
+            break;
+          case 'rtc_disconnect':
+            log('[WebRTC] Received disconnect from:', msg.payload.fromUserId);
+            handleRTCDisconnect(msg.payload.fromUserId);
+            break;
+          case 'rtc_video_off':
+            log('[WebRTC] Received video off notification from:', msg.payload.fromUserId);
+            // Clean up both containers (video call container in sidebar, screen share container in chat)
+            const videoContainer = document.getElementById('videoCallContainer');
+            const screenContainer = document.getElementById('screenShareContainer');
+            if (videoContainer) {
+              videoContainer.remove();
+              log('[WebRTC] videoCallContainer removed after receiving rtc_video_off');
+            }
+            if (screenContainer) {
+              screenContainer.remove();
+              log('[WebRTC] screenShareContainer removed after receiving rtc_video_off');
+            }
+            break;
+          case 'left_room':
+            log('Left', msg.payload.roomId);
+            joinedRooms.delete(msg.payload.roomId);
+            // Close WebRTC connections when leaving room
+            if (currentRoomId === msg.payload.roomId) {
+              closeAllRTCConnections();
+              currentRoomId = '';
+            }
+            renderRooms();
+            loadChat();
+            break;
+          case 'error':
+            log('Error', msg.payload.error);
+            if (msg.payload.error === 'Failed to join room' && pendingJoinRoom) {
+              joinedRooms.add(pendingJoinRoom);
+              currentRoomId = pendingJoinRoom;
+              pendingJoinRoom = null;
+              renderRooms();
+              loadChat();
+            }
+            break;
+        }
+      };
+
+      const showChat = () => {
+        document.getElementById('mainContent').innerHTML = `
+          <div class="sidebar"><button class="create-room-btn" onclick="app.showCreateRoomModal()">+ 创建房间</button><div class="rooms-list" id="roomsList"></div></div>
+          <div class="chat-area" id="chatArea"><div class="no-room-selected"><div style="font-size:48px">💬</div><p>选择一个房间开始聊天</p></div></div>`;
+        
+        const roomsList = document.getElementById('roomsList');
+        if (roomsList) {
+          roomsList.addEventListener('click', (e) => {
+            const roomItem = e.target.closest('.room-item');
+            if (roomItem && roomItem.dataset.roomId) {
+              log(`Room clicked (delegated): ${roomItem.dataset.roomId}`);
+              joinRoom(roomItem.dataset.roomId);
+            }
+          });
+        }
+        
+        requestRooms();
+      };
+
+      const requestRooms = () => send({ type: 'list_rooms', payload: {} });
+
+      const startPolling = () => { stopPolling(); roomPollingInterval = setInterval(requestRooms, POLLING_INTERVAL); };
+      const stopPolling = () => { if (roomPollingInterval) { clearInterval(roomPollingInterval); roomPollingInterval = null; } };
+
+      const renderRooms = () => {
+        const list = document.getElementById('roomsList');
+        if (!list) return;
+        
+        const currentHash = rooms.map(r => 
+          `${r.id}|${r.name}|${(r.members||[]).join(',')}|${currentRoomId===r.id}|${joinedRooms.has(r.id)}|${flashingRooms.has(r.id)}|${(unreadMessages[r.id]||[]).length}`
+        ).join('||');
+        
+        if (currentHash === lastRoomsHash) {
+          log('Rooms unchanged, skipping render');
+          return;
+        }
+        lastRoomsHash = currentHash;
+        
+        list.innerHTML = '';
+        
+        log(`Rendering ${rooms.length} rooms`);
+        
+        rooms.forEach(r => {
+          const div = document.createElement('div');
+          const isActive = r.id === currentRoomId;
+          const isJoined = joinedRooms.has(r.id);
+          const isFlashing = flashingRooms.has(r.id) && !isActive;
+          const unread = unreadMessages[r.id]?.length || 0;
+
+          div.className = `room-item ${isActive ? 'active' : ''} ${isJoined && !isActive ? 'joined' : ''} ${isFlashing ? 'flashing' : ''}`;
+          div.dataset.roomId = r.id;
+
+          let title = r.name;
+          if (unread > 0 && !isActive) {
+            title += ` <span class="unread-badge">${unread}</span>`;
+          }
+
+          div.innerHTML = `<h3>${title}</h3><p>房间成员: ${(r.members || []).slice(0, 3).join(', ')}${(r.members || []).length > 3 ? '...' : ''}</p>`;
+          list.appendChild(div);
+        });
+      };
+
+      const switchToRoom = async (roomId, members = null) => {
+        log('switchToRoom', roomId, 'members:', members);
+        
+        if (currentRoomId === roomId) {
+          log('[WebRTC] Already in room', roomId, 'skipping switch');
+          return;
+        }
+
+        const newMembersSet = members ? new Set(members) : (roomMembersCache.get(roomId) || new Set());
+        
+        currentRoomId = roomId;
+        flashingRooms.delete(roomId);
+        unreadMessages[roomId] = [];
+
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        if (newMembersSet.size > 0) {
+          log('[WebRTC] Closing connections to users not in new room');
+          for (const userId of rtcConnections.keys()) {
+            if (!newMembersSet.has(userId) && userId !== currentUserId) {
+              closeRTCConnection(userId);
+            }
+          }
+          
+          await initRTCConnections(Array.from(newMembersSet));
+        } else {
+          log('[WebRTC] No members provided, using cached members:', Array.from(roomMembersCache.get(roomId) || []));
+          roomMembers = roomMembersCache.get(roomId) || new Set();
+        }
+
+        renderRooms();
+        loadChat();
+      };
+
+      const joinRoom = (id) => {
+        log('joinRoom', id, 'joined:', Array.from(joinedRooms), 'current:', currentRoomId);
+        
+        if (currentRoomId === id) {
+          log('[WebRTC] Already in room', id, 'skipping join');
+          return;
+        }
+        
+        if (!joinedRooms.has(id)) {
+          pendingJoinRoom = id;
+          send({ type: 'join_room', payload: { roomId: id } });
+        } else {
+          const cachedMembers = roomMembersCache.get(id);
+          log('[WebRTC] Switching to already-joined room', id, 'cached members:', Array.from(cachedMembers || []));
+          switchToRoom(id, cachedMembers ? Array.from(cachedMembers) : null);
+        }
+      };
+
+      const loadChat = () => {
+        const room = rooms.find(r => r.id === currentRoomId);
+        const chatArea = document.getElementById('chatArea');
+        if (!room || !chatArea) {
+          if (chatArea) chatArea.innerHTML = '<div class="no-room-selected"><div style="font-size:48px">💬</div><p>选择一个房间开始聊天</p></div>';
+          return;
+        }
+        chatArea.innerHTML = `
+          <div class="chat-header"><h2>${room.name}</h2><div class="chat-actions"><button class="action-btn mic-btn" onclick="app.toggleMic()">📞 音频通话</button><button class="action-btn video-btn" onclick="app.toggleVideo()">📹 视频通话</button><div class="volume-indicator" id="volumeIndicator" style="display:none;"><div class="volume-bar"></div><div class="volume-bar"></div><div class="volume-bar"></div><div class="volume-bar"></div><div class="volume-bar"></div></div><button class="action-btn screen-btn" onclick="app.toggleScreen()">🖥️ 共享桌面</button><button class="leave-btn" onclick="app.leaveRoom()">离开房间</button></div></div>
+
+          <div class="chat-messages" id="chatMessages"></div>
+          <div class="chat-input"><textarea id="messageInput" placeholder="输入消息..."></textarea><button onclick="app.sendMessage()">发送</button></div>`;
+        const msgs = roomMessages[currentRoomId] || [];
+        const chatMessages = document.getElementById('chatMessages');
+        msgs.forEach(m => appendMsg(chatMessages, m));
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      };
+
+      const appendMsg = (container, msg) => {
+        if (!container) return;
+        const div = document.createElement('div');
+        div.className = `message ${msg.from === currentUserId ? 'own' : ''}`;
+        div.innerHTML = `<div class="avatar">${(msg.from || '?')[0].toUpperCase()}</div><div class="message-content"><div class="message-header"><span class="message-author">${msg.from}</span><span class="message-time">${new Date(msg.timestamp).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})}</span></div><div class="message-text">${msg.payload?.content || ''}</div></div>`;
+        container.appendChild(div);
+      };
+
+      const handleRoomMsg = (msg) => {
+        log('handleRoomMsg', msg.from, 'currentUser:', currentUserId, 'currentRoom:', currentRoomId);
+        if (msg.from === currentUserId) { log('Ignoring own msg'); return; }
+
+        const rid = msg.payload.roomId;
+
+        if (!roomMessages[rid]) roomMessages[rid] = [];
+        roomMessages[rid].push(msg);
+
+        if (rid === currentRoomId) {
+          log('Adding to current chat');
+          const chatMessages = document.getElementById('chatMessages');
+          if (chatMessages) {
+            appendMsg(chatMessages, msg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+          }
+        } else {
+          log('Adding to unread, room:', rid);
+          if (!unreadMessages[rid]) unreadMessages[rid] = [];
+          unreadMessages[rid].push(msg);
+          flashingRooms.add(rid);
+          renderRooms();
+        }
+      };
+
+      const sendMessage = () => {
+        const textarea = document.getElementById('messageInput');
+        if (!textarea) return;
+        const content = textarea.value.trim();
+        if (!content || !currentRoomId) return;
+        log('Sending message to', currentRoomId, content);
+        send({ type: 'send_message', payload: { roomId: currentRoomId, content } });
+        textarea.value = '';
+        const ownMsg = { type: 'room_message', payload: { roomId: currentRoomId, content, senderId: currentUserId }, from: currentUserId, timestamp: Date.now() };
+        if (!roomMessages[currentRoomId]) roomMessages[currentRoomId] = [];
+        roomMessages[currentRoomId].push(ownMsg);
+        const chatMessages = document.getElementById('chatMessages');
+        appendMsg(chatMessages, ownMsg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      };
+
+      const leaveRoom = async () => {
+        log('leaveRoom', currentRoomId);
+
+        // Stop screen sharing
+        if (isScreenSharing) {
+          await stopScreenSharing();
+          isScreenSharing = false;
+        }
+
+        // Stop microphone
+        if (isMicOn) {
+          // Remove audio track from WebRTC connections
+          if (localAudioTrack) {
+            await removeLocalTrackFromConnections('audio');
+            localAudioTrack.stop();
+            localAudioTrack = null;
+          }
+          stopVolumeIndicator();
+          if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+            mediaStream = null;
+          }
+          isMicOn = false;
+        }
+
+        // Close all WebRTC connections
+        closeAllRTCConnections();
+
+        if (currentRoomId) {
+          send({ type: 'leave_room', payload: { roomId: currentRoomId } });
+        }
+        currentRoomId = '';
+        roomMembers.clear();
+        loadChat();
+        renderRooms();
+      };
+
+      const showCreateRoomModal = () => document.getElementById('createRoomModal').classList.add('show');
+      const closeModal = () => document.getElementById('createRoomModal').classList.remove('show');
+
+      const createRoom = () => {
+        const name = document.getElementById('roomNameInput').value.trim();
+        if (!name) return alert('请输入房间名称');
+        log('Creating room', name);
+        send({ type: 'create_room', payload: { name, topic: document.getElementById('roomTopicInput').value.trim() } });
+        document.getElementById('roomNameInput').value = '';
+        document.getElementById('roomTopicInput').value = '';
+      };
+
+      const toggleMic = async () => {
+        const micBtn = document.querySelector('.mic-btn');
+        const volumeIndicator = document.getElementById('volumeIndicator');
+
+        if (!isMicOn) {
+          try {
+            if (!audioContext) {
+              audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: 48000,
+                latencyHint: 'interactive'
+              });
+            }
+
+            if (audioContext.state === 'suspended') {
+              await audioContext.resume();
+              log('[WebRTC] AudioContext resumed');
+            }
+
+            log('[WebRTC] Requesting microphone access...');
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true, // Enable AGC for consistent volume
+                channelCount: 1,
+                sampleRate: 48000,
+                latency: 0.02,
+                volume: 0.8, // Reduce volume slightly to prevent distortion
+                // Chrome-specific constraints for better noise handling
+                googEchoCancellation: true,
+                googEchoCancellationMode: 'full',
+                googNoiseSuppression: true,
+                googNoiseSuppression2: true,
+                googHighpassFilter: true,
+                googTypingNoiseDetection: true,
+                googAudioMirroring: false,
+                // Additional constraints
+                googExperimentalEchoCancellation: true,
+                googExperimentalNoiseSuppression: true,
+                googExperimentalAutoGainControl: false
+              },
+              video: false
+            });
+
+            const audioTrack = mediaStream.getAudioTracks()[0];
+            
+            // Apply audio constraints to the track
+            try {
+              // Try to apply additional constraints after track is created
+              await audioTrack.applyConstraints({
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+              });
+              
+              const trackSettings = audioTrack.getSettings();
+              log(`[WebRTC] Audio track settings: sampleRate=${trackSettings.sampleRate}, latency=${trackSettings.latency}, channelCount=${trackSettings.channelCount}, echoCancellation=${trackSettings.echoCancellation}, noiseSuppression=${trackSettings.noiseSuppression}, autoGainControl=${trackSettings.autoGainControl}`);
+              
+              // Apply content hint for audio optimization
+              if (audioTrack.contentHint !== undefined) {
+                audioTrack.contentHint = 'speech'; // Optimize for speech
+                log(`[WebRTC] Applied content hint 'speech' to audio track`);
+              }
+            } catch (e) {
+              log(`[WebRTC] Could not apply audio optimizations:`, e);
+            }
+            if (!audioTrack) {
+              throw new Error('No audio track found in stream');
+            }
+            localAudioTrack = audioTrack;
+
+            log('[WebRTC] Microphone stream obtained, track id:', audioTrack.id, 'enabled:', audioTrack.enabled);
+
+            if (rtcConnections.size > 0) {
+              log('[WebRTC] Adding audio track to', rtcConnections.size, 'existing connections');
+              await addLocalTrackToConnections(audioTrack, mediaStream);
+              log('[WebRTC] Audio track added to all existing connections');
+            }
+
+            if (rtcConnections.size === 0 && roomMembers.size > 1) {
+              log('[WebRTC] No existing connections, initiating', roomMembers.size - 1, 'new connections for audio...');
+              const connectedCount = 0;
+              for (const memberId of roomMembers) {
+                if (memberId !== currentUserId) {
+                  try {
+                    await createAndSendOffer(memberId);
+                    log('[WebRTC] Connection initiated with', memberId);
+                  } catch (connErr) {
+                    log('[WebRTC] Failed to create connection with', memberId, ':', connErr);
+                  }
+                }
+              }
+            }
+
+            isMicOn = true;
+            micBtn.classList.add('disabled');
+            micBtn.textContent = '📞 通话中';
+
+            log('[WebRTC] Audio call started successfully, sample rate:', audioContext.sampleRate);
+            log('[WebRTC] Current connections:', rtcConnections.size, 'room members:', roomMembers.size);
+          } catch (err) {
+            log('[WebRTC] Failed to start audio call:', err);
+            alert('无法访问麦克风，请检查权限设置');
+            isMicOn = false;
+            micBtn.classList.remove('disabled');
+            micBtn.textContent = '📞 音频通话';
+          }
+        } else {
+          stopVolumeIndicator();
+
+          log('[WebRTC] Stopping microphone...');
+
+          if (localAudioTrack) {
+            await removeLocalTrackFromConnections('audio');
+            log('[WebRTC] Audio track removed from all connections');
+            localAudioTrack.stop();
+            localAudioTrack = null;
+            log('[WebRTC] Local audio track stopped');
+          }
+
+          if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+            mediaStream = null;
+            log('[WebRTC] Media stream stopped');
+          }
+
+          isMicOn = false;
+          micBtn.classList.remove('disabled');
+          micBtn.textContent = '📞 音频通话';
+
+          if (volumeIndicator) {
+            volumeIndicator.style.display = 'none';
+          }
+
+          log('[WebRTC] Microphone turned off successfully');
+        }
+      };
+
+      let isVideoOn = false;
+      let localVideoTrack = null;
+
+      const toggleVideo = async () => {
+        const prevState = isVideoOn;
+        isVideoOn = !isVideoOn;
+        const videoBtn = document.querySelector('.video-btn');
+
+        log(`[WebRTC] toggleVideo called, prevState: ${prevState}, newState: ${isVideoOn}`);
+
+        if (isVideoOn) {
+          try {
+            log('[WebRTC] Starting video call...');
+            
+            if (!audioContext) {
+              audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: 48000,
+                latencyHint: 'interactive'
+              });
+            }
+
+            if (audioContext.state === 'suspended') {
+              await audioContext.resume();
+            }
+
+            const videoStream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                width: { ideal: 640, max: 1280 },
+                height: { ideal: 480, max: 720 },
+                frameRate: { ideal: 15, max: 30 }, // Lower frame rate for lower latency
+                facingMode: 'user'
+              },
+              audio: false
+            });
+
+            localVideoTrack = videoStream.getVideoTracks()[0];
+            
+            // Apply low-latency encoding settings if supported
+            try {
+              const trackSettings = localVideoTrack.getSettings();
+              log(`[WebRTC] Video track settings: width=${trackSettings.width}, height=${trackSettings.height}, frameRate=${trackSettings.frameRate}`);
+              
+              // Try to apply content hints for better encoding
+              if (localVideoTrack.contentHint !== undefined) {
+                localVideoTrack.contentHint = 'motion'; // Better for video calls with motion
+                log(`[WebRTC] Applied content hint 'motion' to video track`);
+              }
+            } catch (e) {
+              log(`[WebRTC] Could not apply video optimizations:`, e);
+            }
+            
+            log(`[WebRTC] Local video track obtained: ${localVideoTrack ? localVideoTrack.id : 'null'}`);
+
+            await addLocalTrackToConnections(localVideoTrack, videoStream);
+
+            videoBtn.classList.add('disabled');
+            videoBtn.textContent = '📹 视频中';
+
+            log('[WebRTC] Video call started successfully');
+          } catch (err) {
+            log('[WebRTC] Failed to start video call:', err);
+            alert('无法访问摄像头，请检查权限设置');
+            isVideoOn = false;
+            videoBtn.classList.remove('disabled');
+            videoBtn.textContent = '📹 视频通话';
+          }
+        } else {
+          log('[WebRTC] Closing video call...');
+          
+          if (localVideoTrack) {
+            removeLocalTrackFromConnections('video');
+            localVideoTrack.stop();
+            localVideoTrack = null;
+            log('[WebRTC] Local video track stopped');
+          } else {
+            log('[WebRTC] No local video track to stop');
+          }
+
+          // Notify other users that video is off
+          send({
+            type: 'rtc_video_off',
+            payload: { roomId: currentRoomId }
+          });
+          log('[WebRTC] Sent rtc_video_off notification');
+
+          log('[WebRTC] isScreenSharing:', isScreenSharing);
+          
+          // Clean up video call container (sidebar) and screen share container (chat area)
+          const videoContainer = document.getElementById('videoCallContainer');
+          const screenContainer = document.getElementById('screenShareContainer');
+          
+          log('[WebRTC] videoCallContainer exists:', !!videoContainer);
+          log('[WebRTC] screenShareContainer exists:', !!screenContainer);
+          
+          if (videoContainer) {
+            videoContainer.querySelectorAll('video').forEach(video => {
+              video.pause();
+              video.srcObject = null;
+              video.remove();
+            });
+            videoContainer.remove();
+            log('[WebRTC] videoCallContainer removed');
+          }
+          
+          if (screenContainer && !isScreenSharing) {
+            screenContainer.querySelectorAll('video').forEach(video => {
+              video.pause();
+              video.srcObject = null;
+              video.remove();
+            });
+            screenContainer.remove();
+            log('[WebRTC] screenShareContainer removed');
+          }
+
+          videoBtn.classList.remove('disabled');
+          videoBtn.textContent = '📹 视频通话';
+
+          log('[WebRTC] Video turned off, returned to chat interface');
+        }
+      };
+
+      const setupVolumeIndicator = () => {
+        if (!mediaStream || !audioContext) return;
+        
+        audioAnalyser = audioContext.createAnalyser();
+        audioAnalyser.fftSize = 256;
+        
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        source.connect(audioAnalyser);
+        
+        const dataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
+        
+        volumeCheckInterval = setInterval(() => {
+          if (!audioAnalyser) return;
+          
+          audioAnalyser.getByteFrequencyData(dataArray);
+          const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+          
+          const bars = document.querySelectorAll('.volume-bar');
+          const level = Math.floor(average / 50);
+          
+          bars.forEach((bar, index) => {
+            if (index < level) {
+              bar.classList.add('active');
+              bar.style.height = '16px';
+            } else {
+              bar.classList.remove('active');
+              bar.style.height = '12px';
+            }
+          });
+        }, 100);
+      };
+
+      const stopVolumeIndicator = () => {
+        if (volumeCheckInterval) {
+          clearInterval(volumeCheckInterval);
+          volumeCheckInterval = null;
+        }
+        
+        if (audioAnalyser) {
+          audioAnalyser = null;
+        }
+      };
+
+      let audioInputNode = null;
+      let audioScriptNode = null;
+
+
+      const showSpeakingIndicator = (userId) => {
+        const chatHeader = document.querySelector('.chat-header');
+        if (!chatHeader) return;
+        
+        let indicator = document.getElementById('speakingIndicator');
+        if (!indicator) {
+          indicator = document.createElement('div');
+          indicator.id = 'speakingIndicator';
+          indicator.className = 'speaking-indicator';
+          indicator.innerHTML = '<span class="dot"></span><span class="speaker"></span>';
+          chatHeader.appendChild(indicator);
+        }
+        
+        indicator.querySelector('.speaker').textContent = `${userId} 在说话`;
+        indicator.style.display = 'inline-flex';
+        
+        clearTimeout(indicator.timeout);
+        indicator.timeout = setTimeout(() => {
+          indicator.style.display = 'none';
+        }, 2000);
+      };
+
+      const toggleScreen = async () => {
+        const screenBtn = document.querySelector('.screen-btn');
+
+        log('toggleScreen called, current state:', isScreenSharing);
+
+        if (!isScreenSharing) {
+          try {
+            log('[WebRTC] Requesting screen share permission...');
+            screenStream = await navigator.mediaDevices.getDisplayMedia({
+              video: {
+                cursor: 'always',
+                displaySurface: 'monitor', // Prefer full monitor
+                width: { ideal: 1920, max: 1920 },
+                height: { ideal: 1080, max: 1080 },
+                frameRate: { ideal: 10, max: 15 } // Lower frame rate for screen sharing to reduce latency
+              },
+              audio: false
+            });
+
+            isScreenSharing = true;
+            screenBtn.classList.remove('disabled');
+            screenBtn.textContent = '🖥️ 停止共享';
+
+            // Get video track from screen stream
+            const screenTrack = screenStream.getVideoTracks()[0];
+            localScreenTrack = screenTrack;
+            
+            // Apply content hint for screen sharing
+            try {
+              const trackSettings = screenTrack.getSettings();
+              log(`[WebRTC] Screen track settings: width=${trackSettings.width}, height=${trackSettings.height}, frameRate=${trackSettings.frameRate}`);
+              
+              // Apply content hint for better screen encoding
+              if (screenTrack.contentHint !== undefined) {
+                screenTrack.contentHint = 'text'; // Better for screen content with text
+                log(`[WebRTC] Applied content hint 'text' to screen track`);
+              }
+              
+              // Try to apply bitrate constraints for better performance
+              const senders = Array.from(rtcConnections.values()).flatMap(pc => pc.getSenders());
+              const screenSender = senders.find(s => s.track === screenTrack);
+              if (screenSender && screenSender.getParameters) {
+                const params = screenSender.getParameters();
+                if (params.encodings && params.encodings.length > 0) {
+                  // Set lower max bitrate for screen share to reduce latency
+                  params.encodings[0].maxBitrate = 2000000; // 2 Mbps
+                  params.encodings[0].scaleResolutionDownBy = 1;
+                  await screenSender.setParameters(params);
+                  log(`[WebRTC] Applied bitrate constraints to screen sender`);
+                }
+              }
+            } catch (e) {
+              log(`[WebRTC] Could not apply screen optimizations:`, e);
+            }
+
+            log('[WebRTC] Screen stream obtained, track:', screenTrack.id);
+
+            // Add screen track to all WebRTC connections
+            await addLocalTrackToConnections(screenTrack, screenStream);
+
+            // If no existing connections, we need to renegotiate
+            if (rtcConnections.size === 0 && roomMembers.size > 1) {
+              log('[WebRTC] No existing connections, initiating offers...');
+              for (const memberId of roomMembers) {
+                if (memberId !== currentUserId) {
+                  await createAndSendOffer(memberId);
+                }
+              }
+            } else {
+              // Renegotiate existing connections to include the new track
+              log('[WebRTC] Renegotiating existing connections...');
+              for (const [userId, pc] of rtcConnections) {
+                try {
+                  const offer = await pc.createOffer();
+                  await pc.setLocalDescription(offer);
+                  send({
+                    type: 'rtc_offer',
+                    payload: {
+                      roomId: currentRoomId,
+                      targetUserId: userId,
+                      offer: offer.toJSON()
+                    }
+                  });
+                } catch (err) {
+                  log(`[WebRTC] Failed to renegotiate with ${userId}:`, err);
+                }
+              }
+            }
+
+            screenTrack.onended = () => {
+              log('[WebRTC] Screen track ended');
+              stopScreenSharing();
+              isScreenSharing = false;
+              screenBtn.classList.add('disabled');
+              screenBtn.textContent = '🖥️ 共享桌面';
+            };
+
+            log('[WebRTC] Screen sharing started successfully');
+          } catch (err) {
+            log('[WebRTC] Failed to start screen sharing:', err);
+            alert('无法启动屏幕共享，请检查权限设置');
+            isScreenSharing = false;
+          }
+        } else {
+          log('[WebRTC] Stopping screen sharing...');
+          stopScreenSharing();
+          isScreenSharing = false;
+          screenBtn.classList.add('disabled');
+          screenBtn.textContent = '🖥️ 共享桌面';
+          log('[WebRTC] Screen sharing stopped');
+        }
+      };
+
+      const stopScreenSharing = async () => {
+        // Remove screen track from all WebRTC connections
+        if (localScreenTrack) {
+          await removeLocalTrackFromConnections('video');
+          localScreenTrack.stop();
+          localScreenTrack = null;
+        }
+
+        if (screenStream) {
+          screenStream.getTracks().forEach(track => track.stop());
+          screenStream = null;
+        }
+
+        // Clean up screen share container (in chat area)
+        const screenContainer = document.getElementById('screenShareContainer');
+        if (screenContainer) {
+          screenContainer.querySelectorAll('video').forEach(video => {
+            video.pause();
+            video.srcObject = null;
+            video.remove();
+          });
+          screenContainer.remove();
+          log('[WebRTC] screenShareContainer removed after stopping screen sharing');
+        }
+
+        // Notify via WebSocket (for UI update)
+        if (currentRoomId) {
+          send({
+            type: 'screen_stop',
+            payload: { roomId: currentRoomId }
+          });
+        }
+
+        log('[WebRTC] Screen sharing stopped, resources cleaned up');
+      };
+
+      const removeScreenShare = () => {
+        // Remove screen share container from UI
+        const screenContainer = document.getElementById('screenShareContainer');
+        if (screenContainer) {
+          screenContainer.remove();
+        }
+      };
+
+      return { connect, authenticate, sendMessage, createRoom, showCreateRoomModal, closeModal, leaveRoom, toggleMic, toggleVideo, toggleScreen, reconnect, showServerSettings };
+    })();
+    
+    let audioInitialized = false;
+    
+    function initAudioContext() {
+      if (!audioInitialized) {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          if (ctx.state === 'suspended') {
+            ctx.resume().then(() => {
+              console.log('[Audio] Audio context resumed');
+              audioInitialized = true;
+            });
+          } else {
+            audioInitialized = true;
+          }
+          console.log('[Audio] Audio context initialized');
+        } catch (err) {
+          console.log('[Audio] Failed to initialize audio context:', err);
+        }
+      }
+    }
+
+    document.addEventListener('click', initAudioContext, { once: true });
+    document.addEventListener('keydown', initAudioContext, { once: true });
+    document.addEventListener('touchstart', initAudioContext, { once: true });
+
+    document.addEventListener('error', (e) => {
+      if (e.target instanceof HTMLAudioElement) {
+        console.log('[Audio] === Audio Element Error Detected ===');
+        console.log('[Audio] Target:', e.target);
+        console.log('[Audio] Error type:', e.type);
+        console.log('[Audio] Error message:', e.message);
+        console.log('[Audio] Error stack:', e.error ? e.error.stack : 'No stack');
+      }
+    }, true);
+
+    app.connect();
+  </script>
+</body>
+</html>

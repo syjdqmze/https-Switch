@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Sub-Item 管理页面</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+            margin: 0;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background-color: #c5d8e8; border-radius: 3px; }
+        .sidebar-menu::-webkit-scrollbar-track { background-color: transparent; }
+
+        .sidebar-actions {
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid #dce8f2;
+            flex-shrink: 0;
+        }
+
+        .sidebar-actions button {
+            flex: 1;
+            padding: 5px 0;
+            font-size: 12px;
+            border: 1px solid #dce8f2;
+            background: #fff;
+            color: #999;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .sidebar-actions button:hover {
+            border-color: #1890ff;
+            color: #1890ff;
+            background: #e6f7ff;
+        }
+
+        .sidebar-menu > li {
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu > li > .menu-title {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .sidebar-menu > li > .menu-title:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu > li.active > .menu-title {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu > li.active {
+            border-left-color: #1890ff;
+        }
+
+        .sidebar-menu .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-menu .arrow {
+            margin-left: auto;
+            font-size: 10px;
+            transition: transform .25s;
+            color: #999;
+        }
+
+        .sidebar-menu > li.open > .menu-title .arrow {
+            transform: rotate(90deg);
+        }
+
+        .submenu {
+            list-style: none;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .3s ease;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-menu > li.open > .submenu {
+            max-height: 800px;
+        }
+
+        .submenu li {
+            padding: 8px 20px 8px 44px;
+            cursor: pointer;
+            color: #999;
+            font-size: 13px;
+            transition: all .2s;
+            border-left: 3px solid transparent;
+            margin-left: 3px;
+        }
+
+        .submenu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .submenu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .content-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #2c5f8a;
+            margin: 22px 0 12px;
+            padding-left: 10px;
+            border-left: 4px solid #1890ff;
+            line-height: 1.4;
+        }
+
+        .content-card img {
+            display: block;
+            max-width: 88%;
+            height: auto;
+            margin: 14px auto;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+        }
+
+        .img-caption {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin: -6px 0 16px;
+        }
+
+        .api-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0 18px;
+            font-size: 13px;
+        }
+
+        .api-table th {
+            background-color: #1890ff;
+            color: #fff;
+            padding: 9px 10px;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .api-table td {
+            padding: 8px 10px;
+            border: 1px solid #e8eef4;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .api-table tr:nth-child(even) td {
+            background-color: #f8fbfe;
+        }
+
+        .code-block {
+            background-color: #f7fafc;
+            border-left: 4px solid #6aa1d8;
+            border-radius: 4px;
+            padding: 12px 14px;
+            margin: 12px 0 16px;
+            font-family: Consolas, 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .cm {
+            color: #999;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">AutoSar基础软件层(BSW)</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <div class="sidebar-actions">
+                    <button class="btn-expand-all">全部展开</button>
+                    <button class="btn-collapse-all">全部收起</button>
+                </div>
+                <ul class="sidebar-menu">
+                    <li class="open" data-target="sec-overview">
+                        <div class="menu-title"><span class="icon">&#9654;</span>BSW概述<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-1-1">1.1 什么是BSW</li>
+                            <li data-target="sec-1-2">1.2 BSW的三层结构</li>
+                            <li data-target="sec-1-3">1.3 复杂驱动</li>
+                            <li data-target="sec-1-4">1.4 再将结构细分</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-io">
+                        <div class="menu-title"><span class="icon">&#9654;</span>BSW的I/O功能<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-2-1">2.1 架构与术语解释</li>
+                            <li data-target="sec-2-2">2.2 举例：温度传感器</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-comm">
+                        <div class="menu-title"><span class="icon">&#9654;</span>BSW的Communication功能<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-3-1">3.1 架构与术语解释</li>
+                            <li data-target="sec-3-2">3.2 发送流程</li>
+                            <li data-target="sec-3-3">3.3 接收流程</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-memory">
+                        <div class="menu-title"><span class="icon">&#9654;</span>BSW的Memory功能<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-4-1">4.1 架构与术语解释</li>
+                            <li data-target="sec-4-2">4.2 片内存储</li>
+                            <li data-target="sec-4-3">4.3 片外存储</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-mode">
+                        <div class="menu-title"><span class="icon">&#9654;</span>BSW的Mode Management功能<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-5-1">5.1 架构与术语解释</li>
+                            <li data-target="sec-5-2">5.2 BswM规则配置</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-wdg">
+                        <div class="menu-title"><span class="icon">&#9654;</span>BSW的Watchdog功能<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-6-1">6.1 架构与术语解释</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-diag">
+                        <div class="menu-title"><span class="icon">&#9654;</span>BSW的Diagnostics功能<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-7-1">7.1 架构与术语解释</li>
+                            <li data-target="sec-7-2">7.2 工作流程</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-os">
+                        <div class="menu-title"><span class="icon">&#9654;</span>BSW的OS功能<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-8-1">8.1 OS架构</li>
+                            <li data-target="sec-8-2">8.2 OS的可扩展性</li>
+                        </ul>
+                    </li>
+                    <li class="open" data-target="sec-summary">
+                        <div class="menu-title"><span class="icon">&#9654;</span>BSW小结<span class="arrow">&#9656;</span></div>
+                        <ul class="submenu">
+                            <li data-target="sec-9-1">9.1 关于功能与模块</li>
+                            <li data-target="sec-9-2">9.2 关于实际工程</li>
+                        </ul>
+                    </li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+
+                        <h3 id="sec-overview">一、BSW概述</h3>
+
+                        <h4 id="sec-1-1">1.1 什么是BSW</h4>
+                        <p>BSW（Basic Software，基础软件层）是 AutoSAR 分层架构中最下面的一大层。可以把 ECU 想象成一台电脑，BSW 的作用就相当于<strong>Windows 操作系统</strong>：它向下封装芯片硬件、向上给应用层软件（SWC）提供各种基础服务，让应用工程师不必关心底层硬件细节。</p>
+                        <p>整个 BSW 位于 RTE 之下、硬件（Hardware）之上，它把 ECU 的硬件资源封装起来，通过统一的标准 API 向上层提供服务。下图标出了 BSW 在整个 AutoSAR 分层架构中的整体范围：</p>
+                        <img src="index05-map/b1-01.png" alt="BSW整体架构">
+                        <div class="img-caption">图1-1 AutoSAR 分层架构中的 BSW（绿色区域）：位于 RTE 之下、硬件之上，由服务层、ECU抽象层、硬件抽象层和复杂驱动组成</div>
+
+                        <h4 id="sec-1-2">1.2 BSW的三层结构</h4>
+                        <p>BSW 内部自下而上又分为三层，每一层的封装对象不同：</p>
+                        <p>（1）<strong>硬件抽象层（MCAL，MicroController Abstraction Layer）</strong>——最底层。它把主芯片内部的寄存器封装成 AutoSAR 规定的标准 API，好处是：上层模块只需要调用相同的 API，<strong>就能操作兼容的所有芯片</strong>，更换芯片时上层代码几乎不用改。它高亮显示如下：</p>
+                        <img src="index05-map/b1-02.png" alt="MCAL硬件抽象层高亮">
+                        <div class="img-caption">图1-2 硬件抽象层（MCAL，绿色高亮）：直接封装主芯片寄存器，屏蔽芯片差异，同操作兼容所有芯片</div>
+                        <p>（2）<strong>ECU抽象层（ECU Abstraction Layer）</strong>——中间层。MCAL 只封装主芯片内部的资源，而 ECU 上除了主芯片还有<strong>外置存储器、外置看门狗</strong>等板载设备，ECU 抽象层负责把<strong>整个 ECU（含这些外置设备）</strong>封装起来；它对外提供统一接口，底层仍然需要调用 MCAL 来真正操作硬件：</p>
+                        <img src="index05-map/b1-03.png" alt="ECU抽象层高亮">
+                        <div class="img-caption">图1-3 ECU抽象层（绿色高亮）：封装整个 ECU（包括外置存储、外置看门狗等板载设备），底层依赖 MCAL 完成实际硬件操作</div>
+                        <p>（3）<strong>服务层（Service Layer）</strong>——最上层。它把与硬件相关的功能进一步抽象成应用可用的服务，也是 BSW 中内容最多的一层：<strong>OS（操作系统）、诊断、存储管理（NVRAM）、看门狗管理、通信服务、调度管理、ECU 状态管理、通信通道管理</strong>等都属于服务层：</p>
+                        <img src="index05-map/b1-04.png" alt="服务层高亮">
+                        <div class="img-caption">图1-4 服务层（绿色高亮）：把硬件相关功能抽象成应用服务，包含 OS、诊断、存储管理、看门狗、通信、调度、ECU 状态管理等</div>
+
+                        <h4 id="sec-1-3">1.3 复杂驱动</h4>
+                        <p>BSW 里除了标准的三层结构，还有一个"另类"——<strong>复杂驱动（Complex Drivers）</strong>。它<strong>不属于三层中的任何一层</strong>，而是直接跨层实现，起补充作用：当某些功能对实时性要求极高、或芯片厂商提供了高度优化的专用驱动时，可以把它放进复杂驱动，直接从高层调用到底层硬件，绕过标准分层的层层封装：</p>
+                        <img src="index05-map/b1-05.png" alt="复杂驱动高亮">
+                        <div class="img-caption">图1-5 复杂驱动（Complex Drivers，绿色高亮）：不属于三层中的任何一层，直接贯穿 BSW 实现高实时性或专用驱动功能，起补充作用</div>
+
+                        <h4 id="sec-1-4">1.4 再将结构细分</h4>
+                        <p>把三层结构按功能再细分。下图最左侧是贯穿上下的<strong>系统服务</strong>，从左到右依次是<strong>板载功能、存储功能、通信功能、I/O 功能</strong>四个功能列（底部虚线框标出），最右侧还有贯穿三层的<strong>复杂驱动</strong>（紫色）：</p>
+                        <img src="index05-map/b1-06.png" alt="BSW结构细分图">
+                        <div class="img-caption">图1-6 BSW 结构细分：按板载功能、存储功能、通信功能、I/O 功能四列展开；存储、通信两列自上而下由服务层（红）→ECU抽象层（黄）→MCAL驱动（蓝）叠加，板载与 I/O 两列由 ECU抽象层（黄）→MCAL驱动（蓝）叠加</div>
+
+                        <h3 id="sec-io">二、BSW的I/O功能</h3>
+
+                        <h4 id="sec-2-1">2.1 架构与术语解释</h4>
+                        <p>BSW 的 I/O 功能并不等于 GPIO。把 BSW 中与 I/O 相关的部分——I/O 硬件抽象（黄色，属 ECU抽象层）及其下方的 I/O 驱动（蓝色，属 MCAL）——放大来看，I/O 相关的模块包括：<strong>DIO</strong>（数字输入输出，就是单片机的 GPIO）、<strong>ADC</strong>（模数转换）、<strong>PWM</strong>（脉冲宽度调制）三类驱动，以及辅助模块 <strong>I/O Signal Interface</strong>（输入信号接口，负责输入信号的消抖处理）和 <strong>Driver for ext. ADC / I/O ASIC</strong>（外置 ADC、I/O 专用芯片的驱动，这些外置芯片经过 SPI 总线与主芯片相连，中间要经过 <strong>SPI Handler</strong>）：</p>
+                        <img src="index05-map/b2-01.png" alt="I/O功能模块架构">
+                        <div class="img-caption">图2-1 I/O 功能模块架构：I/O硬件抽象（黄）展开为 I/O Signal Interface（含外置 ADC/I/O ASIC 驱动）、SPI Handler、ADC/PWM/DIO；I/O驱动（蓝）为 MCAL 层的 ADC/PWM/DIO 驱动，最下方灰色为对应硬件</div>
+                        <p>其中 <strong>IoHwAb（I/O 硬件抽象）需要手写代码</strong>：在 DaVinci 中申请一个 SWC，并把它声明为 IOHwAb 类型，然后在这个 SWC 中手写抽象逻辑，向上层屏蔽"信号到底来自片内 ADC 还是外置采样芯片"的细节。</p>
+
+                        <h4 id="sec-2-2">2.2 举例：温度传感器</h4>
+                        <p>以<strong>车内环境温度</strong>的采集为例，把整条 I/O 数据链路走一遍：物理温度先由传感器感知（传感器阻值变化为 0.8kΩ），经过 ADC 采样电路转换成 0.5V 电压送入主芯片；进入软件世界后，<strong>MCAL 的 ADC 驱动</strong>通过 API <code>Adc_ReadGroup()</code> 读出采样值（12 位精度，最大 4095）；<strong>IoHwAb</strong> 通过 C/S 接口 <code>Get_SensorValue()</code> 把采样值换算成欧姆值；<strong>Sensor SWC</strong> 再算出实际温度，通过 S/R 接口 <code>Send_Temperature()</code> 发给 App SWC 使用：</p>
+                        <img src="index05-map/b2-02.png" alt="温度传感器数据链路">
+                        <div class="img-caption">图2-2 温度传感器数据链路（依原文文字描述绘制）：车内环境温度经传感器（阻值 0.8kΩ）→ADC 采样电路（电压 0.5V）→主芯片，进入软件后由 MCAL ADC（Adc_ReadGroup）→IoHwAb（Get_SensorValue）→Sensor SWC（Send_Temperature）层层处理，最终交给 App SWC</div>
+
+                        <h3 id="sec-comm">三、BSW的Communication功能</h3>
+
+                        <h4 id="sec-3-1">3.1 架构与术语解释</h4>
+                        <p>通信服务是 BSW 中最庞大的一块。从服务层的通信服务（红色）往下放大，主要模块有：</p>
+                        <p>（1）<strong>COM</strong>——信号接口与网关：定义信号如何打包，数据内容由 DBC 或 ARXML 文件描述，还负责不同总线之间的网关路由；</p>
+                        <p>（2）<strong>PDU Router</strong>——把"信号 ↔ PDU"分配到不同的协议总线上；</p>
+                        <p>（3）<strong>IPDU Mux</strong>——解析 CAN FD 等特殊协议的复用；</p>
+                        <p>（4）<strong>Bus Tp</strong>（如 CAN Tp）——把长报文分包传输并进行错误检测，诊断报文就靠它传输；</p>
+                        <p>（5）<strong>Bus Interface</strong>（如 CAN Interface）——ECU抽象层的通信硬件抽象，配置收发队列、组帧和调度表；</p>
+                        <p>（6）<strong>Bus Driver</strong>（CAN Driver）与 <strong>Trcv Driver</strong>——MCAL 层的收发器驱动，Trcv Driver 用于外置收发器。</p>
+                        <img src="index05-map/b3-01.png" alt="Communication功能模块架构">
+                        <div class="img-caption">图3-1 Communication 功能模块架构：通信服务（红）展开为 COM、PDU Router、Bus Tp、IPDU Mux；通信硬件抽象（黄）为 Bus Interface；通信驱动（蓝）为 Trcv Driver 与 Bus Driver</div>
+
+                        <h4 id="sec-3-2">3.2 发送流程</h4>
+                        <p>应用层调用 <code>Send</code> 发送信号后，数据自上而下逐层流动：<strong>COM</strong> 把信号写入 PDU Buffer → <strong>PDU Router</strong> 决定立刻发送还是周期发送，并辨认数据要发到哪条总线 → <strong>Bus Interface</strong> 把 PDU 写入发送队列 → <strong>Bus Driver</strong> 按优先级从队列取出并最终发送到硬件总线上：</p>
+                        <img src="index05-map/b3-02.png" alt="通信发送流程">
+                        <div class="img-caption">图3-2 发送流程（绿色箭头自上而下）：COM 写信号进 PDU Buffer → PDU Router 分发并辨认总线 → Bus Interface 写发送队列 → Bus Driver 按优先级发送到硬件</div>
+
+                        <h4 id="sec-3-3">3.3 接收流程</h4>
+                        <p>接收方向的流程正好相反：硬件收到报文后，<strong>Bus Driver</strong> 产生 Rx 中断并触发 <code>RxIndication</code> → <strong>Bus Interface</strong> 接收 → <strong>PDU Router</strong> 上交给 <strong>COM</strong>：如果信号配置了"数据接收触发"（Data Reception Trigger），COM 直接通知 RTE 唤醒应用层；否则信号先暂存在 COM 的 Buffer 中，等应用层来取。最终数据经 <strong>RTE</strong> 交付给应用层 SWC：</p>
+                        <img src="index05-map/b3-03.png" alt="通信接收流程">
+                        <div class="img-caption">图3-3 接收流程（绿色箭头自下而上）：硬件 → Bus Driver（Rx 中断触发 RxIndication）→ Bus Interface → PDU Router → COM（触发则通知 RTE，否则暂存 Buffer）→ RTE → 应用层</div>
+
+                        <h3 id="sec-memory">四、BSW的Memory功能</h3>
+
+                        <h4 id="sec-4-1">4.1 架构与术语解释</h4>
+                        <p>存储服务相关的 ROM 存储方式共有<strong>4 种</strong>：按"片内 / 片外"与"EEPROM / FLASH 仿 EEPROM"两个维度组合而成。其中 FLASH 只能<strong>按块擦写、不能按位修改</strong>，所以用 FLASH 仿 EEPROM 时要先备份数据 → 修改位 → 擦除整个块 → 再烧写回去。</p>
+                        <p>从服务层的存储服务往下放大，主要模块有：<strong>NVRAM Manager</strong>（应用层访问非易失数据的唯一接口，数据按块编写管理）、<strong>Memory Abstraction Interface</strong>（把访问请求分派给 EEPROM 或 FLASH 两条路径）、<strong>EEPROM Abstraction</strong> 与 <strong>Flash EEPROM Emulation</strong>（两条抽象路径）、<strong>External E² Drv / Ext Fls Drv</strong>（片外存储驱动，位于 ECU 抽象层，经 SPI 访问外置芯片）、以及 MCAL 层的 <strong>SPI Handler Drv、EEPROM Drv、Flash Drv</strong>：</p>
+                        <img src="index05-map/b4-01.png" alt="Memory功能模块架构">
+                        <div class="img-caption">图4-1 Memory 功能模块架构：NVRAM Manager（红）为应用层唯一接口；Memory Abstraction Interface（黄）下分 EEPROM Abstraction 与 Flash EEPROM Emulation 两路，并含片外驱动 External E² Drv / Ext Fls Drv；MCAL 层为 SPI Handler Drv、EEPROM Drv、Flash Drv；硬件分主芯片（SPI/EEPROM/FLASH）与板载设备（External E² / External Flash Memory）</div>
+
+                        <h4 id="sec-4-2">4.2 片内存储</h4>
+                        <p><strong>片内存储</strong>指数据存在主芯片内部：EEPROM Abstraction 走 <strong>EEPROM Drv</strong> 直接访问主芯片内的 EEPROM；Flash EEPROM Emulation 走 <strong>Flash Drv</strong> 访问主芯片内的 FLASH（用 FLASH 模拟 EEPROM 的按位改写）。两条路径都不经过 SPI：</p>
+                        <img src="index05-map/b4-02.png" alt="片内存储数据流向">
+                        <div class="img-caption">图4-2 片内存储数据流向：EEPROM Abstraction（黄色箭头）→EEPROM Drv→主芯片内部 EEPROM；Flash EEPROM Emulation（蓝色箭头）→Flash Drv→主芯片内部 FLASH</div>
+
+                        <h4 id="sec-4-3">4.3 片外存储</h4>
+                        <p><strong>片外存储</strong>指数据存在主芯片之外的板载设备上：External E² Drv / Ext Fls Drv 这两个驱动位于 ECU 抽象层，它们必须先经过 MCAL 层的 <strong>SPI Handler Drv</strong>，通过主芯片的 SPI 硬件接口，才能访问板载的 External E² Memory 或 External Flash Memory：</p>
+                        <img src="index05-map/b4-03.png" alt="片外存储数据流向">
+                        <div class="img-caption">图4-3 片外存储数据流向（绿色箭头）：EEPROM Abstraction → External E² Drv → SPI Handler Drv → 主芯片 SPI → 板载设备 External E² Memory；Flash EEPROM Emulation → Ext Fls Drv → SPI Handler Drv → 主芯片 SPI → 板载设备 External Flash Memory</div>
+
+                        <h3 id="sec-mode">五、BSW的Mode Management功能</h3>
+
+                        <h4 id="sec-5-1">5.1 架构与术语解释</h4>
+                        <p>模式管理本质上就是<strong>状态管理</strong>：管理 ECU 的上电、下电、休眠，以及 CAN 通讯等功能的开启与关闭。相关模块全部位于系统服务层：</p>
+                        <p>（1）<strong>EcuM</strong>（ECU State Manager）——负责 ECU 上下电、休眠、重启、唤醒验证 4 类功能；</p>
+                        <p>（2）<strong>BswM</strong>（Basic Software Mode Manager）——基于"规则→动作"的模式仲裁者；</p>
+                        <p>（3）<strong>ComM</strong>（COM Manager）——控制通信功能的启用与关闭；</p>
+                        <p>（4）<strong>Nm</strong> + <strong>Bus NM</strong>——网络管理，负责总线唤醒、保持唤醒以及协调各节点一起关闭；</p>
+                        <p>（5）<strong>Bus SM</strong>（如 CAN SM）——负责切换 CAN 等总线通信的开启与关闭（COM 位于其上一层）。</p>
+                        <img src="index05-map/b5-01.png" alt="Mode Management模块架构">
+                        <div class="img-caption">图5-1 Mode Management 模块架构：系统服务（红）展开出 EcuM、ComM、BswM、NM If、Bus SM、Bus NM；向下经 Bus Interface（黄）与 Trcv/Bus Driver（蓝）作用到硬件</div>
+
+                        <h4 id="sec-5-2">5.2 BswM规则配置</h4>
+                        <p>BswM 的工作方式是"<strong>规则→动作</strong>"：根据模式请求等条件判断规则，再执行相应动作。其中 <strong>Communication Control（通信控制）、Ecu State Handling（ECU 状态处理）、Module Initialization（模块初始化）</strong>三类规则由工具自动生成，用户自定义的规则则在 DaVinci 的 <strong>Miscellaneous</strong> 分支下添加（Rules 下包含 Mode Declaration Groups、Mode Switch Ports、Expressions、Actions、Action Lists 等配置项）：</p>
+                        <img src="index05-map/b5-02.png" alt="DaVinci中BswM的Rules配置">
+                        <div class="img-caption">图5-2 DaVinci 中 BswM 的 Rules 配置：上方三项（Communication Control / Ecu State Handling / Module Initialization）为自动生成的规则，Miscellaneous → Rules 下为用户自定义规则的配置入口</div>
+
+                        <h3 id="sec-wdg">六、BSW的Watchdog功能</h3>
+
+                        <h4 id="sec-6-1">6.1 架构与术语解释</h4>
+                        <p>看门狗功能由三个模块组成一条简短的调用链：<strong>WdgM</strong>（Watchdog Manager，位于服务层）为应用层提供安全相关的监控服务；<strong>WdgIf</strong>（Watchdog Interface，位于 ECU 抽象层）负责统一触发硬件看门狗的接口；最底层是 MCAL 的 <strong>Wdg Drv</strong>（看门狗驱动），真正操作硬件看门狗：</p>
+                        <img src="index05-map/b6-01.png" alt="Watchdog功能模块架构">
+                        <div class="img-caption">图6-1 Watchdog 功能模块架构：服务层的 WdgM（红）→ECU抽象层的 WdgIf（黄）→MCAL 的 Wdg Drv（蓝）→硬件看门狗（灰）</div>
+
+                        <h3 id="sec-diag">七、BSW的Diagnostics功能</h3>
+
+                        <h4 id="sec-7-1">7.1 架构与术语解释</h4>
+                        <p>诊断功能涉及服务层的三兄弟：</p>
+                        <p>（1）<strong>FIM</strong>（Function Inhibition Manager，功能禁止管理）——当某些故障发生时，禁止相关功能运行。比如检测到过电流时关闭 MOS 管/IGBT 的输出，防止炸管；</p>
+                        <p>（2）<strong>DEM</strong>（Diagnostic Event Manager，诊断事件管理）——管理故障事件，并负责把故障记录写入 EEPROM / Flash；</p>
+                        <p>（3）<strong>DCM</strong>（Diagnostic Communication Manager，诊断通信管理）——处理诊断通信，也就是 UDS 协议（ISO 14229）的落地实现。</p>
+                        <p>此外诊断报文的传输还要用到通信服务的 <strong>PDU Router、Bus Tp</strong>，故障数据的存储要经过 <strong>NVRAM Manager</strong>：</p>
+                        <img src="index05-map/b7-01.png" alt="Diagnostics功能模块架构">
+                        <div class="img-caption">图7-1 Diagnostics 功能模块架构：FIM、DEM、DCM（服务层）+ NVRAM Manager（存储服务）+ PDU Router、Bus Tp（通信服务），向下经 Bus Interface 与 Trcv/Bus Driver 到硬件</div>
+
+                        <h4 id="sec-7-2">7.2 工作流程</h4>
+                        <p>诊断功能的日常工作流程有两条线：<strong>绿色箭头</strong>是故障的快速响应路径——应用层检测到故障后交给 DEM 判断，FIM 通过回调或轮询的方式获知故障状态，进而禁止相应 SWC 的功能运行（如过电流时立刻关断输出）；<strong>黄色箭头</strong>是故障的记录路径——DEM 把故障信息经 NVRAM Manager 写入 EEPROM / Flash，供售后读取分析：</p>
+                        <img src="index05-map/b7-02.png" alt="Diagnostics工作流程">
+                        <div class="img-caption">图7-2 Diagnostics 工作流程：绿色箭头为故障快速响应（应用层→DEM 判断→FIM 禁止 SWC 功能）；黄色箭头为故障记录（DEM→NVRAM Manager→EEP/Flash 持久化）</div>
+
+                        <h3 id="sec-os">八、BSW的OS功能</h3>
+
+                        <h4 id="sec-8-1">8.1 OS架构</h4>
+                        <p>OS（操作系统）在逻辑上<strong>仅位于系统服务层</strong>，但由于它需要直接操作硬件（任务切换、中断、时钟等），所以实际上贯穿三层直达硬件。AutoSAR 的 OS 基于 <strong>OSEK OS</strong> 标准开发，负责任务的调度与管理：</p>
+                        <img src="index05-map/b8-01.png" alt="OS模块架构">
+                        <div class="img-caption">图8-1 OS 模块架构：OS 在逻辑上属于系统服务层（红框放大），但因需直接操作硬件，实际贯穿三层直达硬件（Hardware）</div>
+
+                        <h4 id="sec-8-2">8.2 OS的可扩展性</h4>
+                        <p>为了适配从低端到高端的不同 ECU，AutoSAR 把 OS 分成了 4 个可扩展等级（Scalability Class，SC）。四个等级都支持多核、OSEK OS 和调度表；差别在于<strong>内存保护</strong>只有 SC3/SC4 支持，<strong>时间保护</strong>只有 SC2/SC4 支持：</p>
+                        <table class="api-table">
+                            <tr><th>扩展等级</th><th>内存保护</th><th>时间保护</th><th>说明</th></tr>
+                            <tr><td>SC1</td><td>不支持</td><td>不支持</td><td>基础等级：多核 + OSEK OS + 调度表</td></tr>
+                            <tr><td>SC2</td><td>不支持</td><td>支持</td><td>SC1 + 时间保护：任务运行超时会被强制停止</td></tr>
+                            <tr><td>SC3</td><td>支持</td><td>不支持</td><td>SC1 + 内存保护：任务越界访问内存受约束</td></tr>
+                            <tr><td>SC4</td><td>支持</td><td>支持</td><td>SC1 + 两者（等价于 SC2 与 SC3 的并集）</td></tr>
+                        </table>
+                        <p>一句话总结：SC2 = SC1 + 时间保护，SC3 = SC1 + 内存保护，SC4 = SC1 + 两者皆有。从安全性角度看，<strong>SC4 &gt; SC3 ≈ SC2 &gt; SC1</strong>——等级越高保护越全面，但对资源和性能的要求也越高，实际项目中按 ECU 的安全等级需求选择即可。</p>
+
+                        <h3 id="sec-summary">九、BSW小结</h3>
+
+                        <h4 id="sec-9-1">9.1 关于功能与模块</h4>
+                        <p>学习 BSW 要抓住一个要点：<strong>功能与模块不是一对一的关系</strong>。同一个模块可以被多个功能使用——比如 CAN Driver 既属于 Communication 功能，也被 Diagnostic 功能用来收发诊断报文。这就好比人打篮球和敲代码用的是同一双手和同一个大脑，功能不同，器官共用。回顾一下 BSW 的整体细分结构：</p>
+                        <img src="index05-map/b1-06.png" alt="BSW结构细分回顾">
+                        <div class="img-caption">图9-1 BSW 结构细分回顾：模块纵向分属三层（服务层红/ECU抽象层黄/MCAL蓝），横向支撑板载、存储、通信、I/O 等不同功能——同一个模块可服务于多个功能</div>
+
+                        <h4 id="sec-9-2">9.2 关于实际工程</h4>
+                        <p>实际的 AutoSAR 工程由两部分组成：<strong>源代码</strong>——固定不变，通过 #ifdef 条件编译控制各功能的使能；<strong>配置代码</strong>——在 DaVinci 中打勾配置后生成，比如配置波特率后生成 <code>#define CanBaudRate XXXX</code> 这样的宏定义。</p>
+                        <p>理论上的工程结构会按 1_AppL、2_RTE、3_BSW 三个目录组织，每个 SWC 对应一个 .c 文件（其中包含被触发的 runnable 函数）：</p>
+                        <img src="index05-map/b9-01.png" alt="理论工程结构映射">
+                        <div class="img-caption">图9-2 理论工程结构：AppL/RTE/BSW 分层映射到"我们的工程"目录（1_AppL 下的 Composition 与 SWC1~n.c、2_RTE、3_BSW），SWCn.c 中包含每 100ms 触发一次的 Runnable1/Runnable2 函数</div>
+                        <p>而真实的工程目录有所差异：AppL 下分为 <strong>GenData</strong>（配置代码，工具生成，<strong>不可手改</strong>）和 <strong>Source</strong>（手写代码，<strong>唯一可以修改的地方</strong>）；BSW 下分为 <strong>Bsw</strong>（非 MCAL 部分，如 BswM、COM、CAN If、NvM）和 <strong>Mcal</strong>（底层驱动，如 Adc、Dio、Mcu Drv）：</p>
+                        <img src="index05-map/b9-02.png" alt="理论工程与真实工程对比">
+                        <div class="img-caption">图9-3 理论工程（左）与真实工程（右）对比：真实工程中 AppL 分为 GenData（配置代码，不可手改）与 Source（手写代码，唯一可改处，如 MyApp_Core0.c）；BSW 分为 Bsw（BswM/COM/CAN If/NvM 等）与 Mcal（Adc/Dio 等底层驱动）</div>
+
+                        <p style="margin-top:28px; padding-top:12px; border-top:1px dashed #dce8f2; color:#999; font-size:12px;">参考来源：CSDN 博主 雪云飞星《AutoSAR系列讲解（入门篇）》4.1 BSW整体介绍 / 4.2 BSW的I/O功能 / 4.3 BSW的Communication功能 / 4.4 BSW的Memory功能 / 4.5 BSW的Mode Management功能 / 4.6 BSW的Watchdog功能 / 4.7 BSW的Diagnostics功能 / 4.8 BSW的OS功能 / 4.9 BSW小结</p>
+
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 侧边栏两级菜单交互
+        (function () {
+            'use strict';
+            var topItems = document.querySelectorAll('.sidebar-menu > li');
+            var subItems = document.querySelectorAll('.submenu li');
+
+            function clearActive() {
+                document.querySelectorAll('.sidebar-menu .active').forEach(function (el) {
+                    el.classList.remove('active');
+                });
+            }
+
+            function scrollToTarget(targetId) {
+                if (!targetId) { return; }
+                var target = document.getElementById(targetId);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+
+            // 展开按钮：一键展开所有一级目录
+            var btnExpand = document.querySelector('.btn-expand-all');
+            if (btnExpand) {
+                btnExpand.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    topItems.forEach(function (li) { li.classList.add('open'); });
+                });
+            }
+
+            // 折叠按钮：一键折叠所有一级目录
+            var btnCollapse = document.querySelector('.btn-collapse-all');
+            if (btnCollapse) {
+                btnCollapse.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    topItems.forEach(function (li) { li.classList.remove('open'); });
+                });
+            }
+
+            // 一级目录：点击独立展开/折叠 + 跳转 + 高亮
+            topItems.forEach(function (li) {
+                var title = li.querySelector('.menu-title');
+                if (!title) { return; }
+                title.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    li.classList.toggle('open');
+                    clearActive();
+                    li.classList.add('active');
+                    scrollToTarget(li.getAttribute('data-target'));
+                });
+            });
+
+            // 二级目录：点击跳转 + 高亮自身与父级
+            subItems.forEach(function (li) {
+                li.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    clearActive();
+                    li.classList.add('active');
+                    var parentLi = li.closest('.sidebar-menu > li');
+                    if (parentLi) {
+                        parentLi.classList.add('open');
+                        parentLi.classList.add('active');
+                    }
+                    scrollToTarget(li.getAttribute('data-target'));
+                });
+            });
+        })();
+
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

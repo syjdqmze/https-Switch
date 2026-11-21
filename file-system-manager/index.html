@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件系统管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f7fa;
+            background-image: url('iceberg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+        
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .login-box {
+            /* 背景透明度由用户手动调整为 0.3（30% 不透明度 / 70% 透明），用于增强与 iceberg.jpg 背景图的融合效果 */
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .login-box h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #1a1a2e;
+            font-size: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.5);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: rgba(66, 153, 225, 0.5);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: rgba(49, 130, 206, 0.5);
+        }
+        
+        .error-message {
+            color: #fc8181;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .file-manager {
+            display: none;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: white;
+            padding: 16px 24px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            color: #1a1a2e;
+            position: relative;
+            height: 24px;
+            line-height: 24px;
+        }
+
+        .header .nav-indicator {
+            position: absolute;
+            left: -20px;
+            top: -20px;
+            width: 15px;
+            height: 25px;
+            background-color: #f7f8f8;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .header .nav-indicator:hover {
+            background-color: #f7f8fa;
+        }
+
+        /* 右侧导航指示块：红色，位于 header 内部顶部、退出登录按钮左侧 */
+        .header .nav-indicator-right {
+            position: absolute;
+            left: auto;
+            right: 3px;
+            top: 0;
+            width: 15px;
+            height: 25px;
+            background-color: #f7f8f8;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .header .nav-indicator-right:hover {
+            background-color: #f7f8fa;
+        }
+        
+        .header .logout-btn {
+            background-color: #fc8181;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            cursor: pointer;
+        }
+        
+        .header .logout-btn:hover {
+            background-color: #f56565;
+        }
+        
+        .breadcrumb {
+            background: white;
+            margin: 16px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .breadcrumb a {
+            color: #4299e1;
+            text-decoration: none;
+            margin-right: 8px;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .breadcrumb span {
+            color: #718096;
+        }
+        
+        .file-list {
+            flex: 1;
+            margin: 0 16px 16px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+        
+        .file-list table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .file-list th {
+            background-color: #f7fafc;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 14px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .file-list td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+        
+        .file-list tr:hover {
+            background-color: #f7fafc;
+        }
+        
+        .file-list tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .file-name {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .file-name:hover {
+            color: #4299e1;
+        }
+        
+        .icon {
+            margin-right: 8px;
+            font-size: 20px;
+        }
+        
+        .download-btn {
+            background-color: #48bb78;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 13px;
+            transition: background-color 0.3s;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .download-btn:hover {
+            background-color: #38a169;
+        }
+        
+        button {
+            background-color: #48bb78;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: background-color 0.3s;
+            cursor: pointer;
+            border: none;
+        }
+        
+        button:hover {
+            background-color: #38a169;
+        }
+        
+        /* 下载进度条样式 */
+        .download-progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .download-progress-box {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            min-width: 300px;
+            text-align: center;
+        }
+        
+        .download-progress-title {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+        
+        .download-progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .download-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #48bb78, #38a169);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        .download-progress-text {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #4a5568;
+        }
+        
+        .no-files {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container" id="loginContainer">
+        <div class="login-box">
+            <h2>文件系统管理</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">用户名</label>
+                    <input type="text" id="username" name="username" required placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" required placeholder="请输入密码">
+                </div>
+                <button type="submit" class="btn btn-primary">登录</button>
+            </form>
+            <div class="error-message" id="errorMessage">用户名或密码错误</div>
+        </div>
+    </div>
+
+    <div class="file-manager" id="fileManager">
+        <div class="header">
+            <h1>
+                <div class="nav-indicator" onclick="window.location.href='/InSysDev/InSysDev.html'"></div>
+                文件系统管理
+            </h1>
+            <button class="logout-btn" onclick="logout()">退出登录</button>
+            <div class="nav-indicator-right" onclick="window.location.href='/AutoSar/AutoSar.html'"></div>
+        </div>
+        
+        <div class="breadcrumb" id="breadcrumb">
+            <a href="#" onclick="loadFiles(''); return false;">/</a>
+        </div>
+        
+        <div class="file-list" id="fileList">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = null;
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            console.log('用户名:', username);
+            console.log('密码:', password);
+            
+            fetch(window.location.origin + '/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            })
+            .then(response => {
+                console.log('响应状态:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('响应数据:', data);
+                if (data.success) {
+                    authToken = data.token;
+                    document.getElementById('loginContainer').style.display = 'none';
+                    document.getElementById('fileManager').style.display = 'flex';
+                    loadFiles('');
+                } else {
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('请求错误:', error);
+                alert('登录请求失败: ' + error.message);
+            });
+        });
+
+        function logout() {
+            fetch(window.location.origin + '/logout', {
+                method: 'POST',
+                headers: {
+                    'x-auth-token': authToken
+                }
+            })
+            .then(() => {
+                authToken = null;
+                document.getElementById('fileManager').style.display = 'none';
+                document.getElementById('loginContainer').style.display = 'flex';
+                document.getElementById('errorMessage').style.display = 'none';
+            });
+        }
+
+        function loadFiles(path) {
+            // path 可能已经被编码，需要先解码再编码
+            const decodedPath = decodeURIComponent(path || '');
+            fetch(window.location.origin + `/files?path=${encodeURIComponent(decodedPath)}`, {
+                headers: {
+                    'x-auth-token': authToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('文件列表响应:', data);
+                if (data.success) {
+                    renderFileList(data);
+                    renderBreadcrumb(data.currentPath, data.parentPath);
+                } else {
+                    document.getElementById('fileList').innerHTML = '<div class="no-files">' + (data.message || '无法加载文件列表') + '</div>';
+                }
+            })
+            .catch(error => {
+                console.error('加载文件列表失败:', error);
+                document.getElementById('fileList').innerHTML = '<div class="no-files">加载失败: ' + error.message + '</div>';
+            });
+        }
+
+        function renderFileList(data) {
+            if (data.files.length === 0) {
+                document.getElementById('fileList').innerHTML = '<div class="no-files">该目录为空</div>';
+                return;
+            }
+            
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50%">名称</th>
+                            <th style="width: 20%">大小</th>
+                            <th style="width: 20%">修改时间</th>
+                            <th style="width: 10%">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            data.files.forEach(file => {
+                const icon = file.isDirectory ? '📁' : '📄';
+                const size = file.isDirectory ? '-' : formatSize(file.size);
+                const mtime = formatDate(file.mtime);
+                
+                // 修复：使用 onclick 调用 downloadFile 函数，而不是 href
+                html += `
+                    <tr>
+                        <td>
+                            <div class="file-name" onclick="${file.isDirectory ? `loadFiles('${file.path.replace(/'/g, "\\'")}')` : ''}">
+                                <span class="icon">${icon}</span>
+                                <span>${file.name}</span>
+                            </div>
+                        </td>
+                        <td>${size}</td>
+                        <td>${mtime}</td>
+                        <td>
+                            ${file.isDirectory ? '-' : `<button onclick="downloadFile('${file.path.replace(/'/g, "\\'")}')">下载</button>`}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('fileList').innerHTML = html;
+        }
+
+        function renderBreadcrumb(currentPath, parentPath) {
+            let html = '<a href="#" onclick="loadFiles(\'\'); return false;">/</a>';
+            
+            if (currentPath) {
+                const parts = currentPath.split('/').filter(p => p);
+                let pathAccum = '';
+                
+                parts.forEach((part, index) => {
+                    pathAccum += (pathAccum ? '/' : '') + part;
+                    // 修复：不再在这里编码路径，loadFiles 函数会处理
+                    if (index === parts.length - 1) {
+                        html += `<span>/ ${part}</span>`;
+                    } else {
+                        html += `<a href="#" onclick="loadFiles('${pathAccum.replace(/'/g, "\\'")}'); return false;">${part}</a>`;
+                    }
+                });
+            }
+            
+            document.getElementById('breadcrumb').innerHTML = html;
+        }
+
+        function formatSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        // 新增：下载文件函数，使用 fetch 发送认证 token，显示下载进度
+        function downloadFile(filePath) {
+            if (!authToken) {
+                alert('请先登录');
+                return;
+            }
+            
+            console.log('下载文件:', filePath);
+            
+            // 显示进度条
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'download-progress-overlay';
+            progressDiv.innerHTML = `
+                <div class="download-progress-box">
+                    <div class="download-progress-title">正在下载: ${filePath.split('/').pop().split('\\').pop()}</div>
+                    <div class="download-progress-bar">
+                        <div class="download-progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="download-progress-text">0%</div>
+                </div>
+            `;
+            document.body.appendChild(progressDiv);
+            
+            const progressFill = progressDiv.querySelector('.download-progress-fill');
+            const progressText = progressDiv.querySelector('.download-progress-text');
+            
+            fetch(window.location.origin + `/download?path=${encodeURIComponent(filePath)}`, {
+                headers: {
+                    'x-auth-token': authToken
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    document.body.removeChild(progressDiv);
+                    if (response.status === 401) {
+                        throw new Error('未登录或登录已过期');
+                    } else if (response.status === 404) {
+                        throw new Error('文件不存在');
+                    } else {
+                        throw new Error('下载失败: ' + response.status);
+                    }
+                }
+                
+                // 获取文件总大小
+                const contentLength = response.headers.get('Content-Length');
+                const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
+                
+                if (!response.body) {
+                    document.body.removeChild(progressDiv);
+                    throw new Error('无法获取文件流');
+                }
+                
+                // 使用 ReadableStream 读取数据并显示进度
+                const reader = response.body.getReader();
+                const chunks = [];
+                let receivedSize = 0;
+                
+                return new Promise((resolve, reject) => {
+                    function readChunk() {
+                        reader.read().then(({ done, value }) => {
+                            if (done) {
+                                // 读取完成
+                                const blob = new Blob(chunks);
+                                resolve(blob);
+                                return;
+                            }
+                            
+                            chunks.push(value);
+                            receivedSize += value.length;
+                            
+                            // 更新进度条
+                            if (totalSize > 0) {
+                                const percent = Math.round((receivedSize / totalSize) * 100);
+                                progressFill.style.width = percent + '%';
+                                progressText.textContent = `${percent}% (${formatSize(receivedSize)} / ${formatSize(totalSize)})`;
+                            } else {
+                                progressFill.style.width = '100%';
+                                progressText.textContent = `已下载: ${formatSize(receivedSize)}`;
+                            }
+                            
+                            readChunk();
+                        }).catch(reject);
+                    }
+                    
+                    readChunk();
+                });
+            })
+            .then(blob => {
+                // 移除进度条
+                setTimeout(() => {
+                    document.body.removeChild(progressDiv);
+                }, 500);
+                
+                // 创建下载链接
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filePath.split('/').pop().split('\\').pop(); // 获取文件名
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url); // 释放内存
+                console.log('下载成功');
+            })
+            .catch(error => {
+                if (document.body.contains(progressDiv)) {
+                    document.body.removeChild(progressDiv);
+                }
+                console.error('下载失败:', error);
+                alert('下载失败: ' + error.message);
+            });
+        }
+    </script>
+</body>
+</html>

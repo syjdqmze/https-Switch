@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Sub-Item 管理页面</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        /* 侧边栏菜单窄滚动条 */
+        .sidebar-menu::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .sidebar-menu::-webkit-scrollbar-thumb {
+            background-color: #c8d8e8;
+            border-radius: 3px;
+        }
+
+        .sidebar-menu li {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+        }
+
+        /* 二级目录菜单项 */
+        .sidebar-menu li.sub {
+            padding-left: 46px;
+            font-size: 13px;
+            color: #777;
+        }
+
+        .sidebar-menu li.sub::before {
+            content: '└ ';
+            color: #aaa;
+        }
+
+        /* 三级目录菜单项 */
+        .sidebar-menu li.sub2 {
+            padding-left: 66px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .sidebar-menu li.sub2::before {
+            content: '· ';
+            color: #bbb;
+        }
+
+        .content-card h4 {
+            font-size: 14.5px;
+            font-weight: 600;
+            color: #333;
+            margin: 18px 0 10px 0;
+            scroll-margin-top: 12px;
+        }
+
+        .content-card h5 {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #444;
+            margin: 16px 0 8px 0;
+            scroll-margin-top: 12px;
+        }
+
+        /* 图片解说文字 */
+        .content-card .img-note {
+            font-size: 12.5px;
+            color: #888;
+            line-height: 1.6;
+            margin: 6px 0 12px 2em;
+        }
+
+        /* 图片点击放大灯箱 */
+        .content-card img[data-page] {
+            cursor: zoom-in;
+        }
+
+        #imgOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.82);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+        }
+
+        #imgOverlay img {
+            max-width: 92vw;
+            max-height: 92vh;
+            width: auto;
+            height: auto;
+            border-radius: 4px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 0 0 auto;
+            width: calc((100% - 20px) * 0.8);
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+            scroll-margin-top: 12px;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">MDK-DAP下载与调式</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <ul class="sidebar-menu">
+                    <li data-target="sec-dap-connection"><span class="icon">&#9654;</span>DAP硬线连接</li>
+                    <li data-target="sec-mdk-configuration"><span class="icon">&#9654;</span>MDK配置</li>
+                    <li class="sub" data-target="sec-mdk-flash-link">2.1 刷写链接设置</li>
+                    <li class="sub" data-target="sec-mdk-flash-algo">2.2 刷写算法配置</li>
+                    <li class="sub" data-target="sec-mdk-download">2.3 下载</li>
+                    <li data-target="sec-dap-tuning"><span class="icon">&#9654;</span>DAP调式</li>
+                    <li class="sub" data-target="sec-dbg-principle">3.1 调试原理</li>
+                    <li class="sub" data-target="sec-dbg-operations">3.2 调试操作</li>
+                    <li class="sub2" data-target="sec-dbg-buttons">3.2.1 基础按钮</li>
+                    <li class="sub2" data-target="sec-dbg-time">3.2.2 执行时间</li>
+                    <li class="sub2" data-target="sec-dbg-watch">3.2.3 Watch断点</li>
+                    <li class="sub2" data-target="sec-dbg-memory">3.2.4 Memory内存</li>
+                    <li class="sub2" data-target="sec-dbg-error">3.2.5 编译错误窗口</li>
+                    <li class="sub2" data-target="sec-dbg-mdk-settings">3.2.6 MDK基础设置</li>
+                    <li class="sub" data-target="sec-dbg-notes">3.3 调试注意事项</li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+                        <h3 id="sec-dap-connection">DAP硬线连接</h3>
+                        <p>　　DAP 仿真器通过开发板预留的调试接口与芯片相连。该接口既支持 <span style="color: red; font-weight: bold;">JTAG</span>（20 针）模式，也支持 <span style="color: red; font-weight: bold;">SWD</span> 模式——SWD 仅需 SWIO、SWCLK 两根信号线，节省 IO 口资源。</p>
+                        <p>　　下图为开发板 JTAG 20 针排座实物与调试接口原理图（TRST、TDI、TMS/SWDIO、TCK/SWCLK、TDO/SWO、RESET# 等信号经 10K 电阻上拉）：</p>
+                        <img data-page="1" src="./index08-map/dap-connect-01.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图1 开发板 JTAG 20 针排座实物与调试接口原理图，TRST、TDI、TMS、TCK、TDO 等信号均经 10K 电阻上拉。</p>
+                        <p>　　JTAG 接口信号标注细节：</p>
+                        <img data-page="2" src="./index08-map/dap-connect-02.png" style="display: block; margin: 16px 0 0 2em; max-width: 300px; height: auto;">
+                        <p class="img-note">图2 JTAG 接口五根信号线：JTRST（复位）、JTDI（数据输入）、JTMS（模式选择）、JTCK（时钟）、JTDO（数据输出）。</p>
+                        <p>　　SWD 信号标注细节（TMS/SWDIO、TCK/SWCLK）：</p>
+                        <img data-page="3" src="./index08-map/dap-connect-03.png" style="display: block; margin: 16px 0 0 2em; max-width: 300px; height: auto;">
+                        <p class="img-note">图3 SWD 模式下仅用两根线：TMS/SWDIO（串行数据输入/输出）、TCK/SWCLK（串行时钟），与 JTAG 引脚复用（排针 7、9、11 脚）。</p>
+                        <p>　　正点原子 DAP 仿真器全套配件（仿真器、T 口 USB 线、20PIN 排线、XH2.54 4P 排线）：</p>
+                        <img data-page="4" src="./index08-map/dap-connect-04.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图4 正点原子 DAP 仿真器配件清单：DAP 仿真器、T 口 USB 线、20PIN 排线、XH2.54 4P 排线。</p>
+                        <p>　　DAP 一端经 20P 排线接开发板，另一端 USB 接电脑，指示灯<span style="color: blue;">蓝色常亮</span>为连接正常；开发板 BO、B1 用短路帽接 GND，上电后确保 PWR 电源灯常亮：</p>
+                        <img data-page="5" src="./index08-map/dap-connect-05.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图5 连接示意：DAP 经 20P 排线接开发板调试口、USB 端接电脑；BO、B1 短路帽均接 GND（从主闪存启动），上电后 PWR 灯常亮。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-mdk-configuration">MDK配置</h3>
+                        <h4 id="sec-mdk-flash-link">2.1 刷写链接设置</h4>
+                        <p>　　Debug 选项卡选择 <span style="color: red; font-weight: bold;">CMSIS-DAP Debugger</span>；Settings 中 Port 选择 <span style="color: red; font-weight: bold;">SW</span>（仅占用两个 IO 口），Max Clock 设为 10MHz（实际约 4MHz，由 MDK 自动配置）；Utilities 选项卡勾选 Use Debug Driver：</p>
+                        <img data-page="6" src="./index08-map/dap-mdk-flash-link.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图6 Debug 选项卡 Settings 对话框：Port 选择 SW 后，右侧 SW Device 栏显示 IDCODE（0x1BA01477）即表示已识别到芯片；Max Clock 填 10MHz。</p>
+                        <img data-page="7" src="./index08-map/dap-mdk-flash-algo-01.png" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p class="img-note">图7 Options for Target → Debug 选项卡：选择 CMSIS-DAP Debugger 后，点击红框中的 Settings 按钮进入上图设置界面。</p>
+                        <h4 id="sec-mdk-flash-algo">2.2 刷写算法配置</h4>
+                        <p>　　Flash Download 选项卡中添加对应系列的编程算法，如 F1 大容量芯片选择 <span style="color: red; font-weight: bold;">STM32F10x High-density Flash</span>（512K，向下兼容小容量芯片）；擦除方式与 Program、Verify、Reset and Run 按需勾选；右上角 RAM for Algorithm 保持默认：</p>
+                        <img data-page="8" src="./index08-map/dap-mdk-flash-algo-02.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图8 Flash Download 选项卡：已添加 STM32F10x High-density Flash 编程算法（512K），RAM for Algorithm 保持默认（0x20000000 / 0x1000）。</p>
+                        <h4 id="sec-mdk-download">2.3 下载</h4>
+                        <p>　　配置完成后，点击工具栏 <span style="color: red; font-weight: bold;">LOAD</span> 按钮即可将程序刷写到芯片：</p>
+                        <img data-page="9" src="./index08-map/dap-mdk-download.png" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p class="img-note">图9 工具栏 LOAD 按钮：点击后开始烧写，下方 Build Output 窗口显示 Erase、Program、Verify、Flash Load finished 等进度信息。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-dap-tuning">DAP调式</h3>
+                        <h4 id="sec-dbg-principle">3.1 调试原理</h4>
+                        <p>　　推荐使用 SWD 接口调试：相比 JTAG 可节省 IO 口——F1 系列通过配置 AFIO_MAPR 寄存器，可释放 JTAG 占用的三个 IO 口。下图为调试原理相关图示：</p>
+                        <img data-page="10" src="./index08-map/dap-debug-principle-01.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图10 Cortex-M 内核含硬件调试模块：可在取指（指令断点）或访问数据（数据断点）时停止；内核停止时可查询内部/外部状态，查询完成后恢复执行。</p>
+                        <img data-page="11" src="./index08-map/dap-debug-principle-02.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图11 芯片内部结构手绘示意：调试模块经调试端口访问内核与存储器区域。</p>
+                        <img data-page="12" src="./index08-map/dap-debug-principle-03.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图12 SWJ-DP 端口引脚表：JTMS/SWDIO=PA13、JTCK/SWCLK=PA14、JTDI=PA15、JTDO/TRACESWO=PB3、JNTRST=PB4——JTAG 与 SWD 复用同一组引脚。</p>
+                        <img data-page="13" src="./index08-map/dap-debug-principle-04.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图13 调试端口与 SWJ IO 引脚分配：选择"禁止 JTAG-DP 和使能 SW-DP"后，PA15、PB3、PB4 三个引脚即被释放为普通 IO。</p>
+                        <img data-page="14" src="./index08-map/dap-debug-principle-05.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图14 F1 系列通过 AFIO_MAPR 寄存器的 SWJ_CFG[2:0] 位释放 SWJ-DP 引脚；F4/F7/H7 系列默认全部为复用功能 AF0。</p>
+                        <img data-page="15" src="./index08-map/dap-debug-principle-06.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图15 参考手册 8.4.2 节：复用重映射和调试 I/O 配置寄存器（AFIO_MAPR），地址偏移 0x04，复位值 0x0000 0000。</p>
+                        <img data-page="16" src="./index08-map/dap-debug-principle-07.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图16 SWJ_CFG[2:0] 位定义：010＝关闭 JTAG-DP、启用 SW-DP（SWD 调试常用）；复位后默认 000（完全 SWJ）。</p>
+                        <h4 id="sec-dbg-operations">3.2 调试操作</h4>
+                        <h5 id="sec-dbg-buttons">3.2.1 基础按钮</h5>
+                        <p>　　调试工具栏常用按钮（复位、全速运行、停止、单步等）、全局变量查看、仿真窗口与断点的快速设置：</p>
+                        <img data-page="17" src="./index08-map/dap-debug-buttons-01.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图17 调试工具栏中的窗口按钮（带下拉箭头，用于快速打开各调试窗口）。</p>
+                        <img data-page="18" src="./index08-map/dap-debug-buttons-02.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图18 工具栏常用窗口按钮：执行到光标处、反汇编窗口、Call Stack 窗口、观察窗口、内存查看窗口、串口打印窗口、系统分析窗口、系统查看窗口，均可通过 View 菜单开启。</p>
+                        <img data-page="19" src="./index08-map/dap-debug-buttons-03.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图19 上排为开始/停止仿真按钮与断点相关按钮；下排依次为：复位、执行到断点处、停止运行、执行进去、执行过去、执行出去、执行到光标处。</p>
+                        <img data-page="20" src="./index08-map/dap-debug-buttons-04.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图20 开始/停止仿真按钮特写（d 图标）：点击进入调试状态，再次点击退出。</p>
+                        <img data-page="21" src="./index08-map/dap-debug-buttons-05.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图21 调试界面全貌：左侧寄存器窗口、上方反汇编（汇编语言）窗口、中间代码窗口、下方命令行窗口与调用栈窗口。</p>
+                        <img data-page="22" src="./index08-map/dap-debug-buttons-06.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图22 代码窗口左侧箭头：黄色箭头指向即将要执行的行，蓝色箭头指向鼠标所在行。</p>
+                        <img data-page="23" src="./index08-map/dap-debug-buttons-07.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图23 行号旁出现红色圆点表示该行已设置断点。</p>
+                        <img data-page="24" src="./index08-map/dap-debug-buttons-08.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图24 断点按钮提示：Enable/Disable Breakpoint（Ctrl+F9）切换当前行断点；Kill All Breakpoints（Ctrl+Shift+F9）清除全部断点；Disable All 暂时禁用全部断点。</p>
+                        <h5 id="sec-dbg-time">3.2.2 查看程序执行时间</h5>
+                        <p>　　通过 MDK 相关配置查看程序执行时间：</p>
+                        <img data-page="25" src="./index08-map/dap-debug-time-01.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图25 代码行下方显示执行时间 t1：delay_ms(500) 执行前后由 0.00011832 sec 变为 0.50012631 sec，即该行耗时约 500ms。</p>
+                        <img data-page="26" src="./index08-map/dap-debug-time-02.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图26 需要追踪执行时间时，在 Utilities → Settings → Trace 选项卡中将 Core Clock 设为系统实际时钟频率（图中 72MHz；若主频 168M 则填 168M 倒推）。</p>
+                        <img data-page="27" src="./index08-map/dap-debug-time-03.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图27 调试状态下也可从底部状态栏直接查看 t1 执行时间（图中 0.00001575 sec）。</p>
+                        <h5 id="sec-dbg-watch">3.2.3 Watch 窗口自动设置断点</h5>
+                        <img data-page="28" src="./index08-map/dap-debug-watch-01.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图28 观察窗口（Watch Windows）按钮图标：用于打开 Watch1 / Watch2 等变量观察窗口。</p>
+                        <img data-page="29" src="./index08-map/dap-debug-watch-02.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图29 Watch 窗口设置变量访问断点：右键变量 temp → Set Access Breakpoint at 'temp'，在 Breakpoints 对话框勾选 Write（被写入时停止），点击 Define 生效。</p>
+                        <h5 id="sec-dbg-memory">3.2.4 Memory 窗口查看内存</h5>
+                        <p>　　注意<span style="color: red; font-weight: bold;">小端存储</span>：</p>
+                        <img data-page="30" src="./index08-map/dap-debug-memory-01.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图30 内存查看窗口（Memory Windows）按钮图标：用于打开 Memory1 / Memory2 等内存窗口。</p>
+                        <img data-page="31" src="./index08-map/dap-debug-memory-02.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图31 Memory 窗口在 Address 栏输入地址（如 0x08000000）即可查看内存；M3/M4/M7 内核为小端模式，内存的值要倒着读。</p>
+                        <img data-page="32" src="./index08-map/dap-debug-memory-03.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图32 Peripherals 菜单：System Viewer 查看片上外设寄存器，Core Peripherals 查看内核寄存器。</p>
+                        <img data-page="33" src="./index08-map/dap-debug-memory-04.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图33 调试工具栏外设寄存器按钮下拉：Core Peripherals（内核）以及 ADC、AFIO、BKP、CAN 等外设选项。</p>
+                        <img data-page="34" src="./index08-map/dap-debug-memory-05.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图34 Peripheral 窗口查看外设寄存器当前值：如 GPIOA 的 CRL（0x44444444）、CRH、IDR、ODR（0x0000A000）等。</p>
+                        <img data-page="35" src="./index08-map/dap-debug-memory-06.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图35 System Viewer 子菜单：NVIC 中断向量控制器、系统控制及配置寄存器、SysTick 系统滴答定时器、Fault Reports 错误汇报。</p>
+                        <h5 id="sec-dbg-error">3.2.5 编译错误窗口</h5>
+                        <img data-page="36" src="./index08-map/dap-debug-error-01.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图36 在 Build Output 窗口中双击 error/warning 行，可直接定位到问题代码所在位置。</p>
+                        <img data-page="37" src="./index08-map/dap-debug-error-02.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图37 编译错误示例：main.c 第 35 行 #29 expected an expression、第 41 行 #65 expected a ";"，底部汇总 0 warning(s)、2 error(s)。</p>
+                        <h5 id="sec-dbg-mdk-settings">3.2.6 MDK 基础设置</h5>
+                        <img data-page="38" src="./index08-map/dap-mdk-settings.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图38 MDK 基础设置（Configuration → Editor）：编码设为 Chinese GB2312 (Simplified) 防止中文乱码；C/C++、ASM、Other 文件均勾选 Insert spaces for tabs 且 Tab size 为 4。</p>
+                        <h4 id="sec-dbg-notes">3.3 调试注意事项</h4>
+                        <p>　　优化等级未合理设置时，变量观察窗口可能无法正常显示变量；断点设置需注意通信场景（如主从机通信，避免停留在通信关键段）：</p>
+                        <img data-page="39" src="./index08-map/dap-debug-notes-01.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图39 调试注意事项：① 仿真时使用 Level 0 (-O0) 优化等级（C/C++ 选项卡）；② 停在断点处只是内核停止，外设会继续运行；③ 断点设置要有时间观念，避免打断正常通信。</p>
+                        <img data-page="40" src="./index08-map/dap-debug-notes-02.png" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p class="img-note">图40 观察窗口显示 &lt;not in scope&gt;：变量超出作用域（如所在函数尚未执行到），此时无法观察其值。</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <!-- 图片放大灯箱 -->
+    <div id="imgOverlay">
+        <img id="lightboxImg" src="" alt="放大图片">
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 侧边栏导航：点击跳转到对应内容位置
+        var menuItems = document.querySelectorAll('.sidebar-menu li[data-target]');
+        menuItems.forEach(function(item) {
+            item.addEventListener('click', function() {
+                var targetEl = document.getElementById(item.getAttribute('data-target'));
+                if (!targetEl) return;
+                // 高亮当前菜单项
+                document.querySelectorAll('.sidebar-menu li').forEach(function(li) {
+                    li.classList.remove('active');
+                });
+                item.classList.add('active');
+                // 平滑滚动到目标标题
+                targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        // 图片点击放大：点击图片打开灯箱，点击遮罩任意处或按 ESC 关闭
+        var overlay = document.getElementById('imgOverlay');
+        var lightboxImg = document.getElementById('lightboxImg');
+        document.querySelectorAll('.content-card img[data-page]').forEach(function(img) {
+            img.addEventListener('click', function() {
+                lightboxImg.src = img.src;
+                overlay.style.display = 'flex';
+            });
+        });
+        overlay.addEventListener('click', function() {
+            overlay.style.display = 'none';
+            lightboxImg.src = '';
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && overlay.style.display === 'flex') {
+                overlay.style.display = 'none';
+                lightboxImg.src = '';
+            }
+        });
+    </script>
+</body>
+</html>

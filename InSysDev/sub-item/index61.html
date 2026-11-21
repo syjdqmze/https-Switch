@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验47 视频播放器实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验47 视频播放器实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">STM32F429IGT6 · HAL 库 · AVI/MJPEG 解码 + SAI 音频输出</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+<section class="content-card" id="s01" data-title="工程概述与硬件资源">
+                    <h2>01　工程概述与硬件资源</h2>
+                    <div class="sec-sub">实验47 用 SD 卡里的 AVI(MJPEG) 文件同时驱动 LCD 画面与 WM8978 音频</div>
+
+                    <p>本实验的目标是做一个“能放视频的开发板”：从 SD 卡根目录的 <code class="inline">VIDEO</code> 文件夹读取 AVI 文件，按 AVI 索引把文件拆成视频流和音频流。视频流是逐帧 JPEG，交给 MJPEG 解码器还原成 RGB565 写入 SDRAM 帧缓存；音频流是 PCM，经 SAI + DMA 送到 WM8978。画面刷新由 TIM6 的“帧时隙”控制，按键负责上一曲、下一曲、快进和快退。</p>
+
+                    <table class="data">
+                        <tr><th>模块</th><th>关键引脚 / 资源</th><th>在本实验中的作用</th></tr>
+                        <tr><td>SDRAM（W9825G6KH）</td><td>FMC Bank1，16 位数据宽度</td><td>LCD 显存、MJPEG 解码缓冲、内存池</td></tr>
+                        <tr><td>LCD（RGB565）</td><td>LTDC + SDRAM 显存</td><td>显示视频帧、文件名、时间与帧率</td></tr>
+                        <tr><td>SD 卡</td><td>SDIO + FatFs（盘符 0:）</td><td>读取 AVI 文件与目录索引</td></tr>
+                        <tr><td>SPI FLASH（W25Q256）</td><td>SPI（盘符 1:）</td><td>存放字库，供中文显示使用</td></tr>
+                        <tr><td>WM8978 + SAI</td><td>SAI1 Block A + DMA2_Stream3</td><td>音频 DAC 输出，4 个 5KB 缓冲轮转</td></tr>
+                        <tr><td>按键</td><td>KEY0 / KEY1 / KEY2 / WK_UP</td><td>下一曲 / 快退 / 上一曲 / 快进</td></tr>
+                        <tr><td>USART1</td><td>PA9 / PA10，115200-8-N-1</td><td>printf 输出帧率、解码错误等日志</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">SYSCLK = 180MHz</span>
+                        <span class="chip">HCLK = 180MHz</span>
+                        <span class="chip">APB1 = 45MHz</span>
+                        <span class="chip">SDCLK = 90MHz</span>
+                        <span class="chip">AVI 视频缓冲 60KB</span>
+                        <span class="chip">音频缓冲 4 × 5KB</span>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">读这一页要抓住的三条主线</div>
+                        <ol>
+                            <li>存储：AVI 解析只认文件里的索引和流标志，不依赖文件名后缀。</li>
+                            <li>显示：JPEG 解码结果直接写 LCD 窗口，靠 TIM6 的 <code class="inline">frameup</code> 控制帧率。</li>
+                            <li>声音：SAI DMA 双缓冲换链，靠 <code class="inline">i2splaybuf</code> 与 <code class="inline">i2ssavebuf</code> 避免读写碰撞。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">AVI 文件必须是 MJPEG 视频 + PCM 音频。H.264 等其它编码在本实验的解码器里没有对应实现，打开后会停在“decode error”。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="启动流程总览">
+                    <h2>02　启动流程总览</h2>
+                    <div class="sec-sub">初始化顺序是“先内存、再显示、后文件系统”，任何一步失败都会在 LCD 上给出提示</div>
+
+                    <p><code class="inline">main</code> 的前半段全部是“让板子具备放视频的条件”：时钟、延时、串口、定时器、SDRAM、LCD、SPI FLASH、音频编解码器、内存池、FatFs，最后检查字库并进入 <code class="inline">video_play()</code>。</p>
+
+                    <pre class="code">int main(void)
+{
+    HAL_Init();                     <span class="cmt">// 1ms 时基，优先级分组 2</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// HSE 25MHz → SYSCLK 180MHz</span>
+    delay_init(180);                <span class="cmt">// fac_us=180，SysTick 走 HCLK</span>
+    uart_init(115200);              <span class="cmt">// printf 重定向到 USART1</span>
+    TIM3_Init(10000-1,9000-1);      <span class="cmt">// 10kHz 计数，1s 中断打印帧数</span>
+    LED_Init();                     <span class="cmt">// 状态指示</span>
+    KEY_Init();                     <span class="cmt">// KEY0/KEY1/KEY2/WK_UP</span>
+    SDRAM_Init();                   <span class="cmt">// 显存与解码内存的前提</span>
+    LCD_Init();                     <span class="cmt">// LTDC + 面板参数</span>
+    W25QXX_Init();                  <span class="cmt">// 字库存储介质</span>
+    WM8978_Init();                  <span class="cmt">// 音频 Codec</span>
+    WM8978_ADDA_Cfg(1,0);           <span class="cmt">// 只开 DAC</span>
+    WM8978_Input_Cfg(0,0,0);        <span class="cmt">// 关闭输入通道</span>
+    WM8978_Output_Cfg(1,0);         <span class="cmt">// 开启 DAC 输出</span>
+    WM8978_HPvol_Set(40,40);        <span class="cmt">// 耳机音量</span>
+    WM8978_SPKvol_Set(50);          <span class="cmt">// 喇叭音量</span>
+    my_mem_init(SRAMIN);            <span class="cmt">// 内部 SRAM 内存池</span>
+    my_mem_init(SRAMEX);            <span class="cmt">// 外部 SDRAM 内存池</span>
+    my_mem_init(SRAMCCM);           <span class="cmt">// CCM 内存池</span>
+    exfuns_init();                  <span class="cmt">// FatFs 相关变量申请内存</span>
+    f_mount(fs[0],"0:",1);          <span class="cmt">// 挂载 SD 卡</span>
+    f_mount(fs[1],"1:",1);          <span class="cmt">// 挂载 SPI FLASH</span>
+    while(font_init())              <span class="cmt">// 字库缺失则一直提示</span>
+    {
+        LCD_ShowString(30,50,200,16,16,"Font Error!");
+        delay_ms(200);
+        LCD_Fill(30,50,240,66,WHITE);
+        delay_ms(200);
+    }
+    while(1)
+    {
+        video_play();               <span class="cmt">// 进入视频目录并循环播放</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">为什么 SDRAM 和 LCD 必须排在文件系统之前</div>
+                        <ol>
+                            <li><code class="inline">LCD_Init()</code> 需要 SDRAM 做显存，SDRAM 不通就会白屏或花屏。</li>
+                            <li><code class="inline">my_mem_init(SRAMEX)</code> 把 SDRAM 划成动态内存池，后面 AVI 缓冲都从这里 <code class="inline">mymalloc</code>。</li>
+                            <li><code class="inline">f_mount</code> 只负责挂载，真正的目录读取在 <code class="inline">video_play()</code> 里。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">省略了 LED、按键、字库的具体引脚配置，它们不影响播放主链路；完整定义见 <code class="inline">HARDWARE/LED/led.c</code> 与 <code class="inline">HARDWARE/KEY/key.c</code>。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="状态交互演示">
+                    <h2>03　状态交互演示</h2>
+                    <div class="sec-sub">先看启动链路，再点按钮复现“上一曲 / 下一曲 / 快进 / 快退”的索引变化</div>
+
+                    <figure class="figure">
+                        <img src="./index61-map/boot-flow.png" alt="视频播放器从复位到主循环的启动流程图">
+                        <figcaption>图 3-1　视频播放器启动链路总览</figcaption>
+                    </figure>
+
+                    <div class="sim">
+                        <div class="sim-title">按键分支演示（对应 video_play / video_seek）</div>
+                        <div class="sim-buttons">
+                            <button data-act="next">KEY0 下一曲</button>
+                            <button data-act="prev">KEY2 上一曲</button>
+                            <button data-act="ff">WK_UP 快进 5s</button>
+                            <button data-act="rew">KEY1 快退 5s</button>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="ind0"></span>播放中</div>
+                            <div class="led-item"><span class="led-dot" id="ind1"></span>音频输出</div>
+                        </div>
+                        <div class="sim-log" id="simLog">索引 1/3　快进位置 0s　通道：视频 + 音频</div>
+                    </div>
+
+                    <div class="keylogic">
+                        <div class="kl-title">演示与源码的对应关系</div>
+                        <ol>
+                            <li>下一曲：<code class="inline">curindex++</code>，越界后回到 0。</li>
+                            <li>上一曲：<code class="inline">curindex--</code>，到 0 后再回到最后一个文件。</li>
+                            <li>快进/快退：<code class="inline">video_seek()</code> 以“总大小/总秒数×5”为步长移动 <code class="inline">fpos</code>。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">演示只改变索引和快进位置，不模拟真实解码耗时；真实播放时每一帧还要等待 TIM6 的时隙。</div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与复位入口">
+                    <h2>04　启动文件与复位入口</h2>
+                    <div class="sec-sub">上电后的第一条指令不是 main，而是启动文件里的 Reset_Handler</div>
+
+                    <p><code class="inline">startup_stm32f429xx.s</code> 定义了向量表、栈、堆和复位入口。向量表第 0 项是 <code class="inline">__initial_sp</code>，第 1 项是 <code class="inline">Reset_Handler</code>；内核复位后自动从这两项装载 MSP 和 PC。</p>
+
+                    <pre class="code">Stack_Size      EQU     0x800;          <span class="cmt">// 栈 2KB，中断嵌套与局部变量都靠它</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp
+
+Heap_Size       EQU     0x200;          <span class="cmt">// 堆 512B，本工程主要用自己写的内存池</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit
+
+                PRESERVE8
+                THUMB
+
+__Vectors       DCD     __initial_sp    <span class="cmt">// 第 0 项：栈顶地址</span>
+                DCD     Reset_Handler   <span class="cmt">// 第 1 项：复位入口</span>
+
+Reset_Handler   PROC
+                EXPORT  Reset_Handler             [WEAK]
+                IMPORT  SystemInit
+                IMPORT  __main
+                LDR     R0, =SystemInit
+                BLX     R0                      <span class="cmt">// 先做 FPU 与时钟寄存器复位</span>
+                LDR     R0, =__main
+                BX      R0                      <span class="cmt">// 跑到 C 库入口，再调用 main</span>
+                ENDP</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">Reset_Handler 的两跳</div>
+                        <ol>
+                            <li>第一跳 <code class="inline">BLX SystemInit</code>：把 RCC 复位到默认 HSI 16MHz，并按 FPU 宏决定是否打开 CP10/CP11。</li>
+                            <li>第二跳 <code class="inline">BX __main</code>：C 库完成 .data 复制、.bss 清零和堆栈初始化，然后调用 <code class="inline">main</code>。</li>
+                            <li><code class="inline">[WEAK]</code> 允许用户在其它文件重写同名入口，但本工程没有重写。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">不要把 <code class="inline">SystemInit</code> 当成“配好 180MHz”。它只把时钟恢复到复位默认值，真正的 180MHz 在 <code class="inline">Stm32_Clock_Init()</code> 里完成。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="系统时钟与 HAL 初始化">
+                    <h2>05　系统时钟与 HAL 初始化</h2>
+                    <div class="sec-sub">HAL_Init 建立 1ms 时基，Stm32_Clock_Init 把 25MHz 晶振倍频到 180MHz</div>
+
+                    <h3>HAL_Init：时基与优先级分组</h3>
+<pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();   <span class="cmt">// 打开指令缓存</span>
+  __HAL_FLASH_DATA_CACHE_ENABLE();          <span class="cmt">// 打开数据缓存</span>
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();     <span class="cmt">// 打开预取</span>
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2); <span class="cmt">// 2 位抢占 + 2 位子优先级</span>
+  HAL_InitTick(TICK_INT_PRIORITY);          <span class="cmt">// TICK_INT_PRIORITY = 0x0F</span>
+  HAL_MspInit();                            <span class="cmt">// 板级底层初始化</span>
+  return HAL_OK;
+}</pre>
+
+                    <h3>Stm32_Clock_Init：PLL 算式</h3>
+                    <pre class="code">void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq)
+{
+    __HAL_RCC_PWR_CLK_ENABLE();                     <span class="cmt">// 先开 PWR 时钟</span>
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1); <span class="cmt">// 电压等级 1</span>
+
+    RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE; <span class="cmt">// 时钟源 HSE</span>
+    RCC_OscInitStructure.HSEState=RCC_HSE_ON;                   <span class="cmt">// 25MHz 晶振</span>
+    RCC_OscInitStructure.PLL.PLLState=RCC_PLL_ON;                <span class="cmt">// 打开主 PLL</span>
+    RCC_OscInitStructure.PLL.PLLM=pllm;   <span class="cmt">// 25</span>
+    RCC_OscInitStructure.PLL.PLLN=plln;   <span class="cmt">// 360 → VCO 360MHz</span>
+    RCC_OscInitStructure.PLL.PLLP=pllp;   <span class="cmt">// 2 → SYSCLK 180MHz</span>
+    RCC_OscInitStructure.PLL.PLLQ=pllq;   <span class="cmt">// 8 → 45MHz，给 USB/SDIO</span>
+    HAL_RCC_OscConfig(&RCC_OscInitStructure);
+
+    HAL_PWREx_EnableOverDrive();                     <span class="cmt">// F429 跑 180MHz 必须开 Over-Drive</span>
+    RCC_ClkInitStructure.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;   <span class="cmt">// HCLK=180MHz</span>
+    RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;    <span class="cmt">// APB1=45MHz</span>
+    RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;    <span class="cmt">// APB2=90MHz</span>
+    HAL_RCC_ClockConfig(&RCC_ClkInitStructure,FLASH_LATENCY_5); <span class="cmt">// 5WS 等待周期</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">算一遍就明白的时钟关系</div>
+                        <ol>
+                            <li>VCO = 25MHz × (360 / 25) = 360MHz。</li>
+                            <li>SYSCLK = VCO / 2 = 180MHz；HCLK 不分频，仍是 180MHz。</li>
+                            <li>APB1 = 180 / 4 = 45MHz，APB2 = 180 / 2 = 90MHz。</li>
+                            <li>SDRAM 时钟取 HCLK/2 = 90MHz，对应 11.1ns 周期。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">HAL_Init 在 16MHz HSI 下就把 SysTick 配成 1ms；改到 180MHz 后必须调用 <code class="inline">HAL_InitTick()</code> 或重新初始化时基，本实验通过 <code class="inline">delay_init()</code> 重新设定 SysTick 时钟源。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="延时、串口与基础驱动">
+                    <h2>06　延时、串口与基础驱动</h2>
+                    <div class="sec-sub">delay_init 只做两件事：把 SysTick 时钟切到 HCLK，并记下每微秒的计数</div>
+
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">// SysTick 时钟 = HCLK</span>
+    fac_us = SYSCLK;                                     <span class="cmt">// 180 → 1us 计 180 个数</span>
+}
+
+int fputc(int ch, FILE *f)
+{
+    while((USART1->SR&amp;0X40)==0);   <span class="cmt">// 等 TXE 置位，发送寄存器空</span>
+    USART1->DR = (u8)ch;            <span class="cmt">// 写入数据寄存器</span>
+    return ch;
+}</pre>
+
+                    <p>串口初始化把 USART1 配成 115200-8-N-1，并在 <code class="inline">HAL_UART_MspInit()</code> 里把 PA9/PA10 复用为 AF7。由于重定向了 <code class="inline">fputc</code>，工程里可以直接用 <code class="inline">printf</code>，不需要勾选 MicroLIB。</p>
+
+                    <pre class="code">void uart_init(u32 bound)
+{
+    UART1_Handler.Instance=USART1;
+    UART1_Handler.Init.BaudRate=bound;                  <span class="cmt">// 115200</span>
+    UART1_Handler.Init.WordLength=UART_WORDLENGTH_8B;   <span class="cmt">// 8 位数据</span>
+    UART1_Handler.Init.StopBits=UART_STOPBITS_1;        <span class="cmt">// 1 位停止</span>
+    UART1_Handler.Init.Parity=UART_PARITY_NONE;         <span class="cmt">// 无校验</span>
+    UART1_Handler.Init.Mode=UART_MODE_TX_RX;            <span class="cmt">// 收发都开</span>
+    HAL_UART_Init(&amp;UART1_Handler);
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">两个容易忽略的点</div>
+                        <ol>
+                            <li><code class="inline">fac_us = SYSCLK</code> 依赖 SysTick 时钟等于 HCLK；若把时钟源改成 HCLK/8，这里必须同步除以 8。</li>
+                            <li><code class="inline">fputc</code> 是阻塞发送，115200bps 下一字节约 87us；在主循环大量打印会拖慢视频帧率。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">本实验的 USART1 只用于输出，接收中断虽然打开，但主循环不读取 <code class="inline">USART_RX_BUF</code>。</div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="核心外设初始化">
+                    <h2>07　核心外设初始化：SDRAM 与 FMC</h2>
+                    <div class="sec-sub">视频帧缓存、LCD 显存都在 SDRAM，FMC 的时序参数错一个就会花屏</div>
+
+                    <figure class="figure">
+                        <img src="./index61-map/video-init-flow.png" alt="SDRAM 初始化与模式寄存器配置流程图">
+                        <figcaption>图 7-1　SDRAM 初始化流程与模式寄存器配置</figcaption>
+                    </figure>
+
+                    <pre class="code">void SDRAM_Init(void)
+{
+    SDRAM_Handler.Instance=FMC_SDRAM_DEVICE;                        <span class="cmt">// FMC 的 SDRAM 控制器</span>
+    SDRAM_Handler.Init.SDBank=FMC_SDRAM_BANK1;                      <span class="cmt">// 接在 Bank1（BANK5）</span>
+    SDRAM_Handler.Init.ColumnBitsNumber=FMC_SDRAM_COLUMN_BITS_NUM_9; <span class="cmt">// 9 位列地址</span>
+    SDRAM_Handler.Init.RowBitsNumber=FMC_SDRAM_ROW_BITS_NUM_13;      <span class="cmt">// 13 位行地址</span>
+    SDRAM_Handler.Init.MemoryDataWidth=FMC_SDRAM_MEM_BUS_WIDTH_16;   <span class="cmt">// 16 位数据宽度</span>
+    SDRAM_Handler.Init.InternalBankNumber=FMC_SDRAM_INTERN_BANKS_NUM_4;
+    SDRAM_Handler.Init.CASLatency=FMC_SDRAM_CAS_LATENCY_3;           <span class="cmt">// CAS=3</span>
+    SDRAM_Handler.Init.SDClockPeriod=FMC_SDRAM_CLOCK_PERIOD_2;       <span class="cmt">// HCLK/2 = 90MHz</span>
+    SDRAM_Handler.Init.ReadBurst=FMC_SDRAM_RBURST_ENABLE;            <span class="cmt">// 使能突发读</span>
+    SDRAM_Timing.LoadToActiveDelay=2;
+    SDRAM_Timing.ExitSelfRefreshDelay=8;
+    SDRAM_Timing.SelfRefreshTime=6;
+    SDRAM_Timing.RowCycleDelay=6;
+    SDRAM_Timing.WriteRecoveryTime=2;
+    SDRAM_Timing.RPDelay=2;
+    SDRAM_Timing.RCDDelay=2;
+    HAL_SDRAM_Init(&amp;SDRAM_Handler,&amp;SDRAM_Timing);           <span class="cmt">// 写控制器寄存器</span>
+    SDRAM_Initialization_Sequence(&amp;SDRAM_Handler);          <span class="cmt">// 芯片上电序列</span>
+}</pre>
+
+                    <pre class="code">void SDRAM_Initialization_Sequence(SDRAM_HandleTypeDef *hsdram)
+{
+    SDRAM_Send_Cmd(0,FMC_SDRAM_CMD_CLK_ENABLE,1,0);       <span class="cmt">// 时钟使能</span>
+    delay_us(500);                                        <span class="cmt">// 手册要求至少 200us</span>
+    SDRAM_Send_Cmd(0,FMC_SDRAM_CMD_PALL,1,0);             <span class="cmt">// 所有 Bank 预充电</span>
+    SDRAM_Send_Cmd(0,FMC_SDRAM_CMD_AUTOREFRESH_MODE,8,0); <span class="cmt">// 连续 8 次自刷新</span>
+    SDRAM_Send_Cmd(0,FMC_SDRAM_CMD_LOAD_MODE,1,temp);     <span class="cmt">// 写模式寄存器</span>
+    HAL_SDRAM_ProgramRefreshRate(&amp;SDRAM_Handler,683);     <span class="cmt">// 刷新计数</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">模式寄存器与刷新率</div>
+                        <ol>
+                            <li>模式寄存器 = 突发长度 1 + 顺序 + CAS=3 + 标准模式 + 单点写。</li>
+                            <li>刷新计数 = 64ms × 90MHz / 8192 − 20 = 683。</li>
+                            <li>9 位列 + 13 位行 + 4 个内部 Bank × 16 位 = 32MB 地址空间。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">先 <code class="inline">HAL_SDRAM_Init()</code> 再发序列；如果顺序反过来，模式寄存器会写不进去，表现为读写全错。</div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="时序与数据流">
+                    <h2>08　时序与数据流：帧时隙与音频 DMA</h2>
+                    <div class="sec-sub">视频按“帧时隙”刷新，音频按“半传输/传输完成”换缓冲，两条链互不阻塞</div>
+
+                    <figure class="figure">
+                        <img src="./index61-map/video-frame-timing.png" alt="视频帧时隙与 SAI DMA 音频换缓冲时序图">
+                        <figcaption>图 8-1　视频帧时隙与音频 DMA 换缓冲时序</figcaption>
+                    </figure>
+
+                    <p>AVI 头里的 <code class="inline">SecPerFrame</code> 单位是微秒。代码用 <code class="inline">SecPerFrame/100-1</code> 作为 TIM6 的自动重装值，因为 TIM6 被配成 10kHz（每计数 100us）。例如 40000us 对应 arr=399，400 个计数正好 40ms，即 25fps。</p>
+
+                    <pre class="code">res=avi_init(pbuf,AVI_VIDEO_BUF_SIZE);              <span class="cmt">// 解析 AVI 头</span>
+video_info_show(&amp;avix);                              <span class="cmt">// 显示声道、采样率、帧率</span>
+TIM6_Init(avix.SecPerFrame/100-1,9000-1);            <span class="cmt">// 10kHz，1 帧一个时隙</span>
+offset=avi_srarch_id(pbuf,AVI_VIDEO_BUF_SIZE,"movi"); <span class="cmt">// 找 movi 块</span>
+avi_get_streaminfo(pbuf+offset+4);                   <span class="cmt">// 取第一个流信息</span>
+f_lseek(favi,offset+12);                             <span class="cmt">// 定位到流数据</span>
+mjpegdec_init((lcddev.width-avix.Width)/2,
+              110+(lcddev.height-110-avix.Height)/2); <span class="cmt">// 居中显示</span></pre>
+
+                    <pre class="code">void audio_i2s_dma_callback(void)
+{
+    i2splaybuf++;                          <span class="cmt">// 播放缓冲前进一格</span>
+    if(i2splaybuf&gt;3)i2splaybuf=0;          <span class="cmt">// 4 个缓冲循环</span>
+    if(DMA2_Stream3-&gt;CR&amp;(1&lt;&lt;19))           <span class="cmt">// 当前用 M0AR 还是 M1AR</span>
+    {
+        DMA2_Stream3-&gt;M0AR=(u32)i2sbuf[i2splaybuf]; <span class="cmt">// 换下一个缓冲</span>
+    }
+    else
+    {
+        DMA2_Stream3-&gt;M1AR=(u32)i2sbuf[i2splaybuf];
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">为什么音频要用 4 个缓冲</div>
+                        <ol>
+                            <li>SAI DMA 是双缓冲（M0AR/M1AR），回调里再指向 4 个软件缓冲，形成“播放—填充”流水。</li>
+                            <li><code class="inline">i2ssavebuf</code> 是写入位置，<code class="inline">i2splaybuf</code> 是播放位置；两者相等时忙等，避免覆盖正在播的数据。</li>
+                            <li>每个缓冲 5KB，4 个共 20KB，全部从内部 SRAM 内存池申请。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">TIM6 只负责“何时可以显示下一帧”，不负责解码。解码仍在主循环里同步完成，所以帧率上限由 JPEG 解码耗时和 TIM6 时隙共同决定。</div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="中断链路">
+                    <h2>09　中断链路</h2>
+                    <div class="sec-sub">TIM6 给帧时隙，DMA2_Stream3 换音频缓冲，TIM3 每秒打印一次帧数</div>
+
+                    <figure class="figure">
+                        <img src="./index61-map/video-irq-chain.png" alt="TIM6、DMA2_Stream3 与 TIM3 的中断链路图">
+                        <figcaption>图 9-1　视频播放的三条中断链路</figcaption>
+                    </figure>
+
+                    <pre class="code">void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if(htim==(&amp;TIM3_Handler))          <span class="cmt">// TIM3：1 秒一次</span>
+    {
+        printf("frame:%d\r\n",frame);  <span class="cmt">// 打印上一秒的帧数</span>
+        frame=0;                       <span class="cmt">// 清零重新计数</span>
+    }
+    else if(htim==(&amp;TIM6_Handler))     <span class="cmt">// TIM6：一帧一次</span>
+    {
+        frameup=1;                     <span class="cmt">// 允许主循环显示下一帧</span>
+    }
+}</pre>
+
+                    <p>优先级配置写在 <code class="inline">HAL_TIM_Base_MspInit()</code>：TIM3 为抢占 1、子优先级 3；TIM6_DAC 为抢占 0、子优先级 3。音频 DMA 的中断优先级为抢占 0、子优先级 0，保证不会被视频刷新打断。</p>
+
+                    <pre class="code">HAL_NVIC_SetPriority(TIM3_IRQn,1,3);      <span class="cmt">// 帧率统计</span>
+HAL_NVIC_EnableIRQ(TIM3_IRQn);
+HAL_NVIC_SetPriority(TIM6_DAC_IRQn,0,3);  <span class="cmt">// 帧时隙，优先级更高</span>
+HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
+HAL_NVIC_SetPriority(DMA2_Stream3_IRQn,0,0); <span class="cmt">// 音频换缓冲，最高</span>
+HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">中断里只做最短的事</div>
+                        <ol>
+                            <li>TIM6 回调只置 <code class="inline">frameup=1</code>，不碰 LCD，不解码。</li>
+                            <li>DMA 回调只改 M0AR/M1AR，不申请内存、不读文件。</li>
+                            <li>TIM3 回调里的 <code class="inline">printf</code> 是阻塞的，但 1 秒才一次，影响可接受。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">主循环用 <code class="inline">while(frameup==0);</code> 忙等，随后立即 <code class="inline">frameup=0</code>。若在等待期间按键，按键扫描要等到这一帧显示完才会执行。</div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="主循环与现象">
+                    <h2>10　主循环与现象</h2>
+                    <div class="sec-sub">video_play 负责选文件，video_play_mjpeg 负责解一帧、等一帧、再读下一帧</div>
+
+                    <pre class="code">while(1)                                  <span class="cmt">// 播放循环</span>
+{
+    if(avix.StreamID==AVI_VIDS_FLAG)      <span class="cmt">// 当前是视频流</span>
+    {
+        f_read(favi,framebuf,avix.StreamSize+8,&amp;nr); <span class="cmt">// 读整帧</span>
+        res=mjpegdec_decode(framebuf,avix.StreamSize); <span class="cmt">// JPEG → RGB565</span>
+        while(frameup==0);                <span class="cmt">// 等 TIM6 时隙</span>
+        frameup=0;
+        frame++;
+    }
+    else                                  <span class="cmt">// 当前是音频流</span>
+    {
+        video_time_show(favi,&amp;avix);      <span class="cmt">// 刷新播放时间</span>
+        i2ssavebuf++;
+        if(i2ssavebuf&gt;3)i2ssavebuf=0;
+        do
+        {
+            nr=i2splaybuf;
+            if(nr)nr--;
+            else nr=3;
+        }while(i2ssavebuf==nr);            <span class="cmt">// 防止追上正在播的缓冲</span>
+        f_read(favi,i2sbuf[i2ssavebuf],avix.StreamSize+8,&amp;nr);
+        pbuf=i2sbuf[i2ssavebuf];
+    }
+    key=KEY_Scan(0);
+    if(key==KEY0_PRES||key==KEY2_PRES)     <span class="cmt">// 换曲</span>
+    {
+        res=key;
+        break;
+    }
+    else if(key==KEY1_PRES||key==WKUP_PRES) <span class="cmt">// 快退 / 快进</span>
+    {
+        SAI_Play_Stop();
+        video_seek(favi,&amp;avix,framebuf);
+        pbuf=framebuf;
+        SAI_Play_Start();
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">现象与代码对应</div>
+                        <ol>
+                            <li>LCD 先显示文件名、索引，再显示视频画面与播放时间。</li>
+                            <li>KEY0/KEY2 立即退出当前文件，回到 <code class="inline">video_play()</code> 换索引。</li>
+                            <li>KEY1/WK_UP 进入 <code class="inline">video_seek()</code> 循环，松手后回到正常播放。</li>
+                            <li>串口每秒输出一次 <code class="inline">frame:xx</code>，可用来判断实际帧率。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">若视频能显示但没有声音，先看 <code class="inline">avix.SampleRate</code> 是否为 0；为 0 时源码不会初始化 SAI，这是“纯视频 AVI”的正常分支。</div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="核心数据结构与算法">
+                    <h2>11　核心数据结构与算法</h2>
+                    <div class="sec-sub">AVI_INFO 保存流信息，video_seek 用文件大小与总秒数估算跳转步长</div>
+
+                    <pre class="code">typedef struct
+{
+    u16 StreamID;        <span class="cmt">// 视频流 / 音频流标志</span>
+    u32 StreamSize;      <span class="cmt">// 当前流数据长度</span>
+    u32 SecPerFrame;     <span class="cmt">// 每帧时间，单位 us</span>
+    u32 TotalFrame;      <span class="cmt">// 总帧数</span>
+    u16 Width;           <span class="cmt">// 视频宽</span>
+    u16 Height;          <span class="cmt">// 视频高</span>
+    u16 Channels;        <span class="cmt">// 声道数</span>
+    u32 SampleRate;      <span class="cmt">// 采样率（内部按 10 倍存储）</span>
+    u16 AudioBufSize;    <span class="cmt">// 音频缓冲大小</span>
+    u8  VideoFLAG[4];    <span class="cmt">// 视频流标志，如 00dc</span>
+    u8  AudioFLAG[4];    <span class="cmt">// 音频流标志，如 01wb</span>
+} AVI_INFO;</pre>
+
+                    <pre class="code">u8 video_seek(FIL *favi,AVI_INFO *aviinfo,u8 *mbuf)
+{
+    u32 fpos=favi-&gt;fptr;                                   <span class="cmt">// 当前位置</span>
+    u32 totsec=(aviinfo-&gt;SecPerFrame/1000)*aviinfo-&gt;TotalFrame/1000; <span class="cmt">// 总秒数</span>
+    u32 delta=(favi-&gt;obj.objsize/totsec)*5;                <span class="cmt">// 5 秒的数据量</span>
+    while(1)
+    {
+        key=KEY_Scan(1);
+        if(key==WKUP_PRES)                                 <span class="cmt">// 快进</span>
+        {
+            if(fpos&lt;favi-&gt;obj.objsize)fpos+=delta;
+            if(fpos&gt;(favi-&gt;obj.objsize-AVI_VIDEO_BUF_SIZE))
+                fpos=favi-&gt;obj.objsize-AVI_VIDEO_BUF_SIZE; <span class="cmt">// 防止越界</span>
+        }
+        else if(key==KEY1_PRES)                            <span class="cmt">// 快退</span>
+        {
+            if(fpos&gt;delta)fpos-=delta;
+            else fpos=0;
+        }
+        else break;
+        f_lseek(favi,fpos);
+        offset+=avi_srarch_id(pbuf+offset,AVI_VIDEO_BUF_SIZE,avix.VideoFLAG);
+        avi_get_streaminfo(pbuf+offset);                   <span class="cmt">// 重新同步到视频帧</span>
+        f_lseek(favi,fpos+offset+8);
+        mjpegdec_decode(mbuf,avix.StreamSize);              <span class="cmt">// 立即显示目标帧</span>
+    }
+    return 0;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">算法要点</div>
+                        <ol>
+                            <li>AVI 是“块结构”，每帧前有 4 字节标志和 4 字节长度，所以读帧长度要加 8。</li>
+                            <li>快进按字节比例跳，不保证落在帧边界，因此要用 <code class="inline">avi_srarch_id</code> 重新找 <code class="inline">00dc</code>。</li>
+                            <li>解码输出直接写 LCD 窗口，窗口由 <code class="inline">mjpegdec_init</code> 按居中坐标设定。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">代码中的 <code class="inline">offset</code> 在循环内累加，这是原工程的写法；理解时把它当作“在当前缓冲里继续找标志”的游标即可。</div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="串口调试与日志">
+                    <h2>12　串口调试与日志</h2>
+                    <div class="sec-sub">115200 下看四类日志：内存、AVI 解析、解码错误、帧率</div>
+
+                    <pre class="code">if(i2sbuf[3]==NULL||framebuf==NULL||favi==NULL)
+{
+    printf("memory error!\r\n");     <span class="cmt">// 内存池不足</span>
+    res=0XFF;
+}
+res=f_open(favi,(char *)pname,FA_READ);
+if(res)
+{
+    printf("fread error:%d\r\n",res); <span class="cmt">// 文件打不开</span>
+    break;
+}
+res=avi_init(pbuf,AVI_VIDEO_BUF_SIZE);
+if(res)
+{
+    printf("avi err:%d\r\n",res);     <span class="cmt">// 不是合法 AVI</span>
+    break;
+}
+res=mjpegdec_decode(pbuf,avix.StreamSize);
+if(res) printf("decode error!\r\n");  <span class="cmt">// JPEG 数据损坏</span></pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">日志对照表</div>
+                        <ol>
+                            <li><code class="inline">memory error!</code>：内部 SRAM 池不足，检查 <code class="inline">my_mem_init(SRAMIN)</code> 与缓冲大小。</li>
+                            <li><code class="inline">avi err:</code>：文件不是 MJPEG AVI，或 <code class="inline">movi</code> 块缺失。</li>
+                            <li><code class="inline">decode error!</code>：单帧 JPEG 损坏，常见于文件拷贝不完整。</li>
+                            <li><code class="inline">frame:xx</code>：每秒帧数，25fps 素材正常应接近 25。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">串口只发不收，所以看到日志后不需要回发任何字符；若要交互，需要另写接收解析。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="常见问题与排查">
+                    <h2>13　常见问题与排查</h2>
+                    <div class="sec-sub">按“显示 → 文件 → 声音 → 帧率”的顺序定位，比盲改代码快</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>最可能原因</th><th>排查动作</th></tr>
+                        <tr><td>LCD 白屏 / 花屏</td><td>SDRAM 时序或刷新率不对</td><td>先单独跑 SDRAM 读写测试，再核对 683 与 CAS=3</td></tr>
+                        <tr><td>提示“VIDEO文件夹错误”</td><td>SD 卡没有 VIDEO 目录或挂载失败</td><td>看 <code>f_mount</code> 返回值，确认盘符 0:</td></tr>
+                        <tr><td>有画面无声音</td><td>AVI 无音频流，或 WM8978 未配置</td><td>看 <code>avix.SampleRate</code> 与 SAI 初始化分支</td></tr>
+                        <tr><td>声音卡顿</td><td>SD 读速度不足或缓冲碰撞</td><td>换 Class10 卡，观察 <code>i2ssavebuf==nr</code> 忙等</td></tr>
+                        <tr><td>画面慢于 25fps</td><td>JPEG 分辨率过大</td><td>降低视频分辨率，或减少串口打印</td></tr>
+                        <tr><td>Font Error</td><td>SPI FLASH 字库未更新</td><td>用字库更新例程写入，再复位</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">推荐的排查顺序</div>
+                        <ol>
+                            <li>先确认 SDRAM 能读写，再看 LCD 是否能显示纯色。</li>
+                            <li>再确认 SD 卡目录与文件名，最后才怀疑解码器。</li>
+                            <li>声音问题先看 AVI 头，再看 WM8978 的 I2S 配置。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">不要用 H.264 的 MP4 改后缀冒充 AVI；本实验只实现 MJPEG 解码。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="小结">
+                    <h2>14　小结</h2>
+                    <div class="sec-sub">一条完整的“存储 → 解码 → 显示 → 音频”链路</div>
+
+                    <p>实验47 把前面学过的 SDRAM、LCD、SDIO、FatFs、定时器、DMA、SAI 串成一条真实的多媒体链路。最值得记住的是三个“时隙”概念：TIM6 决定画面何时更新，SAI DMA 决定音频何时换缓冲，主循环决定文件何时读下一帧。</p>
+
+                    <table class="data">
+                        <tr><th>层次</th><th>关键函数</th><th>职责</th></tr>
+                        <tr><td>应用层</td><td><code>video_play / video_play_mjpeg</code></td><td>选文件、解析 AVI、组织播放循环</td></tr>
+                        <tr><td>解码层</td><td><code>mjpegdec_init / mjpegdec_decode</code></td><td>JPEG → RGB565，写 LCD 窗口</td></tr>
+                        <tr><td>驱动层</td><td><code>SDRAM_Init / TIM6_Init / SAIA_Init</code></td><td>显存、帧时隙、音频输出</td></tr>
+                        <tr><td>系统层</td><td><code>HAL_Init / Stm32_Clock_Init</code></td><td>时基、180MHz 时钟、优先级分组</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">三个必须能复述的结论</div>
+                        <ol>
+                            <li>SecPerFrame 单位是 us，TIM6 的 10kHz 让“微秒”直接变成计数值。</li>
+                            <li>视频和音频共用同一个文件指针，靠流标志切换，不能并行读。</li>
+                            <li>帧缓存与音频缓冲都来自内存池，申请失败会直接报 <code class="inline">memory error!</code>。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note blue">下一节可继续看实验48：不接任何外部存储，只用 FPU 跑 Julia 分形，把“算力”单独量出来。</div>
+                </section>
+
+                <script>
+                    (function () {
+                        var idx = 0, total = 3, ff = 0, playing = true, audio = true;
+                        var log = document.getElementById('simLog');
+                        var i0 = document.getElementById('ind0');
+                        var i1 = document.getElementById('ind1');
+                        function render() {
+                            log.textContent = '索引 ' + (idx + 1) + '/' + total +
+                                '　快进位置 ' + ff + 's　通道：' + (audio ? '视频 + 音频' : '仅视频') +
+                                '　状态：' + (playing ? '播放中' : '已暂停');
+                            i0.classList.toggle('on', playing);
+                            i1.classList.toggle('on', audio);
+                        }
+                        var acts = {
+                            next: function () { idx = (idx + 1) % total; ff = 0; playing = true; },
+                            prev: function () { idx = (idx + total - 1) % total; ff = 0; playing = true; },
+                            ff: function () { ff = ff + 5; },
+                            rew: function () { ff = ff > 5 ? ff - 5 : 0; }
+                        };
+                        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+                            btn.addEventListener('click', function () {
+                                var a = acts[btn.getAttribute('data-act')];
+                                if (a) a();
+                                render();
+                            });
+                        });
+                        render();
+                    })();
+                </script>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

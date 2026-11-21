@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据库管理系统</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 16px 24px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+
+        .header h1 {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background-color: #fff;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar-section {
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .sidebar-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .db-list {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .db-item {
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 4px;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .db-item:hover {
+            background-color: #f0f2ff;
+        }
+
+        .db-item.active {
+            background-color: #667eea;
+            color: #fff;
+        }
+
+        .db-item .delete-db {
+            display: none;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .db-item:hover .delete-db,
+        .db-item.active .delete-db {
+            display: block;
+        }
+
+        .delete-db:hover {
+            background-color: rgba(231, 76, 60, 0.8);
+        }
+
+        .table-list {
+            list-style: none;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 8px;
+        }
+
+        .table-item {
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 2px;
+            transition: all 0.2s;
+            padding-left: 24px;
+        }
+
+        .table-item:hover {
+            background-color: #f8f9fc;
+        }
+
+        .table-item.active {
+            background-color: #e8ecf0;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tabs {
+            display: flex;
+            background-color: #fff;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            padding: 14px 24px;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn:hover {
+            color: #667eea;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            background-color: #f5f7fa;
+        }
+
+        .panel {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: #fff;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: #f0f0f0;
+            color: #666;
+            margin-left: 12px;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e0e0e0;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: #fff;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: #fafafa;
+        }
+
+        .file-upload:hover {
+            border-color: #667eea;
+            background-color: #f0f2ff;
+        }
+
+        .file-upload.dragover {
+            border-color: #667eea;
+            background-color: #e8ecf0;
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .file-upload-icon {
+            font-size: 48px;
+            color: #999;
+            margin-bottom: 12px;
+        }
+
+        .file-upload-text {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .file-upload-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 8px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #f8f9fc;
+            font-weight: 600;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        td {
+            color: #333;
+        }
+
+        tr:hover {
+            background-color: #f8f9fc;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+
+        .message.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            display: block;
+        }
+
+        .query-area {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .query-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Consolas', monospace;
+            transition: border-color 0.3s;
+        }
+
+        .query-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background-color: #f8f9fc;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .column-config {
+            background-color: #fafafa;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .column-item {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .column-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .column-name {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .column-type {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            background-color: #fff;
+            cursor: pointer;
+            width: 120px;
+        }
+
+        .column-primary {
+            width: 120px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        .btn-remove {
+            padding: 6px 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #e74c3c;
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .btn-add-column {
+            padding: 8px 16px;
+            border: 1px dashed #667eea;
+            border-radius: 6px;
+            background-color: #f0f2ff;
+            color: #667eea;
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+
+        .btn-add-column:hover {
+            background-color: #e8ecf0;
+        }
+
+        .preview-data {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 16px;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .preview-table th,
+        .preview-table td {
+            padding: 8px 12px;
+            font-size: 12px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .preview-table th {
+            background-color: #f8f9fc;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+
+            .tab-content {
+                padding: 12px;
+            }
+
+            .panel {
+                padding: 16px;
+            }
+
+            .query-area {
+                flex-direction: column;
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            th, td {
+                padding: 8px 6px;
+                font-size: 12px;
+            }
+
+            .column-item {
+                flex-wrap: wrap;
+            }
+
+            .column-name, .column-type, .column-primary {
+                flex: 1;
+                min-width: 100px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🗄️ 数据库管理系统</h1>
+    </div>
+
+    <div class="main-content">
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">数据库列表</div>
+                <div class="message" id="createDbMsg"></div>
+                <div class="form-group">
+                    <input type="text" class="form-input" id="dbNameInput" placeholder="输入数据库名称">
+                </div>
+                <button class="btn btn-primary" onclick="createDatabase()">创建数据库</button>
+                <ul class="db-list" id="databaseList"></ul>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">数据表列表</div>
+                <ul class="table-list" id="tableList"></ul>
+            </div>
+        </div>
+
+        <div class="workspace">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('createTable')">创建数据表</button>
+                <button class="tab-btn" onclick="switchTab('importData')">数据录入</button>
+                <button class="tab-btn" onclick="switchTab('query')">数据查询</button>
+            </div>
+
+            <div class="tab-content">
+                <div id="tab-createTable" class="tab-panel">
+                    <div class="panel">
+                        <div class="panel-title">📋 创建数据表</div>
+                        <div class="message" id="createTableMsg"></div>
+                        <div class="form-group">
+                            <label class="form-label">选择数据库</label>
+                            <select class="form-select" id="createTableDb" onchange="updateCreateTableTableList()">
+                                <option value="">请选择数据库</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">表名</label>
+                            <input type="text" class="form-input" id="tableNameInput" placeholder="输入表名">
+                        </div>
+                        <div class="column-config">
+                            <div class="sidebar-title" style="margin-bottom: 8px;">字段配置</div>
+                            <div id="columnList">
+                                <div class="column-item">
+                                    <input type="text" class="column-name" placeholder="字段名" value="id">
+                                    <select class="column-type">
+                                        <option value="INTEGER" selected>INTEGER</option>
+                                        <option value="TEXT">TEXT</option>
+                                        <option value="REAL">REAL</option>
+                                        <option value="BLOB">BLOB</option>
+                                        <option value="NUMERIC">NUMERIC</option>
+                                    </select>
+                                    <select class="column-primary">
+                                        <option value="none">普通字段</option>
+                                        <option value="primary">主键</option>
+                                        <option value="primary_auto" selected>主键+自增</option>
+                                    </select>
+                                    <button class="btn-remove" onclick="removeColumn(this)">✕</button>
+                                </div>
+                            </div>
+                            <button class="btn-add-column" onclick="addColumn()">+ 添加字段</button>
+                        </div>
+                        <button class="btn btn-primary" onclick="createTable()">创建表</button>
+                    </div>
+                </div>
+
+                <div id="tab-importData" class="tab-panel" style="display: none;">
+                    <div class="panel">
+                        <div class="panel-title">📥 从Excel导入数据</div>
+                        <div class="message" id="importMsg"></div>
+                        <div class="form-group">
+                            <label class="form-label">选择数据库</label>
+                            <select class="form-select" id="importDb" onchange="updateImportTableList()">
+                                <option value="">请选择数据库</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">选择数据表</label>
+                            <select class="form-select" id="importTable">
+                                <option value="">请选择数据表</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">上传Excel文件</label>
+                            <div class="file-upload" id="fileUpload" onclick="document.getElementById('excelFile').click()">
+                                <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(event)">
+                                <div class="file-upload-icon">📁</div>
+                                <div class="file-upload-text" id="uploadText">点击或拖拽上传Excel文件</div>
+                                <div class="file-upload-hint">支持 .xlsx, .xls, .csv 格式</div>
+                            </div>
+                        </div>
+                        <div class="preview-data" id="previewData" style="display: none;">
+                            <div class="sidebar-title" style="margin-bottom: 8px;">数据预览</div>
+                            <table class="preview-table" id="previewTable"></table>
+                        </div>
+                        <button class="btn btn-success" onclick="importData()" id="importBtn" disabled>导入数据</button>
+                    </div>
+                </div>
+
+                <div id="tab-query" class="tab-panel" style="display: none;">
+                    <div class="panel">
+                        <div class="panel-title">🔍 数据查询</div>
+                        <div class="message" id="queryMsg"></div>
+                        <div class="form-group">
+                            <label class="form-label">选择数据库</label>
+                            <select class="form-select" id="queryDb" onchange="updateQueryTableList()">
+                                <option value="">请选择数据库</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">选择数据表</label>
+                            <select class="form-select" id="queryTable" onchange="updateQueryPreview()">
+                                <option value="">请选择数据表</option>
+                            </select>
+                        </div>
+                        <div class="query-area">
+                            <input type="text" class="query-input" id="sqlInput" placeholder="输入SQL查询语句，如: SELECT * FROM table_name">
+                            <button class="btn btn-primary" onclick="executeQuery()">执行查询</button>
+                            <button class="btn btn-secondary" onclick="resetQuery()">重置</button>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stat-card">
+                                <div class="stat-value" id="recordCount">0</div>
+                                <div class="stat-label">记录数</div>
+                            </div>
+                        </div>
+                        <div class="table-container" id="resultTableContainer" style="display: none;">
+                            <table id="resultTable"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <script>
+        let currentDbName = null;
+        let currentTableName = null;
+        let excelData = null;
+
+        const API_BASE = '';
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').classList.toggle('show', show);
+        }
+
+        async function fetchApi(action, params = {}, method = 'POST') {
+            let url = `${API_BASE}api.php?action=${action}`;
+            
+            let options = {
+                method: method
+            };
+            
+            if (method === 'GET' && Object.keys(params).length > 0) {
+                const queryString = new URLSearchParams(params).toString();
+                url += '&' + queryString;
+            }
+            
+            if (method === 'POST' && Object.keys(params).length > 0) {
+                options.headers = {
+                    'Content-Type': 'application/json'
+                };
+                options.body = JSON.stringify(params);
+            }
+            
+            const response = await fetch(url, options);
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            return data;
+        }
+
+        async function init() {
+            await loadDatabases();
+            initFileUploadDragDrop();
+        }
+
+        async function loadDatabases() {
+            try {
+                showLoading(true);
+                const result = await fetchApi('listDatabases', {}, 'GET');
+                if (result.success) {
+                    renderDbList(result.data);
+                    updateDbSelects(result.data);
+                }
+            } catch (error) {
+                showMessage('createDbMsg', '加载数据库列表失败: ' + error.message, 'error');
+                console.error('Load databases error:', error);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function loadTables(dbName) {
+            if (!dbName) return;
+            
+            try {
+                const result = await fetchApi('listTables', { dbName }, 'GET');
+                if (result.success) {
+                    renderTableList(result.data);
+                }
+            } catch (error) {
+                console.error('加载数据表失败:', error);
+            }
+        }
+
+        function renderDbList(dbs) {
+            const list = document.getElementById('databaseList');
+            list.innerHTML = '';
+            
+            if (dbs.length === 0) {
+                list.innerHTML = '<li style="padding: 10px; color: #999; font-size: 13px;">暂无数据库，请创建</li>';
+                return;
+            }
+            
+            dbs.forEach(name => {
+                const li = document.createElement('li');
+                li.className = 'db-item' + (name === currentDbName ? ' active' : '');
+                li.innerHTML = `<span>${name}</span><span class="delete-db" onclick="deleteDatabase('${name}');event.stopPropagation()">✕</span>`;
+                li.onclick = () => selectDatabase(name);
+                list.appendChild(li);
+            });
+        }
+
+        function renderTableList(tables) {
+            const list = document.getElementById('tableList');
+            list.innerHTML = '';
+            
+            if (!currentDbName) {
+                list.innerHTML = '<li style="padding: 10px; color: #999; font-size: 13px;">请先选择数据库</li>';
+                return;
+            }
+            
+            if (tables.length === 0) {
+                list.innerHTML = '<li style="padding: 10px; color: #999; font-size: 13px;">暂无数据表</li>';
+                return;
+            }
+            
+            tables.forEach(name => {
+                const li = document.createElement('li');
+                li.className = 'table-item' + (name === currentTableName ? ' active' : '');
+                li.innerHTML = name;
+                li.onclick = () => selectTable(name);
+                list.appendChild(li);
+            });
+        }
+
+        function updateDbSelects(dbs) {
+            const selects = ['createTableDb', 'importDb', 'queryDb'];
+            selects.forEach(id => {
+                const select = document.getElementById(id);
+                select.innerHTML = '<option value="">请选择数据库</option>';
+                dbs.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function updateTableSelect(selectId, dbName, tables) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">请选择数据表</option>';
+            if (tables) {
+                tables.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
+            }
+        }
+
+        async function createDatabase() {
+            const nameInput = document.getElementById('dbNameInput');
+            const name = nameInput.value.trim();
+            
+            if (!name) {
+                showMessage('createDbMsg', '请输入数据库名称', 'error');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                const result = await fetchApi('createDatabase', { name });
+                
+                if (result.success) {
+                    nameInput.value = '';
+                    showMessage('createDbMsg', result.message, 'success');
+                    await loadDatabases();
+                } else {
+                    showMessage('createDbMsg', result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('createDbMsg', '创建数据库失败: ' + error.message, 'error');
+                console.error('Create database error:', error);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function deleteDatabase(name) {
+            if (!confirm(`确定要删除数据库 "${name}" 吗？此操作不可恢复。`)) {
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                const result = await fetchApi('deleteDatabase', { name });
+                
+                if (result.success) {
+                    if (currentDbName === name) {
+                        currentDbName = null;
+                        currentTableName = null;
+                    }
+                    showMessage('createDbMsg', result.message, 'info');
+                    await loadDatabases();
+                    renderTableList([]);
+                } else {
+                    showMessage('createDbMsg', result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('createDbMsg', '删除数据库失败: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function selectDatabase(name) {
+            currentDbName = name;
+            currentTableName = null;
+            
+            renderDbList([...document.querySelectorAll('.db-item span:first-child')].map(el => el.textContent));
+            document.getElementById('createTableDb').value = name;
+            document.getElementById('importDb').value = name;
+            document.getElementById('queryDb').value = name;
+            
+            await loadTables(name);
+        }
+
+        function selectTable(name) {
+            currentTableName = name;
+            renderTableList([...document.querySelectorAll('.table-item')].map(el => el.textContent));
+            document.getElementById('importTable').value = name;
+            document.getElementById('queryTable').value = name;
+        }
+
+        function addColumn() {
+            const container = document.getElementById('columnList');
+            const div = document.createElement('div');
+            div.className = 'column-item';
+            div.innerHTML = `
+                <input type="text" class="column-name" placeholder="字段名">
+                <select class="column-type">
+                    <option value="INTEGER">INTEGER</option>
+                    <option value="TEXT">TEXT</option>
+                    <option value="REAL">REAL</option>
+                    <option value="BLOB">BLOB</option>
+                    <option value="NUMERIC">NUMERIC</option>
+                </select>
+                <select class="column-primary">
+                    <option value="none" selected>普通字段</option>
+                    <option value="primary">主键</option>
+                    <option value="primary_auto">主键+自增</option>
+                </select>
+                <button class="btn-remove" onclick="removeColumn(this)">✕</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function removeColumn(btn) {
+            const container = document.getElementById('columnList');
+            if (container.children.length > 1) {
+                btn.parentElement.remove();
+            } else {
+                showMessage('createTableMsg', '至少需要一个字段', 'error');
+            }
+        }
+
+        async function createTable() {
+            const dbName = document.getElementById('createTableDb').value;
+            const tableName = document.getElementById('tableNameInput').value.trim();
+            
+            if (!dbName) {
+                showMessage('createTableMsg', '请选择数据库', 'error');
+                return;
+            }
+            
+            if (!tableName) {
+                showMessage('createTableMsg', '请输入表名', 'error');
+                return;
+            }
+            
+            const columnItems = document.querySelectorAll('#columnList .column-item');
+            const columns = [];
+            
+            for (let i = 0; i < columnItems.length; i++) {
+                const item = columnItems[i];
+                const name = item.querySelector('.column-name').value.trim();
+                const type = item.querySelector('.column-type').value;
+                const primaryType = item.querySelector('.column-primary').value;
+                
+                if (!name) {
+                    showMessage('createTableMsg', `第 ${i + 1} 个字段名不能为空`, 'error');
+                    return;
+                }
+                
+                columns.push({ name, type, primaryType });
+            }
+            
+            if (columns.length === 0) {
+                showMessage('createTableMsg', '请至少添加一个字段', 'error');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                console.log('createTable params:', { dbName, tableName, columns });
+                const result = await fetchApi('createTable', { dbName, tableName, columns });
+                
+                if (result.success) {
+                    document.getElementById('tableNameInput').value = '';
+                    showMessage('createTableMsg', result.message, 'success');
+                    await loadTables(dbName);
+                } else {
+                    showMessage('createTableMsg', result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('createTableMsg', '创建表失败: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function initFileUploadDragDrop() {
+            const upload = document.getElementById('fileUpload');
+            upload.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                upload.classList.add('dragover');
+            });
+            upload.addEventListener('dragleave', () => {
+                upload.classList.remove('dragover');
+            });
+            upload.addEventListener('drop', (e) => {
+                e.preventDefault();
+                upload.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    handleFile(file);
+                }
+            });
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    excelData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    if (excelData.length < 2) {
+                        showMessage('importMsg', 'Excel文件至少需要包含表头和一行数据', 'error');
+                        excelData = null;
+                        return;
+                    }
+                    
+                    document.getElementById('uploadText').textContent = `已选择: ${file.name}`;
+                    document.getElementById('importBtn').disabled = false;
+                    showPreview();
+                    showMessage('importMsg', '文件读取成功，数据已准备就绪', 'success');
+                } catch (e) {
+                    showMessage('importMsg', '读取文件失败: ' + e.message, 'error');
+                    excelData = null;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function showPreview() {
+            const previewData = document.getElementById('previewData');
+            const previewTable = document.getElementById('previewTable');
+            previewData.style.display = 'block';
+            
+            let html = '<thead><tr>';
+            excelData[0].forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            const previewRows = excelData.slice(1, 11);
+            previewRows.forEach(row => {
+                html += '<tr>';
+                row.forEach(cell => {
+                    html += `<td>${cell !== undefined ? cell : ''}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            if (excelData.length > 11) {
+                html += `<tr><td colspan="${excelData[0].length}" style="text-align: center; color: #999;">... 还有 ${excelData.length - 11} 行数据未显示</td></tr>`;
+            }
+            
+            html += '</tbody>';
+            previewTable.innerHTML = html;
+        }
+
+        async function importData() {
+            const dbName = document.getElementById('importDb').value;
+            const tableName = document.getElementById('importTable').value;
+            
+            if (!dbName) {
+                showMessage('importMsg', '请选择数据库', 'error');
+                return;
+            }
+            
+            if (!tableName) {
+                showMessage('importMsg', '请选择数据表', 'error');
+                return;
+            }
+            
+            if (!excelData) {
+                showMessage('importMsg', '请先上传Excel文件', 'error');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                const result = await fetchApi('importData', { dbName, tableName, excelData });
+                
+                if (result.success) {
+                    showMessage('importMsg', result.message, 'success');
+                    document.getElementById('previewData').style.display = 'none';
+                    document.getElementById('uploadText').textContent = '点击或拖拽上传Excel文件';
+                    document.getElementById('excelFile').value = '';
+                    document.getElementById('importBtn').disabled = true;
+                    excelData = null;
+                } else {
+                    showMessage('importMsg', result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('importMsg', '导入数据失败: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function updateCreateTableTableList() {
+            const dbName = document.getElementById('createTableDb').value;
+            if (dbName) {
+                await loadTables(dbName);
+            } else {
+                renderTableList([]);
+            }
+        }
+
+        async function updateImportTableList() {
+            const dbName = document.getElementById('importDb').value;
+            if (dbName) {
+                const result = await fetchApi('listTables', { dbName: dbName }, 'GET');
+                if (result.success) {
+                    updateTableSelect('importTable', dbName, result.data);
+                }
+            } else {
+                updateTableSelect('importTable', '', []);
+            }
+        }
+
+        async function updateQueryTableList() {
+            const dbName = document.getElementById('queryDb').value;
+            document.getElementById('sqlInput').value = '';
+            document.getElementById('resultTableContainer').style.display = 'none';
+            document.getElementById('recordCount').textContent = '0';
+            
+            if (dbName) {
+                const result = await fetchApi('listTables', { dbName: dbName }, 'GET');
+                if (result.success) {
+                    updateTableSelect('queryTable', dbName, result.data);
+                }
+            } else {
+                updateTableSelect('queryTable', '', []);
+            }
+        }
+
+        function updateQueryPreview() {
+            const dbName = document.getElementById('queryDb').value;
+            const tableName = document.getElementById('queryTable').value;
+            
+            if (dbName && tableName) {
+                document.getElementById('sqlInput').value = `SELECT * FROM \`${tableName}\` LIMIT 100`;
+            }
+        }
+
+        async function executeQuery() {
+            const dbName = document.getElementById('queryDb').value;
+            const sql = document.getElementById('sqlInput').value.trim();
+            
+            if (!dbName) {
+                showMessage('queryMsg', '请选择数据库', 'error');
+                return;
+            }
+            
+            if (!sql) {
+                showMessage('queryMsg', '请输入SQL语句', 'error');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                const result = await fetchApi('query', { dbName, sql });
+                
+                if (result.success) {
+                    document.getElementById('recordCount').textContent = result.data.count;
+                    renderResultTable(result.data.columns, result.data.data);
+                    showMessage('queryMsg', `查询成功，共 ${result.data.count} 条记录`, 'success');
+                } else {
+                    showMessage('queryMsg', result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('queryMsg', 'SQL执行失败: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderResultTable(columns, values) {
+            const container = document.getElementById('resultTableContainer');
+            const table = document.getElementById('resultTable');
+            container.style.display = 'block';
+            
+            let html = '<thead><tr>';
+            columns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            values.forEach(row => {
+                html += '<tr>';
+                columns.forEach(col => {
+                    html += `<td>${row[col] !== undefined ? row[col] : ''}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody>';
+            table.innerHTML = html;
+        }
+
+        function resetQuery() {
+            document.getElementById('sqlInput').value = '';
+            document.getElementById('resultTableContainer').style.display = 'none';
+            document.getElementById('recordCount').textContent = '0';
+            document.getElementById('queryMsg').style.display = 'none';
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(panel => panel.style.display = 'none');
+            
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).style.display = 'block';
+        }
+
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = 'message ' + type;
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

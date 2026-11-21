@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验51 T9拼音输入法实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验51 T9拼音输入法实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">输入法=码表检索，不是算法识别</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">在 3×3 虚拟键盘上用数字键输入拼音，再从码表中检索并翻页选择汉字</div>
+
+                    <p>实验51 把“九宫格输入法”搬到 STM32F429 开发板上：屏幕画出 9 个按键，每个按键同时显示数字和字母（2=abc、3=def……9=wxyz），触摸按键后把数字拼成字符串（例如“726”），再用这张数字串到预置的拼音码表 <code class="inline">py_index3[]</code> 中做前缀匹配，最后把匹配到的拼音与汉字显示出来。整个过程没有联网、没有词典文件，码表是编译进 Flash 的常量数组。</p>
+
+                    <p>与相邻的实验50 手写识别相比，本实验的难点不在“识别算法”，而在<strong>字符串匹配与状态机</strong>：输入串怎么增长/删除、完全匹配与部分匹配如何区分、候选索引怎么循环翻页、触摸按住不放为什么不能连续触发。把这些状态讲清楚，T9 就通了。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>配置</th><th>在本实验中的作用</th></tr>
+                        <tr><td>系统时钟</td><td><code>Stm32_Clock_Init(360,25,2,8)</code> → 180 MHz</td><td>主循环节拍、延时、LCD 刷新</td></tr>
+                        <tr><td>LED0 / LED1</td><td>PB1 / PB0，推挽输出</td><td>LED0 每 30 次循环翻转，作为运行心跳</td></tr>
+                        <tr><td>按键</td><td>KEY0=PH3、KEY1=PH2、KEY2=PC13、WK_UP=PA0</td><td>上翻、下翻、清除、电阻屏校准</td></tr>
+                        <tr><td>触摸屏</td><td>电阻屏 SPI（PEN=PH7、TCLK=PH6、TDIN=PI3、TCS=PI8）或电容屏 IIC</td><td>产生 9 个虚拟按键的坐标</td></tr>
+                        <tr><td>LCD</td><td>按 <code>lcddev.id</code> 适配 3.5/4.3/7 寸等面板</td><td>画键盘、显示输入串与候选结果</td></tr>
+                        <tr><td>串口1</td><td>PA9/PA10，115200-8-N-1</td><td>打印当前拼音与命中汉字，便于观察匹配</td></tr>
+                        <tr><td>码表</td><td><code>py_index3[]</code>（pymb.h 常量）</td><td>数字串 → 拼音 → 汉字串</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">2~9 → abc~wxyz</span>
+                        <span class="chip">1 → DEL</span>
+                        <span class="chip">最多 6 个数字 + '\0'</span>
+                        <span class="chip">候选 10 条（MAX_MATCH_PYMB）</span>
+                        <span class="chip">KEY_UP 上翻 / KEY1 下翻</span>
+                    </div>
+
+                    <div class="note">本实验的“输入法”只认数字串前缀，不做多音字、词库和联想；<code>py_index3[]</code> 里一个数字串可能对应多个拼音（如“26”同时是 an、ao、bo），所以必须用候选索引翻页查看。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">T9 的代码集中在 USER/main.c 与 T9INPUT 目录，触摸/按键/显示沿用板级驱动</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本页关注点</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化、虚拟键盘绘制、输入状态机、按键翻页</td><td>输入串如何增长/回退，部分匹配如何截断</td></tr>
+                        <tr><td><code>T9INPUT/pyinput.c</code></td><td><code>str_match</code>、<code>get_matched_pymb</code>、<code>get_pymb</code></td><td>完全匹配 0xFF、部分匹配位数的编码</td></tr>
+                        <tr><td><code>T9INPUT/pyinput.h</code></td><td><code>py_index</code>、<code>pyinput</code> 两个结构体</td><td><code>pymb[10]</code> 候选指针数组</td></tr>
+                        <tr><td><code>T9INPUT/pymb.h</code></td><td>汉字串常量与 <code>py_index3[]</code> 索引表</td><td>“拼音 → 汉字串”的静态映射</td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td><code>Stm32_Clock_Init</code>、<code>MSR_MSP</code>、<code>INTX_DISABLE</code></td><td>180 MHz 与 PLLQ=8 的来历</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td><code>delay_init</code>、<code>delay_us</code>、<code>delay_ms</code></td><td>用 SysTick-&gt;VAL 轮询实现微秒延时</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>USART1 初始化、接收中断、<code>fputc</code> 重定向</td><td>printf 为什么能直接输出到串口</td></tr>
+                        <tr><td><code>HARDWARE/TOUCH/touch.c</code></td><td><code>TP_Init</code>、<code>TP_Scan</code> 与各触摸 IC 驱动</td><td>电阻屏/电容屏的函数指针切换</td></tr>
+                        <tr><td><code>HARDWARE/KEY/key.c</code></td><td><code>KEY_Init</code>、<code>KEY_Scan</code></td><td>10 ms 消抖与 <code>key_up</code> 锁存</td></tr>
+                        <tr><td><code>HARDWARE/LCD/lcd.c</code></td><td><code>LCD_Init</code>、<code>Show_Str</code>、<code>LCD_ShowNum</code></td><td>候选结果的显示与清屏</td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>向量表、<code>Reset_Handler</code>、栈/堆</td><td>复位后第一条指令与 MSP 的来源</td></tr>
+                    </table>
+
+                    <p><code>T9INPUT</code> 目录里还有一个更大的 <code>t9input.c</code>（带编辑框、标点、手写切换的完整输入法界面），但本实验的 <code>main.c</code> 并没有调用它，实际只使用 <code>pyinput.c</code> 提供的检索函数。读代码时不要被未参与编译的界面代码带偏。</p>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从复位到 while(1)：先时基，再时钟，再板级外设，最后才允许触摸输入</div>
+
+                    <figure class="figure">
+                        <img src="./index65-map/boot-flow.png" alt="STM32F429 从上电复位到 T9 输入主循环的启动流程图">
+                        <figcaption>图 3-1　T9 输入法实验启动链路总览</figcaption>
+                    </figure>
+
+                    <p>启动顺序不是“随便排”的：<code>HAL_Init()</code> 必须最先执行，因为它配置 Flash 预取、NVIC 优先级分组并建立 1 ms SysTick；<code>Stm32_Clock_Init()</code> 把主频抬到 180 MHz 后，<code>delay_init(180)</code> 才能用正确的 <code>fac_us</code> 计算延时；LCD、SDRAM、W25QXX、触摸都依赖已经稳定的时钟和延时。</p>
+
+                    <pre class="code">int main(void)
+{
+    u8 i = 0;
+    u8 result_num;                  <span class="cmt">// 当前输入串的候选总数</span>
+    u8 cur_index;                   <span class="cmt">// 当前显示第几条候选（1 起）</span>
+    u8 key;
+    u8 inputstr[7];                 <span class="cmt">// 最大 6 个数字 + 结束符</span>
+    u8 inputlen;                    <span class="cmt">// 当前有效数字个数</span>
+
+    HAL_Init();                     <span class="cmt">// Flash 预取/Cache、NVIC 分组 2、1 ms SysTick</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// HSE 25 MHz → SYSCLK 180 MHz</span>
+    delay_init(180);                <span class="cmt">// fac_us = 180，供 delay_us 使用</span>
+    uart_init(115200);              <span class="cmt">// USART1，PA9/PA10</span>
+    LED_Init();                     <span class="cmt">// PB0/PB1</span>
+    KEY_Init();                     <span class="cmt">// PA0/PC13/PH2/PH3</span>
+
+    SDRAM_Init();                   <span class="cmt">// 外部 SDRAM，供 LCD 显存与内存池</span>
+    LCD_Init();                     <span class="cmt">// 读 ID 后决定分辨率与驱动</span>
+    W25QXX_Init();                  <span class="cmt">// 外部 SPI Flash，字库来源</span>
+    tp_dev.init();                  <span class="cmt">// 函数指针，按屏幕型号选触摸驱动</span>
+    my_mem_init(SRAMIN);            <span class="cmt">// 内部 SRAM 内存池</span>
+    my_mem_init(SRAMEX);            <span class="cmt">// 外部 SDRAM 内存池</span>
+    my_mem_init(SRAMCCM);           <span class="cmt">// CCM 内存池</span>
+
+RESTART:
+    POINT_COLOR = RED;
+    while (font_init())             <span class="cmt">// 字库没准备好就一直重试</span>
+    {
+        LCD_ShowString(60,50,200,16,16,"Font Error!");
+        delay_ms(200);
+        LCD_Fill(60,50,240,66,WHITE);
+    }
+    <span class="cmt">// …省略标题、操作提示与 py_load_ui(30,195) 的界面绘制…</span>
+    memset(inputstr,0,7);           <span class="cmt">// 清空输入串</span>
+    inputlen = 0;
+    result_num = 0;
+    cur_index = 0;
+
+    while (1)
+    {
+        i++;
+        delay_ms(10);               <span class="cmt">// 主循环节拍约 10 ms</span>
+        key = py_get_keynum(30,195);<span class="cmt">// 触摸键盘扫描</span>
+        <span class="cmt">// …省略输入、匹配、显示与按键翻页，见第 08、10 节…</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么 HAL_Init 在最前：</strong>它打开 Flash 指令/数据 Cache 与预取，并把 SysTick 配成 1 ms。后面 <code>HAL_Delay</code>、<code>HAL_GetTick</code>、HAL 驱动的超时判断都依赖这个节拍。</li>
+                            <li><strong>为什么 LCD 在触摸之前：</strong><code>TP_Init</code> 要用 <code>lcddev.id</code> 判断是电阻屏还是电容屏，还要用 <code>lcddev.dir</code> 记录横竖屏方向；LCD 没初始化时这两个值没有意义。</li>
+                            <li><strong>为什么有 RESTART 标号：</strong>KEY2 校准或 KEY0 清除后需要回到“重新画键盘、清空输入”的初始状态，用 <code>goto RESTART</code> 比复制一大段初始化代码更直接。</li>
+                            <li><strong>字库重试：</strong><code>font_init()</code> 失败时只清掉提示区域并延时 200 ms，不继续往下走；否则后面 <code>Show_Str</code> 会读到未初始化的字库。</li>
+                            <li><strong>主循环节拍：</strong><code>delay_ms(10)</code> 决定触摸采样率约 100 Hz；但这个延时是阻塞的，所以按键、串口接收、LCD 刷新之间会相互影响。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">复位后硬件从 0x08000000 取 MSP，从 0x08000004 取 Reset_Handler</div>
+
+                    <p><code>startup_stm32f429xx.s</code> 定义了两个段：<code>STACK</code> 与 <code>HEAP</code>，大小分别是 <code>0x400</code>（1 KB）和 <code>0x200</code>（512 B）。向量表的第 0 项是 <code>__initial_sp</code>，第 1 项是 <code>Reset_Handler</code>；Cortex-M4 复位时自动把这两项装入 MSP 与 PC。</p>
+
+                    <pre class="code">Stack_Size      EQU     0x400;              <span class="cmt">// 1 KB 主栈</span>
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp                                 <span class="cmt">// 栈顶地址，向量表第 0 项</span>
+
+Heap_Size       EQU     0x200;              <span class="cmt">// 512 B 堆，本实验基本不用 malloc</span>
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit
+
+                AREA    RESET, DATA, READONLY
+                DCD     __initial_sp             <span class="cmt">// 0x08000000：初始 MSP</span>
+                DCD     Reset_Handler            <span class="cmt">// 0x08000004：复位入口</span>
+                DCD     NMI_Handler
+                DCD     HardFault_Handler
+                <span class="cmt">// …省略其余异常与外设中断向量…</span>
+
+Reset_Handler    PROC
+                 EXPORT  Reset_Handler   [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+
+                 LDR     R0, =SystemInit
+                 BLX     R0                       <span class="cmt">// 先执行 SystemInit</span>
+                 LDR     R0, =__main
+                 BX      R0                       <span class="cmt">// 再由 C 库 __main 建栈/搬 .data/清 .bss</span>
+                 ENDP</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>MSP 从哪来：</strong>复位时内核从向量表第 0 项取 4 字节写入 MSP，所以 <code>__initial_sp</code> 必须指向 RAM 的合法栈顶；本工程栈只有 1 KB，深递归或大局部数组要特别小心。</li>
+                            <li><strong>为什么是 SystemInit → __main：</strong><code>SystemInit</code> 只做内核与 RCC 复位、FPU 使能、VTOR 设置；真正的 <code>.data</code> 复制和 <code>.bss</code> 清零由 C 库的 <code>__main</code> 完成，不能直接跳到 <code>main</code>。</li>
+                            <li><strong>WEAK 的作用：</strong>启动文件把每个中断都声明成弱符号，<code>stm32f4xx_it.c</code> 或外设驱动里定义同名函数即可覆盖；没覆盖时落到默认死循环，便于发现“中断进了但没有处理函数”。</li>
+                            <li><strong>VTOR：</strong><code>SystemInit</code> 末尾执行 <code>SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET</code>，本工程偏移为 <code>0x00</code>，所以向量表仍指向 0x08000000。</li>
+                            <li><strong>堆的意义：</strong>本实验使用 <code>my_mem_init</code> 管理自己的内存池，不走 <code>malloc</code>；<code>Heap_Size</code> 只是保留给 C 库，实际几乎不用。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">SystemInit 只“归零 + 开 FPU + 设 VTOR”，HAL_Init 才建立 HAL 的运行环境</div>
+
+                    <p>很多人以为 <code>SystemInit</code> 会把时钟配到 180 MHz，其实它只把 RCC 恢复到复位状态，真正的 PLL 配置在 <code>Stm32_Clock_Init</code> 里。下面这段代码来自 <code>USER/system_stm32f4xx.c</code>，重点看 FPU 与 VTOR 两处。</p>
+
+                    <pre class="code">void SystemInit(void)
+{
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));  <span class="cmt">// CP10/CP11 全访问，开启 FPU</span>
+  #endif
+
+  RCC-&gt;CR |= (uint32_t)0x00000001;      <span class="cmt">// 打开 HSION</span>
+  RCC-&gt;CFGR = 0x00000000;               <span class="cmt">// 时钟源回到 HSI，分频清零</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFEF6FFFF;      <span class="cmt">// 关 HSEON/CSSON/PLLON</span>
+  RCC-&gt;PLLCFGR = 0x24003010;            <span class="cmt">// PLLCFGR 复位值</span>
+  RCC-&gt;CR &amp;= (uint32_t)0xFFFBFFFF;      <span class="cmt">// 清 HSEBYP</span>
+  RCC-&gt;CIR = 0x00000000;                <span class="cmt">// 关闭所有 RCC 中断</span>
+
+  <span class="cmt">// …省略 DATA_IN_ExtSRAM/ExtSDRAM 条件编译…</span>
+
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET; <span class="cmt">// 向量表仍在 0x08000000</span>
+}</pre>
+
+                    <p><code>HAL_Init()</code> 在 <code>stm32f4xx_hal.c</code> 中，依次做 Flash 预取、指令/数据 Cache、NVIC 优先级分组、1 ms SysTick 和 <code>HAL_MspInit</code>。注意优先级分组被固定为 2，这决定了后面 USART1 的“抢占 3 / 子优先级 3”如何解释。</p>
+
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+#if (INSTRUCTION_CACHE_ENABLE != 0)
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();   <span class="cmt">// 指令 Cache</span>
+#endif
+#if (DATA_CACHE_ENABLE != 0)
+  __HAL_FLASH_DATA_CACHE_ENABLE();          <span class="cmt">// 数据 Cache</span>
+#endif
+#if (PREFETCH_ENABLE != 0)
+  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();     <span class="cmt">// 预取缓冲</span>
+#endif
+
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2); <span class="cmt">// 2 位抢占 + 2 位子优先级</span>
+  HAL_InitTick(TICK_INT_PRIORITY);          <span class="cmt">// 建立 1 ms 时基</span>
+  HAL_MspInit();                            <span class="cmt">// 全局底层初始化（本工程为空实现）</span>
+  return HAL_OK;
+}
+
+__weak HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
+{
+  HAL_SYSTICK_Config(HAL_RCC_GetHCLKFreq()/1000); <span class="cmt">// 180 MHz / 1000 = 180000 个 HCLK</span>
+  HAL_NVIC_SetPriority(SysTick_IRQn, TickPriority, 0);
+  return HAL_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>FPU 必须显式开：</strong>Cortex-M4 复位后 CP10/CP11 是禁止访问的，不写 <code>CPACR</code> 就使用浮点指令会进 HardFault。本实验的 <code>lcddev.xfac</code> 等校准系数是浮点，必须开。</li>
+                            <li><strong>SystemInit 不配 PLL：</strong>它把 RCC 恢复到 HSI 16 MHz 的复位状态，所以紧接着必须调用 <code>Stm32_Clock_Init</code>，否则主频只有 16 MHz，延时和波特率都会偏。</li>
+                            <li><strong>HAL_InitTick 的除数：</strong><code>HAL_RCC_GetHCLKFreq()/1000</code> 得到 1 ms 需要的计数。此时时钟还是 HSI，所以第一次装的是 16000；<code>Stm32_Clock_Init</code> 之后 HAL 会再次更新，最终按 180 MHz 计算。</li>
+                            <li><strong>优先级分组 2：</strong>4 位优先级里高 2 位是抢占优先级、低 2 位是子优先级。因此 <code>HAL_NVIC_SetPriority(USART1_IRQn,3,3)</code> 的 3/3 都在合法范围内。</li>
+                            <li><strong>HAL_MspInit 为空：</strong>本工程的时钟、GPIO 都在各自驱动的 <code>MspInit</code> 里做，全局 Msp 不承担板级初始化。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟树与 SysTick 时基">
+                    <h2>06　时钟树与 SysTick 时基</h2>
+                    <div class="sec-sub">25 MHz 晶振 → 1 MHz 比较频率 → 360 MHz VCO → 180 MHz 系统时钟</div>
+
+                    <p><code>Stm32_Clock_Init(360,25,2,8)</code> 的四个参数分别是 PLLN、PLLM、PLLP、PLLQ。代码先把 PWR 时钟打开并把调压器设为 Scale 1，再配置 HSE 与 PLL，最后开 OverDrive 并切换 SYSCLK。</p>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>算式</th><th>结果</th></tr>
+                        <tr><td>PLL 输入比较频率</td><td>HSE / PLLM = 25 MHz / 25</td><td>1 MHz</td></tr>
+                        <tr><td>VCO 输出</td><td>1 MHz × PLLN = 1 × 360</td><td>360 MHz</td></tr>
+                        <tr><td>SYSCLK</td><td>VCO / PLLP = 360 / 2</td><td>180 MHz</td></tr>
+                        <tr><td>HCLK</td><td>SYSCLK / AHB_DIV1</td><td>180 MHz</td></tr>
+                        <tr><td>PCLK1（APB1）</td><td>HCLK / 4</td><td>45 MHz</td></tr>
+                        <tr><td>PCLK2（APB2）</td><td>HCLK / 2</td><td>90 MHz</td></tr>
+                        <tr><td>USB / SDIO 时钟</td><td>VCO / PLLQ = 360 / 8</td><td>45 MHz</td></tr>
+                        <tr><td>Flash 等待周期</td><td><code>FLASH_LATENCY_5</code></td><td>5 WS（6 个 CPU 周期）</td></tr>
+                    </table>
+
+                    <pre class="code">void Stm32_Clock_Init(u32 plln,u32 pllm,u32 pllp,u32 pllq)
+{
+    HAL_StatusTypeDef ret = HAL_OK;
+    RCC_OscInitTypeDef RCC_OscInitStructure;
+    RCC_ClkInitTypeDef RCC_ClkInitStructure;
+
+    __HAL_RCC_PWR_CLK_ENABLE();                       <span class="cmt">// 先开 PWR 时钟</span>
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1); <span class="cmt">// Scale 1，180 MHz 必需</span>
+
+    RCC_OscInitStructure.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+    RCC_OscInitStructure.HSEState = RCC_HSE_ON;       <span class="cmt">// 25 MHz 外部晶振</span>
+    RCC_OscInitStructure.PLL.PLLState = RCC_PLL_ON;
+    RCC_OscInitStructure.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+    RCC_OscInitStructure.PLL.PLLM = pllm;             <span class="cmt">// 25</span>
+    RCC_OscInitStructure.PLL.PLLN = plln;             <span class="cmt">// 360</span>
+    RCC_OscInitStructure.PLL.PLLP = pllp;             <span class="cmt">// 2</span>
+    RCC_OscInitStructure.PLL.PLLQ = pllq;             <span class="cmt">// 8 → 45 MHz</span>
+    ret = HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+    if (ret != HAL_OK) while (1);                     <span class="cmt">// 时钟配不起来就停在这里</span>
+
+    ret = HAL_PWREx_EnableOverDrive();                <span class="cmt">// 180 MHz 必须开 Over-Drive</span>
+    if (ret != HAL_OK) while (1);
+
+    RCC_ClkInitStructure.ClockType = RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK
+                                   | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+    RCC_ClkInitStructure.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStructure.AHBCLKDivider = RCC_SYSCLK_DIV1;
+    RCC_ClkInitStructure.APB1CLKDivider = RCC_HCLK_DIV4;   <span class="cmt">// 45 MHz</span>
+    RCC_ClkInitStructure.APB2CLKDivider = RCC_HCLK_DIV2;   <span class="cmt">// 90 MHz</span>
+    ret = HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure, FLASH_LATENCY_5);
+    if (ret != HAL_OK) while (1);
+}</pre>
+
+                    <p><code>delay_init(180)</code> 只做两件事：把 SysTick 的时钟源设为 HCLK，并记录 <code>fac_us = 180</code>。<code>delay_us</code> 不依赖 SysTick 中断，而是直接读 <code>SysTick-&gt;VAL</code> 递减计数，所以即使中断被关掉也能延时。</p>
+
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">// SysTick 计数频率 = HCLK</span>
+    fac_us = SYSCLK;                                     <span class="cmt">// 180，每 us 需要 180 个 HCLK</span>
+}
+
+void delay_us(u32 nus)
+{
+    u32 ticks;
+    u32 told,tnow,tcnt = 0;
+    u32 reload = SysTick-&gt;LOAD;      <span class="cmt">// 当前重装值</span>
+    ticks = nus * fac_us;            <span class="cmt">// 需要的节拍数</span>
+    told = SysTick-&gt;VAL;             <span class="cmt">// 进入时的计数值</span>
+    while (1)
+    {
+        tnow = SysTick-&gt;VAL;
+        if (tnow != told)
+        {
+            if (tnow &lt; told) tcnt += told - tnow;      <span class="cmt">// 未跨过重装</span>
+            else tcnt += reload - tnow + told;         <span class="cmt">// 已跨过重装</span>
+            told = tnow;
+            if (tcnt &gt;= ticks) break;                  <span class="cmt">// 到点退出</span>
+        }
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么先 Scale 1：</strong>STM32F429 在 180 MHz 下必须使用调压器电压等级 1，否则 Over-Drive 无法开启，PLL 也就上不去。</li>
+                            <li><strong>为什么必须 OverDrive：</strong>F42x/F43x 的 180 MHz 属于 Over-Drive 模式，<code>HAL_PWREx_EnableOverDrive()</code> 会先切换到 HSI 再改 ODEN/ODSWRDY，失败就死循环。</li>
+                            <li><strong>Flash 5 WS 的含义：</strong>180 MHz、3.3 V 下需要 5 个等待周期（6 个 CPU 周期）。设少了会取指错误，设多了只是性能损失。</li>
+                            <li><strong>USB 只有 45 MHz：</strong>PLLQ=8 得到 45 MHz，而 USB 规范要求 48 MHz。本实验不用 USB，所以源码注释就写 45 MHz；如果要做 USB，应改 PLLN/PLLQ 组合。</li>
+                            <li><strong>delay_us 的边界：</strong><code>nus</code> 的注释上限是 <code>2^32/fac_us</code>；<code>nus=0</code> 时 <code>ticks=0</code>，循环仍会等待一次 <code>VAL</code> 变化才退出。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="触摸屏与按键初始化">
+                    <h2>07　触摸屏与按键初始化</h2>
+                    <div class="sec-sub">LED/KEY 是普通 GPIO；触摸屏的关键是“按屏幕型号选择扫描函数”</div>
+
+                    <figure class="figure">
+                        <img src="./index65-map/t9-init-flow.png" alt="T9 拼音输入法外设初始化流程图">
+                        <figcaption>图 7-1　T9 输入法外设初始化顺序</figcaption>
+                    </figure>
+
+                    <p>LED 与按键的初始化是标准的 GPIO 配置：LED 推挽输出并默认输出高电平（灭），按键输入并加上/下拉。真正需要理解的是 <code>TP_Init</code>：它不是“一种触摸屏驱动”，而是根据 <code>lcddev.id</code> 在电阻屏、GT9147、OTT2001A、FT5206、GT9271 之间做选择，并把对应的扫描函数赋给 <code>tp_dev.scan</code>。</p>
+
+                    <table class="data">
+                        <tr><th>引脚</th><th>模式</th><th>上下拉</th><th>用途</th></tr>
+                        <tr><td>PB0 / PB1</td><td>推挽输出</td><td>上拉</td><td>LED1 / LED0，输出高电平熄灭</td></tr>
+                        <tr><td>PA0</td><td>输入</td><td>下拉</td><td>WK_UP，高电平有效</td></tr>
+                        <tr><td>PC13</td><td>输入</td><td>上拉</td><td>KEY2，低电平有效</td></tr>
+                        <tr><td>PH2 / PH3</td><td>输入</td><td>上拉</td><td>KEY1 / KEY0，低电平有效</td></tr>
+                        <tr><td>PH7</td><td>输入</td><td>—</td><td>电阻屏 PEN，低电平表示按下</td></tr>
+                        <tr><td>PH6 / PI3 / PI8</td><td>推挽输出</td><td>—</td><td>TCLK / TDIN / TCS，电阻屏 SPI</td></tr>
+                    </table>
+
+                    <pre class="code">void LED_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_GPIOB_CLK_ENABLE();           <span class="cmt">// 开 GPIOB 时钟</span>
+
+    GPIO_Initure.Pin = GPIO_PIN_0 | GPIO_PIN_1;
+    GPIO_Initure.Mode = GPIO_MODE_OUTPUT_PP; <span class="cmt">// 推挽输出</span>
+    GPIO_Initure.Pull = GPIO_PULLUP;
+    GPIO_Initure.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOB,&amp;GPIO_Initure);
+
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_0,GPIO_PIN_SET); <span class="cmt">// 默认熄灭</span>
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,GPIO_PIN_SET);
+}
+
+void KEY_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOH_CLK_ENABLE();
+
+    GPIO_Initure.Pin = GPIO_PIN_0;          <span class="cmt">// PA0 = WK_UP</span>
+    GPIO_Initure.Mode = GPIO_MODE_INPUT;
+    GPIO_Initure.Pull = GPIO_PULLDOWN;      <span class="cmt">// 按下为高</span>
+    GPIO_Initure.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+
+    GPIO_Initure.Pin = GPIO_PIN_13;         <span class="cmt">// PC13 = KEY2</span>
+    GPIO_Initure.Pull = GPIO_PULLUP;        <span class="cmt">// 按下为低</span>
+    HAL_GPIO_Init(GPIOC,&amp;GPIO_Initure);
+
+    GPIO_Initure.Pin = GPIO_PIN_2 | GPIO_PIN_3; <span class="cmt">// PH2/PH3 = KEY1/KEY0</span>
+    HAL_GPIO_Init(GPIOH,&amp;GPIO_Initure);
+}</pre>
+
+                    <pre class="code">u8 TP_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+
+    if (lcddev.id == 0X5510 || lcddev.id == 0X4342) <span class="cmt">// 4.3 寸 MCU 屏 / RGB 屏</span>
+    {
+        if (GT9147_Init() == 0) tp_dev.scan = GT9147_Scan;   <span class="cmt">// 电容屏 GT9147</span>
+        else { OTT2001A_Init(); tp_dev.scan = OTT2001A_Scan; }
+        tp_dev.touchtype |= 0X80;                       <span class="cmt">// bit7 标记电容屏</span>
+        tp_dev.touchtype |= lcddev.dir &amp; 0X01;          <span class="cmt">// 横竖屏方向</span>
+        return 0;
+    }
+    else if (lcddev.id == 0X1963 || lcddev.id == 0X7084 || lcddev.id == 0X7016)
+    {
+        FT5206_Init(); tp_dev.scan = FT5206_Scan;       <span class="cmt">// 7 寸电容屏</span>
+        tp_dev.touchtype |= 0X80;
+        return 0;
+    }
+    else if (lcddev.id == 0X1018)
+    {
+        GT9271_Init(); tp_dev.scan = GT9271_Scan;       <span class="cmt">// 10 点电容屏</span>
+        tp_dev.touchtype |= 0X80;
+        return 0;
+    }
+    else
+    {
+        <span class="cmt">// …省略电阻屏 GPIO 初始化与校准参数读取…</span>
+        tp_dev.scan = TP_Scan;                          <span class="cmt">// 电阻屏扫描函数</span>
+        tp_dev.touchtype &amp;= 0X7F;                       <span class="cmt">// bit7 清零 = 电阻屏</span>
+        return 0;
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>函数指针是分层的核心：</strong><code>tp_dev</code> 是 <code>_m_tp_dev</code> 结构体，<code>init</code>、<code>scan</code>、<code>adjust</code> 都是函数指针。上层 <code>py_get_keynum</code> 只调 <code>tp_dev.scan(0)</code>，不关心底层是电阻屏还是电容屏。</li>
+                            <li><strong>touchtype 的 bit7：</strong>bit7=1 表示电容屏，bit0 表示横竖屏方向。KEY2 校准时只有 <code>touchtype==0</code>（电阻屏、竖屏）才允许进入 <code>tp_dev.adjust()</code>。</li>
+                            <li><strong>PEN 低有效：</strong><code>TP_Scan</code> 用 <code>if (PEN==0)</code> 判断按下，所以 PEN 必须配置成输入；如果误配成输出，读回的电平没有意义。</li>
+                            <li><strong>校准参数：</strong>电阻屏的 <code>xfac/xoff/yfac/yoff</code> 来自 EEPROM（<code>TP_Adjust</code> 写入，<code>TP_Init</code> 读出），<code>TP_Scan</code> 用它们把原始 AD 值换算成屏幕坐标。</li>
+                            <li><strong>为什么按键与触摸分开初始化：</strong>按键是轮询 GPIO，触摸要走 SPI/IIC 时序，二者互不依赖；但都在 LCD 之后，因为触摸驱动需要 <code>lcddev</code>。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="触摸扫描时序与键值判定">
+                    <h2>08　触摸扫描时序与键值判定</h2>
+                    <div class="sec-sub">按下、消抖、坐标换算、九宫格命中、松手复位，构成一次完整的按键事件</div>
+
+                    <figure class="figure">
+                        <img src="./index65-map/key-scan-timing.png" alt="触摸按下到键值输出的波形时序图">
+                        <figcaption>图 8-1　触摸扫描与按键状态时序</figcaption>
+                    </figure>
+
+                    <p>一次按键事件分三段：① PEN 变低，<code>TP_Scan</code> 连续读两次坐标并比较偏差（<code>ERR_RANGE=50</code>），通过后做 <code>xfac*x+xoff</code> 换算；② <code>py_get_keynum</code> 用 3×3 循环判断坐标落在哪个格子；③ 松手后 <code>tp_dev.sta</code> 清掉 <code>TP_PRES_DOWN</code>，键盘恢复白色。整个过程是轮询，没有 EXTI 中断。</p>
+
+                    <pre class="code">u8 py_get_keynum(u16 x,u16 y)
+{
+    u16 i,j;
+    static u8 key_x = 0;      <span class="cmt">// 0=无按键；1~9=当前按下的键</span>
+    u8 key = 0;
+
+    tp_dev.scan(0);           <span class="cmt">// 扫描一次触摸屏</span>
+    if (tp_dev.sta &amp; TP_PRES_DOWN)          <span class="cmt">// 当前有触摸</span>
+    {
+        for (i = 0; i &lt; 3; i++)
+        {
+            for (j = 0; j &lt; 3; j++)
+            {
+                if (tp_dev.x[0] &lt; (x + j*kbdxsize + kbdxsize) &amp;&amp;
+                    tp_dev.x[0] &gt; (x + j*kbdxsize) &amp;&amp;
+                    tp_dev.y[0] &lt; (y + i*kbdysize + kbdysize) &amp;&amp;
+                    tp_dev.y[0] &gt; (y + i*kbdysize))
+                {
+                    key = i*3 + j + 1;      <span class="cmt">// 行优先编号 1~9</span>
+                    break;
+                }
+            }
+            if (key)
+            {
+                if (key_x == key) key = 0;  <span class="cmt">// 同一键仍按着：不重复上报</span>
+                else
+                {
+                    py_key_staset(x,y,key_x-1,0); <span class="cmt">// 旧键恢复白色</span>
+                    key_x = key;
+                    py_key_staset(x,y,key_x-1,1); <span class="cmt">// 新键变绿</span>
+                }
+                break;
+            }
+        }
+    }
+    else if (key_x)                        <span class="cmt">// 已松手</span>
+    {
+        py_key_staset(x,y,key_x-1,0);
+        key_x = 0;
+    }
+    return key;
+}</pre>
+
+                    <pre class="code">void py_key_staset(u16 x,u16 y,u8 keyx,u8 sta)
+{
+    u16 i = keyx/3, j = keyx%3;
+    if (keyx &gt; 8) return;                  <span class="cmt">// 防止 key_x-1 下溢成 255</span>
+
+    if (sta) LCD_Fill(x+j*kbdxsize+1, y+i*kbdysize+1,
+                      x+j*kbdxsize+kbdxsize-1, y+i*kbdysize+kbdysize-1, GREEN);
+    else     LCD_Fill(x+j*kbdxsize+1, y+i*kbdysize+1,
+                      x+j*kbdxsize+kbdxsize-1, y+i*kbdysize+kbdysize-1, WHITE);
+
+    Show_Str_Mid(x+j*kbdxsize, y+4+kbdysize*i,      (u8*)kbd_tbl[keyx],16,kbdxsize);
+    Show_Str_Mid(x+j*kbdxsize, y+kbdysize/2+kbdysize*i,(u8*)kbs_tbl[keyx],16,kbdxsize);
+}</pre>
+
+                    <table class="data">
+                        <tr><th>键值</th><th>屏幕主字符</th><th>字母</th><th>输入到 inputstr</th></tr>
+                        <tr><td>1</td><td>←</td><td>DEL</td><td>删除一个数字</td></tr>
+                        <tr><td>2</td><td>2</td><td>abc</td><td>'2'</td></tr>
+                        <tr><td>3</td><td>3</td><td>def</td><td>'3'</td></tr>
+                        <tr><td>4</td><td>4</td><td>ghi</td><td>'4'</td></tr>
+                        <tr><td>5</td><td>5</td><td>jkl</td><td>'5'</td></tr>
+                        <tr><td>6</td><td>6</td><td>mno</td><td>'6'</td></tr>
+                        <tr><td>7</td><td>7</td><td>pqrs</td><td>'7'</td></tr>
+                        <tr><td>8</td><td>8</td><td>tuv</td><td>'8'</td></tr>
+                        <tr><td>9</td><td>9</td><td>wxyz</td><td>'9'</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么同一键不重复上报：</strong><code>key_x</code> 记住上一次的键值，<code>if (key_x == key) key = 0</code> 实现“按住只算一次”。否则主循环每 10 ms 就会往输入串追加一个数字，按住 1 秒会输入 100 个字符。</li>
+                            <li><strong>为什么 1 号键用 <code>key_x-1</code>：</strong>键值是 1~9，而 <code>py_key_staset</code> 的 <code>keyx</code> 是 0~8。无按键时 <code>key_x=0</code>，<code>key_x-1</code> 会下溢，函数里的 <code>if (keyx&gt;8) return</code> 正是为此兜底。</li>
+                            <li><strong>坐标边界用开区间：</strong>判断条件是 <code>&gt; 左边界</code> 且 <code>&lt; 右边界</code>，正好落在分隔线上的点不会被两个格子同时命中。</li>
+                            <li><strong>两次采样消抖：</strong><code>TP_Read_XY2</code> 连续读两次，只有 x、y 偏差都在 ±50 内才取平均，能显著减少电阻屏抖动导致的“跳键”。</li>
+                            <li><strong>显示与逻辑同步：</strong>每次键值变化都立即重画旧键和新键，所以视觉上的绿色方块就是 <code>key_x</code> 的当前值，调试时可以直接对照。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="中断链路">
+                    <h2>09　中断链路</h2>
+                    <div class="sec-sub">SysTick 提供时基，USART1 负责收命令；触摸与按键不进中断</div>
+
+                    <figure class="figure">
+                        <img src="./index65-map/t9-irq-chain.png" alt="T9 输入法 SysTick 与 USART1 中断链路图">
+                        <figcaption>图 9-1　T9 输入法的中断链路与轮询边界</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>触发源</th><th>控制器/寄存器</th><th>NVIC 中断号与优先级</th><th>ISR</th><th>用户回调</th></tr>
+                        <tr><td>SysTick 每 1 ms</td><td>SysTick-&gt;LOAD/VAL/CTRL</td><td>SysTick_IRQn，优先级由 <code>TICK_INT_PRIORITY</code> 决定</td><td><code>SysTick_Handler</code></td><td><code>HAL_IncTick()</code></td></tr>
+                        <tr><td>USART1 收到 1 字节</td><td>USART1-&gt;SR 的 RXNE</td><td>USART1_IRQn，抢占 3 / 子 3</td><td><code>USART1_IRQHandler</code></td><td>无（直接组帧到 <code>USART_RX_BUF</code>）</td></tr>
+                        <tr><td>触摸 PEN 变低</td><td>GPIOH IDR bit7</td><td>未使用 EXTI</td><td>—</td><td><code>tp_dev.scan(0)</code> 轮询</td></tr>
+                        <tr><td>按键按下</td><td>GPIOA/C/H 的 IDR</td><td>未使用 EXTI</td><td>—</td><td><code>KEY_Scan(0)</code> 轮询</td></tr>
+                    </table>
+
+                    <pre class="code">void USART1_IRQHandler(void)
+{
+    u8 Res;
+
+    if ((__HAL_UART_GET_FLAG(&amp;UART1_Handler,UART_FLAG_RXNE) != RESET)) <span class="cmt">// 收到数据</span>
+    {
+        HAL_UART_Receive(&amp;UART1_Handler,&amp;Res,1,1000); <span class="cmt">// 读 1 字节，顺带清 RXNE</span>
+        if ((USART_RX_STA &amp; 0x8000) == 0)             <span class="cmt">// 上一帧未完成</span>
+        {
+            if (USART_RX_STA &amp; 0x4000)                <span class="cmt">// 已收到 0x0D</span>
+            {
+                if (Res != 0x0A) USART_RX_STA = 0;    <span class="cmt">// 不是 0x0A，整帧作废</span>
+                else USART_RX_STA |= 0x8000;          <span class="cmt">// 收到 0x0D0A，帧完成</span>
+            }
+            else
+            {
+                if (Res == 0x0D) USART_RX_STA |= 0x4000;
+                else
+                {
+                    USART_RX_BUF[USART_RX_STA &amp; 0X3FFF] = Res; <span class="cmt">// 存入缓冲区</span>
+                    USART_RX_STA++;
+                    if (USART_RX_STA &gt; (USART_REC_LEN-1)) USART_RX_STA = 0; <span class="cmt">// 溢出保护</span>
+                }
+            }
+        }
+    }
+    HAL_UART_IRQHandler(&amp;UART1_Handler); <span class="cmt">// 处理错误标志等</span>
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么先读 SR：</strong>注释明确提醒“读取 USARTx-&gt;SR 能避免莫名其妙的错误”，HAL 的 <code>__HAL_UART_GET_FLAG</code> 读的就是 SR；RXNE 置位后必须读 DR 才能清除，<code>HAL_UART_Receive</code> 完成这件事。</li>
+                            <li><strong>帧格式固定 0x0D 0x0A：</strong><code>USART_RX_STA</code> 的 bit14 表示已见到 0x0D，bit15 表示整帧完成，bit13:0 是长度。发数据时必须带回车换行，否则永远不置完成位。</li>
+                            <li><strong>缓冲区只有 200 字节：</strong><code>USART_REC_LEN=200</code>，超过就回到 0 重新接收，旧数据被覆盖；这是“够用就好”的实现，不追求不丢包。</li>
+                            <li><strong>优先级 3/3 的影响：</strong>在分组 2 下，USART1 可以被抢占优先级 0~2 的中断打断；SysTick 的优先级通常更高，所以串口中断不会阻塞时基。</li>
+                            <li><strong>触摸为什么不用中断：</strong>电阻屏需要软件模拟 SPI 时序，电容屏要走 IIC 读寄存器，放到 EXTI 里会拉长中断时间；轮询虽然占用 CPU，但逻辑简单、不会重入。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="主循环与现象">
+                    <h2>10　主循环与现象</h2>
+                    <div class="sec-sub">输入串是唯一状态：增长、回退、匹配、翻页都围绕 inputstr/inputlen 展开</div>
+
+                    <pre class="code">while (1)
+{
+    i++;
+    delay_ms(10);                       <span class="cmt">// 约 100 Hz 的主循环节拍</span>
+    key = py_get_keynum(30,195);        <span class="cmt">// 触摸键盘：返回 1~9 或 0</span>
+    if (key)
+    {
+        if (key == 1)                   <span class="cmt">// 1 号键 = DEL</span>
+        {
+            if (inputlen) inputlen--;
+            inputstr[inputlen] = '\0';
+        }
+        else
+        {
+            inputstr[inputlen] = key + '0'; <span class="cmt">// 数字键转字符</span>
+            if (inputlen &lt; 7) inputlen++;   <span class="cmt">// 最多 6 个字符</span>
+        }
+
+        if (inputstr[0] != NULL)        <span class="cmt">// 输入串非空才检索</span>
+        {
+            key = t9.getpymb(inputstr); <span class="cmt">// 返回匹配数 / 部分匹配标志</span>
+            if (key)
+            {
+                result_num = key &amp; 0X7F; <span class="cmt">// bit6:0 = 候选数或有效位数</span>
+                cur_index = 1;
+                if (key &amp; 0X80)          <span class="cmt">// 部分匹配</span>
+                {
+                    inputlen = key &amp; 0X7F;      <span class="cmt">// 只保留有效位数</span>
+                    inputstr[inputlen] = '\0';
+                    if (inputlen &gt; 1) result_num = t9.getpymb(inputstr); <span class="cmt">// 重新取完全匹配数</span>
+                }
+            }
+            else                         <span class="cmt">// 没有任何匹配：回退一个字符</span>
+            {
+                inputlen--;
+                inputstr[inputlen] = '\0';
+            }
+        }
+        else
+        {
+            cur_index = 0;
+            result_num = 0;
+        }
+
+        LCD_Fill(30+40,105,30+40+48,110+16,WHITE); <span class="cmt">// 清匹配数区域</span>
+        LCD_ShowNum(30+144,105,result_num,1,16);   <span class="cmt">// 显示候选总数</span>
+        Show_Str(30+40,105,200,16,inputstr,16,0);  <span class="cmt">// 显示有效数字串</span>
+        py_show_result(cur_index);                 <span class="cmt">// 显示当前候选</span>
+    }
+
+    key = KEY_Scan(0);                  <span class="cmt">// 物理按键，不支持连按</span>
+    if (key == KEY2_PRES &amp;&amp; tp_dev.touchtype == 0) <span class="cmt">// 电阻屏才允许校准</span>
+    {
+        tp_dev.adjust();
+        LCD_Clear(WHITE);
+        goto RESTART;
+    }
+
+    if (result_num)                     <span class="cmt">// 有候选才翻页</span>
+    {
+        switch (key)
+        {
+            case WKUP_PRES:             <span class="cmt">// 上翻</span>
+                if (cur_index &lt; result_num) cur_index++;
+                else cur_index = 1;
+                py_show_result(cur_index);
+                break;
+            case KEY1_PRES:             <span class="cmt">// 下翻</span>
+                if (cur_index &gt; 1) cur_index--;
+                else cur_index = result_num;
+                py_show_result(cur_index);
+                break;
+            case KEY0_PRES:             <span class="cmt">// 清除输入</span>
+                LCD_Fill(30+40,145,lcddev.width-1,145+48,WHITE);
+                goto RESTART;
+        }
+    }
+
+    if (i == 30)                        <span class="cmt">// 30 × 10 ms ≈ 300 ms</span>
+    {
+        i = 0;
+        LED0 = !LED0;                   <span class="cmt">// 心跳翻转</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>inputlen 与 '\0'：</strong>删除只减长度并补结束符，不擦除后面的旧字符；因为所有显示函数都按字符串遇到 '\0' 停止，旧字符不会显示出来。</li>
+                            <li><strong>为什么输入上限是 7：</strong>数组是 <code>inputstr[7]</code>，最多 6 个数字 + 1 个结束符。<code>if (inputlen&lt;7) inputlen++</code> 后写入位置最大是 7，下一次写之前已经补过 '\0'，不会越界。</li>
+                            <li><strong>部分匹配的“截断”：</strong>例如输入“7268”没有对应拼音，但“726”能匹配，<code>getpymb</code> 返回 <code>0x80|3</code>；主循环把 <code>inputlen</code> 改成 3 并截断字符串，界面只保留有效部分。</li>
+                            <li><strong>没有匹配为什么回退：</strong>用户多按了一位时，源码选择“删掉最后一位”而不是清空全部，符合输入法的直觉；但连续多次无匹配会逐位退到空串。</li>
+                            <li><strong>翻页是环形：</strong>上翻到 <code>result_num</code> 后回到 1，下翻到 1 后回到 <code>result_num</code>；候选为 0 时整个 switch 被跳过。</li>
+                            <li><strong>KEY0 的 goto：</strong>清除输入直接跳回 RESTART，会重画整个键盘和标题，所以屏幕会闪一下；这是源码的真实行为。</li>
+                        </ol>
+                    </div>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>现象</th><th>关键变量</th></tr>
+                        <tr><td>触摸数字 2/3/4</td><td>按键变绿，输入行出现“234”，匹配数更新</td><td><code>inputstr</code>、<code>result_num</code></td></tr>
+                        <tr><td>触摸 ← 键</td><td>输入串少一位，拼音与结果刷新</td><td><code>inputlen</code></td></tr>
+                        <tr><td>按 KEY_UP</td><td>候选索引 +1，到末尾回到 1</td><td><code>cur_index</code></td></tr>
+                        <tr><td>按 KEY1</td><td>候选索引 -1，到 1 回到末尾</td><td><code>cur_index</code></td></tr>
+                        <tr><td>按 KEY0</td><td>清屏并重画键盘，输入清空</td><td><code>goto RESTART</code></td></tr>
+                        <tr><td>按 KEY2（电阻屏）</td><td>进入四点校准，校准后重画</td><td><code>tp_dev.adjust()</code></td></tr>
+                        <tr><td>静置</td><td>LED0 约 300 ms 翻转一次</td><td><code>i==30</code></td></tr>
+                    </table>
+                </section>
+
+                <section class="content-card" id="s11" data-title="拼音匹配数据结构与算法">
+                    <h2>11　拼音匹配数据结构与算法</h2>
+                    <div class="sec-sub">一张只读索引表 + 一个候选指针数组，就是全部“输入法引擎”</div>
+
+                    <p><code>py_index</code> 把“数字串、拼音、汉字串”绑在一起；<code>pyinput</code> 保存检索函数和最多 10 个候选指针。<code>py_index3[]</code> 是 <code>const</code> 数组，放在 Flash 中，不占 RAM。第一个元素是空串，用来处理“无输入”的情况。</p>
+
+                    <pre class="code">typedef struct
+{
+    u8 *py_input;   <span class="cmt">// 输入数字串，如 "726"</span>
+    u8 *py;         <span class="cmt">// 对应拼音，如 "ran"</span>
+    u8 *pymb;       <span class="cmt">// 对应汉字串（UTF-8/GBK 字节流）</span>
+} py_index;
+
+#define MAX_MATCH_PYMB  10   <span class="cmt">// 最多保存 10 个候选</span>
+
+typedef struct
+{
+    u8 (*getpymb)(u8 *instr);        <span class="cmt">// 函数指针：数字串 → 候选数</span>
+    py_index *pymb[MAX_MATCH_PYMB];  <span class="cmt">// 候选指针数组</span>
+} pyinput;
+
+pyinput t9 = { get_pymb, 0 };        <span class="cmt">// 编译期完成绑定</span>
+
+const py_index py_index3[] =
+{
+    {""  ,""   ,(u8*)PY_mb_space},
+    {"2" ,"a"  ,(u8*)PY_mb_a},
+    {"3" ,"e"  ,(u8*)PY_mb_e},
+    {"6" ,"o"  ,(u8*)PY_mb_o},
+    {"24","ai" ,(u8*)PY_mb_ai},
+    {"26","an" ,(u8*)PY_mb_an},
+    {"26","ao" ,(u8*)PY_mb_ao},
+    {"22","ba" ,(u8*)PY_mb_ba},
+    <span class="cmt">// …省略其余数百条…</span>
+};</pre>
+
+                    <pre class="code">u8 str_match(u8 *str1,u8 *str2)
+{
+    u8 i = 0;
+    while (1)
+    {
+        if (*str1 != *str2) break;          <span class="cmt">// 出现不同：部分匹配</span>
+        if (*str1 == '\0') { i = 0XFF; break; } <span class="cmt">// 同时到结尾：完全匹配</span>
+        i++;
+        str1++;
+        str2++;
+    }
+    return i;   <span class="cmt">// 0xFF=完全匹配；其余=相同字符数</span>
+}
+
+u8 get_matched_pymb(u8 *strin,py_index **matchlist)
+{
+    py_index *bestmatch = 0;
+    u16 pyindex_len = 0;
+    u16 i = 0;
+    u8 temp,mcnt = 0,bmcnt = 0;
+
+    bestmatch = (py_index*)&amp;py_index3[0];              <span class="cmt">// 默认空串</span>
+    pyindex_len = sizeof(py_index3)/sizeof(py_index3[0]); <span class="cmt">// 表项个数</span>
+
+    for (i = 0; i &lt; pyindex_len; i++)
+    {
+        temp = str_match(strin,(u8*)py_index3[i].py_input);
+        if (temp)
+        {
+            if (temp == 0XFF) matchlist[mcnt++] = (py_index*)&amp;py_index3[i]; <span class="cmt">// 完全匹配收集</span>
+            else if (temp &gt; bmcnt) { bmcnt = temp; bestmatch = (py_index*)&amp;py_index3[i]; }
+        }
+    }
+
+    if (mcnt == 0 &amp;&amp; bmcnt)      <span class="cmt">// 无完全匹配但有部分匹配</span>
+    {
+        matchlist[0] = bestmatch;
+        mcnt = bmcnt | 0X80;      <span class="cmt">// bit7=1，低 7 位=有效位数</span>
+    }
+    return mcnt;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>0xFF 为什么能表示完全匹配：</strong>输入串最长 6 个字符，匹配字符数最多 6，不可能到 255，所以用 0xFF 当“到结尾且完全相等”的哨兵值。</li>
+                            <li><strong>前缀匹配的规则：</strong><code>str_match</code> 只比较到任一串结束；输入“72”与表项“726”会返回 2（部分匹配），与表项“72”会返回 0xFF（完全匹配）。</li>
+                            <li><strong>候选数组不会溢出：</strong><code>MAX_MATCH_PYMB=10</code>，但代码没有在 <code>mcnt++</code> 前判断 10。工程能跑是因为同一个数字串完全匹配的拼音不超过 10 条；这是隐含约束，改码表时必须自己保证。</li>
+                            <li><strong>bestmatch 的选择：</strong>部分匹配时只保留“相同字符数最多”的那一条，不保留全部；所以部分匹配只显示一个结果，完全匹配才有多候选。</li>
+                            <li><strong>0x80 的双重含义：</strong>返回值 bit7=1 表示部分匹配，bit6:0 此时是有效位数；bit7=0 时 bit6:0 是完全匹配的候选个数。主循环正是靠这一位决定要不要截断输入串。</li>
+                            <li><strong>时间复杂度：</strong>每次按键都线性扫描整张表（数百项），在 180 MHz 下耗时可以忽略；这是“用 Flash 换代码复杂度”的典型做法。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="串口调试与日志">
+                    <h2>12　串口调试与日志</h2>
+                    <div class="sec-sub">USART1 既用于打印匹配结果，也保留了一套 0x0D0A 组帧的接收逻辑</div>
+
+                    <p><code>uart_init(115200)</code> 只填 <code>UART_HandleTypeDef</code> 并调用 <code>HAL_UART_Init</code>；真正的 GPIO、时钟、NVIC 在 <code>HAL_UART_MspInit</code> 里。PA9 复用为 AF7 推挽输出，PA10 复用输入，RXNE 中断优先级 3/3。</p>
+
+                    <pre class="code">void uart_init(u32 bound)
+{
+    UART1_Handler.Instance = USART1;
+    UART1_Handler.Init.BaudRate = bound;                <span class="cmt">// 115200</span>
+    UART1_Handler.Init.WordLength = UART_WORDLENGTH_8B; <span class="cmt">// 8 位数据</span>
+    UART1_Handler.Init.StopBits = UART_STOPBITS_1;      <span class="cmt">// 1 位停止</span>
+    UART1_Handler.Init.Parity = UART_PARITY_NONE;       <span class="cmt">// 无校验</span>
+    UART1_Handler.Init.HwFlowCtl = UART_HWCONTROL_NONE; <span class="cmt">// 无流控</span>
+    UART1_Handler.Init.Mode = UART_MODE_TX_RX;          <span class="cmt">// 收发</span>
+    HAL_UART_Init(&amp;UART1_Handler);                      <span class="cmt">// 内部会调 MspInit</span>
+}
+
+void HAL_UART_MspInit(UART_HandleTypeDef *huart)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    if (huart-&gt;Instance == USART1)
+    {
+        __HAL_RCC_GPIOA_CLK_ENABLE();
+        __HAL_RCC_USART1_CLK_ENABLE();
+
+        GPIO_Initure.Pin = GPIO_PIN_9;              <span class="cmt">// TX</span>
+        GPIO_Initure.Mode = GPIO_MODE_AF_PP;
+        GPIO_Initure.Pull = GPIO_PULLUP;
+        GPIO_Initure.Speed = GPIO_SPEED_FAST;
+        GPIO_Initure.Alternate = GPIO_AF7_USART1;
+        HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+
+        GPIO_Initure.Pin = GPIO_PIN_10;             <span class="cmt">// RX</span>
+        HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+
+        __HAL_UART_ENABLE_IT(huart,UART_IT_RXNE);       <span class="cmt">// 开接收中断</span>
+        HAL_NVIC_EnableIRQ(USART1_IRQn);
+        HAL_NVIC_SetPriority(USART1_IRQn,3,3);          <span class="cmt">// 抢占 3 / 子 3</span>
+    }
+}</pre>
+
+                    <p>调试输出靠 <code>fputc</code> 重定向：取消半主机模式，<code>printf</code> 最终逐字节调用 <code>fputc</code>，而 <code>fputc</code> 轮询 USART1 的 TXE 标志（<code>SR&amp;0x40</code>）后写 DR。没有 DMA，所以 printf 是阻塞的。</p>
+
+                    <pre class="code">#pragma import(__use_no_semihosting)   <span class="cmt">// 不使用半主机</span>
+struct __FILE { int handle; };
+FILE __stdout;
+
+void _sys_exit(int x) { x = x; }      <span class="cmt">// 避免链接半主机</span>
+
+int fputc(int ch, FILE *f)
+{
+    while ((USART1-&gt;SR &amp; 0X40) == 0);  <span class="cmt">// 等 TXE：发送寄存器空</span>
+    USART1-&gt;DR = (u8)ch;                <span class="cmt">// 写入即发送</span>
+    return ch;
+}
+
+<span class="cmt">// py_show_result 中的实际输出</span>
+printf("\r\n拼音:%s\r\n",t9.pymb[index-1]-&gt;py);
+printf("结果:%s\r\n",t9.pymb[index-1]-&gt;pymb);</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>为什么用 TXE 而不是 TC：</strong>TXE 表示 DR 已空、可以写下一个字节；TC 表示整帧发送完成。逐字节发送只需等 TXE，等 TC 会多一个字节时间的延迟。</li>
+                            <li><strong>半主机模式：</strong>不加 <code>__use_no_semihosting</code> 时，<code>printf</code> 可能通过调试器半主机输出，脱机运行就卡死；这里显式禁用并自己实现 <code>fputc</code>。</li>
+                            <li><strong>接收中断是否参与业务：</strong>本实验主流程不解析串口命令，<code>USART_RX_BUF</code> 只是保留能力；真正被使用的输出路径是 <code>printf</code>。</li>
+                            <li><strong>115200 的误差：</strong>PCLK2=90 MHz，USART1 挂在 APB2；HAL 会按 <code>90 MHz/115200</code> 计算 BRR，误差在允许范围内。</li>
+                            <li><strong>日志能证明什么：</strong>每次 <code>py_show_result</code> 都会打印当前拼音与汉字串，翻页时日志随之变化，可用来确认 <code>cur_index</code> 是否真的改了。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="关键逻辑复盘与排查">
+                    <h2>13　关键逻辑复盘与排查</h2>
+                    <div class="sec-sub">先判断“是没输入、没匹配，还是没显示”，再往对应层查</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>原因</th><th>排查</th></tr>
+                        <tr><td>点触摸没反应</td><td>PEN 未配置为输入、触摸 IC 型号不匹配、LCD 未初始化</td><td>看 <code>TP_Init</code> 走了哪个分支；量 PEN 是否随按下变低</td></tr>
+                        <tr><td>按一下输入很多位</td><td><code>key_x</code> 去重失效，或主循环没有 10 ms 节拍</td><td>检查 <code>py_get_keynum</code> 的 <code>key_x==key</code> 分支</td></tr>
+                        <tr><td>坐标偏移/点到旁边</td><td>电阻屏未校准，<code>xfac/xoff</code> 为默认值</td><td>按 KEY2 重新校准；确认 <code>touchtype==0</code></td></tr>
+                        <tr><td>输入数字但没有候选</td><td>数字串在码表中没有前缀，或表项被裁掉</td><td>串口看 <code>result_num</code>；检查 <code>py_index3[]</code></td></tr>
+                        <tr><td>候选数大于 10 时异常</td><td><code>pymb[10]</code> 越界写</td><td>统计同一数字串的完全匹配条数，必要时加大 <code>MAX_MATCH_PYMB</code></td></tr>
+                        <tr><td>中文显示为方块</td><td>字库未更新或 GBK/UTF-8 编码不匹配</td><td><code>font_init()</code> 是否成功；<code>pymb.h</code> 的字串编码</td></tr>
+                        <tr><td>串口无输出</td><td>PA9/PA10 接反、波特率不对、未禁用半主机</td><td>示波器看 TX 波形；确认 <code>fputc</code> 被链接</td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><strong>输入层：</strong><code>TP_Scan</code> 只负责产生坐标与 <code>sta</code>；如果 <code>sta</code> 没有 <code>TP_PRES_DOWN</code>，后面所有逻辑都不会执行。</li>
+                            <li><strong>映射层：</strong><code>py_get_keynum</code> 的九宫格边界由 <code>kbdxsize/kbdysize</code> 决定，而这两个值又由 <code>lcddev.id</code> 决定；换屏后按键尺寸没跟着变，就会出现“点 2 出 3”。</li>
+                            <li><strong>匹配层：</strong>部分匹配返回 <code>0x80|位数</code>，完全匹配返回候选数；把这两个含义搞反，主循环就会错误截断输入串。</li>
+                            <li><strong>显示层：</strong><code>py_show_result</code> 先清两块区域再显示，索引为 0 时只清不显示；如果清屏区域算错，会留下上一帧的残影。</li>
+                            <li><strong>状态层：</strong><code>RESTART</code> 会重置 <code>inputstr/inputlen/result_num/cur_index</code>，但不会重新初始化触摸和 LCD；所以“清除”很快，不是重新上电。</li>
+                            <li><strong>码表层：</strong>码表是只读常量，运行时不会变；如果修改了 <code>pymb.h</code> 却忘记重新编译，页面现象不会变化。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="交互演示">
+                    <h2>14　交互演示</h2>
+                    <div class="sec-sub">按钮对应 main 的输入、删除、翻页与清除分支，仅演示逻辑，不访问真实硬件</div>
+
+                    <div class="sim">
+                        <div class="sim-title">T9 输入状态机演示（仅演示逻辑）</div>
+                        <div class="sim-buttons">
+                            <button data-act="key2">触摸 2（abc）</button>
+                            <button data-act="key6">触摸 6（mno）</button>
+                            <button data-act="key7">触摸 7（pqrs）</button>
+                            <button data-act="del">触摸 ←（DEL）</button>
+                            <button data-act="up">KEY_UP 上翻</button>
+                            <button data-act="down">KEY1 下翻</button>
+                            <button data-act="clear">KEY0 清除</button>
+                        </div>
+                        <div class="sim-log" id="simLog">输入：空　　候选：0　　当前索引：0</div>
+                    </div>
+
+                    <p>演示的状态变化对应源码中的四条规则：数字键把 <code>key+'0'</code> 追加到 <code>inputstr</code>；DEL 让 <code>inputlen--</code> 并补 <code>'\0'</code>；上翻/下翻在 <code>1..result_num</code> 之间环形移动 <code>cur_index</code>；KEY0 等价于 <code>goto RESTART</code>，把输入与候选全部清零。</p>
+
+                    <div class="note blue">真实工程里“726”会命中多个拼音（ran/san 等），候选数量由 <code>get_matched_pymb</code> 线性扫描码表得出；本演示只固定显示 3 条候选，用来说明翻页边界，不代表完整码表。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+
+<script>
+/* sim-wire：把演示按钮接到日志，分支与正文源码说明一致 */
+(function () {
+    var log = document.getElementById('simLog');
+    if (!log) return;
+    var msgs = {"key2": "触摸 2(abc) → T9 把按键映射为字母组，加入当前拼音串", "key6": "触摸 6(mno) → 追加字母组，调用 T9_GetInputCode 查候选", "key7": "触摸 7(pqrs) → 追加字母组，候选汉字刷新到列表框", "del": "DEL → 删除拼音串最后一个字符，候选重新计算", "up": "KEY_UP → 候选列表上翻一页", "down": "KEY1 → 候选列表下翻一页", "clear": "KEY0 → 清空拼音串，回到初始键盘状态"};
+    Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (b) {
+        b.addEventListener('click', function () {
+            var k = b.getAttribute('data-key') || b.getAttribute('data-act');
+            if (k && msgs[k]) log.textContent = msgs[k];
+        });
+    });
+})();
+</script>
+</body>
+</html>

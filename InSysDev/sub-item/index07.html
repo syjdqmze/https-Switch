@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Sub-Item 管理页面</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+        }
+
+        .sidebar-menu li {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 0 0 auto;
+            width: calc((100% - 20px) * 0.8);
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+            scroll-margin-top: 12px;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">MDK-ISP例程编译与串口下载</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <ul class="sidebar-menu">
+                    <li data-target="sec-mdk5-compile-case"><span class="icon">&#9654;</span>MDK5编译例程</li>
+                    <li data-target="sec-uart-download"><span class="icon">&#9654;</span>串口下载硬件连线</li>
+                    <li data-target="sec-uart-download-tool"><span class="icon">&#9654;</span>串口下载工具介绍</li>
+                    <li data-target="sec-uart-One-Click-Download-Circuit"><span class="icon">&#9654;</span>串口一键下载电路</li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+                        <h3 id="sec-mdk5-compile-case">MDK5编译例程</h3>
+                        <img data-page="3" src="./index07-map/stm32-mdk-compile.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 500px; height: auto;">
+                        <p>　　部分编译：表示只编译工程中修改过的代码文件</p>
+                        <p>　　全局编译：表示重新编译工程中所有代码文件</p>
+                        <p>　　ROM大小：Code size + RO-Datae size + RW-Data Size</p>
+                        <p>　　RAM大小：Data size + Stack size</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-uart-download">串口下载硬件连线</h3>
+                        <p>　　STM32的串口下载一般是通过串口1下载的，本手册的实验平台ALIENTEK阿波罗STM32F429开发板，不是通过RS232串口下载的，而是通过自带的USB串口来下载。看起来像是USB下载(只需一根 USB 线，并不需要串口线)的，实际上，是通过USB转成串口，然后再下载的。</p>
+                        <p>　　下图为串口下载硬件连接图：</p>
+                        <img data-page="4" src="./index07-map/stm32-mdk-consol-download-connect.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p>　　下图为STM32F4开发板串口下载跳线示意图：</p>
+                        <img data-page="5" src="./index07-map/stm32-mdk-hardware-board-pin-connect.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-uart-download-tool">串口下载工具介绍</h3>
+                        <p>　　下面是串口下载工具(ATK-XISP.exe)各控件介绍：</p>
+                        <img data-page="6" src="./index07-map/stm32-mdk-download-tool.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p style="color: #1565c0;">　　①搜索并选择CH340虚拟的串口，然后设置波特率</p>
+                        <p style="color: red; margin-left: 2em;">特别注意：不同系列芯片内部Bootloader支持的波特率可能不一样，发现下载不了时，应把波特率设置小一些，多试几种波特率</p>
+                        <p>　　②选择要下载的hex文件（ 在Output文件夹）</p>
+                        <p>　　③勾选“编程后运行”、“校验”、“编程前执行全片擦除”</p>
+                        <p>　　④选择 “DTR低电平复位，RTS高电平进BootLoader”</p>
+                        <p>　　⑤点击“开始编程”</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-uart-One-Click-Download-Circuit">串口一键下载电路</h3>
+                        <p>　　一键下载电路,是利用串口的DTR和RTS信号,分别控制STM32的复位和BOOT0引脚,配合ATK-XISP.exe软件,设置:DTR低电平复位,RTS高电平进BootLoader,这样,BOOT0和STM32的复位引脚,完全由下载软件自动控制,从而实现一键下载。</p>
+                        <p>　　下图为STM32一键下载电路原理图：</p>
+                        <img data-page="7" src="./index07-map/stm32-mdk-one-click-download-circuit.jpg" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;">
+                        <p style="color: red; font-weight: bold;">　　。ISP下载程序一般步骤：</p>
+                        <p>　　　　1)BOOT0接高电平，BOOT1接低电平</p>
+                        <p>　　　　2)按复位键</p>
+                        <p style="color: red; font-weight: bold;">　　。程序执行一般步骤：</p>
+                        <p>　　　　1)BOOT0接低电平，BOOT1接任意电平</p>
+                        <p>　　　　2)按复位键</p>
+                        <p style="color: red; font-weight: bold;">　　。STM32启动模式:</p>
+                        <img data-page="8" src="./index07-map/stm32-boot-mode.jpg" style="display: block; margin: 16px 0 0 4em; max-width: 600px; height: auto;">
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 侧边栏导航：点击跳转到对应内容位置
+        var menuItems = document.querySelectorAll('.sidebar-menu li[data-target]');
+        menuItems.forEach(function(item) {
+            item.addEventListener('click', function() {
+                var targetEl = document.getElementById(item.getAttribute('data-target'));
+                if (!targetEl) return;
+                // 高亮当前菜单项
+                document.querySelectorAll('.sidebar-menu li').forEach(function(li) {
+                    li.classList.remove('active');
+                });
+                item.classList.add('active');
+                // 平滑滚动到目标标题
+                targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+    </script>
+</body>
+</html>

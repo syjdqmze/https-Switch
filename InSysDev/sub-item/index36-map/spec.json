@@ -1,0 +1,313 @@
+{
+  "figures": [
+    {
+      "name": "boot-flow",
+      "size": [1700, 820],
+      "bg": "#ffffff",
+      "elements": [
+        {"type": "text", "x": 60, "y": 34, "text": "PWM DAC 实验：从上电复位到主循环", "font": "msyhbd", "size": 30, "color": "dark"},
+        {"type": "text", "x": 60, "y": 82, "text": "关键路径：启动文件 → 系统时钟 180 MHz → TIM9_CH2(PA3) → while(1)", "size": 18, "color": "muted"},
+
+        {"type": "box", "x": 50, "y": 130, "w": 290, "h": 116, "pad": 14,
+         "rich": [
+           {"text": "01  上电复位", "font": "msyhbd", "size": 21, "color": "dark"},
+           {"text": "MSP=__initial_sp", "font": "mono", "size": 15, "color": "muted"},
+           {"text": "PC=Reset_Handler", "font": "mono", "size": 15, "color": "muted"}
+         ]},
+        {"type": "box", "x": 375, "y": 130, "w": 290, "h": 116, "pad": 14,
+         "rich": [
+           {"text": "02  Reset_Handler", "font": "msyhbd", "size": 20, "color": "dark"},
+           {"text": "SystemInit", "font": "mono", "size": 15, "color": "text"},
+           {"text": "__main → main()", "font": "mono", "size": 15, "color": "text"}
+         ]},
+        {"type": "box", "x": 700, "y": 130, "w": 290, "h": 116, "pad": 14,
+         "rich": [
+           {"text": "03  SystemInit", "font": "msyhbd", "size": 20, "color": "dark"},
+           {"text": "FPU CP10/CP11 使能", "font": "msyh", "size": 15, "color": "text"},
+           {"text": "VTOR = 0x08000000", "font": "mono", "size": 15, "color": "muted"}
+         ]},
+        {"type": "box", "x": 1025, "y": 130, "w": 290, "h": 116, "pad": 14,
+         "rich": [
+           {"text": "04  __main", "font": "msyhbd", "size": 20, "color": "dark"},
+           {"text": ".data 复制到 RAM", "font": "msyh", "size": 15, "color": "text"},
+           {"text": ".bss 清零", "font": "msyh", "size": 15, "color": "text"}
+         ]},
+        {"type": "box", "x": 1350, "y": 130, "w": 290, "h": 116, "pad": 14,
+         "rich": [
+           {"text": "05  main()", "font": "msyhbd", "size": 20, "color": "dark"},
+           {"text": "USER/main.c", "font": "mono", "size": 15, "color": "muted"},
+           {"text": "初始化从这里开始", "font": "msyh", "size": 15, "color": "text"}
+         ]},
+
+        {"type": "arrow", "points": [[340, 188], [375, 188]], "color": "dark", "width": 4},
+        {"type": "arrow", "points": [[665, 188], [700, 188]], "color": "dark", "width": 4},
+        {"type": "arrow", "points": [[990, 188], [1025, 188]], "color": "dark", "width": 4},
+        {"type": "arrow", "points": [[1315, 188], [1350, 188]], "color": "dark", "width": 4},
+
+        {"type": "dashed", "points": [[1495, 246], [1495, 272], [195, 272], [195, 290]], "color": "orange", "width": 3},
+        {"type": "arrow", "points": [[195, 282], [195, 300]], "color": "orange", "width": 3, "head": 12},
+        {"type": "text", "x": 640, "y": 246, "text": "顺序执行，全程无中断参与", "size": 15, "color": "orange"},
+
+        {"type": "box", "x": 50, "y": 300, "w": 290, "h": 116, "pad": 14,
+         "rich": [
+           {"text": "06  HAL_Init", "font": "msyhbd", "size": 20, "color": "dark"},
+           {"text": "优先级分组 2", "font": "msyh", "size": 15, "color": "text"},
+           {"text": "SysTick 1 ms 时基", "font": "msyh", "size": 15, "color": "text"}
+         ]},
+        {"type": "box", "x": 375, "y": 300, "w": 290, "h": 116, "pad": 14,
+         "rich": [
+           {"text": "07  系统时钟初始化", "font": "msyhbd", "size": 20, "color": "dark"},
+           {"text": "PLL 360/25/2", "font": "mono", "size": 15, "color": "text"},
+           {"text": "SYSCLK = 180 MHz", "font": "mono", "size": 15, "color": "text"}
+         ]},
+        {"type": "box", "x": 700, "y": 300, "w": 290, "h": 116, "pad": 14,
+         "rich": [
+           {"text": "08  delay_init(180)", "font": "msyhbd", "size": 19, "color": "dark"},
+           {"text": "fac_us = 180", "font": "mono", "size": 15, "color": "text"},
+           {"text": "SysTick 时钟源 = HCLK", "font": "msyh", "size": 15, "color": "text"}
+         ]},
+        {"type": "box", "x": 1025, "y": 300, "w": 290, "h": 116, "pad": 14,
+         "rich": [
+           {"text": "09  uart_init", "font": "msyhbd", "size": 20, "color": "dark"},
+           {"text": "115200 / PA9 PA10", "font": "mono", "size": 15, "color": "text"},
+           {"text": "printf 重定向", "font": "msyh", "size": 15, "color": "text"}
+         ]},
+        {"type": "box", "x": 1350, "y": 300, "w": 290, "h": 116, "pad": 14,
+         "rich": [
+           {"text": "10  板级外设", "font": "msyhbd", "size": 20, "color": "dark"},
+           {"text": "LED / KEY / SDRAM", "font": "mono", "size": 14, "color": "text"},
+           {"text": "LCD / ADC1", "font": "mono", "size": 14, "color": "text"}
+         ]},
+
+        {"type": "arrow", "points": [[340, 358], [375, 358]], "color": "dark", "width": 4},
+        {"type": "arrow", "points": [[665, 358], [700, 358]], "color": "dark", "width": 4},
+        {"type": "arrow", "points": [[990, 358], [1025, 358]], "color": "dark", "width": 4},
+        {"type": "arrow", "points": [[1315, 358], [1350, 358]], "color": "dark", "width": 4},
+
+        {"type": "dashed", "points": [[1495, 416], [1495, 442], [195, 442], [195, 460]], "color": "orange", "width": 3},
+        {"type": "arrow", "points": [[195, 452], [195, 470]], "color": "orange", "width": 3, "head": 12},
+        {"type": "text", "x": 600, "y": 416, "text": "外设就绪后才配置 PWM 输出", "size": 15, "color": "orange"},
+
+        {"type": "box", "x": 50, "y": 470, "w": 290, "h": 116, "pad": 14,
+         "rich": [
+           {"text": "11  TIM9 PWM 初始化", "font": "msyhbd", "size": 19, "color": "dark"},
+           {"text": "TIM9_CH2_PWM_Init", "font": "mono", "size": 14, "color": "text"},
+           {"text": "(255, 1)", "font": "mono", "size": 15, "color": "text"}
+         ]},
+        {"type": "box", "x": 375, "y": 470, "w": 290, "h": 116, "pad": 14,
+         "rich": [
+           {"text": "12  初值 0", "font": "msyhbd", "size": 20, "color": "dark"},
+           {"text": "TIM_SetTIM9Compare2", "font": "mono", "size": 14, "color": "text"},
+           {"text": "(0) → CCR2 = 0", "font": "mono", "size": 15, "color": "text"}
+         ]},
+        {"type": "box", "x": 700, "y": 470, "w": 290, "h": 116, "pad": 14, "stroke": "green", "fill": "#F4FBF7",
+         "rich": [
+           {"text": "13  while(1)", "font": "msyhbd", "size": 20, "color": "dark"},
+           {"text": "KEY_Scan / delay_ms(10)", "font": "mono", "size": 13, "color": "text"},
+           {"text": "改 CCR2 → 改电压", "font": "msyh", "size": 15, "color": "green"}
+         ]},
+
+        {"type": "arrow", "points": [[340, 528], [375, 528]], "color": "dark", "width": 4},
+        {"type": "arrow", "points": [[665, 528], [700, 528]], "color": "dark", "width": 4},
+
+        {"type": "note", "x": 1060, "y": 480, "w": 580, "size": 17,
+         "text": "PA3 输出 351.5625 kHz 方波，占空比 = CCR2/256；经二阶 RC 取平均后得到 0~3.3 V 直流，再由 PA5 的 ADC1_CH5 回读显示。"}
+      ]
+    },
+
+    {
+      "name": "pwm-clock",
+      "size": [1700, 1110],
+      "bg": "#ffffff",
+      "elements": [
+        {"type": "text", "x": 60, "y": 34, "text": "TIM9 时钟链：25 MHz 晶振 → 351.5625 kHz PWM", "font": "msyhbd", "size": 30, "color": "dark"},
+        {"type": "text", "x": 60, "y": 82, "text": "每一级都写出算式；PSC 与 ARR 各分频一次，别把 PCLK2 当成定时器时钟", "size": 18, "color": "muted"},
+
+        {"type": "box", "x": 90, "y": 120, "w": 1520, "h": 90, "pad": 12, "align": "left",
+         "rich": [
+           {"text": "01  HSE 外部晶振 = 25 MHz", "font": "msyhbd", "size": 21, "color": "dark"},
+           {"text": "stm32f4xx_hal_conf.h : HSE_VALUE = 25000000", "font": "mono", "size": 14, "color": "muted"}
+         ]},
+        {"type": "arrow", "points": [[850, 210], [850, 232]], "color": "primary", "width": 4, "head": 12},
+        {"type": "box", "x": 90, "y": 232, "w": 1520, "h": 90, "pad": 12, "align": "left",
+         "rich": [
+           {"text": "02  PLL1：M=25 先分频，N=360 再倍频", "font": "msyhbd", "size": 21, "color": "dark"},
+           {"text": "25 MHz / 25 * 360 = 360 MHz (VCO)", "font": "mono", "size": 14, "color": "muted"}
+         ]},
+        {"type": "arrow", "points": [[850, 322], [850, 344]], "color": "primary", "width": 4, "head": 12},
+        {"type": "box", "x": 90, "y": 344, "w": 1520, "h": 90, "pad": 12, "align": "left",
+         "rich": [
+           {"text": "03  PLLP=2：系统时钟 SYSCLK", "font": "msyhbd", "size": 21, "color": "dark"},
+           {"text": "SYSCLK = 360 MHz / 2 = 180 MHz", "font": "mono", "size": 14, "color": "muted"}
+         ]},
+        {"type": "arrow", "points": [[850, 434], [850, 456]], "color": "primary", "width": 4, "head": 12},
+        {"type": "box", "x": 90, "y": 456, "w": 1520, "h": 90, "pad": 12, "align": "left",
+         "rich": [
+           {"text": "04  AHB /1 → HCLK；APB1 /4 → PCLK1", "font": "msyhbd", "size": 21, "color": "dark"},
+           {"text": "HCLK = 180 MHz / PCLK1 = 45 MHz", "font": "mono", "size": 14, "color": "muted"}
+         ]},
+        {"type": "arrow", "points": [[850, 546], [850, 568]], "color": "primary", "width": 4, "head": 12},
+        {"type": "box", "x": 90, "y": 568, "w": 1520, "h": 90, "pad": 12, "align": "left",
+         "rich": [
+           {"text": "05  APB2 /2 → PCLK2", "font": "msyhbd", "size": 21, "color": "dark"},
+           {"text": "PCLK2 = 180 MHz / 2 = 90 MHz", "font": "mono", "size": 14, "color": "muted"}
+         ]},
+        {"type": "arrow", "points": [[850, 658], [850, 680]], "color": "primary", "width": 4, "head": 12},
+        {"type": "box", "x": 90, "y": 680, "w": 1520, "h": 90, "pad": 12, "align": "left",
+         "rich": [
+           {"text": "06  APB2 定时器时钟 = PCLK2 x 2", "font": "msyhbd", "size": 21, "color": "dark"},
+           {"text": "TIM9CLK = 90 MHz * 2 = 180 MHz", "font": "mono", "size": 14, "color": "muted"}
+         ]},
+        {"type": "arrow", "points": [[850, 770], [850, 792]], "color": "primary", "width": 4, "head": 12},
+        {"type": "box", "x": 90, "y": 792, "w": 1520, "h": 90, "pad": 12, "align": "left",
+         "rich": [
+           {"text": "07  TIM9 PSC=1：计数器时钟再除 2", "font": "msyhbd", "size": 21, "color": "dark"},
+           {"text": "CK_CNT = 180 MHz / (1+1) = 90 MHz", "font": "mono", "size": 14, "color": "muted"}
+         ]},
+        {"type": "arrow", "points": [[850, 882], [850, 904]], "color": "primary", "width": 4, "head": 12},
+        {"type": "box", "x": 90, "y": 904, "w": 1520, "h": 90, "pad": 12, "align": "left", "stroke": "green", "fill": "#F4FBF7",
+         "rich": [
+           {"text": "08  ARR=255：PWM 频率 = CK_CNT / 256", "font": "msyhbd", "size": 21, "color": "dark"},
+           {"text": "Fpwm = 90 MHz / 256 = 351.5625 kHz", "font": "mono", "size": 14, "color": "green"}
+         ]},
+
+        {"type": "note", "x": 90, "y": 1016, "w": 1520, "size": 17,
+         "text": "易错点：main.c 注释写 Fpwm=90M/256，把 PCLK2 当成了定时器时钟；实际 TIM9CLK=180 MHz，先被 PSC=1 二分频、再被 ARR+1 分频，结果同为 351.5625 kHz。"}
+      ]
+    },
+
+    {
+      "name": "pwm-wave",
+      "size": [1700, 830],
+      "bg": "#ffffff",
+      "elements": [
+        {"type": "text", "x": 60, "y": 34, "text": "PWM 模式 1：CCR2 决定高电平持续多少个计数", "font": "msyhbd", "size": 30, "color": "dark"},
+        {"type": "text", "x": 60, "y": 82, "text": "ARR=255 → 一个周期 256 个计数；PWM1 + 高极性：CNT 小于 CCR2 时输出高", "size": 18, "color": "muted"},
+
+        {"type": "box", "x": 80, "y": 150, "w": 280, "h": 100, "pad": 14,
+         "rich": [
+           {"text": "CCR2 = 64", "font": "mono", "size": 24, "color": "dark"},
+           {"text": "占空比 25.0%", "font": "msyh", "size": 17, "color": "text"}
+         ]},
+        {"type": "waveform", "x": 400, "y": 150, "w": 1050, "h": 100, "levels": [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "color": "primary", "width": 4, "baseline": true,
+         "marks": [{"i": 4, "color": "orange"}],
+         "seg_labels": [{"i": 0, "text": "高", "size": 15}, {"i": 4, "text": "低", "size": 15}]},
+        {"type": "text", "x": 1480, "y": 172, "align": "left",
+         "rich": [
+           {"text": "0.825 V", "font": "mono", "size": 18, "color": "green"},
+           {"text": "3.3 x 64/256", "font": "msyh", "size": 15, "color": "muted"}
+         ]},
+
+        {"type": "box", "x": 80, "y": 340, "w": 280, "h": 100, "pad": 14,
+         "rich": [
+           {"text": "CCR2 = 128", "font": "mono", "size": 24, "color": "dark"},
+           {"text": "占空比 50.0%", "font": "msyh", "size": 17, "color": "text"}
+         ]},
+        {"type": "waveform", "x": 400, "y": 340, "w": 1050, "h": 100, "levels": [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0], "color": "primary", "width": 4, "baseline": true,
+         "marks": [{"i": 8, "color": "orange"}],
+         "seg_labels": [{"i": 0, "text": "高", "size": 15}, {"i": 8, "text": "低", "size": 15}]},
+        {"type": "text", "x": 1480, "y": 362, "align": "left",
+         "rich": [
+           {"text": "1.650 V", "font": "mono", "size": 18, "color": "green"},
+           {"text": "3.3 x 128/256", "font": "msyh", "size": 15, "color": "muted"}
+         ]},
+
+        {"type": "box", "x": 80, "y": 530, "w": 280, "h": 100, "pad": 14,
+         "rich": [
+           {"text": "CCR2 = 192", "font": "mono", "size": 24, "color": "dark"},
+           {"text": "占空比 75.0%", "font": "msyh", "size": 17, "color": "text"}
+         ]},
+        {"type": "waveform", "x": 400, "y": 530, "w": 1050, "h": 100, "levels": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0], "color": "primary", "width": 4, "baseline": true,
+         "marks": [{"i": 12, "color": "orange"}],
+         "seg_labels": [{"i": 0, "text": "高", "size": 15}, {"i": 12, "text": "低", "size": 15}]},
+        {"type": "text", "x": 1480, "y": 552, "align": "left",
+         "rich": [
+           {"text": "2.475 V", "font": "mono", "size": 18, "color": "green"},
+           {"text": "3.3 x 192/256", "font": "msyh", "size": 15, "color": "muted"}
+         ]},
+
+        {"type": "note", "x": 80, "y": 700, "w": 1540, "size": 17,
+         "text": "CCR2 直接写 TIM9->CCR2；HAL_TIM_PWM_ConfigChannel 已置 OC2PE（预装载），新比较值在下一个更新事件生效，避免输出出现窄毛刺。"}
+      ]
+    },
+
+    {
+      "name": "pwm-dac",
+      "size": [1700, 640],
+      "bg": "#ffffff",
+      "elements": [
+        {"type": "text", "x": 60, "y": 34, "text": "PWM → RC → ADC 的完整链路", "font": "msyhbd", "size": 30, "color": "dark"},
+        {"type": "text", "x": 60, "y": 82, "text": "PA3 输出方波，二阶 RC 取平均，PA5 回读验证", "size": 18, "color": "muted"},
+
+        {"type": "box", "x": 60, "y": 160, "w": 340, "h": 160, "pad": 16,
+         "rich": [
+           {"text": "TIM9_CH2", "font": "msyhbd", "size": 23, "color": "dark"},
+           {"text": "PA3 / AF3", "font": "mono", "size": 17, "color": "text"},
+           {"text": "PWM1，351.5625 kHz", "font": "msyh", "size": 16, "color": "muted"},
+           {"text": "占空比 = CCR2 / 256", "font": "msyh", "size": 16, "color": "muted"}
+         ]},
+        {"type": "box", "x": 450, "y": 160, "w": 400, "h": 160, "pad": 16,
+         "rich": [
+           {"text": "二阶 RC 低通", "font": "msyhbd", "size": 23, "color": "dark"},
+           {"text": "R1  R2  C1  C2", "font": "mono", "size": 17, "color": "text"},
+           {"text": "滤除 351.5625 kHz 载波", "font": "msyh", "size": 16, "color": "muted"},
+           {"text": "输出直流 = 平均值", "font": "msyh", "size": 16, "color": "muted"}
+         ]},
+        {"type": "box", "x": 900, "y": 160, "w": 360, "h": 160, "pad": 16,
+         "rich": [
+           {"text": "ADC1_CH5", "font": "msyhbd", "size": 23, "color": "dark"},
+           {"text": "PA5 / 12 bit", "font": "mono", "size": 17, "color": "text"},
+           {"text": "480 周期采样", "font": "msyh", "size": 16, "color": "muted"},
+           {"text": "20 次平均后显示", "font": "msyh", "size": 16, "color": "muted"}
+         ]},
+        {"type": "box", "x": 1310, "y": 160, "w": 330, "h": 160, "pad": 16,
+         "rich": [
+           {"text": "LCD 显示", "font": "msyhbd", "size": 23, "color": "dark"},
+           {"text": "DAC VAL", "font": "mono", "size": 17, "color": "text"},
+           {"text": "DAC VOL / ADC VOL", "font": "mono", "size": 15, "color": "text"},
+           {"text": "每约 100 ms 刷新", "font": "msyh", "size": 16, "color": "muted"}
+         ]},
+
+        {"type": "arrow", "points": [[400, 240], [450, 240]], "color": "dark", "width": 4},
+        {"type": "arrow", "points": [[850, 240], [900, 240]], "color": "dark", "width": 4},
+        {"type": "arrow", "points": [[1260, 240], [1310, 240]], "color": "dark", "width": 4},
+
+        {"type": "waveform", "x": 60, "y": 390, "w": 340, "h": 80, "levels": [1, 1, 0, 0, 0, 0, 0, 0], "color": "primary", "width": 4, "baseline": true},
+        {"type": "text", "x": 60, "y": 490, "text": "0 → 3.3 V 方波（25% 占空比）", "size": 15, "color": "muted"},
+
+        {"type": "note", "x": 450, "y": 380, "w": 560, "size": 16,
+         "text": "Vout = 3.3 V x CCR2 / 256，每级约 12.9 mV。\nCCR2 为 0 时输出 0 V；CCR2 为 256 时恒高，输出 3.3 V。"},
+
+        {"type": "note", "x": 1080, "y": 380, "w": 560, "size": 16, "accent": "primary", "fill": "#F1F8FD",
+         "text": "自测需用跳线帽短接 P11 的 ADC 与 PDC；\n同时必须拔掉 P8 上 PA3 的跳线帽，否则会影响转换结果。"}
+      ]
+    },
+
+    {
+      "name": "ripple",
+      "size": [1700, 700],
+      "bg": "#ffffff",
+      "elements": [
+        {"type": "text", "x": 60, "y": 34, "text": "RC 滤波前后：方波被积分成带纹波的直流", "font": "msyhbd", "size": 30, "color": "dark"},
+        {"type": "text", "x": 60, "y": 82, "text": "频率越高、RC 时间常数越大，纹波越小；二阶级联比一阶衰减更陡", "size": 18, "color": "muted"},
+
+        {"type": "text", "x": 70, "y": 124, "text": "滤波前：PA3 上的 PWM 方波", "font": "msyhbd", "size": 21, "color": "dark"},
+        {"type": "line", "points": [[110, 240], [110, 440], [790, 440]], "color": "muted", "width": 3},
+        {"type": "text", "x": 100, "y": 228, "text": "3.3 V", "size": 15, "align": "right", "color": "muted"},
+        {"type": "text", "x": 100, "y": 424, "text": "0 V", "size": 15, "align": "right", "color": "muted"},
+        {"type": "waveform", "x": 120, "y": 240, "w": 650, "h": 200, "levels": [1, 1, 0, 0, 0, 0, 0, 0], "color": "primary", "width": 4, "baseline": true},
+        {"type": "text", "x": 400, "y": 470, "text": "一个周期 2.844 μs，占空比 25%", "size": 15, "color": "muted"},
+
+        {"type": "text", "x": 880, "y": 124, "text": "滤波后：PA5 上测得的直流 + 纹波", "font": "msyhbd", "size": 21, "color": "dark"},
+        {"type": "line", "points": [[920, 240], [920, 440], [1620, 440]], "color": "muted", "width": 3},
+        {"type": "line", "points": [[940, 330], [974, 322], [1008, 338], [1042, 322], [1076, 338], [1110, 322], [1144, 338], [1178, 322], [1212, 338], [1246, 322], [1280, 338], [1314, 322], [1348, 338], [1382, 322], [1416, 338], [1450, 322], [1484, 338], [1518, 322], [1552, 338], [1586, 322], [1620, 338]], "color": "green", "width": 4},
+        {"type": "dashed", "points": [[920, 330], [1620, 330]], "color": "orange", "width": 3},
+        {"type": "text", "x": 990, "y": 282, "text": "Vout ≈ 1.65 V（CCR2=128）", "size": 17, "color": "dark"},
+        {"type": "text", "x": 1440, "y": 352, "text": "ΔV 纹波", "size": 16, "color": "orange"},
+
+        {"type": "note", "x": 70, "y": 540, "w": 1560, "size": 17,
+         "text": "二阶 RC 在同样总阻容下提供更陡的低通特性，纹波近似与 1/(f x R x C) 成正比。本工程源文件未给出 R/C 具体数值（由硬件原理图决定），此处不臆造。"}
+      ]
+    }
+  ]
+}

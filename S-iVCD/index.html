@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>S-iVCD</title>
+    <style>
+        html, body {
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .wrapper {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        .title-bar {
+            height: 40px;
+            background-color: #87CEEB;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            flex-shrink: 0;
+            border-bottom: 1px solid #ccc;
+            gap: 2px;
+        }
+
+        .menu-item {
+            padding: 4px 12px;
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+            border-radius: 4px;
+            user-select: none;
+        }
+
+        .menu-item:hover {
+            background-color: #e0e0e0;
+        }
+
+        .menu-item:active {
+            background-color: #d0d0d0;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            width: 100%;
+            gap: 3px;
+            background-color: #87CEEB;
+            min-height: 0;
+        }
+
+        .col-left {
+            flex: 2.5;
+            height: 100%;
+            background-color: #ffffff;
+            border: 5px solid #FFD1DC;
+            box-sizing: border-box;
+        }
+
+        .col-center {
+            flex: 5;
+            height: 100%;
+            background-color: #87CEEB;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .col-center-top {
+            flex: 3;
+            width: 100%;
+            background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 40%, #90EE90 40%, #228B22 100%);
+            border: 5px solid #FFD1DC;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 公路场景容器 */
+        .road-scene {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 远景树木层（慢速） */
+        .trees-far {
+            position: absolute;
+            bottom: 18%;
+            width: 200%;
+            height: 22%;
+            animation: scrollTrees 8s linear infinite;
+            animation-play-state: paused;
+        }
+
+        /* 近景树木层（快速） */
+        .trees-near {
+            position: absolute;
+            bottom: 10%;
+            width: 200%;
+            height: 30%;
+            animation: scrollTrees 4s linear infinite;
+            animation-play-state: paused;
+        }
+
+        /* 公路 */
+        .road {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 18%;
+            background: linear-gradient(to bottom, #555 0%, #333 100%);
+        }
+
+        /* 公路标线 - 上边缘 */
+        .road-markings-top {
+            position: absolute;
+            top: 0;
+            width: 200%;
+            height: 2px;
+            background: repeating-linear-gradient(
+                90deg,
+                #fff 0px,
+                #fff 30px,
+                transparent 30px,
+                transparent 60px
+            );
+            animation: scrollRoad 1s linear infinite;
+            animation-play-state: paused;
+        }
+
+        /* 公路标线 - 中间线 */
+        .road-markings-center {
+            position: absolute;
+            top: 50%;
+            width: 200%;
+            height: 3px;
+            background: repeating-linear-gradient(
+                90deg,
+                #ffcc00 0px,
+                #ffcc00 40px,
+                transparent 40px,
+                transparent 80px
+            );
+            animation: scrollRoad 1s linear infinite;
+            animation-play-state: paused;
+        }
+
+        /* 公路标线 - 下边缘 */
+        .road-markings-bottom {
+            position: absolute;
+            bottom: 0;
+            width: 200%;
+            height: 2px;
+            background: repeating-linear-gradient(
+                90deg,
+                #fff 0px,
+                #fff 30px,
+                transparent 30px,
+                transparent 60px
+            );
+            animation: scrollRoad 1s linear infinite;
+            animation-play-state: paused;
+        }
+
+        /* 树木滚动动画 */
+        @keyframes scrollTrees {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* 公路标线滚动 */
+        @keyframes scrollRoad {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-60px); }
+        }
+
+        /* 运行状态 */
+        .running .trees-far,
+        .running .trees-near,
+        .running .road-markings-top,
+        .running .road-markings-center,
+        .running .road-markings-bottom {
+            animation-play-state: running;
+        }
+
+        .col-center-bottom {
+            flex: 1;
+            width: 100%;
+            background-color: #ffffff;
+            border: 5px solid #FFD1DC;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .col-right {
+            flex: 2.5;
+            height: 100%;
+            background-color: #ffffff;
+            border: 5px solid #FFD1DC;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 方向按键容器 */
+        .direction-pad {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 5px;
+            width: 240px;
+            height: 210px;
+        }
+
+        .direction-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg, #e6e6e6, #ffffff);
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+            color: #555;
+            user-select: none;
+            transition: all 0.1s ease;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .direction-btn:hover {
+            background: linear-gradient(145deg, #ffffff, #e6e6e6);
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .direction-btn:active {
+            background: linear-gradient(145deg, #d0d0d0, #e6e6e6);
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.2);
+            transform: scale(0.95);
+        }
+
+        /* 转向灯开关样式 */
+        .signal-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg, #e6e6e6, #ffffff);
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s ease;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .signal-btn:hover {
+            background: linear-gradient(145deg, #ffffff, #e6e6e6);
+        }
+
+        .signal-btn:active {
+            transform: scale(0.95);
+        }
+
+        .signal-btn.active {
+            background: linear-gradient(145deg, #ffcc00, #ff9900);
+            border-color: #ff8800;
+            box-shadow: 0 0 8px rgba(255, 170, 0, 0.5);
+        }
+
+        .direction-btn.up {
+            grid-column: 3;
+            grid-row: 1;
+        }
+
+        .signal-btn.left-signal {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .signal-btn.right-signal {
+            grid-column: 4;
+            grid-row: 1;
+        }
+
+        .direction-btn.left {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .direction-btn.center {
+            grid-column: 3;
+            grid-row: 2;
+            background: #f0f0f0;
+            cursor: default;
+        }
+
+        .direction-btn.right {
+            grid-column: 4;
+            grid-row: 2;
+        }
+
+        .direction-btn.down {
+            grid-column: 3;
+            grid-row: 3;
+        }
+
+        /* 灯光开关样式 */
+        .beam-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg, #e6e6e6, #ffffff);
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s ease;
+            box-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            font-size: 11px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .beam-btn:hover {
+            background: linear-gradient(145deg, #ffffff, #e6e6e6);
+        }
+
+        .beam-btn:active {
+            transform: scale(0.95);
+        }
+
+        .beam-btn.active {
+            background: linear-gradient(145deg, #ffffcc, #ffee88);
+            border-color: #ddaa00;
+            box-shadow: 0 0 8px rgba(255, 238, 100, 0.6);
+            color: #886600;
+        }
+
+        .beam-btn.low-beam {
+            grid-column: 2;
+            grid-row: 4;
+        }
+
+        .beam-btn.high-beam {
+            grid-column: 4;
+            grid-row: 4;
+        }
+
+        /* 速度显示表 */
+        .speed-display {
+            position: absolute;
+            top: 65%;
+            left: 58%;
+            transform: translateX(-50%);
+            background: transparent;
+            color: #ff0000;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: none;
+            z-index: 100;
+            display: none;
+            white-space: nowrap;
+            text-shadow: 0 0 6px rgba(255, 0, 0, 0.6);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.3);
+        }
+
+        .speed-display .speed-value {
+            font-size: 22px;
+            color: #ff0000;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+        }
+
+        .speed-display .speed-unit {
+            font-size: 12px;
+            color: #ff0000;
+            margin-left: 3px;
+        }
+
+        /* 车型面板 */
+        .car-type-panel {
+            width: 100%;
+            height: 100%;
+            background: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        /* 文字车型选项（与 Model 3 字体一致） */
+        .car-type-text {
+            font-size: 16px;
+            color: #333;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .car-type-text:hover {
+            color: #007bff;
+        }
+
+        /* Model 3 置灰 */
+        .model3 {
+            color: #aaa;
+            cursor: not-allowed;
+        }
+
+    </style>
+    <script>
+        // 禁止 Ctrl + 滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    
+        // 禁止 Ctrl +/- 键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && (e.key === '+' || e.key === '-' || e.key === '=' || e.key === '0')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    
+        // 禁止手势缩放（双指）
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+    
+        // 控制皮卡车运行/停止
+        let isRunning = false;
+
+        // 暂停车辆动画（车轮、颠簸、阴影）
+        function pauseVehicleAnimations() {
+            const anims = ['rearWheelSpin', 'frontWheelSpin', 'bodyBounce', 'shadowBounce'];
+            anims.forEach(function(id) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.setAttribute('dur', 'indefinite');
+                    el.endElement();
+                }
+            });
+        }
+
+        // 恢复车辆动画
+        function resumeVehicleAnimations() {
+            const anims = ['rearWheelSpin', 'frontWheelSpin', 'bodyBounce', 'shadowBounce'];
+            const durs = ['0.6s', '0.6s', '0.8s', '0.8s'];
+            anims.forEach(function(id, index) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.setAttribute('dur', durs[index]);
+                    el.beginElement();
+                }
+            });
+        }
+
+        // 速度控制系统
+        let currentSpeed = 0;           // 当前速度 (Km/h)
+        let isAccelerating = false;     // 是否正在加速
+        let speedTimer = null;          // 加速定时器
+        const ACCEL_RATE = 3.5;        // 加速度: 3.5 Km/h 每次
+        const ACCEL_INTERVAL = 1000;   // 加速间隔: 1秒
+
+        // 开始加速（按下向上键）
+        function startAccelerate() {
+            if (isAccelerating) return;
+            isAccelerating = true;
+
+            // 如果车辆未运行，启动运行
+            if (!isRunning) {
+                isRunning = true;
+                const sceneContainer = document.getElementById('sceneContainer');
+                sceneContainer.classList.add('running');
+                resumeVehicleAnimations();
+            }
+
+            // 显示速度表
+            document.getElementById('speedDisplay').style.display = 'block';
+
+            // 清除之前的定时器
+            if (speedTimer) {
+                clearInterval(speedTimer);
+            }
+
+            // 立即增加一次速度
+            currentSpeed += ACCEL_RATE;
+            updateSpeedDisplay();
+
+            // 开始定时加速
+            speedTimer = setInterval(function() {
+                currentSpeed += ACCEL_RATE;
+                updateSpeedDisplay();
+            }, ACCEL_INTERVAL);
+        }
+
+        // 停止加速（松开向上键）—— 车辆保持当前速度匀速运行
+        function stopAccelerate() {
+            if (!isAccelerating) return;
+            isAccelerating = false;
+
+            if (speedTimer) {
+                clearInterval(speedTimer);
+                speedTimer = null;
+            }
+            // 车辆保持当前速度匀速运行，速度表保持显示
+        }
+
+        // 制动减速系统
+        let isBraking = false;        // 是否正在制动
+        let brakeTimer = null;        // 制动定时器
+        const BRAKE_RATE = 4.5;      // 制动减速度: 4.5 Km/h 每次
+        const BRAKE_INTERVAL = 1000; // 制动间隔: 1秒
+
+        // 开始制动减速（按下向下键）
+        function startBrake() {
+            if (isBraking) return;
+            isBraking = true;
+
+            // 点亮制动灯
+            const brakes = document.getElementById('brakeLights');
+            if (brakes) {
+                brakes.style.display = 'inline';
+            }
+
+            // 清除之前的定时器
+            if (brakeTimer) {
+                clearInterval(brakeTimer);
+            }
+
+            // 立即减少一次速度
+            currentSpeed = Math.max(0, currentSpeed - BRAKE_RATE);
+            updateSpeedDisplay();
+
+            // 开始定时制动减速
+            brakeTimer = setInterval(function() {
+                currentSpeed = Math.max(0, currentSpeed - BRAKE_RATE);
+                updateSpeedDisplay();
+
+                // 速度降到0时自动停止制动
+                if (currentSpeed <= 0) {
+                    currentSpeed = 0;
+                    updateSpeedDisplay();
+                    endBraking();
+                }
+            }, BRAKE_INTERVAL);
+        }
+
+        // 停止制动减速（松开向下键）—— 车辆保持当前速度匀速行驶
+        function stopBrake() {
+            if (!isBraking) return;
+            endBraking();
+        }
+
+        // 结束制动（内部函数，统一处理清理逻辑）
+        function endBraking() {
+            isBraking = false;
+
+            if (brakeTimer) {
+                clearInterval(brakeTimer);
+                brakeTimer = null;
+            }
+
+            // 熄灭制动灯
+            const brakes = document.getElementById('brakeLights');
+            if (brakes) {
+                brakes.style.display = 'none';
+            }
+        }
+
+        // 更新速度显示及场景滚动速度
+        function updateSpeedDisplay() {
+            const speedValue = document.getElementById('speedValue');
+            if (speedValue) {
+                speedValue.textContent = Math.round(currentSpeed);
+            }
+
+            // 根据车速动态调整树木和公路标线后退速度
+            // 基准: 20 Km/h 对应基础动画周期（低速慢退，高速快退）
+            const baseSpeed = 20;
+            const farBase = 10;   // 远景树木基础周期(秒)
+            const nearBase = 5;   // 近景树木基础周期(秒)
+            const roadBase = 1.2; // 公路标线基础周期(秒)
+
+            if (currentSpeed > 0) {
+                const ratio = baseSpeed / currentSpeed;
+                const farDur = Math.max(0.5, farBase * ratio);
+                const nearDur = Math.max(0.3, nearBase * ratio);
+                const roadDur = Math.max(0.1, roadBase * ratio);
+
+                const treesFar = document.querySelector('.trees-far');
+                const treesNear = document.querySelector('.trees-near');
+                const roadTop = document.querySelector('.road-markings-top');
+                const roadCenter = document.querySelector('.road-markings-center');
+                const roadBottom = document.querySelector('.road-markings-bottom');
+
+                if (treesFar) { treesFar.style.animationDuration = farDur + 's'; treesFar.style.animationPlayState = ''; }
+                if (treesNear) { treesNear.style.animationDuration = nearDur + 's'; treesNear.style.animationPlayState = ''; }
+                if (roadTop) { roadTop.style.animationDuration = roadDur + 's'; roadTop.style.animationPlayState = ''; }
+                if (roadCenter) { roadCenter.style.animationDuration = roadDur + 's'; roadCenter.style.animationPlayState = ''; }
+                if (roadBottom) { roadBottom.style.animationDuration = roadDur + 's'; roadBottom.style.animationPlayState = ''; }
+            } else {
+                // 速度为0时暂停场景动画
+                const els = document.querySelectorAll('.trees-far, .trees-near, .road-markings-top, .road-markings-center, .road-markings-bottom');
+                els.forEach(function(el) {
+                    el.style.animationPlayState = 'paused';
+                });
+            }
+        }
+
+        // 近光灯/远光灯开关控制
+        let lowBeamOn = false;
+        let highBeamOn = false;
+        let lowBeamForcedByHighBeam = false; // 近光灯是否由远光灯联动点亮
+
+        function toggleBeam(type) {
+            if (type === 'low') {
+                // 远光灯点亮状态时，不能熄灭近光灯
+                if (highBeamOn && lowBeamOn) return;
+                lowBeamOn = !lowBeamOn;
+                lowBeamForcedByHighBeam = false; // 用户手动操作，清除联动标记
+                const btn = document.querySelector('.low-beam');
+                btn.classList.toggle('active', lowBeamOn);
+                updateLowBeam();
+            } else if (type === 'high') {
+                highBeamOn = !highBeamOn;
+                const btn = document.querySelector('.high-beam');
+                btn.classList.toggle('active', highBeamOn);
+                updateHighBeam();
+
+                if (highBeamOn) {
+                    // 开启远光灯时：如果近光灯熄灭，则联动点亮近光灯
+                    if (!lowBeamOn) {
+                        lowBeamOn = true;
+                        lowBeamForcedByHighBeam = true;
+                        const lowBtn = document.querySelector('.low-beam');
+                        lowBtn.classList.add('active');
+                        updateLowBeam();
+                    }
+                } else {
+                    // 熄灭远光灯时：仅当近光灯是由远光灯联动点亮时，才同时熄灭
+                    if (lowBeamForcedByHighBeam) {
+                        lowBeamOn = false;
+                        lowBeamForcedByHighBeam = false;
+                        const lowBtn = document.querySelector('.low-beam');
+                        lowBtn.classList.remove('active');
+                        updateLowBeam();
+                    }
+                }
+            }
+        }
+
+        // 更新近光灯 SVG 状态
+        function updateLowBeam() {
+            const lights = document.getElementById('lowBeamLights');
+            if (lights) {
+                lights.style.display = lowBeamOn ? 'inline' : 'none';
+            }
+        }
+
+        // 更新远光灯 SVG 状态
+        function updateHighBeam() {
+            const lights = document.getElementById('highBeamLights');
+            if (lights) {
+                lights.style.display = highBeamOn ? 'inline' : 'none';
+            }
+        }
+
+        // 转向灯开关控制
+        let leftSignalOn = false;
+        let rightSignalOn = false;
+
+        function toggleSignal(direction) {
+            if (direction === 'left') {
+                leftSignalOn = !leftSignalOn;
+                const btn = document.querySelector('.left-signal');
+                btn.classList.toggle('active', leftSignalOn);
+                updateTurnSignals();
+            } else if (direction === 'right') {
+                rightSignalOn = !rightSignalOn;
+                const btn = document.querySelector('.right-signal');
+                btn.classList.toggle('active', rightSignalOn);
+                updateTurnSignals();
+            }
+        }
+
+        // 更新转向灯 SVG 状态
+        function updateTurnSignals() {
+            const signals = document.getElementById('turnSignals');
+            if (signals) {
+                signals.style.display = (leftSignalOn || rightSignalOn) ? 'inline' : 'none';
+            }
+        }
+
+        // 转向灯闪烁计数器
+        let turnSignalTimer = null;
+        let turnSignalFlashes = 0;
+        const MAX_FLASHES = 6;
+
+        // 左转函数：闪烁左转向灯 6 次后熄灭
+        function turnLeft() {
+            // 清除之前的定时器
+            if (turnSignalTimer) {
+                clearInterval(turnSignalTimer);
+            }
+            // 重置状态
+            rightSignalOn = false;
+            document.querySelector('.right-signal').classList.remove('active');
+            
+            leftSignalOn = true;
+            document.querySelector('.left-signal').classList.add('active');
+            updateTurnSignals();
+            
+            // 开始闪烁计数
+            turnSignalFlashes = 0;
+            turnSignalTimer = setInterval(function() {
+                turnSignalFlashes++;
+                leftSignalOn = !leftSignalOn;
+                updateTurnSignals();
+                
+                // 闪烁 6 次后停止（每次闪烁包含开和关，所以 6 次 = 12 个切换）
+                if (turnSignalFlashes >= MAX_FLASHES * 2) {
+                    clearInterval(turnSignalTimer);
+                    turnSignalTimer = null;
+                    leftSignalOn = false;
+                    document.querySelector('.left-signal').classList.remove('active');
+                    updateTurnSignals();
+                }
+            }, 500); // 500ms 切换一次，1秒一个完整闪烁
+        }
+
+        // 右转函数：闪烁右转向灯 6 次后熄灭
+        function turnRight() {
+            // 清除之前的定时器
+            if (turnSignalTimer) {
+                clearInterval(turnSignalTimer);
+            }
+            // 重置状态
+            leftSignalOn = false;
+            document.querySelector('.left-signal').classList.remove('active');
+            
+            rightSignalOn = true;
+            document.querySelector('.right-signal').classList.add('active');
+            updateTurnSignals();
+            
+            // 开始闪烁计数
+            turnSignalFlashes = 0;
+            turnSignalTimer = setInterval(function() {
+                turnSignalFlashes++;
+                rightSignalOn = !rightSignalOn;
+                updateTurnSignals();
+                
+                // 闪烁 6 次后停止
+                if (turnSignalFlashes >= MAX_FLASHES * 2) {
+                    clearInterval(turnSignalTimer);
+                    turnSignalTimer = null;
+                    rightSignalOn = false;
+                    document.querySelector('.right-signal').classList.remove('active');
+                    updateTurnSignals();
+                }
+            }, 500);
+        }
+
+        // 喇叭音效系统
+        let hornAudioCtx = null;
+        let hornOscillators = [];
+        let hornGainNode = null;
+        let isHornPlaying = false;
+
+        function startHorn() {
+            if (isHornPlaying) return;
+            isHornPlaying = true;
+
+            // 创建音频上下文
+            if (!hornAudioCtx) {
+                hornAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            // 恢复音频上下文（浏览器安全策略要求用户交互后才能播放音频）
+            var ctx = hornAudioCtx;
+            var resumePromise = ctx.state === 'suspended' ? ctx.resume() : Promise.resolve();
+
+            resumePromise.then(function() {
+                if (!isHornPlaying) return; // 在等待恢复期间已松开，取消发声
+
+                // 创建增益节点（控制音量）
+                hornGainNode = ctx.createGain();
+                hornGainNode.gain.value = 0.5;
+                hornGainNode.connect(ctx.destination);
+
+                // 创建多个振荡器模拟汽车喇叭声
+                // 低频方波 + 中频锯齿波 = 更真实的喇叭音色
+                var hornConfig = [
+                    { freq: 350, type: 'square', gain: 0.4 },
+                    { freq: 440, type: 'square', gain: 0.3 },
+                    { freq: 520, type: 'sawtooth', gain: 0.2 }
+                ];
+                hornConfig.forEach(function(cfg) {
+                    var osc = ctx.createOscillator();
+                    osc.type = cfg.type;
+                    osc.frequency.value = cfg.freq;
+                    var oscGain = ctx.createGain();
+                    oscGain.gain.value = cfg.gain;
+                    osc.connect(oscGain);
+                    oscGain.connect(hornGainNode);
+                    osc.start();
+                    hornOscillators.push(osc);
+                });
+            });
+
+            // 高亮喇叭按键
+            var centerBtn = document.querySelector('.direction-btn.center');
+            if (centerBtn) {
+                centerBtn.style.background = 'linear-gradient(145deg, #ffcc00, #ff9900)';
+                centerBtn.style.boxShadow = '0 0 8px rgba(255, 170, 0, 0.5)';
+            }
+        }
+
+        function stopHorn() {
+            if (!isHornPlaying) return;
+            isHornPlaying = false;
+
+            // 停止所有振荡器
+            hornOscillators.forEach(function(osc) {
+                try { osc.stop(); } catch(e) {}
+            });
+            hornOscillators = [];
+
+            // 断开增益节点
+            if (hornGainNode) {
+                hornGainNode.disconnect();
+                hornGainNode = null;
+            }
+
+            // 恢复喇叭按键样式
+            const centerBtn = document.querySelector('.direction-btn.center');
+            if (centerBtn) {
+                centerBtn.style.background = '';
+                centerBtn.style.boxShadow = '';
+            }
+        }
+
+        // 页面加载时初始化灯光状态
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLowBeam();
+            updateHighBeam();
+            updateTurnSignals();
+            // 制动灯默认熄灭
+            const brakes = document.getElementById('brakeLights');
+            if (brakes) {
+                brakes.style.display = 'none';
+            }
+            // 车辆默认停止，暂停车轮等动画
+            pauseVehicleAnimations();
+        });
+    </script>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="title-bar">
+            <div class="menu-item">文件</div>
+            <div class="menu-item">编辑</div>
+            <div class="menu-item">选择</div>
+            <div class="menu-item">视图</div>
+            <div class="menu-item">工具</div>
+            <div class="menu-item">帮助</div>
+        </div>
+        <div class="container">
+            <div class="col-left">
+                <div class="car-type-panel">
+                    <a class="car-type-text">Suv</a>
+                    <a class="car-type-text">Pickup</a>
+                    <a class="car-type-text model3">Model 3</a>
+                </div>
+            </div>
+            <div class="col-center">
+                <div class="col-center-top" id="sceneContainer">
+                    
+                    <div class="road-scene">
+                        <!-- 远景树木层 -->
+                        <div class="trees-far">
+                            <svg width="100%" height="100%" viewBox="0 0 400 60" preserveAspectRatio="none">
+                                <!-- 远景树木（重复图案） -->
+                                <g fill="#2d5016">
+                                    <polygon points="20,60 30,20 40,60"/>
+                                    <polygon points="60,60 70,25 80,60"/>
+                                    <polygon points="100,60 110,15 120,60"/>
+                                    <polygon points="140,60 150,22 160,60"/>
+                                    <polygon points="180,60 190,18 200,60"/>
+                                    <polygon points="220,60 230,20 240,60"/>
+                                    <polygon points="260,60 270,25 280,60"/>
+                                    <polygon points="300,60 310,15 320,60"/>
+                                    <polygon points="340,60 350,22 360,60"/>
+                                    <polygon points="380,60 390,18 400,60"/>
+                                </g>
+                            </svg>
+                        </div>
+                        
+                        <!-- 近景树木层 -->
+                        <div class="trees-near">
+                            <svg width="100%" height="100%" viewBox="0 0 400 80" preserveAspectRatio="none">
+                                <!-- 近景树木（更大更密） -->
+                                <g fill="#1a3d0a">
+                                    <polygon points="10,80 25,20 40,80"/>
+                                    <polygon points="50,80 65,30 80,80"/>
+                                    <polygon points="90,80 105,15 120,80"/>
+                                    <polygon points="130,80 145,25 160,80"/>
+                                    <polygon points="170,80 185,18 200,80"/>
+                                    <polygon points="210,80 225,20 240,80"/>
+                                    <polygon points="250,80 265,30 280,80"/>
+                                    <polygon points="290,80 305,15 320,80"/>
+                                    <polygon points="330,80 345,25 360,80"/>
+                                    <polygon points="370,80 385,18 400,80"/>
+                                </g>
+                            </svg>
+                        </div>
+                        
+                        <!-- 公路 -->
+                        <div class="road">
+                            <div class="road-markings-top"></div>
+                            <div class="road-markings-center"></div>
+                            <div class="road-markings-bottom"></div>
+                        </div>
+                        
+                        <!-- 皮卡车 SVG -->
+                        <!-- 速度显示表 -->
+                        <div class="speed-display" id="speedDisplay">
+                            <span class="speed-value" id="speedValue">0</span>
+                            <span class="speed-unit">Km/h</span>
+                        </div>
+                        <svg viewBox="-10 0 210 100" style="position:absolute; bottom:1%; left:50%; transform:translateX(-50%); width:60%; max-height:60%">
+                        <defs>
+                            <!-- 近光灯发光滤镜 -->
+                            <filter id="lowBeamGlow" x="-300%" y="-300%" width="800%" height="800%">
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur1"/>
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur2"/>
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur3"/>
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur4"/>
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur5"/>
+                                <feMerge result="merged">
+                                    <feMergeNode in="blur1"/>
+                                    <feMergeNode in="blur2"/>
+                                    <feMergeNode in="blur3"/>
+                                    <feMergeNode in="blur4"/>
+                                    <feMergeNode in="blur5"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                                <feColorMatrix in="merged" type="matrix" values="1.5 0 0 0 0.1  0 1.5 0 0 0.1  0 0 1.2 0 0  0 0 0 1 0"/>
+                            </filter>
+                            <!-- 近光灯投射光锥 -->
+                            <linearGradient id="beamProjection" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+                                <stop offset="30%" stop-color="#ffffcc" stop-opacity="0.6"/>
+                                <stop offset="70%" stop-color="#ffffaa" stop-opacity="0.3"/>
+                                <stop offset="100%" stop-color="#ffffaa" stop-opacity="0"/>
+                            </linearGradient>
+                            <!-- 远光灯发光滤镜（更强光晕） -->
+                            <filter id="highBeamGlow" x="-300%" y="-300%" width="800%" height="800%">
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="15" result="blur1"/>
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur2"/>
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur3"/>
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur4"/>
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur5"/>
+                                <feMerge result="merged">
+                                    <feMergeNode in="blur1"/>
+                                    <feMergeNode in="blur2"/>
+                                    <feMergeNode in="blur3"/>
+                                    <feMergeNode in="blur4"/>
+                                    <feMergeNode in="blur5"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                                <feColorMatrix in="merged" type="matrix" values="1.8 0 0 0 0.15  0 1.8 0 0 0.15  0 0 1.5 0 0  0 0 0 1 0"/>
+                            </filter>
+                            <!-- 远光灯投射光锥（更远更亮） -->
+                            <linearGradient id="highBeamProjection" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+                                <stop offset="25%" stop-color="#ffffff" stop-opacity="0.7"/>
+                                <stop offset="50%" stop-color="#ffffee" stop-opacity="0.4"/>
+                                <stop offset="100%" stop-color="#ffffdd" stop-opacity="0"/>
+                            </linearGradient>
+                            <!-- 制动灯发光滤镜（红色光晕） -->
+                            <filter id="brakeGlow" x="-120%" y="-120%" width="340%" height="340%">
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur1"/>
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur2"/>
+                                <feMerge>
+                                    <feMergeNode in="blur1"/>
+                                    <feMergeNode in="blur2"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                            <!-- 转向灯发光滤镜（橙色光晕） -->
+                            <filter id="turnSignalGlow" x="-120%" y="-120%" width="340%" height="340%">
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur1"/>
+                                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur2"/>
+                                <feMerge>
+                                    <feMergeNode in="blur1"/>
+                                    <feMergeNode in="blur2"/>
+                                    <feMergeNode in="SourceGraphic"/>
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <g transform="scale(0.257)">
+                        <!-- 车身整体颠簸动画 -->
+                        <animateTransform id="bodyBounce" attributeName="transform" type="translate" values="0,0; 0,-2; 0,0; 0,-1; 0,0" dur="0.8s" repeatCount="indefinite" additive="sum"/>
+                        
+                        <!-- 地面阴影 -->
+                        <ellipse cx="313" cy="318" rx="280" ry="6" fill="rgba(0,0,0,0.06)">
+                            <animate id="shadowBounce" attributeName="ry" values="6;5;6;5.5;6" dur="0.8s" repeatCount="indefinite"/>
+                        </ellipse>
+
+                        <!-- 后轮（在车身后面，透过轮拱可见） -->
+                        <g id="rearWheel">
+                            <animateTransform id="rearWheelSpin" attributeName="transform" type="rotate" from="0 120 282" to="360 120 282" dur="0.6s" repeatCount="indefinite"/>
+                            <circle cx="120" cy="282" r="35" fill="#444" stroke="#333" stroke-width="2"/>
+                            <circle cx="120" cy="282" r="23" fill="#555"/>
+                            <circle cx="120" cy="282" r="9" fill="#999"/>
+                            <!-- 轮辐线条（增强旋转视觉效果） -->
+                            <line x1="120" y1="259" x2="120" y2="305" stroke="#666" stroke-width="2"/>
+                            <line x1="97" y1="282" x2="143" y2="282" stroke="#666" stroke-width="2"/>
+                        </g>
+                        
+                        <!-- 前轮 -->
+                        <g id="frontWheel">
+                            <animateTransform id="frontWheelSpin" attributeName="transform" type="rotate" from="0 535 282" to="360 535 282" dur="0.6s" repeatCount="indefinite"/>
+                            <circle cx="535" cy="282" r="35" fill="#444" stroke="#333" stroke-width="2"/>
+                            <circle cx="535" cy="282" r="23" fill="#555"/>
+                            <circle cx="535" cy="282" r="9" fill="#999"/>
+                            <!-- 轮辐线条（增强旋转视觉效果） -->
+                            <line x1="535" y1="259" x2="535" y2="305" stroke="#666" stroke-width="2"/>
+                            <line x1="512" y1="282" x2="558" y2="282" stroke="#666" stroke-width="2"/>
+                        </g>
+
+                        <!-- 车身主体轮廓 -->
+                        <path d="M 0,285 L 0,225 L 240,225 L 240,145 L 250,138 L 400,132 L 415,135 L 450,195 L 470,200 L 591,208 L 611,215 L 626,240 L 626,285 L 577,285 A 42,42 0 0,0 493,285 L 162,285 A 42,42 0 0,0 78,285 Z"
+                              fill="#e8e8e8" stroke="#333" stroke-width="2.5" stroke-linejoin="round"/>
+
+                        <!-- 货箱面板线 -->
+                        <line x1="240" y1="225" x2="450" y2="225" stroke="#bbb" stroke-width="1"/>
+
+                        <!-- 驾驶室与货箱分界线 -->
+                        <line x1="450" y1="198" x2="450" y2="285" stroke="#aaa" stroke-width="1.5"/>
+
+                        <!-- 后门轮廓（后排） -->
+                        <path d="M 253,148 L 253,280 L 343,280 L 343,140 L 260,143 Z"
+                              fill="none" stroke="#888" stroke-width="1.5" stroke-linejoin="round"/>
+
+                        <!-- 前门轮廓（前排） -->
+                        <path d="M 353,138 L 353,280 L 443,280 L 443,200 L 413,138 Z"
+                              fill="none" stroke="#888" stroke-width="1.5" stroke-linejoin="round"/>
+
+                        <!-- B柱（前后门分隔） -->
+                        <path d="M 343,138 L 343,280 M 353,138 L 353,280"
+                              stroke="#666" stroke-width="1" fill="none"/>
+                        <rect x="343" y="138" width="10" height="142" fill="#d0d0d0" stroke="#666" stroke-width="0.8" rx="1"/>
+
+                        <!-- C柱（驾驶室后柱） -->
+                        <rect x="243" y="145" width="10" height="135" fill="#d0d0d0" stroke="#666" stroke-width="0.8" rx="1"/>
+
+                        <!-- 挡风玻璃 -->
+                        <!-- 橡胶密封条外框（左侧贴合A柱） -->
+                        <path d="M 413,138 L 421,136 L 455,195 L 448,200 Z"
+                              fill="none" stroke="#444" stroke-width="2.5" stroke-linejoin="round"/>
+                        <!-- 玻璃面板 -->
+                        <path d="M 417,142 L 423,140 L 452,193 L 448,197 Z"
+                              fill="#a8d8e8" stroke="#7ab0d0" stroke-width="0.8"/>
+                        <!-- 玻璃反光 -->
+                        <line x1="424" y1="148" x2="451" y2="191" stroke="rgba(255,255,255,0.45)" stroke-width="1.5"/>
+                        <line x1="427" y1="147" x2="453" y2="189" stroke="rgba(255,255,255,0.2)" stroke-width="0.8"/>
+                        <!-- 顶部镀铬饰条 -->
+                        <line x1="413" y1="138" x2="421" y2="136" stroke="#c0c0c0" stroke-width="2"/>
+
+                        <!-- 后排升降车窗 -->
+                        <!-- 窗框外框（顶部与车顶平行） -->
+                        <path d="M 258,150 L 338,147 L 338,215 L 258,215 Z"
+                              fill="none" stroke="#777" stroke-width="2" stroke-linejoin="round"/>
+                        <!-- 玻璃面板 -->
+                        <path d="M 262,154 L 334,151 L 334,211 L 262,211 Z"
+                              fill="#b8d8f0" stroke="#8ab4d0" stroke-width="0.8"/>
+                        <!-- 玻璃下沿（插入车门槽口） -->
+                        <line x1="262" y1="211" x2="334" y2="211" stroke="#666" stroke-width="1.5"/>
+                        <line x1="258" y1="214" x2="338" y2="214" stroke="#aaa" stroke-width="0.5"/>
+                        <!-- 玻璃反光线条 -->
+                        <line x1="270" y1="158" x2="270" y2="209" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+                        <line x1="276" y1="157" x2="276" y2="208" stroke="rgba(255,255,255,0.25)" stroke-width="0.8"/>
+                        <!-- 窗框顶部镀铬饰条（与车顶平行） -->
+                        <line x1="258" y1="150" x2="338" y2="147" stroke="#c0c0c0" stroke-width="1.5"/>
+
+
+                        <!-- 前排升降车窗 -->
+                        <!-- 窗框外框 -->
+                        <path d="M 358,146 L 408,146 L 445,213 L 358,213 Z"
+                              fill="none" stroke="#777" stroke-width="2" stroke-linejoin="round"/>
+                        <!-- 玻璃面板 -->
+                        <path d="M 362,150 L 405,150 L 440,209 L 362,209 Z"
+                              fill="#b8d8f0" stroke="#8ab4d0" stroke-width="0.8"/>
+                        <!-- 玻璃下沿（插入车门槽口） -->
+                        <line x1="362" y1="209" x2="440" y2="209" stroke="#666" stroke-width="1.5"/>
+                        <line x1="358" y1="213" x2="445" y2="213" stroke="#aaa" stroke-width="0.5"/>
+                        <!-- 玻璃反光线条 -->
+                        <line x1="370" y1="154" x2="370" y2="205" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+                        <line x1="376" y1="154" x2="376" y2="205" stroke="rgba(255,255,255,0.25)" stroke-width="0.8"/>
+                        <!-- 窗框顶部镀铬饰条 -->
+                        <line x1="358" y1="146" x2="408" y2="146" stroke="#c0c0c0" stroke-width="1.5"/>
+
+                        <!-- 后门把手 -->
+                        <rect x="268" y="228" width="20" height="5" rx="2.5" fill="#ccc" stroke="#888" stroke-width="1"/>
+
+                        <!-- 前门把手 -->
+                        <rect x="368" y="228" width="20" height="5" rx="2.5" fill="#ccc" stroke="#888" stroke-width="1"/>
+
+                        <!-- 近光灯投射光锥 -->
+                        <g id="lowBeamLights">
+                            <polygon points="626,229 750,200 750,258" fill="url(#beamProjection)" opacity="1"/>
+                            <polygon points="626,229 750,208 750,252" fill="url(#beamProjection)" opacity="0.9"/>
+                            <polygon points="626,229 720,215 720,248" fill="url(#beamProjection)" opacity="0.7"/>
+                            <!-- 近光灯环境光 -->
+                            <ellipse cx="650" cy="229" rx="40" ry="18" fill="#ffffcc" opacity="0.15"/>
+
+                            <!-- 前大灯（右）- 近光灯 -->
+                            <rect x="613" y="222" width="11" height="14" rx="2" fill="#ffffff" stroke="#ffff44" stroke-width="2" filter="url(#lowBeamGlow)"/>
+                            <!-- 前大灯（左）- 近光灯 -->
+                            <rect x="600" y="222" width="11" height="14" rx="2" fill="#ffffff" stroke="#ffff44" stroke-width="2" filter="url(#lowBeamGlow)"/>
+                        </g>
+
+                        <!-- 远光灯投射光锥 -->
+                        <g id="highBeamLights">
+                            <polygon points="626,216 830,185 830,248" fill="url(#highBeamProjection)" opacity="1"/>
+                            <polygon points="626,216 830,192 830,242" fill="url(#highBeamProjection)" opacity="0.9"/>
+                            <polygon points="626,216 780,200 780,235" fill="url(#highBeamProjection)" opacity="0.7"/>
+                            <!-- 远光灯环境光 -->
+                            <ellipse cx="670" cy="216" rx="55" ry="22" fill="#ffffff" opacity="0.12"/>
+
+                            <!-- 远光灯（右） -->
+                            <circle cx="620" cy="216" r="6" fill="#ffffff" stroke="#ffdd00" stroke-width="1.5" filter="url(#highBeamGlow)"/>
+                            <circle cx="620" cy="216" r="3" fill="#ffffff"/>
+                            <!-- 远光灯（左） -->
+                            <circle cx="607" cy="216" r="6" fill="#ffffff" stroke="#ffdd00" stroke-width="1.5" filter="url(#highBeamGlow)"/>
+                            <circle cx="607" cy="216" r="3" fill="#ffffff"/>
+                        </g>
+
+                        <!-- 前保险杠 -->
+                        <rect x="624" y="262" width="8" height="20" rx="2" fill="#ccc" stroke="#888" stroke-width="1"/>
+
+                        <!-- 后保险杠 -->
+                        <rect x="-8" y="262" width="10" height="20" rx="2" fill="#ccc" stroke="#888" stroke-width="1"/>
+
+                        <!-- 格栅横纹 -->
+                        <line x1="603" y1="220" x2="623" y2="220" stroke="#aaa" stroke-width="1"/>
+                        <line x1="603" y1="228" x2="623" y2="228" stroke="#aaa" stroke-width="1"/>
+                        <line x1="603" y1="236" x2="623" y2="236" stroke="#aaa" stroke-width="1"/>
+
+                        <!-- 喇叭（前格栅位置） -->
+                        <circle cx="613" cy="245" r="6" fill="#ddd" stroke="#888" stroke-width="1"/>
+                        <circle cx="613" cy="245" r="3" fill="#999"/>
+                        <path d="M 610,245 L 616,245 M 613,242 L 613,248" stroke="#666" stroke-width="0.8"/>
+
+                        <!-- 后视镜 -->
+                        <rect x="466" y="186" width="5" height="14" rx="1.5" fill="#ddd" stroke="#888" stroke-width="1"/>
+
+                        <!-- 踏板 -->
+                        <rect x="340" y="283" width="45" height="4" rx="1" fill="#aaa" stroke="#888" stroke-width="0.8"/>
+
+                        <!-- 货箱尾灯 -->
+                        <rect x="238" y="228" width="5" height="16" rx="1" fill="#f44" stroke="#c00" stroke-width="0.8"/>
+
+                        <!-- 制动灯 -->
+                        <g id="brakeLights">
+                            <rect x="2" y="250" width="6" height="12" rx="1" fill="#ff2222" stroke="#ff0000" stroke-width="1" filter="url(#brakeGlow)"/>
+                            <rect x="-10" y="250" width="6" height="12" rx="1" fill="#ff2222" stroke="#ff0000" stroke-width="1" filter="url(#brakeGlow)"/>
+                            <ellipse cx="-4" cy="256" rx="18" ry="10" fill="#ff0000" opacity="0.12"/>
+                        </g>
+
+                        <!-- 后转向灯 -->
+                        <g id="turnSignals">
+                            <g id="turnSignalFlash">
+                                <animate attributeName="opacity" values="1;0" dur="1s" repeatCount="indefinite" calcMode="discrete" keyTimes="0;0.5"/>
+                                <!-- 后转向灯（右） -->
+                                <rect x="2" y="268" width="6" height="8" rx="1" fill="#ffaa00" stroke="#ff8800" stroke-width="1" filter="url(#turnSignalGlow)"/>
+                                <!-- 后转向灯（左） -->
+                                <rect x="-10" y="268" width="6" height="8" rx="1" fill="#ffaa00" stroke="#ff8800" stroke-width="1" filter="url(#turnSignalGlow)"/>
+                                <!-- 转向灯橙色环境光 -->
+                                <ellipse cx="-4" cy="272" rx="15" ry="8" fill="#ff8800" opacity="0.1"/>
+                            </g>
+                        </g>
+
+                        <!-- 排气管 -->
+                        <line x1="80" y1="289" x2="160" y2="289" stroke="#999" stroke-width="2" stroke-linecap="round"/>
+
+                        <!-- 地面线（移动效果） -->
+                        <line x1="-30" y1="310" x2="660" y2="310" stroke="#ccc" stroke-width="0.5" stroke-dasharray="4,4">
+                            <animate attributeName="stroke-dashoffset" from="0" to="-8" dur="0.2s" repeatCount="indefinite"/>
+                        </line>
+                        
+                        <!-- 运动线条（速度感） -->
+                        <g opacity="0.3">
+                            <line x1="-20" y1="200" x2="-60" y2="200" stroke="#999" stroke-width="1" stroke-linecap="round">
+                                <animate attributeName="x1" values="-20;-100;-20" dur="1.5s" repeatCount="indefinite"/>
+                                <animate attributeName="x2" values="-60;-140;-60" dur="1.5s" repeatCount="indefinite"/>
+                                <animate attributeName="opacity" values="0;0.3;0" dur="1.5s" repeatCount="indefinite"/>
+                            </line>
+                            <line x1="-10" y1="240" x2="-50" y2="240" stroke="#999" stroke-width="1" stroke-linecap="round">
+                                <animate attributeName="x1" values="-10;-90;-10" dur="1.2s" repeatCount="indefinite"/>
+                                <animate attributeName="x2" values="-50;-130;-50" dur="1.2s" repeatCount="indefinite"/>
+                                <animate attributeName="opacity" values="0;0.4;0" dur="1.2s" repeatCount="indefinite"/>
+                            </line>
+                            <line x1="-15" y1="260" x2="-45" y2="260" stroke="#999" stroke-width="0.8" stroke-linecap="round">
+                                <animate attributeName="x1" values="-15;-85;-15" dur="1s" repeatCount="indefinite"/>
+                                <animate attributeName="x2" values="-45;-115;-45" dur="1s" repeatCount="indefinite"/>
+                                <animate attributeName="opacity" values="0;0.3;0" dur="1s" repeatCount="indefinite"/>
+                            </line>
+                        </g>
+                        </g>
+                    </svg>
+                    </div>
+                </div>
+                <div class="col-center-bottom"></div>
+            </div>
+            <div class="col-right">
+                <div class="direction-pad">
+                    <!-- 左转灯开关 -->
+                    <div class="signal-btn left-signal" onclick="toggleSignal('left')">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2">
+                            <polygon points="12,4 4,12 12,20"/>
+                            <line x1="16" y1="12" x2="22" y2="12"/>
+                        </svg>
+                    </div>
+                    <!-- 上箭头 -->
+                    <div class="direction-btn up" id="upArrow"
+                         onmousedown="startAccelerate()"
+                         onmouseup="stopAccelerate()"
+                         onmouseleave="stopAccelerate()"
+                         ontouchstart="startAccelerate()"
+                         ontouchend="stopAccelerate()">&#9650;</div>
+                    <!-- 右转灯开关 -->
+                    <div class="signal-btn right-signal" onclick="toggleSignal('right')">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2">
+                            <polygon points="12,4 20,12 12,20"/>
+                            <line x1="2" y1="12" x2="8" y2="12"/>
+                        </svg>
+                    </div>
+                    <!-- 左箭头 -->
+                    <div class="direction-btn left" onclick="turnLeft()">&#9664;</div>
+                    <!-- 中间喇叭 -->
+                    <div class="direction-btn center"
+                         onmousedown="startHorn()"
+                         onmouseup="stopHorn()"
+                         onmouseleave="stopHorn()"
+                         ontouchstart="startHorn()"
+                         ontouchend="stopHorn()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                        </svg>
+                    </div>
+                    <!-- 右箭头 -->
+                    <div class="direction-btn right" onclick="turnRight()">&#9654;</div>
+                    <!-- 下箭头 -->
+                    <div class="direction-btn down" id="downArrow"
+                         onmousedown="startBrake()"
+                         onmouseup="stopBrake()"
+                         onmouseleave="stopBrake()"
+                         ontouchstart="startBrake()"
+                         ontouchend="stopBrake()">&#9660;</div>
+                    <!-- 近光灯开关 -->
+                    <div class="beam-btn low-beam" onclick="toggleBeam('low')">近光</div>
+                    <!-- 远光灯开关 -->
+                    <div class="beam-btn high-beam" onclick="toggleBeam('high')">远光</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

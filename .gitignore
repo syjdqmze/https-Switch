@@ -1,0 +1,19 @@
+# 依赖目录
+node_modules/
+
+# 构建产物
+webSocket/server/dist/
+
+# 运行时上传与缓存
+.uploads/
+uploads/
+.trae-html-share-packages/
+.cache/
+
+# 含敏感信息的本地配置（参考 config.example.json）
+file-system-manager/config.json
+
+# 系统与日志
+.DS_Store
+Thumbs.db
+*.log

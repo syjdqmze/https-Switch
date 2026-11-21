@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Sub-Item 管理页面</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        /* 侧边栏菜单窄滚动条 */
+        .sidebar-menu::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .sidebar-menu::-webkit-scrollbar-thumb {
+            background-color: #c8d8e8;
+            border-radius: 3px;
+        }
+
+        .sidebar-menu li {
+            padding: 10px 20px;
+            line-height: 1.4;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+        }
+
+        /* 二级目录菜单项 */
+        .sidebar-menu li.sub {
+            padding-left: 46px;
+            font-size: 13px;
+            color: #777;
+        }
+
+        .sidebar-menu li.sub::before {
+            content: '└ ';
+            color: #aaa;
+        }
+
+        /* 三级目录菜单项 */
+        .sidebar-menu li.sub2 {
+            padding-left: 66px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .sidebar-menu li.sub2::before {
+            content: '· ';
+            color: #bbb;
+        }
+
+        .content-card h4 {
+            font-size: 14.5px;
+            font-weight: 600;
+            color: #333;
+            margin: 18px 0 10px 0;
+            scroll-margin-top: 12px;
+        }
+
+        .content-card h5 {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #444;
+            margin: 16px 0 8px 0;
+            scroll-margin-top: 12px;
+        }
+
+        /* 图片解说文字 */
+        .content-card .img-note {
+            font-size: 12.5px;
+            color: #888;
+            line-height: 1.6;
+            margin: 6px 0 12px 2em;
+        }
+
+        /* 图片点击放大灯箱 */
+        .content-card img[data-page] {
+            cursor: zoom-in;
+        }
+
+        #imgOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.82);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+        }
+
+        #imgOverlay img {
+            max-width: 92vw;
+            max-height: 92vh;
+            width: auto;
+            height: auto;
+            border-radius: 4px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 0 0 auto;
+            width: calc((100% - 20px) * 0.8);
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+            scroll-margin-top: 12px;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* 内容表格（对应 PPT 中的表格） */
+        .content-card table {
+            width: calc(100% - 2em);
+            border-collapse: collapse;
+            margin: 4px 0 14px 2em;
+            font-size: 12.5px;
+        }
+
+        .content-card th, .content-card td {
+            border: 1px solid #dce8f2;
+            padding: 7px 10px;
+            text-align: left;
+            line-height: 1.6;
+            vertical-align: top;
+        }
+
+        .content-card th {
+            background-color: #eaf2fa;
+            color: #555;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .content-card td:first-child {
+            white-space: nowrap;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">STM32F429建立寄存器版本工程</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <ul class="sidebar-menu">
+                    <li data-target="sec-overview"><span class="icon">&#9654;</span>总体说明</li>
+                    <li data-target="sec-preparation"><span class="icon">&#9654;</span>1 新建工程前准备工作</li>
+                    <li data-target="sec-steps"><span class="icon">&#9654;</span>2 新建MDK工程步骤</li>
+                    <li class="sub" data-target="sec-steps-folders">2.1 新建工程文件夹</li>
+                    <li class="sub" data-target="sec-steps-framework">2.2 新建一个工程框架</li>
+                    <li class="sub" data-target="sec-steps-files">2.3 添加文件</li>
+                    <li class="sub" data-target="sec-steps-wand">2.4 魔术棒设置</li>
+                    <li class="sub" data-target="sec-steps-mainc">2.5 添加main.c文件</li>
+                    <li data-target="sec-download"><span class="icon">&#9654;</span>3 下载验证</li>
+                    <li data-target="sec-summary"><span class="icon">&#9654;</span>4 课堂总结</li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+                        <h3 id="sec-overview">总体说明</h3>
+                        <p>　　本文根据正点原子《手把手教你学 STM32》系列课件整理，介绍 STM32F429 寄存器版本 MDK 工程的完整建立流程：不依赖 HAL 库与标准外设库，直接基于寄存器定义搭建工程框架。全文分为四部分：新建工程前的准备工作、新建工程步骤、下载验证与课堂总结。</p>
+                    </div>
+
+                    <div class="content-card">
+                        <h3 id="sec-preparation">1 新建工程前的准备工作</h3>
+                        <p>　　在正式新建工程之前，需要完成两项准备工作（了解级别即可）。</p>
+                        <p>　　<span style="color: red; font-weight: bold;">1，下载相关 STM32Cube 官方固件包（F1/F4/F7/H7）</span>，有两种获取方式：</p>
+                        <p>　　方式一：ST 官网搜索 STM32Cube 下载；<br>
+                        　　方式二：开发板 A 盘资料：A 盘→8，STM32 参考资料→1，STM32CubeXX 固件包。</p>
+                        <p>　　<span style="color: red; font-weight: bold;">2，搭建开发环境</span>：请参考"搭建开发环境"相关视频，此处不再赘述。</p>
+                    </div>
+
+                    <div class="content-card">
+                        <h3 id="sec-steps">2 新建寄存器版本MDK工程步骤</h3>
+                        <p>　　新建寄存器版本 MDK 工程的简要步骤（熟悉级别）：①新建工程文件夹（D/M/O/P/U 共 5 个文件夹）→ ②新建工程框架（工程命名、选芯片）→ ③添加文件（建分组、添加 .s 与 .c 文件）→ ④魔术棒设置（T/O/L/C/D/U 共 6 个选项卡）→ ⑤添加 main.c 编写自己的代码。</p>
+                        <p>　　新建工程过程可参考：A 盘→4，程序源码→2，标准例程-HAL 库版本→实验0 基础入门实验→实验0-2，新建工程实验-寄存器版本。</p>
+
+                        <h4 id="sec-steps-folders">2.1 新建工程文件夹</h4>
+                        <p>　　在桌面新建一个工程根目录文件夹，并在该文件夹里新建 D/M/O/P/U 五个文件夹：</p>
+                        <img src="./index09-map/p06-2.png" alt="工程文件夹结构" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="1">
+                        <div class="img-note">图1 工程根目录（实验0-2 新建工程实验-寄存器版本）下的 5 个文件夹：Drivers、Middlewares、Output、Projects、User</div>
+                        <table>
+                            <tr><th>文件夹名称</th><th>作用</th></tr>
+                            <tr><td>Drivers</td><td>存放与硬件相关的驱动层文件</td></tr>
+                            <tr><td>Middlewares</td><td>存放正点原子提供的中间层组件文件和第三方中间层文件</td></tr>
+                            <tr><td>Output</td><td>存放工程编译输出文件</td></tr>
+                            <tr><td>Projects</td><td>存放 MDK 工程文件</td></tr>
+                            <tr><td>User</td><td>存放 HAL 库用户配置文件、main.c、中断处理文件，以及分散加载文件</td></tr>
+                        </table>
+                        <p>　　其中 Drivers 文件夹下再新建 3 个子文件夹，用于分类存放工程相关文件：</p>
+                        <table>
+                            <tr><th>文件夹名称</th><th>作用</th></tr>
+                            <tr><td>BSP</td><td>存放开发板板级支持包驱动代码，如各种外设驱动</td></tr>
+                            <tr><td>CMSIS</td><td>存放 CMSIS 底层代码，如启动文件（.s 文件）等</td></tr>
+                            <tr><td>SYSTEM</td><td>存放正点原子系统级核心驱动代码，如 sys.c、delay.c 和 usart.c 等</td></tr>
+                        </table>
+                        <p>　　<span style="color: red; font-weight: bold;">Middlewares</span> 文件夹：存放正点原子和其他第三方提供的中间层代码（组件/Lib 等），如 USMART、MALLOC、TEXT、FATFS、USB、LWIP、各种 OS、各种 GUI 等。</p>
+                        <p>　　<span style="color: red; font-weight: bold;">Output</span> 文件夹：存放编译器编译工程输出的中间文件，比如 .hex、.bin、.o 文件等。</p>
+                        <p>　　<span style="color: red; font-weight: bold;">Projects</span> 文件夹：存放编译器（MDK、IAR 等）工程文件。我们主要用 MDK，为了方便区分，在该文件夹下新建 MDK-ARM 文件夹，用于存放 MDK 的工程文件。</p>
+                        <p>　　<span style="color: red; font-weight: bold;">User</span> 文件夹：存放用户编写的代码，如 main.c 等。</p>
+
+                        <h4 id="sec-steps-framework">2.2 新建一个工程框架</h4>
+                        <p>　　新建工程框架共四个步骤：<span style="color: red; font-weight: bold;">1，新建工程 → 2，保存工程 → 3，选择主控型号 → 4，删除文件夹</span>。</p>
+                        <p>　　保存工程时，工程名可根据喜好命名（下图为示例工程 LED-REG），保存在工程根目录文件夹下：</p>
+                        <img src="./index09-map/reg-new-project.png" alt="保存工程" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="2">
+                        <div class="img-note">图2 新建工程并保存：打开 KEIL5 新建工程，输入工程名（示例 LED-REG）并保存到工程根目录文件夹下</div>
+                        <p>　　选择主控型号：根据开发板 CPU 的具体型号选择，F429 选 <span style="color: red; font-weight: bold;">STM32F429IGTx</span>。如果列表中没有想要的 CPU 型号、或者一个型号都没有，说明 KEIL5 没有添加 device 库——KEIL5 不像 KEIL4 自带很多 MCU 型号，需要自己安装器件支持包：</p>
+                        <img src="./index09-map/reg-cpu-select.png" alt="选择CPU型号" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="3">
+                        <div class="img-note">图3 选择 CPU 型号：Select Device for Target 对话框中展开 STM32F429IG 系列，选中 STM32F429IGTx 后点击 OK</div>
+                        <p>　　选好型号后会弹出在线添加库文件窗口（Manage Run-Time Environment）：使用<span style="color: red; font-weight: bold;">寄存器</span>控制 STM32 时不依赖任何库，直接关闭该窗口即可：</p>
+                        <img src="./index09-map/reg-rtt-close.png" alt="关闭在线添加库文件" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="4">
+                        <div class="img-note">图4 在线添加库文件窗口：寄存器开发无需勾选任何组件，直接关闭</div>
+                        <p>　　工程保存后，MDK 会在工程目录（MDK-ARM 文件夹）下自动生成 3 个文件夹：</p>
+                        <table>
+                            <tr><th>文件夹名称</th><th>作用</th></tr>
+                            <tr><td>DebugConfig</td><td>用于存放调试设置信息文件（.dbgconf），不可删除！</td></tr>
+                            <tr><td>Listings</td><td>用于存放编译过程产生的链接列表等文件</td></tr>
+                            <tr><td>Objects</td><td>用于存放编译过程产生的调试信息、.hex、预览、.lib 文件等</td></tr>
+                        </table>
+
+                        <h4 id="sec-steps-files">2.3 添加文件</h4>
+                        <p>　　工程名：<span style="color: red; font-weight: bold;">Template</span>；分组名：Startup、User、Drivers/SYSTEM、Readme。添加文件步骤：</p>
+                        <p>　　<span style="color: red; font-weight: bold;">1，设置工程名和分组名 → 2，添加启动文件 → 3，添加 SYSTEM 源码</span>。</p>
+                        <p>　　以寄存器版最小工程为例，需要添加/新建的三个关键文件：</p>
+                        <table>
+                            <tr><th>文件</th><th>说明</th></tr>
+                            <tr><td>startup_stm32f429_439xx.s</td><td>启动文件，系统上电后第一个运行的程序，由汇编编写，从官方固件库拷贝（路径：STM32F4xx_DSP_StdPeriph_Lib_V1.8.0\Libraries\CMSIS\Device\ST\STM32F4xx\Source\Templates\arm）</td></tr>
+                            <tr><td>stm32f4xx.h</td><td>用户手动新建，用于存放寄存器映射的代码，暂时为空</td></tr>
+                            <tr><td>main.c</td><td>用户手动新建，用于存放 main 函数，暂时为空</td></tr>
+                        </table>
+                        <p>　　添加方法：在工程分组上双击（或右键选择 Add Existing Files），从本地建好的工程文件夹下选择文件即可：</p>
+                        <img src="./index09-map/reg-add-files.png" alt="添加文件" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="5">
+                        <div class="img-note">图5 添加文件后的工程结构：各分组下已加入启动文件、寄存器映射头文件与 main.c</div>
+
+                        <h4 id="sec-steps-wand">2.4 魔术棒设置</h4>
+                        <p>　　点击魔术棒（Options for Target）打开工程设置，共 7 个选项卡需要按需设置：</p>
+                        <table>
+                            <tr><th>选项卡</th><th>设置内容</th></tr>
+                            <tr><td>Target</td><td>设置使用的编译器版本、外部晶振频率</td></tr>
+                            <tr><td>Output</td><td>设置 Objects 输出文件夹、生成 .hex 文件、输出浏览信息</td></tr>
+                            <tr><td>Listing</td><td>设置 Listing 输出文件夹</td></tr>
+                            <tr><td>C/C++</td><td>设置全局宏定义、优化等级、C99 Mode、设置头文件包含路径</td></tr>
+                            <tr><td>Debug</td><td>设置使用的仿真器类型、选择的下载接口等</td></tr>
+                            <tr><td>Utilities</td><td>设置下载功能、下载算法、下载算法起始地址和大小等</td></tr>
+                            <tr><td>Linker（可选）</td><td>添加分散加载文件（北极星/MiniPro H750 需要）</td></tr>
+                        </table>
+                        <p>　　这一步的配置很重要：很多人<span style="color: red; font-weight: bold;">串口用不了 printf 函数、编译有问题、下载有问题</span>，都是这个步骤的配置出了错。各选项卡的关键配置如下：</p>
+                        <p>　　Target 选项卡：选中微库 <span style="color: red; font-weight: bold;">Use MicroLib</span>，为的是日后编写串口驱动时可以使用 printf 函数；若应用中使用了 STM32 的浮点运算单元 FPU，一定要同时开微库，否则有时会出现各种奇怪的现象。FPU 的开关选项在微库配置下方的 Use Single Precision 中，默认开启：</p>
+                        <img src="./index09-map/reg-target-microlib.png" alt="Target微库配置" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="6">
+                        <div class="img-note">图6 Target 选项卡：勾选 Use MicroLib 微库</div>
+                        <p>　　Output 选项卡：把输出文件夹定位到工程目录下的 Output 文件夹；若想在编译过程中生成 hex 文件，勾选 <span style="color: red; font-weight: bold;">Create HEX File</span>：</p>
+                        <img src="./index09-map/reg-output-hex.png" alt="Output配置" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="7">
+                        <div class="img-note">图7 Output 选项卡：定位输出文件夹并勾选 Create HEX File</div>
+                        <p>　　Listing 选项卡：把输出文件夹定位到工程目录下的 Listing 文件夹：</p>
+                        <img src="./index09-map/reg-listing.png" alt="Listing配置" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="8">
+                        <div class="img-note">图8 Listing 选项卡：定位列表文件输出文件夹</div>
+                        <p>　　下载器配置（在仿真器连接好电脑和开发板、且开发板供电正常的情况下进行）：Debug 选项卡中选择所用的仿真器型号：</p>
+                        <img src="./index09-map/reg-debug.png" alt="Debug配置" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="9">
+                        <div class="img-note">图9 Debug 选项卡：右侧下拉框选择所用仿真器型号</div>
+                        <p>　　Utilities 选项卡：选择仿真器下载方式：</p>
+                        <img src="./index09-map/reg-utilities.png" alt="Utilities配置" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="10">
+                        <div class="img-note">图10 Utilities 选项卡：勾选 Use Debug Driver</div>
+                        <p>　　点击 Debug 选项卡的 Settings 进入仿真器设置：Port 选择 <span style="color: red; font-weight: bold;">SW</span> 接口并设置速度；仿真器连接了电脑和开发板且开发板已供电时，会自动识别到芯片（SWDIO 显示 IDCODE）：</p>
+                        <img src="./index09-map/reg-debug-settings.png" alt="Debug Settings配置" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="11">
+                        <div class="img-note">图11 Debug Settings：Port 选 SW、速度设置，识别到芯片（IDCODE 0x2BA01477）</div>
+                        <p>　　在 Flash Download 配置中选择目标板：FLASH 大小根据板子上的芯片型号决定，F429 选 <span style="color: red; font-weight: bold;">1M</span>（不添加编程算法会出现 Algorithm 错误）；小技巧：勾选 <span style="color: red; font-weight: bold;">Reset and Run</span>，程序下载完后自动运行，否则需要手动复位；擦除方式选择 <span style="color: red; font-weight: bold;">Erase Sectors</span> 即可，不要选 Erase Full Chip，否则下载会比较慢：</p>
+                        <img src="./index09-map/reg-flash-download.png" alt="Flash Download配置" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="12">
+                        <div class="img-note">图12 Flash Download：Erase Sectors、勾选 Reset and Run，编程算法添加 STM32F4xx Flash 1M</div>
+                        <p>　　Target 选项卡中选择编译器版本（AC5 或 AC6），两者对比：</p>
+                        <table>
+                            <tr><th>对比项</th><th>AC5</th><th>AC6</th><th>说明</th></tr>
+                            <tr><td>中文支持</td><td>较好</td><td>较差</td><td>AC6 对中文支持极差，goto definition 无法使用、误报等</td></tr>
+                            <tr><td>代码兼容性</td><td>较好</td><td>较差</td><td>AC6 对某些代码优化可能导致运行异常，需慢慢调试</td></tr>
+                            <tr><td>编译速度</td><td>较慢</td><td>较快</td><td>AC6 编译速度比 AC5 快</td></tr>
+                            <tr><td>语法检查</td><td>一般</td><td>严格</td><td>AC6 语法检查非常严格，代码严谨性较好</td></tr>
+                        </table>
+                        <p>　　选择编译器的方法：在 <span style="color: red; font-weight: bold;">Target</span> 选项卡中选择 AC5 或 AC6；若选 AC6，还需在 <span style="color: red; font-weight: bold;">C/C++</span> 选项卡的 Misc Controls 中设置 <span style="color: red; font-weight: bold;">-Wno-invalid-source-encoding</span>，以关闭对汉字的错误警告，AC5 则无需设置。</p>
+                        <p>　　设置头文件包含路径时涉及绝对路径与相对路径：绝对路径是从盘符开始的完整路径，可直接到达目标位置；相对路径是由某个文件所在路径引起的与其它文件（夹）的路径关系。关于相对路径，记住 3 点：<br>
+                        　　1，默认路径指 MDK 工程所在路径，即 .uvprojx 文件所在文件夹；<br>
+                        　　2，"./"表示当前目录（也可写作".\"）；<br>
+                        　　3，"../"表示当前目录的上一层目录（也可写作"..\"）。</p>
+
+                        <h4 id="sec-steps-mainc">2.5 添加main.c并编写代码</h4>
+                        <p>　　新建一个文件，命名为 <span style="color: red; font-weight: bold;">main.c</span>，保存在 User 文件夹下，并添加到 User 分组，然后编写用户代码。</p>
+                    </div>
+
+                    <div class="content-card">
+                        <h3 id="sec-download">3 下载验证</h3>
+                        <p>　　如果前面步骤都成功了，接下来就可以把编译好的程序下载到开发板上运行（了解级别）。下载程序不需要其他额外的软件，直接点击 KEIL 工具栏中的 <span style="color: red; font-weight: bold;">LOAD</span> 按钮即可：</p>
+                        <img src="./index09-map/reg-load.png" alt="LOAD按钮下载" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="13">
+                        <div class="img-note">图13 点击工具栏 LOAD 按钮下载程序</div>
+                        <p>　　程序下载后，Build Output 选项卡如果打印出 <span style="color: red; font-weight: bold;">Application running...</span> 则表示程序下载成功；如果没有出现实验现象，按复位键试试。由于工程模板还没有编写程序，开发板不会有任何现象，属正常情况。</p>
+                        <p>　　进一步验证：打开 XCOM 串口助手，选择开发板 CH340 对应的串口号，波特率设置为 115200，即可看到程序持续输出的计数信息，说明寄存器版本工程建立成功、运行正常。</p>
+                        <img src="./index09-map/p16-2.png" alt="下载验证串口输出" style="display: block; margin: 16px 0 0 2em; max-width: 600px; height: auto;" data-page="14">
+                        <div class="img-note">图14 XCOM 串口助手：选择串口（COM28: USB-SERIAL CH34）、波特率 115200，左侧窗口持续输出 t:0~t:18 计数信息</div>
+                    </div>
+
+                    <div class="content-card">
+                        <h3 id="sec-summary">4 课堂总结</h3>
+                        <p>　　本讲内容回顾（详细脑图见课件"新建寄存器版本MDK工程（课堂总结）.pdf"）：</p>
+                        <p>　　1，新建工程前的准备工作（了解）：下载 STM32Cube 官方固件包、搭建开发环境；</p>
+                        <p>　　2，新建寄存器版本MDK工程步骤（熟悉）：新建工程文件夹 → 新建工程框架 → 添加文件 → 魔术棒设置 → 添加 main.c 并编写代码；</p>
+                        <p>　　3，下载验证（了解）；4，课堂总结（了解）。</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <!-- 图片放大灯箱 -->
+    <div id="imgOverlay">
+        <img id="lightboxImg" src="" alt="放大图片">
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 侧边栏导航：点击跳转到对应内容位置
+        var menuItems = document.querySelectorAll('.sidebar-menu li[data-target]');
+        menuItems.forEach(function(item) {
+            item.addEventListener('click', function() {
+                var targetEl = document.getElementById(item.getAttribute('data-target'));
+                if (!targetEl) return;
+                // 高亮当前菜单项
+                document.querySelectorAll('.sidebar-menu li').forEach(function(li) {
+                    li.classList.remove('active');
+                });
+                item.classList.add('active');
+                // 平滑滚动到目标标题
+                targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        // 图片点击放大：点击图片打开灯箱，点击遮罩任意处或按 ESC 关闭
+        var overlay = document.getElementById('imgOverlay');
+        var lightboxImg = document.getElementById('lightboxImg');
+        document.querySelectorAll('.content-card img[data-page]').forEach(function(img) {
+            img.addEventListener('click', function() {
+                lightboxImg.src = img.src;
+                overlay.style.display = 'flex';
+            });
+        });
+        overlay.addEventListener('click', function() {
+            overlay.style.display = 'none';
+            lightboxImg.src = '';
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && overlay.style.display === 'flex') {
+                overlay.style.display = 'none';
+                lightboxImg.src = '';
+            }
+        });
+    </script>
+</body>
+</html>

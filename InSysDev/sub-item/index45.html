@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验31 红外遥控器实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+        .keylogic {
+            background: #f4fbf7;
+            border: 1px solid #d8ecdf;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 10px 14px 8px;
+            margin: 8px 0 16px;
+        }
+
+        .keylogic .kl-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #2f7a52;
+            margin-bottom: 6px;
+        }
+
+        .keylogic ol, .keylogic ul { margin: 0 0 4px 20px; color: #4e6b5b; font-size: 13px; line-height: 1.8; }
+        .keylogic li { margin-bottom: 2px; }
+
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验31 红外遥控器实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">按下遥控器，先看 PA8 有没有波形，再看键值。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验目标与硬件资源">
+                    <h2>01　实验目标与硬件资源</h2>
+                    <div class="sec-sub">用 TIM1 输入捕获解出 NEC 红外键值，并把键值、次数、键名显示到 LCD</div>
+
+                    <p>本实验不涉及无线协议栈，核心只有两件事：把红外接收头输出的高低电平<b>精确计时</b>，再按 NEC 的编码规则把时间还原成 32 位数据。计时交给 TIM1_CH1 的输入捕获，还原交给中断回调和 <code class="inline">Remote_Scan()</code>，主循环只负责显示。</p>
+
+                    <table class="data">
+                        <tr><th>资源</th><th>引脚 / 外设</th><th>在工程中的落点</th></tr>
+                        <tr><td>红外接收头 OUT</td><td>PA8，复用 AF1 → TIM1_CH1</td><td><code>remote.h</code> 的 <code>RDATA PAin(8)</code>；<code>HAL_TIM_IC_MspInit</code></td></tr>
+                        <tr><td>捕获定时器</td><td>TIM1，APB2，计数时钟 180MHz</td><td><code>Remote_Init()</code>：PSC=179、ARR=10000</td></tr>
+                        <tr><td>状态指示灯</td><td>PB0 / PB1（DS0 / DS1）</td><td><code>LED_Init()</code>，主循环翻转 LED0</td></tr>
+                        <tr><td>按键</td><td>PA0 / PC13 / PH2 / PH3</td><td><code>KEY_Init()</code>，本实验不参与解码</td></tr>
+                        <tr><td>显示</td><td>LCD（FMC 或 LTDC 屏）</td><td><code>SDRAM_Init()</code> → <code>LCD_Init()</code></td></tr>
+                        <tr><td>串口</td><td>USART1，PA9/PA10，115200</td><td><code>uart_init()</code>，printf 重定向</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">PA8 → TIM1_CH1</span>
+                        <span class="chip">PSC=179 → 1MHz</span>
+                        <span class="chip">ARR=10000 → 10ms</span>
+                        <span class="chip">NEC / REMOTE_ID=0</span>
+                    </div>
+
+                    <div class="note blue">阿波罗板上的红外接收头是 38kHz 解调模块，输出端已经还原成基带波形，所以 MCU 不需要产生载波，只测高电平宽度即可。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="目录与文件分工">
+                    <h2>02　目录与文件分工</h2>
+                    <div class="sec-sub">启动代码、SYSTEM 层、HARDWARE 层各管什么，先分清再读源码</div>
+
+                    <table class="data">
+                        <tr><th>目录 / 文件</th><th>职责</th><th>本实验需要关注的点</th></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>栈堆定义、向量表、Reset_Handler</td><td>栈 0x400、堆 0x200；跳 <code>__main</code></td></tr>
+                        <tr><td><code>USER/system_stm32f4xx.c</code></td><td>SystemInit：FPU、VTOR、RCC 复位</td><td>不改 PLL，时钟留给 <code>Stm32_Clock_Init</code></td></tr>
+                        <tr><td><code>USER/main.c</code></td><td>初始化顺序与主循环</td><td>9 个初始化调用，顺序不可随意调换</td></tr>
+                        <tr><td><code>USER/stm32f4xx_it.c</code></td><td>内核异常与 SysTick 入口</td><td>本实验的 TIM1 中断<b>不在这里</b></td></tr>
+                        <tr><td><code>SYSTEM/sys</code></td><td>位带宏、时钟初始化</td><td><code>PAin(8)</code>、<code>Stm32_Clock_Init</code></td></tr>
+                        <tr><td><code>SYSTEM/delay</code></td><td>SysTick 轮询延时</td><td>fac_us=180，供 LCD/初始化使用</td></tr>
+                        <tr><td><code>SYSTEM/usart</code></td><td>USART1 与 printf 重定向</td><td><code>fputc</code> 逐字节发送</td></tr>
+                        <tr><td><code>HARDWARE/REMOTE</code></td><td>捕获初始化 + NEC 解码</td><td><code>Remote_Init</code>、两个回调、<code>Remote_Scan</code></td></tr>
+                        <tr><td><code>HARDWARE/LCD、SDRAM、LED、KEY</code></td><td>板级外设</td><td>显示与指示灯，不参与协议</td></tr>
+                    </table>
+
+                    <div class="note">TIM1 的两个中断服务函数写在 <code>remote.c</code> 里，而不是 <code>stm32f4xx_it.c</code>。向量表只认函数名，文件放在哪里都可以，但同名函数只能有一份。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览">
+                    <h2>03　启动流程总览</h2>
+                    <div class="sec-sub">从取 MSP 到 while(1)，13 个步骤的先后关系</div>
+
+                    <figure class="figure">
+                        <img src="./index45-map/boot-flow.png" alt="实验31 从上电复位到主循环的启动链路">
+                        <figcaption>图 3-1　启动链路：绿色为启动/ C 库，蓝色为 SYSTEM 层，橙色为本实验外设</figcaption>
+                    </figure>
+
+                    <h3>main 的初始化顺序</h3>
+                    <pre class="code">int main(void)
+{
+    u8 key;
+    u8 t=0;
+    u8 *str=0;
+    HAL_Init();                     <span class="cmt">// 初始化HAL库：优先级分组、SysTick、Cache</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">// 设置时钟,180Mhz</span>
+    delay_init(180);                <span class="cmt">// 初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">// 初始化USART</span>
+    LED_Init();                     <span class="cmt">// 初始化LED</span>
+    KEY_Init();                     <span class="cmt">// 初始化按键</span>
+    SDRAM_Init();                   <span class="cmt">// 初始化SDRAM</span>
+    LCD_Init();                     <span class="cmt">// 初始化LCD</span>
+    Remote_Init();                  <span class="cmt">// 初始化红外接收</span>
+    POINT_COLOR=RED;
+    LCD_ShowString(30,50,200,16,16,"Apollo STM32F4/F7");
+    LCD_ShowString(30,70,200,16,16,"REMOTE TEST");
+    LCD_ShowString(30,90,200,16,16,"ATOM@ALIENTEK");
+    LCD_ShowString(30,110,200,16,16,"2016/1/16");
+    LCD_ShowString(30,130,200,16,16,"KEYVAL:");
+    LCD_ShowString(30,150,200,16,16,"KEYCNT:");
+    LCD_ShowString(30,170,200,16,16,"SYMBOL:");
+    POINT_COLOR=BLUE;
+    while(1)
+    {
+        key=Remote_Scan();
+        <span class="cmt">// ... 显示分支见第 11 节</span>
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><b>HAL_Init 必须第一</b>：它建立 1ms SysTick 并设置 NVIC 优先级分组，后面的 delay/LCD 都依赖这个时基。</li>
+                            <li><b>时钟紧跟 HAL_Init</b>：delay_init(180) 的 180 必须与真实 SYSCLK 一致，否则所有 us/ms 延时都按比例偏差。</li>
+                            <li><b>SDRAM 在 LCD 之前</b>：F429 的 LTDC 显存和部分 LCD 驱动把帧缓冲放在 SDRAM，SDRAM 没起来时 LCD_Init 会花屏或死等。</li>
+                            <li><b>Remote_Init 放最后</b>：它只配置 TIM1 和 PA8，不依赖 LCD；但放在最后可以保证前面任何一步失败时能通过串口/指示灯先看到。</li>
+                            <li>初始化阶段全部是阻塞式，没有开总中断之外的动作；真正的异步从 <code>HAL_TIM_IC_Start_IT</code> 开始。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">栈堆在哪里、Reset_Handler 做了什么、VTOR 指向哪</div>
+
+                    <pre class="code">Stack_Size      EQU     0x00000400
+
+                AREA    STACK, NOINIT, READWRITE, ALIGN=3
+Stack_Mem       SPACE   Stack_Size
+__initial_sp
+
+Heap_Size       EQU     0x00000200
+
+                AREA    HEAP, NOINIT, READWRITE, ALIGN=3
+__heap_base
+Heap_Mem        SPACE   Heap_Size
+__heap_limit
+
+                PRESERVE8
+                THUMB</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>栈只有 <b>0x400 = 1KB</b>，堆 <b>0x200 = 512B</b>。LCD 字符串、printf 浮点格式化都吃栈，递归或大局部数组很容易溢出。</li>
+                            <li><code>__initial_sp</code> 标号紧贴栈顶，链接器把它填进向量表第 0 项；复位时 Cortex-M4 硬件自动把它装入 MSP。</li>
+                            <li><code>PRESERVE8</code> 要求 8 字节栈对齐，调用 <code>__main</code> 前由启动代码保证。</li>
+                        </ol>
+                    </div>
+
+                    <h3>Reset_Handler</h3>
+                    <pre class="code">Reset_Handler    PROC
+                 EXPORT  Reset_Handler             [WEAK]
+        IMPORT  SystemInit
+        IMPORT  __main
+
+                 LDR     R0, =SystemInit
+                 BLX     R0
+                 LDR     R0, =__main
+                 BX      R0
+                 ENDP</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>顺序固定：<b>SystemInit → __main</b>。前者只做芯片级最小初始化，后者是 ARM C 库的入口，负责把 .data 从 Flash 搬到 RAM、把 .bss 清零，再调用 <code>main()</code>。</li>
+                            <li>启动文件里<b>没有</b>手写 copy/zero 循环，分散加载由 Keil 的 <code>__main</code> 完成；换 GCC 时对应的是 <code>Reset_Handler</code> 里的 <code>LoopCopyDataInit</code>，不要混用。</li>
+                            <li>向量表在文件前部用 <code>DCD</code> 逐项列出，<code>TIM1_CC_IRQHandler</code>、<code>TIM1_UP_TIM10_IRQHandler</code> 的名字必须与 C 函数完全一致，否则链接器填入默认死循环。</li>
+                        </ol>
+                    </div>
+
+                    <h3>向量表基址</h3>
+                    <pre class="code">void SystemInit(void)
+{
+  /* FPU settings ------------------------------------------------------------*/
+  #if (__FPU_PRESENT == 1) &amp;&amp; (__FPU_USED == 1)
+    SCB-&gt;CPACR |= ((3UL &lt;&lt; 10*2)|(3UL &lt;&lt; 11*2));    <span class="cmt">/* set CP10 and CP11 Full Access */</span>
+  #endif
+
+  /* Configure the Vector Table location add offset address ------------------*/
+#ifdef VECT_TAB_SRAM
+  SCB-&gt;VTOR = SRAM_BASE | VECT_TAB_OFFSET;
+#else
+  SCB-&gt;VTOR = FLASH_BASE | VECT_TAB_OFFSET; <span class="cmt">/* Vector Table Relocation in Internal FLASH */</span>
+#endif
+}</pre>
+
+                    <div class="note blue"><code>FLASH_BASE = 0x08000000</code>，<code>VECT_TAB_OFFSET = 0x00</code>，所以 VTOR 指向 0x08000000。做 IAP 或 bootloader 时改的是这个偏移，不是启动文件。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">两个都叫“初始化”，但一个只管内核，一个管 HAL 时基与优先级</div>
+
+                    <p><code class="inline">SystemInit</code> 在 <code>__main</code> 之前执行，此时 .data/.bss 还没准备好，所以它只能碰寄存器和 Flash，不能调用 HAL 或使用全局变量。它把 FPU 打开、VTOR 设到 Flash 首地址，并把 RCC 恢复到复位状态（HSI 16MHz）。</p>
+
+                    <pre class="code">HAL_StatusTypeDef HAL_Init(void)
+{
+  HAL_InitTick(TICK_INT_PRIORITY);          <span class="cmt">// 先用 HSI 装 1ms SysTick</span>
+  HAL_MspInit();                            <span class="cmt">// 板级最低层初始化，本工程为空实现</span>
+  return HAL_OK;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>HAL_Init</code> 内部还会调用 <code>HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2)</code>：2 位抢占优先级 + 2 位子优先级，所以后面 <code>HAL_NVIC_SetPriority(TIM1_CC_IRQn,1,3)</code> 的 1/3 才合法。</li>
+                            <li><code>HAL_InitTick</code> 此时用的还是 HSI 16MHz，装出来是 1ms；等 <code>Stm32_Clock_Init</code> 把 SYSCLK 切到 180MHz 后，SysTick 的 LOAD 没有重装，所以中断周期变成 180000/16000 ≈ 11.25ms 的说法是错的——LOAD 不变、计数时钟变快，实际周期变为 1ms 的 16/180。工程里没有重装，因此 HAL 的 1ms 节拍并不准；本实验不依赖 <code>HAL_Delay</code>，不受影响。</li>
+                            <li>本工程真正可靠的毫秒延时来自 <code>delay_ms</code>，它通过 SysTick-&gt;VAL 轮询计数，只依赖当前 HCLK，不依赖中断。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">不要在主循环里混用 <code>HAL_Delay()</code> 和 <code>delay_ms()</code>：前者依赖 SysTick 中断，后者是忙等；两者对当前时钟的假设不同，混用会出现“同一数值、不同时长”。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟、延时与串口">
+                    <h2>06　时钟、延时与串口</h2>
+                    <div class="sec-sub">25MHz 晶振 → 180MHz SYSCLK，再分出 45/90MHz 与外设时钟</div>
+
+                    <figure class="figure">
+                        <img src="./index45-map/clock-tree.png" alt="STM32F429 时钟树与 TIM1 计数时钟换算">
+                        <figcaption>图 6-1　HSE 25MHz 经 PLL 得到 180MHz，TIM1 计数 1MHz</figcaption>
+                    </figure>
+
+                    <h3>PLL 参数</h3>
+                    <pre class="code">RCC_OscInitStructure.OscillatorType=RCC_OSCILLATORTYPE_HSE;    <span class="cmt">// 时钟源为HSE</span>
+RCC_OscInitStructure.HSEState=RCC_HSE_ON;                      <span class="cmt">// 打开HSE</span>
+RCC_OscInitStructure.PLL.PLLState=RCC_PLL_ON;                  <span class="cmt">// 打开PLL</span>
+RCC_OscInitStructure.PLL.PLLSource=RCC_PLLSOURCE_HSE;          <span class="cmt">// PLL时钟源选择HSE</span>
+RCC_OscInitStructure.PLL.PLLM=pllm;   <span class="cmt">// 25</span>
+RCC_OscInitStructure.PLL.PLLN=plln;   <span class="cmt">// 360</span>
+RCC_OscInitStructure.PLL.PLLP=pllp;   <span class="cmt">// 2</span>
+RCC_OscInitStructure.PLL.PLLQ=pllq;   <span class="cmt">// 8</span>
+ret=HAL_RCC_OscConfig(&amp;RCC_OscInitStructure);
+...
+ret=HAL_PWREx_EnableOverDrive();      <span class="cmt">// 180MHz 必须开 Over-Drive</span>
+...
+RCC_ClkInitStructure.AHBCLKDivider=RCC_SYSCLK_DIV1;   <span class="cmt">// HCLK = 180MHz</span>
+RCC_ClkInitStructure.APB1CLKDivider=RCC_HCLK_DIV4;    <span class="cmt">// PCLK1 = 45MHz</span>
+RCC_ClkInitStructure.APB2CLKDivider=RCC_HCLK_DIV2;    <span class="cmt">// PCLK2 = 90MHz</span>
+ret=HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure,FLASH_LATENCY_5);</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>算式：<code>25MHz / M(25) = 1MHz</code>，<code>1MHz × N(360) = 360MHz</code>，<code>360MHz / P(2) = 180MHz</code>；Q=8 得到 45MHz 给 USB/SDIO。</li>
+                            <li>180MHz 超过 168MHz 档，必须先 <code>HAL_PWREx_EnableOverDrive()</code>，否则 PLL 切不过去，HAL 返回错误后工程停在 <code>while(1)</code>。</li>
+                            <li>Flash 5 个等待周期对应 180MHz、3.3V 的 6 CPU 周期；少设会取指错，多设会白掉性能。</li>
+                            <li>APB2 分频系数不为 1，定时器时钟自动 ×2：TIM1 得到 <code>90 × 2 = 180MHz</code>，这是 1MHz 计数的前提。</li>
+                        </ol>
+                    </div>
+
+                    <h3>delay_init：只设 fac_us，不改 LOAD</h3>
+                    <pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">// SysTick频率为HCLK</span>
+    fac_us=SYSCLK;                        <span class="cmt">// 180，1us 的节拍数</span>
+}</pre>
+
+                    <p>非 OS 版本里 <code>delay_us(n)</code> 的做法是：记录进入时的 <code>SysTick-&gt;VAL</code>，累加 <code>n × fac_us</code> 个节拍，靠 24 位递减计数器的回绕判断是否走完。它不关中断、不依赖 SysTick 中断，所以 1ms 中断准不准都不影响 us 延时。</p>
+
+                    <h3>printf 重定向</h3>
+                    <pre class="code">int fputc(int ch, FILE *f)
+{
+    while((USART1-&gt;SR&amp;0X40)==0);   <span class="cmt">// 等待发送缓冲空</span>
+    USART1-&gt;DR=(u8)ch;
+    return ch;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>uart_init(115200)</code> 里把 PA9/PA10 配成 AF7，并使能 USART1 时钟；波特率由 <code>HAL_UART_Init</code> 按 PCLK2=90MHz 计算。</li>
+                            <li><code>fputc</code> 是阻塞发送：每字节等 TXE，主循环里大量 printf 会拖慢按键响应，调试完应删掉。</li>
+                            <li>使用 printf 需要在 Keil 里勾选 MicroLIB，否则会链接到半主机 <code>_sys_exit</code> 而卡死。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="红外接收与TIM1捕获初始化">
+                    <h2>07　红外接收与 TIM1 捕获初始化</h2>
+                    <div class="sec-sub">PA8 复用为 TIM1_CH1，PSC=179 把 180MHz 变成 1MHz</div>
+
+                    <pre class="code">void Remote_Init(void)
+{
+    TIM_IC_InitTypeDef TIM1_CH1Config;
+
+    TIM1_Handler.Instance=TIM1;                          <span class="cmt">// 通用定时器1</span>
+    TIM1_Handler.Init.Prescaler=179;                     <span class="cmt">// 1M的计数频率,1us加1</span>
+    TIM1_Handler.Init.CounterMode=TIM_COUNTERMODE_UP;    <span class="cmt">// 向上计数器</span>
+    TIM1_Handler.Init.Period=10000;                      <span class="cmt">// 自动装载值</span>
+    TIM1_Handler.Init.ClockDivision=TIM_CLOCKDIVISION_DIV1;
+    HAL_TIM_IC_Init(&amp;TIM1_Handler);
+
+    TIM1_CH1Config.ICPolarity=TIM_ICPOLARITY_RISING;     <span class="cmt">// 上升沿捕获</span>
+    TIM1_CH1Config.ICSelection=TIM_ICSELECTION_DIRECTTI;<span class="cmt">// 映射到TI1上</span>
+    TIM1_CH1Config.ICPrescaler=TIM_ICPSC_DIV1;           <span class="cmt">// 不分频</span>
+    TIM1_CH1Config.ICFilter=0x03;                        <span class="cmt">// IC1F=0003 8个定时器时钟周期滤波</span>
+    HAL_TIM_IC_ConfigChannel(&amp;TIM1_Handler,&amp;TIM1_CH1Config,TIM_CHANNEL_1);
+    HAL_TIM_IC_Start_IT(&amp;TIM1_Handler,TIM_CHANNEL_1);    <span class="cmt">// 开始捕获</span>
+    __HAL_TIM_ENABLE_IT(&amp;TIM1_Handler,TIM_IT_UPDATE);    <span class="cmt">// 使能更新中断</span>
+}</pre>
+
+                    <h3>MSP：引脚与 NVIC</h3>
+                    <pre class="code">void HAL_TIM_IC_MspInit(TIM_HandleTypeDef *htim)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_TIM1_CLK_ENABLE();            <span class="cmt">// 使能TIM1时钟</span>
+    __HAL_RCC_GPIOA_CLK_ENABLE();           <span class="cmt">// 开启GPIOA时钟</span>
+
+    GPIO_Initure.Pin=GPIO_PIN_8;            <span class="cmt">// PA8</span>
+    GPIO_Initure.Mode=GPIO_MODE_AF_PP;      <span class="cmt">// 复用推挽</span>
+    GPIO_Initure.Pull=GPIO_PULLUP;          <span class="cmt">// 上拉</span>
+    GPIO_Initure.Speed=GPIO_SPEED_HIGH;     <span class="cmt">// 高速</span>
+    GPIO_Initure.Alternate=GPIO_AF1_TIM1;   <span class="cmt">// PA8 → TIM1_CH1</span>
+    HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+
+    HAL_NVIC_SetPriority(TIM1_CC_IRQn,1,3);        <span class="cmt">// 捕获中断</span>
+    HAL_NVIC_EnableIRQ(TIM1_CC_IRQn);
+    HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn,1,2);  <span class="cmt">// 更新中断</span>
+    HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>计数频率：<code>180MHz / (179+1) = 1MHz</code>，即 1 个计数 = 1μs；捕获值直接就是微秒数，省掉换算。</li>
+                            <li>溢出周期：<code>(10000+1) × 1μs ≈ 10ms</code>。一次按键最长的高电平是 4.5ms，不会跨溢出；跨溢出的情况由更新中断补记。</li>
+                            <li>滤波 <code>IC1F=0x03</code> 要求有效电平持续 8 个采样周期才认边沿，能滤掉接收头输出的毛刺，但会带来约 0.04μs 级延迟，对 560μs 判定无影响。</li>
+                            <li><code>GPIO_PULLUP</code> 是必要的：接收头多为开漏输出，模块没供电或没接时 PA8 不能浮空，否则会随机触发捕获。</li>
+                            <li><code>HAL_TIM_IC_Start_IT</code> 内部使能 CC1IE；<code>__HAL_TIM_ENABLE_IT(TIM_IT_UPDATE)</code> 单独打开更新中断，两者缺一不可。</li>
+                        </ol>
+                    </div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="输入捕获与边沿切换">
+                    <h2>08　输入捕获与边沿切换</h2>
+                    <div class="sec-sub">一次完整的高电平需要“上升沿记起点、下降沿读终点”两次捕获</div>
+
+                    <pre class="code">void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+{
+ if(htim-&gt;Instance==TIM1)
+{
+    if(RDATA)                                   <span class="cmt">// 当前为高 → 刚发生上升沿</span>
+    {
+        TIM_RESET_CAPTUREPOLARITY(&amp;TIM1_Handler,TIM_CHANNEL_1);   <span class="cmt">// 先清原设置</span>
+        TIM_SET_CAPTUREPOLARITY(&amp;TIM1_Handler,TIM_CHANNEL_1,TIM_ICPOLARITY_FALLING);
+        __HAL_TIM_SET_COUNTER(&amp;TIM1_Handler,0); <span class="cmt">// 清空计数器，从0开始量高电平</span>
+        RmtSta|=0X10;                           <span class="cmt">// 标记上升沿已捕获</span>
+    }else                                       <span class="cmt">// 下降沿</span>
+    {
+        Dval=HAL_TIM_ReadCapturedValue(&amp;TIM1_Handler,TIM_CHANNEL_1);
+        TIM_RESET_CAPTUREPOLARITY(&amp;TIM1_Handler,TIM_CHANNEL_1);
+        TIM_SET_CAPTUREPOLARITY(&amp;TIM1_Handler,TIM_CHANNEL_1,TIM_ICPOLARITY_RISING);
+        if(RmtSta&amp;0X10)                         <span class="cmt">// 完成一次高电平捕获</span>
+        {
+            <span class="cmt">// ... 解码见第 09 节</span>
+        }
+        RmtSta&amp;=~(1&lt;&lt;4);
+    }
+}
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>NEC 的每个位都是“低 560μs + 高 560/1690μs”，真正携带信息的是<b>高电平宽度</b>，所以每次上升沿清零计数器，下降沿读 CCR1。</li>
+                            <li><code>TIM_RESET_CAPTUREPOLARITY</code> 必须先调用再改极性，这是 HAL 的要求：直接写 CC1P 可能被影子寄存器延迟，导致下一次边沿判错。</li>
+                            <li>捕获值同时起到清 CC1IF 的作用，读 CCR1 后不必再手动清标志。</li>
+                            <li><code>RmtSta bit4</code> 是“已见上升沿”的配对标志；只有它置位时，下降沿的 Dval 才是有效的高电平宽度，否则是噪声。</li>
+                            <li>回调里没有任何延时和显示，执行时间约几微秒，不会影响下一个 560μs 时隙。</li>
+                        </ol>
+                    </div>
+
+                    <table class="data">
+                        <tr><th>捕获值 Dval</th><th>对应物理量</th><th>解码动作</th></tr>
+                        <tr><td>300 ~ 800</td><td>560μs 高电平</td><td>收到逻辑 0</td></tr>
+                        <tr><td>1400 ~ 1800</td><td>1690μs 高电平</td><td>收到逻辑 1</td></tr>
+                        <tr><td>2200 ~ 2600</td><td>2.5ms 重复码高电平</td><td>RmtCnt++</td></tr>
+                        <tr><td>4200 ~ 4700</td><td>4.5ms 引导高电平</td><td>置引导码标志 bit7，RmtCnt=0</td></tr>
+                    </table>
+                </section>
+
+                <section class="content-card" id="s09" data-title="NEC解码与Remote_Scan">
+                    <h2>09　NEC 解码与 Remote_Scan</h2>
+                    <div class="sec-sub">32 位移位、反码校验、按键次数与超时清理</div>
+
+                    <figure class="figure">
+                        <img src="./index45-map/nec-frame.png" alt="NEC 红外帧格式与判定窗口">
+                        <figcaption>图 9-1　引导码、32 位数据、重复码与三个判定窗口</figcaption>
+                    </figure>
+
+                    <h3>位解码</h3>
+                    <pre class="code">if(RmtSta&amp;0X80)                              <span class="cmt">// 已收到引导码</span>
+{
+    if(Dval&gt;300&amp;&amp;Dval&lt;800)                   <span class="cmt">// 560为标准值</span>
+    {
+        RmtRec&lt;&lt;=1;                          <span class="cmt">// 左移一位</span>
+        RmtRec|=0;                           <span class="cmt">// 接收到0</span>
+    }else if(Dval&gt;1400&amp;&amp;Dval&lt;1800)           <span class="cmt">// 1680为标准值</span>
+    {
+        RmtRec&lt;&lt;=1;
+        RmtRec|=1;                           <span class="cmt">// 接收到1</span>
+    }else if(Dval&gt;2200&amp;&amp;Dval&lt;2600)           <span class="cmt">// 2500为标准值</span>
+    {
+        RmtCnt++;                            <span class="cmt">// 按键次数增加1次</span>
+        RmtSta&amp;=0XF0;                        <span class="cmt">// 清空计时器</span>
+    }
+}else if(Dval&gt;4200&amp;&amp;Dval&lt;4700)               <span class="cmt">// 4500为标准值</span>
+{
+    RmtSta|=1&lt;&lt;7;                            <span class="cmt">// 标记成功接收引导码</span>
+    RmtCnt=0;                                <span class="cmt">// 清除按键次数</span>
+}</pre>
+
+                    <h3>超时与“收齐一帧”</h3>
+                    <pre class="code">void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+ if(htim-&gt;Instance==TIM1){
+    if(RmtSta&amp;0x80)                          <span class="cmt">// 上次有数据被接收到了</span>
+    {
+        RmtSta&amp;=~0X10;                       <span class="cmt">// 取消上升沿已捕获标记</span>
+        if((RmtSta&amp;0X0F)==0X00)RmtSta|=1&lt;&lt;6; <span class="cmt">// 标记已完成一次采集</span>
+        if((RmtSta&amp;0X0F)&lt;14)RmtSta++;
+        else
+        {
+            RmtSta&amp;=~(1&lt;&lt;7);                <span class="cmt">// 清空引导标识</span>
+            RmtSta&amp;=0XF0;                    <span class="cmt">// 清空计数器</span>
+        }
+    }
+ }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>每 10ms 更新中断进入一次，低 4 位是溢出计数。计数回到 0 的那一拍说明“刚刚有边沿把计数器清零”，即一帧 32 位已经收完，于是置 bit6。</li>
+                            <li>低 4 位加到 14（约 140ms）仍未被边沿清零，说明遥控器已松开，清 bit7 和计数器，防止残留半帧污染下一次按键。</li>
+                            <li>NEC 帧是 <b>地址 + ~地址 + 命令 + ~命令</b>，先收到的字节落在 RmtRec 高 8 位，所以 <code>t1=RmtRec&gt;&gt;24</code> 是地址。</li>
+                            <li>重复码只发 9ms+2.5ms，不含数据，所以只能增加 RmtCnt，不能刷新 RmtRec。</li>
+                        </ol>
+                    </div>
+
+                    <h3>Remote_Scan 的反码校验</h3>
+                    <pre class="code">u8 Remote_Scan(void)
+{
+    u8 sta=0;
+    u8 t1,t2;
+    if(RmtSta&amp;(1&lt;&lt;6))                        <span class="cmt">// 得到完整按键信息</span>
+    {
+        t1=RmtRec&gt;&gt;24;                       <span class="cmt">// 地址码</span>
+        t2=(RmtRec&gt;&gt;16)&amp;0xff;                <span class="cmt">// 地址反码</span>
+        if((t1==(u8)~t2)&amp;&amp;t1==REMOTE_ID)     <span class="cmt">// ID 与地址校验</span>
+        {
+            t1=RmtRec&gt;&gt;8;
+            t2=RmtRec;
+            if(t1==(u8)~t2)sta=t1;           <span class="cmt">// 键值反码校验通过</span>
+        }
+        if((sta==0)||((RmtSta&amp;0X80)==0))     <span class="cmt">// 数据错误或已松开</span>
+        {
+            RmtSta&amp;=~(1&lt;&lt;6);
+            RmtCnt=0;
+        }
+    }
+    return sta;
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>先校验地址反码，再校验键值反码，两层都过才返回键值；任何一层失败都返回 0，LCD 不刷新。</li>
+                            <li><code>REMOTE_ID</code> 在 <code>remote.h</code> 里定义为 0，只适配配套遥控器；换遥控器要同时改这里，否则永远返回 0。</li>
+                            <li>校验失败时顺手清 bit6 和 RmtCnt，避免同一帧被反复读出。</li>
+                            <li>返回 0 还有一个语义：键值 0 本身不可用（switch 里 case 0 是 "ERROR"），所以 0 被保留为“无按键”。</li>
+                        </ol>
+                    </div>
+
+                    <figure>
+                        <img src="./index45-map/ir-timing.png" alt="NEC 红外协议引导码、地址码、数据码与停止位的电平时序">
+                        <figcaption>图 9-2　NEC 红外协议引导码、地址码、数据码与停止位的电平时序</figcaption>
+                    </figure>
+                </section>
+
+                <section class="content-card" id="s10" data-title="中断链路与优先级">
+                    <h2>10　中断链路与优先级</h2>
+                    <div class="sec-sub">两个 IRQ 同抢 1 个回调入口，优先级只差子优先级</div>
+
+                    <figure class="figure">
+                        <img src="./index45-map/capture-chain.png" alt="红外解码中断链路">
+                        <figcaption>图 10-1　PA8 → TIM1_CH1 → NVIC → ISR → HAL 回调 → 共享状态</figcaption>
+                    </figure>
+
+                    <table class="data">
+                        <tr><th>环节</th><th>名称 / 编号</th><th>工程中的证据</th></tr>
+                        <tr><td>触发源</td><td>PA8 边沿（上升/下降交替）</td><td><code>RDATA</code>、<code>TIM_ICPOLARITY_*</code></td></tr>
+                        <tr><td>外设</td><td>TIM1 CH1，CC1IF</td><td><code>HAL_TIM_IC_Start_IT</code></td></tr>
+                        <tr><td>溢出源</td><td>TIM1 UIF，每 10ms</td><td><code>__HAL_TIM_ENABLE_IT(TIM_IT_UPDATE)</code></td></tr>
+                        <tr><td>NVIC</td><td>TIM1_CC_IRQn = 27，1/3</td><td><code>HAL_NVIC_SetPriority(TIM1_CC_IRQn,1,3)</code></td></tr>
+                        <tr><td>NVIC</td><td>TIM1_UP_TIM10_IRQn = 25，1/2</td><td><code>HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn,1,2)</code></td></tr>
+                        <tr><td>ISR</td><td>两个同名入口都调 <code>HAL_TIM_IRQHandler</code></td><td><code>remote.c</code> 第 77、83 行</td></tr>
+                        <tr><td>回调</td><td>IC / PeriodElapsed 两个弱函数被重写</td><td><code>HAL_TIM_IC_CaptureCallback</code>、<code>HAL_TIM_PeriodElapsedCallback</code></td></tr>
+                    </table>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li>两个中断抢占优先级都是 1，彼此不能打断；子优先级 2 的更新中断先于子优先级 3 的捕获中断排队。对解码没有影响，因为两者操作的是不同标志位。</li>
+                            <li>捕获中断频率最高约 2kHz（560μs 一个边沿），每次只做几十条指令，CPU 占用可以忽略。</li>
+                            <li><code>RmtSta</code>、<code>RmtRec</code>、<code>RmtCnt</code> 在中断与主循环之间共享，却没有 <code>volatile</code>，也没有临界区；这是本工程的隐患，靠 -O0/关优化时“碰巧正确”。</li>
+                            <li>若把 <code>Remote_Scan</code> 里的 32 位读取拆成多条指令，可能在中断更新 RmtRec 时读到半新半旧的值，表现为偶发键值错误。</li>
+                        </ol>
+                    </div>
+
+                    <div class="note">工程中未体现对共享变量的原子保护。要工程化，至少给三个变量加 <code class="inline">volatile</code>，并在 <code class="inline">Remote_Scan</code> 读取前短暂关中断。</div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="主循环显示与交互演示">
+                    <h2>11　主循环显示与交互演示</h2>
+                    <div class="sec-sub">有键值才刷新 LCD，无键值延时 10ms；LED 每 20 轮翻转</div>
+
+                    <figure class="figure">
+                        <img src="./index45-map/main-loop.png" alt="红外实验主循环分支">
+                        <figcaption>图 11-1　Remote_Scan 返回值决定 LCD 与 LED 的动作</figcaption>
+                    </figure>
+
+                    <pre class="code">while(1)
+{
+    key=Remote_Scan();
+    if(key)
+    {
+        LCD_ShowNum(86,130,key,3,16);        <span class="cmt">// 显示键值</span>
+        LCD_ShowNum(86,150,RmtCnt,3,16);     <span class="cmt">// 显示按键次数</span>
+        switch(key)
+        {
+            case 162:str="POWER";break;
+            case 98:str="UP";break;
+            case 2:str="PLAY";break;
+            case 194:str="RIGHT";break;
+            case 34:str="LEFT";break;
+            case 168:str="DOWN";break;
+            <span class="cmt">// ... 其余键值省略，完整 21 项见 main.c</span>
+        }
+        LCD_Fill(86,170,116+8*8,170+16,WHITE); <span class="cmt">// 清除之前的显示</span>
+        LCD_ShowString(86,170,200,16,16,str);  <span class="cmt">// 显示SYMBOL</span>
+    }else delay_ms(10);
+    t++;
+    if(t==20)
+    {
+        t=0;
+        LED0=!LED0;
+    }
+}</pre>
+
+                    <div class="keylogic">
+                        <div class="kl-title">关键逻辑说明</div>
+                        <ol>
+                            <li><code>Remote_Scan</code> 返回 0 表示“没有新键值”，此时才延时 10ms；有键值时立即进入下一轮，保证连按不丢。</li>
+                            <li><code>RmtCnt</code> 是重复码计数，按住不放会持续增加；松开约 140ms 后被清零。</li>
+                            <li>先 <code>LCD_Fill</code> 再显示 SYMBOL，是因为新键名可能比旧键名短，不清会残留字符。</li>
+                            <li><code>t</code> 是 u8，20 次循环约 200ms（无键值时）翻转一次 LED0，用来证明主循环还活着。</li>
+                            <li>键值 0 被 <code>if(key)</code> 过滤掉，所以 switch 里的 <code>case 0:"ERROR"</code> 实际不会执行。</li>
+                        </ol>
+                    </div>
+
+                    <h3>交互演示（仅演示逻辑）</h3>
+                    <div class="sim">
+                        <div class="sim-title">按下遥控器后 Remote_Scan 与显示分支</div>
+                        <div class="sim-buttons">
+                            <button data-key="power">按 POWER（162）</button>
+                            <button data-key="up">按 UP（98）</button>
+                            <button data-key="repeat">按住重复码</button>
+                            <button data-key="release">松开超时（140ms）</button>
+                        </div>
+                        <div class="sim-log" id="sim45">键值：--　次数：0　键名：--　说明：等待按键</div>
+                    </div>
+                    <div class="note">演示只复现 main.c 的 if/switch 与 Remote_Scan 的校验结果，不模拟 38kHz 载波与真实捕获时序。</div>
+
+                    <table class="data">
+                        <tr><th>操作</th><th>可观察现象</th></tr>
+                        <tr><td>上电</td><td>LCD 显示 5 行固定字符串，KEYVAL/KEYCNT/SYMBOL 为空，DS0 约 2.5Hz 闪烁</td></tr>
+                        <tr><td>按 POWER</td><td>KEYVAL=162，KEYCNT 递增，SYMBOL=POWER</td></tr>
+                        <tr><td>按住不放</td><td>KEYCNT 持续增加，键值与 SYMBOL 不变</td></tr>
+                        <tr><td>换按 UP</td><td>KEYVAL=98，SYMBOL 变为 UP，旧字符被 LCD_Fill 清掉</td></tr>
+                        <tr><td>遮挡/拔掉接收头</td><td>无新键值，LCD 保持最后内容，LED 继续闪</td></tr>
+                    </table>
+                </section>
+
+                <section class="content-card" id="s12" data-title="关键逻辑复盘">
+                    <h2>12　关键逻辑复盘</h2>
+                    <div class="sec-sub">把“为什么这样写”串成一条线</div>
+
+                    <ol>
+                        <li><b>时基先行</b>：HAL_Init 建 SysTick，Stm32_Clock_Init 把时钟拉到 180MHz，delay_init 记录 fac_us；三者顺序错了，后面所有时间都不对。</li>
+                        <li><b>捕获分辨率</b>：PSC=179 把 180MHz 分成 1MHz，捕获值天然是微秒，解码窗口可以直接写 300~800 这样的数。</li>
+                        <li><b>边沿换向</b>：上升沿清计数器并改成下降沿，下降沿读 CCR1 再改回上升沿；换向必须用 HAL 的 RESET/SET 宏。</li>
+                        <li><b>只测高电平</b>：NEC 的 0/1 差异在高电平长度（560 vs 1690μs），低电平固定 560μs，所以不需要测低电平。</li>
+                        <li><b>两级超时</b>：10ms 更新中断既负责“一帧收齐”的判定（低 4 位回 0），也负责“松手”的判定（加到 14）。</li>
+                        <li><b>反码校验</b>：地址与键值各带一个反码字节，两次 <code>(u8)~</code> 比较能过滤掉大部分误码。</li>
+                        <li><b>主循环不解码</b>：所有时间敏感工作都在中断里完成，主循环只读结果、刷屏、闪灯，避免 LCD 的毫秒级操作破坏时序。</li>
+                        <li><b>共享变量风险</b>：RmtSta/RmtRec/RmtCnt 无 volatile、无临界区，是本工程最值得改进的地方。</li>
+                    </ol>
+
+                    <div class="note blue">如果要把这套代码移植到 FreeRTOS，必须给共享变量加 <code class="inline">volatile</code>，并把 <code class="inline">Remote_Scan</code> 放进临界区或消息队列，否则编译器优化和任务切换都会让解码偶发失败。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="常见问题排查">
+                    <h2>13　常见问题排查</h2>
+                    <div class="sec-sub">先分清是“收不到边沿”还是“收到了但校验不过”</div>
+
+                    <table class="data">
+                        <tr><th>现象</th><th>优先怀疑</th><th>定位方法</th></tr>
+                        <tr><td>LCD 正常但按键无反应</td><td>PA8 没接到 TIM1_CH1 / 接收头没供电</td><td>示波器看 PA8 是否有 9ms 低 + 4.5ms 高的波形</td></tr>
+                        <tr><td>KEYVAL 偶尔正确、多数为 0</td><td>反码校验失败或 REMOTE_ID 不匹配</td><td>在 <code>Remote_Scan</code> 里打印 RmtRec 的 4 个字节</td></tr>
+                        <tr><td>所有键值都偏移/错乱</td><td>捕获极性切换漏了 RESET 宏</td><td>检查是否只写了 CC1P，没有先清影子寄存器</td></tr>
+                        <tr><td>按住只加 1 次</td><td>重复码窗口 2200~2600 没进</td><td>打印重复码的 Dval，确认在 2.5ms 附近</td></tr>
+                        <tr><td>松手后键值一直不消失</td><td>更新中断没使能</td><td>确认 <code>__HAL_TIM_ENABLE_IT(TIM_IT_UPDATE)</code> 执行</td></tr>
+                        <tr><td>LED 不闪</td><td>主循环卡在 LCD 或 delay</td><td>在 while 里翻转一个空闲 GPIO 用示波器看</td></tr>
+                    </table>
+
+                    <div class="note">先用示波器确认“有没有波形”，再用串口确认“解出来的 32 位对不对”，最后才看 LCD。跳过前两步容易把硬件问题当成软件 bug。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="总结">
+                    <h2>14　总结</h2>
+                    <div class="sec-sub">一个定时器、两个中断、三次判断，构成完整的红外解码闭环</div>
+
+                    <p>实验31 的价值在于把“时间”变成“数据”：TIM1 把 180MHz 分频到 1MHz，捕获寄存器把电平宽度变成微秒数，回调按 NEC 的四个时间窗口把它移位成 32 位，最后用地址/键值反码做完整性校验。整个链路里没有任何阻塞操作，主循环可以安心刷 LCD。</p>
+
+                    <p>从启动角度看，它和前面实验的骨架完全一致：启动文件给栈和向量表，SystemInit 打开 FPU 与 VTOR，HAL_Init 建时基，Stm32_Clock_Init 拉时钟，delay/uart 提供基础设施，最后才是本实验的 Remote_Init。把这条骨架记住，换任何外设都只是替换最后一两步。</p>
+
+                    <div class="note blue">下一步可以尝试：给共享变量加 <code class="inline">volatile</code>、把键值映射表从 switch 改成数组、用 DMA 或从模式门控捕获更长的协议（如 NEC 扩展帧）。</div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归 Erish 个人所有，版权时间为 2026-11-12 开始的 10 年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+<script>
+(function () {
+    var state = { key: 0, cnt: 0, symbol: '--' };
+    var log = document.getElementById('sim45');
+    function render(note) {
+        log.textContent = '键值：' + (state.key ? state.key : '--') +
+            '　次数：' + state.cnt +
+            '　键名：' + state.symbol +
+            '　说明：' + note;
+    }
+    document.querySelectorAll('.sim-buttons button[data-key]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var k = btn.getAttribute('data-key');
+            if (k === 'power') {
+                state.key = 162; state.cnt++; state.symbol = 'POWER';
+                render('地址/键值反码通过，if(key) 成立，进入 switch');
+            } else if (k === 'up') {
+                state.key = 98; state.cnt++; state.symbol = 'UP';
+                render('键值变化，LCD_Fill 先清旧 SYMBOL');
+            } else if (k === 'repeat') {
+                if (!state.key) { render('没有引导码，重复码被忽略'); return; }
+                state.cnt++;
+                render('Dval 落在 2200~2600，只加 RmtCnt，不改键值');
+            } else if (k === 'release') {
+                state.key = 0; state.cnt = 0; state.symbol = '--';
+                render('低 4 位计到 14，清 bit7/bit6，Remote_Scan 返回 0');
+            }
+        });
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  websocket-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: websocket-server
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      - NODE_ENV=production
+      - PORT=8081
+      - HOST=0.0.0.0
+      - MAX_CONNECTIONS=5000
+      - WSS_ENABLED=${WSS_ENABLED:-false}
+      - WSS_CERT_PATH=/app/certs/cert.pem
+      - WSS_KEY_PATH=/app/certs/cert.key
+    volumes:
+      # 挂载证书目录（如果需要 WSS）
+      - ./certs:/app/certs:ro
+      # 挂载日志目录
+      - ./logs:/app/logs
+    networks:
+      - websocket-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  websocket-network:
+    driver: bridge
+
+# 可选：使用外部日志驱动
+# logging:
+#   driver: "json-file"
+#   options:
+#     max-size: "10m"
+#     max-file: "3"

@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验60 UCOSII信号量和邮箱实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验60 UCOSII信号量和邮箱实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">本页源码取自实验60 UCOSII实验2；按键通过邮箱传键码，主任务再用信号量唤醒蜂鸣器。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+<section id="s01" data-title="01 实验目标与硬件资源" class="content-card">
+  <h2>01 实验目标与硬件资源</h2>
+  <p class="sec-sub">按键不再直接操作任务：键码先进邮箱，主任务分发，蜂鸣器由信号量唤醒</p>
+  <p>实验 60 在任务调度与任务控制之上引入两种进程间通信（IPC）对象：<b>邮箱</b>负责搬运“按下了哪个键”，<b>信号量</b>负责“允许蜂鸣器响一次”。LCD 主界面同时显示信号量计数与 CPU 使用率，能直观看到内核事件在运行。</p>
+  <table class="data">
+    <thead><tr><th>任务</th><th>优先级</th><th>栈</th><th>行为</th></tr></thead>
+    <tbody>
+      <tr><td>KEY</td><td>3</td><td>128 OS_STK</td><td>每 10 ms 扫描，键码非 0 就投进邮箱</td></tr>
+      <tr><td>MAIN</td><td>4</td><td>128 OS_STK</td><td>10 tick 超时等邮箱，分发键码并刷新 LCD</td></tr>
+      <tr><td>BEEP</td><td>5</td><td>128 OS_STK</td><td>永久等信号量，拿到后响 60 ms、停 940 ms</td></tr>
+      <tr><td>LED</td><td>6</td><td>128 OS_STK</td><td>10 ms 计数，第 8 次灭、第 100 次亮</td></tr>
+      <tr><td>TOUCH</td><td>7</td><td>128 OS_STK</td><td>扫描触摸并在 LCD 上画红线</td></tr>
+      <tr><td>START</td><td>10</td><td>128 OS_STK</td><td>建 IPC、OSStatInit、建 5 个任务后挂起</td></tr>
+    </tbody>
+  </table>
+  <table class="data">
+    <thead><tr><th>按键</th><th>键码</th><th>主任务动作</th><th>现象</th></tr></thead>
+    <tbody>
+      <tr><td>KEY0</td><td>1</td><td><code>LED1 = !LED1</code></td><td>DS1 翻转</td></tr>
+      <tr><td>KEY1</td><td>2</td><td><code>OSSemPost(sem_beep)</code></td><td>蜂鸣器响 60 ms，SEM 计数变化</td></tr>
+      <tr><td>KEY2</td><td>3</td><td><code>LCD_Fill(0,121,...)</code></td><td>清空触摸绘图区</td></tr>
+      <tr><td>WKUP</td><td>4</td><td>挂起触摸 → <code>TP_Adjust()</code> → 恢复</td><td>触摸校准并重载主界面</td></tr>
+    </tbody>
+  </table>
+  <pre class="code"><span class="cmt">/* HARDWARE/KEY/key.h：键码即邮箱消息，0 表示无键 */</span>
+#define KEY0_PRES   1        <span class="cmt">// DS1 翻转</span>
+#define KEY1_PRES   2        <span class="cmt">// 释放蜂鸣器信号量</span>
+#define KEY2_PRES   3        <span class="cmt">// 清除绘图区</span>
+#define WKUP_PRES   4        <span class="cmt">// 触摸校准</span></pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>键码是 1~4 的小整数，直接强转成 <code>void *</code> 当邮箱消息，不需要额外缓冲区。</li>
+      <li>KEY 任务优先级 3 最高，扫描到按键后立刻投递；MAIN 任务优先级 4 紧随其后被唤醒。</li>
+      <li>BEEP 任务只在收到信号量时响，不再固定每 1 s 吵闹，体现“事件驱动”而不是“轮询驱动”。</li>
+      <li>LCD 上 <code>SEM:000</code> 显示的是 <code>sem_beep-&gt;OSEventCnt</code>，不是任务计数。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s02" data-title="02 工程结构与源码地图" class="content-card">
+  <h2>02 工程结构与源码地图</h2>
+  <p class="sec-sub">相比实验59，新增 LCD、SDRAM、触摸驱动，内核部分只多了事件管理</p>
+  <table class="data">
+    <thead><tr><th>文件</th><th>本页关注点</th></tr></thead>
+    <tbody>
+      <tr><td>USER/main.c</td><td>start_task、main_task、key_task、beep_task、led_task、touch_task</td></tr>
+      <tr><td>UCOSII/uCOS-II/Source/os_sem.c</td><td>OSSemCreate、OSSemPend、OSSemPost</td></tr>
+      <tr><td>UCOSII/uCOS-II/Source/os_mbox.c</td><td>OSMboxCreate、OSMboxPend、OSMboxPost</td></tr>
+      <tr><td>UCOSII/uCOS-II/Source/os_core.c</td><td>OS_EventTaskWait、OS_EventTaskRdy、OS_EventWaitListInit</td></tr>
+      <tr><td>UCOSII/uCOS-CONFIG/os_cfg.h</td><td>OS_MAX_EVENTS=20、OS_SEM_EN、OS_MBOX_EN</td></tr>
+      <tr><td>SYSTEM/delay/delay.c</td><td>delay_init、SysTick_Handler、delay_ms → OSTimeDly</td></tr>
+      <tr><td>CORE/startup_stm32f429xx.s</td><td>向量表、Reset_Handler、FPU 使能</td></tr>
+    </tbody>
+  </table>
+  <pre class="code"><span class="cmt">/* includes.h：应用只依赖内核公开头文件 */</span>
+#include &lt;stdio.h&gt;
+#include "ucos_ii.h"     <span class="cmt">// OS_EVENT、OSInit、任务与事件 API</span>
+#include "os_cpu.h"      <span class="cmt">// OS_ENTER_CRITICAL、OS_TASK_SW</span>
+#include "os_cfg.h"      <span class="cmt">// OS_MAX_EVENTS、OS_SEM_EN、OS_MBOX_EN</span>
+#include "app_cfg.h"     <span class="cmt">// 应用级配置</span></pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>信号量与邮箱在同一个 <code>os_event</code> 体系里实现，事件块总数由 <code>OS_MAX_EVENTS</code> 限制为 20。</li>
+      <li>本实验只创建 2 个事件块（<code>msg_key</code>、<code>sem_beep</code>），远小于上限。</li>
+      <li><code>OSInit</code> 会把 20 个事件块串成空闲链，创建时从链头摘一个，删除时再挂回去。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s03" data-title="03 启动流程总览" class="content-card">
+  <h2>03 启动流程总览</h2>
+  <p class="sec-sub">main 先点亮 LCD 主界面，再启动内核；任务装配全部放在 start_task</p>
+  <figure class="figure">
+    <img src="./index75-map/boot-flow.png" alt="UCOSII 从上电复位到 OSStart 的启动流程图">
+    <figcaption>图 3-1　从上电复位到 OSStart 的启动链路（实验60 在 OSInit 前增加了 LCD 与触摸初始化）</figcaption>
+  </figure>
+  <pre class="code">int main(void)
+{
+    HAL_Init();                        <span class="cmt">// HAL 基础、NVIC 分组、SysTick 初值</span>
+    Stm32_Clock_Init(360, 25, 2, 8);   <span class="cmt">// SYSCLK 180 MHz</span>
+    delay_init(180);                   <span class="cmt">// 1 tick = 1 ms</span>
+    uart_init(115200);
+    LED_Init();
+    KEY_Init();
+    PCF8574_Init();                    <span class="cmt">// 蜂鸣器接在 I2C 扩展 IO</span>
+    SDRAM_Init();                      <span class="cmt">// LCD 显存</span>
+    LCD_Init();
+    tp_dev.init();                     <span class="cmt">// 触摸屏</span>
+    ucos_load_main_ui();               <span class="cmt">// 先画静态界面，再开调度</span>
+
+    OSInit();                          <span class="cmt">// 空闲任务 63、统计任务 62、事件空闲链</span>
+    OSTaskCreateExt((void (*)(void *))start_task, ... START_TASK_PRIO ...);
+    OSStart();                         <span class="cmt">// 跳到 start_task，不返回</span>
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>LCD 与触摸必须在 <code>OSInit</code> 之前初始化，否则任务一跑起来就可能访问未配置的外设。</li>
+      <li><code>ucos_load_main_ui()</code> 只画标题、分隔线和固定文字，动态数值由 <code>main_task</code> 刷新。</li>
+      <li><code>OSStart</code> 之后 MSP 留给中断，任务运行在 PSP 上。</li>
+      <li><code>start_task</code> 的第一条业务语句是创建邮箱与信号量，第二条才是 <code>OSStatInit</code>。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s04" data-title="04 时钟与 SysTick 时基" class="content-card">
+  <h2>04 时钟与 SysTick 时基</h2>
+  <p class="sec-sub">1 ms 节拍既驱动延时，也驱动信号量的 0 tick 永久等待与 10 tick 超时</p>
+  <pre class="code">void delay_init(u8 SYSCLK)
+{
+#if SYSTEM_SUPPORT_OS
+    u32 reload;
+#endif
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK); <span class="cmt">// SysTick 时钟 = HCLK = 180 MHz</span>
+    fac_us = SYSCLK;                       <span class="cmt">// 180，用于 delay_us 的普通延时</span>
+#if SYSTEM_SUPPORT_OS
+    reload = SYSCLK;                       <span class="cmt">// 180</span>
+    reload *= 1000000 / delay_ostickspersec; <span class="cmt">// 180 × 1000 = 180000</span>
+    fac_ms = 1000 / delay_ostickspersec;   <span class="cmt">// 1 ms</span>
+    SysTick-&gt;CTRL |= SysTick_CTRL_TICKINT_Msk;
+    SysTick-&gt;LOAD  = reload;               <span class="cmt">// 每 1 ms 中断一次</span>
+    SysTick-&gt;CTRL |= SysTick_CTRL_ENABLE_Msk;
+#endif
+}</pre>
+  <pre class="code">void SysTick_Handler(void)
+{
+    HAL_IncTick();
+    if (delay_osrunning == 1) {            <span class="cmt">// OSStart 之后才为 1</span>
+        OSIntEnter();                      <span class="cmt">// OSIntNesting++</span>
+        OSTimeTick();                      <span class="cmt">// 所有 OSTCBDly--，到 0 则置就绪</span>
+        OSIntExit();                       <span class="cmt">// 退出中断，必要时触发 PendSV</span>
+    }
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>delay_ostickspersec</code> 在 delay.c 中宏定义为 <code>OS_TICKS_PER_SEC</code>，即 1000。</li>
+      <li><code>reload = 180000</code> 小于 24 位计数器上限 16777215，不需要分频。</li>
+      <li><code>OSSemPend(sem_beep, 0, &amp;err)</code> 的 0 不是“立即返回”，而是“永不超时”。</li>
+      <li><code>OSMboxPend(msg_key, 10, &amp;err)</code> 最多等 10 ms，超时返回 NULL 并置 <code>OS_ERR_TIMEOUT</code>。</li>
+    </ol>
+  </div>
+  <div class="note">本工程没有调用 <code>OS_CPU_SysTickInit</code>，而是在 <code>delay_init</code> 里做了等价配置：同样选择 HCLK、同样按 <code>OS_TICKS_PER_SEC</code> 计算重装值并打开 TICKINT。</div>
+</section>
+
+<section id="s05" data-title="05 启动汇编与 C 运行时" class="content-card">
+  <h2>05 启动汇编与 C 运行时</h2>
+  <p class="sec-sub">向量表里的 PendSV/SysTick 是弱符号，链接时被内核与 delay.c 的强符号覆盖</p>
+  <pre class="code">__Vectors       DCD     __initial_sp          <span class="cmt">; 初始 MSP</span>
+                DCD     Reset_Handler         <span class="cmt">; 复位入口</span>
+                ...
+                DCD     PendSV_Handler        <span class="cmt">; os_cpu_a.asm 提供强符号</span>
+                DCD     SysTick_Handler       <span class="cmt">; delay.c 提供强符号</span>
+
+Reset_Handler   PROC
+                LDR     R0, =SystemInit
+                BLX     R0
+                LDR.W   R0, =0xE000ED88       <span class="cmt">; CPACR</span>
+                LDR     R1, [R0]
+                ORR     R1, R1, #(0xF &lt;&lt; 20)   <span class="cmt">; 使能 CP10/CP11</span>
+                STR     R1, [R0]
+                DSB
+                ISB
+                LDR     R0, =__main
+                BX      R0                    <span class="cmt">; 拷贝 .data、清零 .bss、调用 main</span>
+                ENDP</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>启动文件中的 <code>PendSV_Handler</code> 与 <code>SysTick_Handler</code> 带 <code>[WEAK]</code>，只是兜底死循环。</li>
+      <li>链接器优先选择 <code>os_cpu_a.asm</code> 与 <code>delay.c</code> 中的同名强符号，因此向量表最终指向真实实现。</li>
+      <li>FPU 在 <code>__main</code> 之前就打开；所有任务又带 <code>SAVE_FP</code>，浮点上下文才有意义。</li>
+      <li><code>__main</code> 完成 C 运行时初始化后才进入 <code>main()</code>，全局指针此时都是 0。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s06" data-title="06 main 初始化与 LCD 界面" class="content-card">
+  <h2>06 main 初始化与 LCD 界面</h2>
+  <p class="sec-sub">界面上的 SEM 与 CPU 两个数字，正好对应本实验的两个观察对象</p>
+  <pre class="code">void ucos_load_main_ui(void)
+{
+    LCD_Clear(WHITE);
+    POINT_COLOR = RED;
+    LCD_ShowString(30, 10, 200, 16, 16, "Apollo STM32F4/F7");
+    LCD_ShowString(30, 30, 200, 16, 16, "UCOSII TEST2");
+    LCD_ShowString(30, 75, 200, 16, 16, "KEY0:DS1 KEY_UP:ADJUST");
+    LCD_ShowString(30, 95, 200, 16, 16, "KEY1:BEEP  KEY2:CLEAR");
+    LCD_ShowString(80, 210, 200, 16, 16, "Touch Area");
+    LCD_DrawLine(0, 120, lcddev.width - 1, 120);
+    LCD_DrawLine(0, 70, lcddev.width - 1, 70);
+    LCD_DrawLine(170, 0, 170, 70);
+    POINT_COLOR = BLUE;
+    LCD_ShowString(180, 30, 200, 16, 16, "CPU:   %");
+    LCD_ShowString(180, 50, 200, 16, 16, "SEM:000");
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>y = 120</code> 以下留给触摸绘图区，KEY2 清屏时也只清 <code>y &gt; 121</code> 的部分。</li>
+      <li><code>CPU:</code> 与 <code>SEM:</code> 先占位，<code>main_task</code> 之后用 <code>LCD_ShowxNum</code> 覆盖数字。</li>
+      <li>主界面在 <code>OSInit</code> 前绘制，此时还没有任务竞争 LCD，不需要临界区。</li>
+      <li>触摸校准后会再次调用本函数，把被校准界面覆盖的区域恢复成主界面。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s07" data-title="07 事件控制块与等待表" class="content-card">
+  <h2>07 事件控制块与等待表</h2>
+  <p class="sec-sub">信号量与邮箱共用 OS_EVENT，只靠 OSEventType 区分解释方式</p>
+  <figure class="figure">
+    <img src="./index75-map/event-block.png" alt="OS_EVENT 事件控制块的字段与信号量邮箱的语义">
+    <figcaption>图 7-1　OS_EVENT 字段复用：OSEventCnt 给信号量，OSEventPtr 给邮箱，OSEventTbl 记录等待者</figcaption>
+  </figure>
+  <pre class="code">typedef struct os_event {
+    INT8U    OSEventType;   <span class="cmt">/* MBOX=1, Q=2, SEM=3, MUTEX=4, FLAG=5 */</span>
+    void    *OSEventPtr;    <span class="cmt">/* 邮箱消息指针 / OS_Q* */</span>
+    INT16U   OSEventCnt;    <span class="cmt">/* 信号量计数，其它类型不用 */</span>
+    OS_PRIO  OSEventGrp;    <span class="cmt">/* 等待任务分组位图 */</span>
+    OS_PRIO  OSEventTbl[OS_EVENT_TBL_SIZE]; <span class="cmt">/* 64 优先级 → 8 行 */</span>
+    INT8U   *OSEventName;
+} OS_EVENT;</pre>
+  <pre class="code">OS_EVENT *OSMboxCreate(void *pmsg)
+{
+    OS_EVENT *pevent;
+    if (OSIntNesting &gt; 0u) return ((OS_EVENT *)0); <span class="cmt">// 中断里不能创建</span>
+    OS_ENTER_CRITICAL();
+    pevent = OSEventFreeList;                      <span class="cmt">// 从空闲链摘一个</span>
+    if (OSEventFreeList != (OS_EVENT *)0) {
+        OSEventFreeList = (OS_EVENT *)OSEventFreeList-&gt;OSEventPtr;
+    }
+    OS_EXIT_CRITICAL();
+    if (pevent != (OS_EVENT *)0) {
+        pevent-&gt;OSEventType = OS_EVENT_TYPE_MBOX;
+        pevent-&gt;OSEventCnt  = 0u;
+        pevent-&gt;OSEventPtr  = pmsg;                <span class="cmt">// NULL 表示空邮箱</span>
+        OS_EventWaitListInit(pevent);              <span class="cmt">// 等待表清零</span>
+    }
+    return pevent;
+}</pre>
+  <pre class="code">OS_EVENT *OSSemCreate(INT16U cnt)
+{
+    OS_EVENT *pevent;
+    if (OSIntNesting &gt; 0u) return ((OS_EVENT *)0);
+    OS_ENTER_CRITICAL();
+    pevent = OSEventFreeList;
+    if (OSEventFreeList != (OS_EVENT *)0) {
+        OSEventFreeList = (OS_EVENT *)OSEventFreeList-&gt;OSEventPtr;
+    }
+    OS_EXIT_CRITICAL();
+    if (pevent != (OS_EVENT *)0) {
+        pevent-&gt;OSEventType = OS_EVENT_TYPE_SEM;
+        pevent-&gt;OSEventCnt  = cnt;                 <span class="cmt">// 初值直接决定 Pend 是否阻塞</span>
+        pevent-&gt;OSEventPtr  = (void *)0;
+        OS_EventWaitListInit(pevent);
+    }
+    return pevent;
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>msg_key = OSMboxCreate((void *)0)</code>：初值为 NULL，所以第一次 <code>OSMboxPend</code> 一定阻塞。</li>
+      <li><code>sem_beep = OSSemCreate(0)</code>：计数为 0，<code>beep_task</code> 启动后立即挂起等待。</li>
+      <li>两者都从 <code>OSEventFreeList</code> 取块，ECB 数量固定，运行期不会动态申请内存。</li>
+      <li><code>OS_EventWaitListInit</code> 把 <code>OSEventGrp</code> 与 <code>OSEventTbl[8]</code> 全部清零，表示“还没有人等”。</li>
+      <li>创建失败只在事件块耗尽时发生，返回 NULL；本实验不检查返回值，因为只用了 2 个。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s08" data-title="08 信号量：等待与释放" class="content-card">
+  <h2>08 信号量：等待与释放</h2>
+  <p class="sec-sub">Pend 先减计数，减不到才挂起；Post 先唤醒等待者，没人等才加计数</p>
+  <pre class="code">void OSSemPend(OS_EVENT *pevent, INT32U timeout, INT8U *perr)
+{
+    if (OSIntNesting &gt; 0u) { *perr = OS_ERR_PEND_ISR; return; } <span class="cmt">// 中断里不能等</span>
+    if (OSLockNesting &gt; 0u) { *perr = OS_ERR_PEND_LOCKED; return; }
+    OS_ENTER_CRITICAL();
+    if (pevent-&gt;OSEventCnt &gt; 0u) {          <span class="cmt">// 有资源，直接拿走</span>
+        pevent-&gt;OSEventCnt--;
+        OS_EXIT_CRITICAL();
+        *perr = OS_ERR_NONE;
+        return;
+    }
+    OSTCBCur-&gt;OSTCBStat    |= OS_STAT_SEM;  <span class="cmt">// 标记“在等信号量”</span>
+    OSTCBCur-&gt;OSTCBStatPend = OS_STAT_PEND_OK;
+    OSTCBCur-&gt;OSTCBDly      = timeout;      <span class="cmt">// 0 = 永久等待</span>
+    OS_EventTaskWait(pevent);               <span class="cmt">// 挂到 OSEventTbl，清就绪位</span>
+    OS_EXIT_CRITICAL();
+    OS_Sched();                             <span class="cmt">// 让出 CPU</span>
+    OS_ENTER_CRITICAL();
+    switch (OSTCBCur-&gt;OSTCBStatPend) {
+        case OS_STAT_PEND_OK:    *perr = OS_ERR_NONE;      break;
+        case OS_STAT_PEND_ABORT: *perr = OS_ERR_PEND_ABORT; break;
+        default:                 *perr = OS_ERR_TIMEOUT;    break;
+    }
+    OSTCBCur-&gt;OSTCBStat = OS_STAT_RDY;
+    OSTCBCur-&gt;OSTCBEventPtr = (OS_EVENT *)0;
+    OS_EXIT_CRITICAL();
+}</pre>
+  <pre class="code">INT8U OSSemPost(OS_EVENT *pevent)
+{
+    OS_ENTER_CRITICAL();
+    if (pevent-&gt;OSEventGrp != 0u) {                 <span class="cmt">// 有人在等</span>
+        (void)OS_EventTaskRdy(pevent, (void *)0, OS_STAT_SEM, OS_STAT_PEND_OK);
+        OS_EXIT_CRITICAL();
+        OS_Sched();                                 <span class="cmt">// 可能立即切到等待者</span>
+        return (OS_ERR_NONE);
+    }
+    if (pevent-&gt;OSEventCnt &lt; 65535u) {              <span class="cmt">// 没人等才累加</span>
+        pevent-&gt;OSEventCnt++;
+        OS_EXIT_CRITICAL();
+        return (OS_ERR_NONE);
+    }
+    OS_EXIT_CRITICAL();
+    return (OS_ERR_SEM_OVF);                        <span class="cmt">// 计数溢出</span>
+}</pre>
+  <pre class="code">void beep_task(void *pdata)
+{
+    u8 err;
+    while (1) {
+        OSSemPend(sem_beep, 0, &amp;err);      <span class="cmt">// 永久等待，err 未被检查</span>
+        PCF8574_WriteBit(BEEP_IO, 0);       <span class="cmt">// 打开蜂鸣器</span>
+        delay_ms(60);
+        PCF8574_WriteBit(BEEP_IO, 1);       <span class="cmt">// 关闭蜂鸣器</span>
+        delay_ms(940);
+    }
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>sem_beep</code> 初值 0，所以 <code>beep_task</code> 第一次 Pend 必然走“挂起”分支，<code>OSTCBDly = 0</code> 表示不设超时。</li>
+      <li>KEY1 触发的 <code>OSSemPost</code> 发现 <code>OSEventGrp != 0</code>，直接把 BEEP 任务置就绪，<b>不会</b>把计数加到 1。</li>
+      <li>若 BEEP 正在响（不在等待），Post 才执行 <code>OSEventCnt++</code>；计数最多累积到 65535。</li>
+      <li><code>OSSemPend</code> 返回后 <code>err</code> 可能是 <code>OS_ERR_NONE</code> 或 <code>OS_ERR_TIMEOUT</code>；本例 timeout=0，实际只会是 NONE。</li>
+      <li>Pend 内的 <code>OS_Sched</code> 是任务主动让出 CPU 的位置，也是“阻塞”真正的含义。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s09" data-title="09 邮箱：任务间传键码" class="content-card">
+  <h2>09 邮箱：任务间传键码</h2>
+  <p class="sec-sub">邮箱只存一个指针：取走即清空，未取走再投递会返回 MBOX_FULL</p>
+  <pre class="code">void *OSMboxPend(OS_EVENT *pevent, INT32U timeout, INT8U *perr)
+{
+    void *pmsg;
+    if (OSIntNesting &gt; 0u) { *perr = OS_ERR_PEND_ISR; return ((void *)0); }
+    OS_ENTER_CRITICAL();
+    pmsg = pevent-&gt;OSEventPtr;
+    if (pmsg != (void *)0) {                 <span class="cmt">// 邮箱里已有消息</span>
+        pevent-&gt;OSEventPtr = (void *)0;      <span class="cmt">// 取走并清空</span>
+        OS_EXIT_CRITICAL();
+        *perr = OS_ERR_NONE;
+        return pmsg;
+    }
+    OSTCBCur-&gt;OSTCBStat    |= OS_STAT_MBOX;
+    OSTCBCur-&gt;OSTCBStatPend = OS_STAT_PEND_OK;
+    OSTCBCur-&gt;OSTCBDly      = timeout;       <span class="cmt">// 10 tick</span>
+    OS_EventTaskWait(pevent);                <span class="cmt">// 挂起等待</span>
+    OS_EXIT_CRITICAL();
+    OS_Sched();
+    OS_ENTER_CRITICAL();
+    switch (OSTCBCur-&gt;OSTCBStatPend) {
+        case OS_STAT_PEND_OK:    pmsg = OSTCBCur-&gt;OSTCBMsg; *perr = OS_ERR_NONE; break;
+        case OS_STAT_PEND_ABORT: pmsg = (void *)0; *perr = OS_ERR_PEND_ABORT; break;
+        default:                 pmsg = (void *)0; *perr = OS_ERR_TIMEOUT; break;
+    }
+    OSTCBCur-&gt;OSTCBStat = OS_STAT_RDY;
+    OSTCBCur-&gt;OSTCBEventPtr = (OS_EVENT *)0;
+    OSTCBCur-&gt;OSTCBMsg = (void *)0;
+    OS_EXIT_CRITICAL();
+    return pmsg;
+}</pre>
+  <pre class="code">INT8U OSMboxPost(OS_EVENT *pevent, void *pmsg)
+{
+    if (pmsg == (void *)0) return (OS_ERR_POST_NULL_PTR); <span class="cmt">// 禁止投 NULL</span>
+    OS_ENTER_CRITICAL();
+    if (pevent-&gt;OSEventGrp != 0u) {                 <span class="cmt">// 有任务在等</span>
+        (void)OS_EventTaskRdy(pevent, pmsg, OS_STAT_MBOX, OS_STAT_PEND_OK);
+        OS_EXIT_CRITICAL();
+        OS_Sched();
+        return (OS_ERR_NONE);
+    }
+    if (pevent-&gt;OSEventPtr != (void *)0) {           <span class="cmt">// 邮箱已满</span>
+        OS_EXIT_CRITICAL();
+        return (OS_ERR_MBOX_FULL);
+    }
+    pevent-&gt;OSEventPtr = pmsg;                      <span class="cmt">// 存入消息</span>
+    OS_EXIT_CRITICAL();
+    return (OS_ERR_NONE);
+}</pre>
+  <pre class="code">void main_task(void *pdata)
+{
+    u32 key = 0;
+    u8  err;
+    while (1) {
+        key = (u32)OSMboxPend(msg_key, 10, &amp;err);   <span class="cmt">// 10 ms 超时</span>
+        switch (key) {
+            case 1: LED1 = !LED1; break;
+            case 2: OSSemPost(sem_beep); break;
+            case 3: LCD_Fill(0, 121, lcddev.width - 1, lcddev.height - 1, WHITE); break;
+            case 4: OSTaskSuspend(TOUCH_TASK_PRIO);
+                    if ((tp_dev.touchtype &amp; 0X80) == 0) TP_Adjust();
+                    OSTaskResume(TOUCH_TASK_PRIO);
+                    ucos_load_main_ui();
+                    break;
+        }
+        delay_ms(10);
+    }
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>OSMboxPost(msg_key, (void *)key)</code> 把 1~4 当指针存，不分配内存，也没有拷贝开销。</li>
+      <li>邮箱容量是 1：MAIN 还没取走时再按键，<code>OSMboxPost</code> 返回 <code>OS_ERR_MBOX_FULL</code>，<code>key_task</code> 忽略返回值。</li>
+      <li><code>OSMboxPend</code> 的 10 tick 超时意味着主任务不会永久睡死，超时返回 NULL，<code>switch</code> 不匹配任何 case。</li>
+      <li>真正被唤醒时，消息不是从 <code>OSEventPtr</code> 取，而是由 <code>OS_EventTaskRdy</code> 写进 <code>OSTCBCur-&gt;OSTCBMsg</code>。</li>
+      <li>取走后 <code>OSEventPtr</code> 清 0，邮箱回到“空”状态，可以接收下一条键码。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s10" data-title="10 临界区与中断嵌套" class="content-card">
+  <h2>10 临界区与中断嵌套</h2>
+  <p class="sec-sub">事件等待表与就绪表必须一起改，任何一半被中断打断都会破坏内核一致性</p>
+  <pre class="code"><span class="cmt">/* os_cpu.h：方法 3，局部变量保存 PRIMASK */</span>
+#define OS_CRITICAL_METHOD  3u
+#define OS_ENTER_CRITICAL()  { cpu_sr = OS_CPU_SR_Save(); }
+#define OS_EXIT_CRITICAL()   { OS_CPU_SR_Restore(cpu_sr); }</pre>
+  <pre class="code"><span class="cmt">/* os_cpu_a.asm */</span>
+OS_CPU_SR_Save
+    MRS     R0, PRIMASK      <span class="cmt">; 读出旧的中断屏蔽状态</span>
+    CPSID   I                <span class="cmt">; 关可屏蔽中断</span>
+    BX      LR
+
+OS_CPU_SR_Restore
+    MSR     PRIMASK, R0      <span class="cmt">; 恢复旧状态，天然支持嵌套</span>
+    BX      LR</pre>
+  <pre class="code">void touch_task(void *pdata)
+{
+    while (1) {
+        tp_dev.scan(0);
+        if (tp_dev.sta &amp; TP_PRES_DOWN) {
+            OS_ENTER_CRITICAL();   <span class="cmt">// 防止别的任务插入 LCD 操作</span>
+            lcd_draw_bline(lastpos[0], lastpos[1], tp_dev.x[0], tp_dev.y[0], 2, RED);
+            OS_EXIT_CRITICAL();    <span class="cmt">// 画完立即恢复中断</span>
+        } else {
+            lastpos[0] = 0XFFFF;
+            delay_ms(10);
+        }
+    }
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>OS_EventTaskWait</code> 同时改 <code>OSEventTbl/OSEventGrp</code> 与 <code>OSRdyTbl/OSRdyGrp</code>，调用者已用临界区包住。</li>
+      <li>方法 3 保存的是进入前的 PRIMASK，而不是无条件开中断；嵌套调用时不会提前打开中断。</li>
+      <li>触摸任务在画线期间关中断，是为了防止 MAIN 任务同时操作 LCD 导致花屏；画线很短，关中断时间可控。</li>
+      <li><code>OSIntEnter/OSIntExit</code> 维护 <code>OSIntNesting</code>，保证 SysTick 里不会直接切换任务。</li>
+      <li>临界区内不能调用 <code>OSSemPend</code>、<code>OSMboxPend</code>、<code>delay_ms</code> 等可能引起调度的函数。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s11" data-title="11 调度与 PendSV 上下文切换" class="content-card">
+  <h2>11 调度与 PendSV 上下文切换</h2>
+  <p class="sec-sub">Post 只是“置就绪 + 触发 PendSV”，真正的寄存器保存发生在 PendSV 异常里</p>
+  <pre class="code">void OS_Sched(void)
+{
+    INT8U y;
+    OS_ENTER_CRITICAL();
+    if ((OSIntNesting == 0u) &amp;&amp; (OSLockNesting == 0u)) {
+        y = OSUnMapTbl[OSRdyGrp];
+        OSPrioHighRdy = (INT8U)((y &lt;&lt; 3u) + OSUnMapTbl[OSRdyTbl[y]]);
+        if (OSPrioHighRdy != OSPrioCur) {
+            OSTCBHighRdy = OSTCBPrioTbl[OSPrioHighRdy];
+            OSCtxSwCtr++;
+            OS_TASK_SW();              <span class="cmt">// os_cpu.h：OSCtxSw()</span>
+        }
+    }
+    OS_EXIT_CRITICAL();
+}</pre>
+  <pre class="code">PendSV_Handler
+    CPSID   I
+    MRS     R0, PSP
+    CBZ     R0, PendSV_nosave
+    SUBS    R0, R0, #0x20
+    STM     R0, {R4-R11}             <span class="cmt">; 保存旧任务 R4-R11</span>
+    LDR     R1, =OSTCBCur
+    LDR     R1, [R1]
+    STR     R0, [R1]                 <span class="cmt">; OSTCBStkPtr = 当前 PSP</span>
+PendSV_nosave
+    PUSH    {R14}
+    LDR     R0, =OSTaskSwHook
+    BLX     R0
+    POP     {R14}
+    LDR     R0, =OSPrioCur
+    LDR     R1, =OSPrioHighRdy
+    LDRB    R2, [R1]
+    STRB    R2, [R0]                 <span class="cmt">; OSPrioCur = OSPrioHighRdy</span>
+    LDR     R0, =OSTCBCur
+    LDR     R1, =OSTCBHighRdy
+    LDR     R2, [R1]
+    STR     R2, [R0]                 <span class="cmt">; OSTCBCur = OSTCBHighRdy</span>
+    LDR     R0, [R2]
+    LDM     R0, {R4-R11}
+    ADDS    R0, R0, #0x20
+    MSR     PSP, R0
+    ORR     LR, LR, #0xF4
+    CPSIE   I
+    BX      LR</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>OS_EventTaskRdy</code> 会把 BEEP/MAIN 任务重新置就绪，但不会立刻切；<code>OSSemPost</code> 随后调用 <code>OS_Sched</code>。</li>
+      <li>若被唤醒的任务优先级低于当前任务，<code>OSPrioHighRdy == OSPrioCur</code>，不触发切换，当前任务继续跑。</li>
+      <li>PendSV 保存 R4-R11，硬件异常帧自动保存 R0-R3/R12/LR/PC/xPSR，两者合起来才是完整上下文。</li>
+      <li><code>ORR LR, LR, #0xF4</code> 让异常返回后使用 PSP、Thread 模式，任务继续在自己的栈上运行。</li>
+      <li>PendSV 优先级最低，保证所有中断服务先完成，再统一做任务切换。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s12" data-title="12 IPC 链路与观察点" class="content-card">
+  <h2>12 IPC 链路与观察点</h2>
+  <p class="sec-sub">一次 KEY1 按下，键码经过邮箱、主任务分发，最后变成一次 60 ms 蜂鸣</p>
+  <figure class="figure">
+    <img src="./index75-map/ipc-chain.png" alt="按键任务、邮箱、主任务、信号量与蜂鸣器任务的数据流">
+    <figcaption>图 12-1　邮箱传键码、信号量做同步的完整链路与各任务优先级</figcaption>
+  </figure>
+  <pre class="code">void start_task(void *pdata)
+{
+    OS_CPU_SR cpu_sr = 0;
+    pdata = pdata;
+    msg_key  = OSMboxCreate((void *)0);   <span class="cmt">// 空邮箱</span>
+    sem_beep = OSSemCreate(0);            <span class="cmt">// 计数 0，BEEP 先阻塞</span>
+    OSStatInit();                         <span class="cmt">// 约 102 ms 的空闲计数采样</span>
+    OS_ENTER_CRITICAL();                  <span class="cmt">// 连续创建 5 个任务，期间不调度</span>
+    OSTaskCreateExt(touch_task, ... TOUCH_TASK_PRIO ...);
+    OSTaskCreateExt(led_task,   ... LED_TASK_PRIO   ...);
+    OSTaskCreateExt(beep_task,  ... BEEP_TASK_PRIO  ...);
+    OSTaskCreateExt(main_task,  ... MAIN_TASK_PRIO  ...);
+    OSTaskCreateExt(key_task,   ... KEY_TASK_PRIO   ...);
+    OS_EXIT_CRITICAL();
+    OSTaskSuspend(START_TASK_PRIO);       <span class="cmt">// 开始任务功成身退</span>
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>创建顺序是 TOUCH→LED→BEEP→MAIN→KEY，但真正运行顺序由优先级决定：KEY(3) 最先。</li>
+      <li>创建 5 个任务时关中断，避免创建到一半被更高优先级任务抢占，造成半初始化状态。</li>
+      <li>KEY 任务投递后执行 <code>delay_ms(10)</code>，主动让出 CPU；MAIN 任务优先级 4 立刻取走消息。</li>
+      <li>MAIN 执行 <code>OSSemPost</code> 时 BEEP(5) 被置就绪，但 MAIN(4) 更高，所以 MAIN 先继续，直到自己延时。</li>
+      <li>观察点：<code>msg_key-&gt;OSEventPtr</code> 是否非 0、<code>sem_beep-&gt;OSEventCnt</code> 是否变化、<code>OSEventTbl</code> 是否有等待位。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s13" data-title="13 实验现象与调试验证" class="content-card">
+  <h2>13 实验现象与调试验证</h2>
+  <p class="sec-sub">用示波器同时看按键、蜂鸣器与串口打印，可以区分“邮箱丢消息”和“信号量没释放”</p>
+  <figure class="figure">
+    <img src="./index75-map/mbox-sem-timing.png" alt="邮箱投递、主任务取消息、信号量释放与蜂鸣器电平的时序">
+    <figcaption>图 13-1　一次 KEY1 从邮箱投递到蜂鸣器响 60 ms 的时序</figcaption>
+  </figure>
+  <table class="data">
+    <thead><tr><th>操作</th><th>预期现象</th><th>调试确认</th></tr></thead>
+    <tbody>
+      <tr><td>上电</td><td>LCD 显示主界面，SEM:000，CPU 百分比周期刷新</td><td>Watch 看 <code>OSCPUUsage</code>、<code>sem_beep-&gt;OSEventCnt</code></td></tr>
+      <tr><td>KEY0</td><td>DS1 翻转</td><td>看 <code>msg_key-&gt;OSEventPtr</code> 短暂非 0</td></tr>
+      <tr><td>KEY1</td><td>蜂鸣器响 60 ms，SEM 数字短暂变化</td><td>看 <code>OSEventTbl[0]</code> 中 BEEP 位是否被清</td></tr>
+      <tr><td>KEY2</td><td>y&gt;121 的绘图区被清空</td><td>确认只清下半屏，标题仍在</td></tr>
+      <tr><td>WKUP</td><td>进入触摸校准，完成后重载界面</td><td>看 TOUCH 任务是否短暂从就绪表消失</td></tr>
+    </tbody>
+  </table>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>连按 KEY1 时，若 BEEP 正在响，<code>OSSemPost</code> 只把计数加 1；下一次 Pend 立即消费，不会叠加成多次蜂鸣。</li>
+      <li>若 KEY1 完全无反应，先确认 <code>msg_key</code> 是否创建成功、MAIN 任务是否卡在别处。</li>
+      <li>若蜂鸣器一直响，检查 <code>beep_task</code> 是否在 <code>delay_ms(60)</code> 后被更高优先级任务长期抢占。</li>
+      <li>CPU 使用率每 0.5 s 刷新一次，因为 <code>tcnt == 50</code> 且循环底部有 <code>delay_ms(10)</code>。</li>
+    </ol>
+  </div>
+  <div class="note blue">邮箱和信号量都不是“数据管道”：邮箱只存一个指针，信号量只存一个计数。需要缓存多条消息时应改用消息队列（实验61）。</div>
+</section>
+
+<section id="s14" data-title="14 总结与移植要点" class="content-card">
+  <h2>14 总结与移植要点</h2>
+  <p class="sec-sub">邮箱传数据、信号量做同步，两者都通过“等待表 + 就绪表”参与调度</p>
+  <table class="data">
+    <thead><tr><th>API</th><th>作用</th><th>关键参数</th><th>返回 / 错误</th></tr></thead>
+    <tbody>
+      <tr><td>OSSemCreate</td><td>创建计数信号量</td><td>cnt 初值</td><td>OS_EVENT*，耗尽返回 NULL</td></tr>
+      <tr><td>OSSemPend</td><td>申请信号量</td><td>timeout：0 永久等待</td><td>void，错误码经 perr 返回</td></tr>
+      <tr><td>OSSemPost</td><td>释放信号量</td><td>pevent</td><td>OS_ERR_NONE / OS_ERR_SEM_OVF</td></tr>
+      <tr><td>OSMboxCreate</td><td>创建邮箱</td><td>pmsg 初值，NULL 为空</td><td>OS_EVENT*，耗尽返回 NULL</td></tr>
+      <tr><td>OSMboxPend</td><td>取消息</td><td>timeout tick</td><td>消息指针，超时返回 NULL</td></tr>
+      <tr><td>OSMboxPost</td><td>投消息</td><td>pmsg 不能为 NULL</td><td>NONE / MBOX_FULL / POST_NULL_PTR</td></tr>
+    </tbody>
+  </table>
+  <pre class="code"><span class="cmt">/* UCOSII/uCOS-CONFIG/os_cfg.h：本实验相关裁剪 */</span>
+#define OS_MAX_EVENTS          20u   <span class="cmt">// 事件块总数</span>
+#define OS_EVENT_NAME_EN        1u   <span class="cmt">// 事件可带名字</span>
+#define OS_SEM_EN               1u   <span class="cmt">// 打开信号量</span>
+#define OS_MBOX_EN              1u   <span class="cmt">// 打开邮箱</span>
+#define OS_Q_EN                 1u   <span class="cmt">// 队列已编译，但本实验未用</span>
+#define OS_TICKS_PER_SEC     1000u   <span class="cmt">// 10 tick = 10 ms</span>
+#define OS_LOWEST_PRIO         63u   <span class="cmt">// 64 个优先级</span></pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>信号量适合“资源计数 / 事件通知”，不携带数据；邮箱适合“传一个指针”，容量为 1。</li>
+      <li>Pend 的 timeout=0 是永久等待，不是立即返回；需要非阻塞查询时用 <code>OSSemAccept</code>/<code>OSMboxAccept</code>。</li>
+      <li>Post 在有人等待时直接唤醒最高优先级等待者，不增加计数；没人等待时才累加。</li>
+      <li>事件 API 不能在中断里 Pend；Post 可以在中断里调用，但会触发调度，需配合 <code>OSIntEnter/OSIntExit</code>。</li>
+      <li>所有等待/唤醒只改位图，时间复杂度 O(1)，与等待任务数量无关。</li>
+    </ol>
+  </div>
+  <div class="note">下一实验（实验61）把“一条消息”扩展为“多条消息的环形队列”，并引入信号量集与软件定时器：消息队列缓存触摸/按键事件，信号量集一次等待多个位，软件定时器在回调里生产消息。</div>
+</section>
+
+            
+
+            
+                <section class="content-card" id="s15" data-title="15 交互演示">
+                    <h2>15　交互演示</h2>
+                    <div class="sec-sub">按钮对应 <code class="inline">os_sem.c</code> / <code class="inline">os_mbox.c</code> 的 API，仅演示逻辑</div>
+                    <div class="sim">
+                        <div class="sim-title">信号量计数与邮箱消息</div>
+                        <div class="sim-buttons">
+                            <button data-act="sem_post">OSSemPost</button>
+                            <button data-act="sem_pend">OSSemPend</button>
+                            <button data-act="mbox_post">OSMboxPost</button>
+                            <button data-act="mbox_pend">OSMboxPend</button>
+                        </div>
+                        <div class="sim-log" id="simLog">信号量计数：0　邮箱：空　等待任务：无</div>
+                    </div>
+                    <div class="note blue">计数为 0 时 <code class="inline">OSSemPend</code> 会把当前任务阻塞，直到有任务 Post 或超时。</div>
+                    <script>
+                        (function () {
+                            var log = document.getElementById('simLog');
+                            var sem = 0, mbox = null, waiting = '无';
+                            function show(msg) {
+                                log.textContent = msg + '　信号量计数：' + sem +
+                                    '　邮箱：' + (mbox === null ? '空' : '有消息') +
+                                    '　等待任务：' + waiting;
+                            }
+                            var acts = {
+                                sem_post: function () {
+                                    if (waiting === '等待信号量') { waiting = '无'; show('OSSemPost 唤醒等待任务，计数不加'); return; }
+                                    sem++;
+                                    show('OSSemPost 成功，计数加 1');
+                                },
+                                sem_pend: function () {
+                                    if (sem > 0) { sem--; show('OSSemPend 立即返回，计数减 1'); }
+                                    else { waiting = '等待信号量'; show('计数为 0，任务进入等待（设置超时）'); }
+                                },
+                                mbox_post: function () {
+                                    if (mbox !== null) { show('邮箱非空，返回 OS_ERR_MBOX_FULL'); return; }
+                                    mbox = 1;
+                                    show('OSMboxPost 写入消息指针');
+                                },
+                                mbox_pend: function () {
+                                    if (mbox !== null) { mbox = null; show('OSMboxPend 取走消息，邮箱变空'); }
+                                    else { waiting = '等待邮箱'; show('邮箱为空，任务阻塞等待'); }
+                                }
+                            };
+                            Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (b) {
+                                b.addEventListener('click', function () { var a = b.getAttribute('data-act'); if (acts[a]) acts[a](); });
+                            });
+                        })();
+                    </script>
+                </section>
+</div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Navigation Page</title>
+    <script type="text/javascript">
+        window._AMapSecurityConfig = {
+            securityJsCode: 'c1e466ea4dab0433dc78f167b20a24d1',
+        }
+    </script>
+    <script type="text/javascript" src="https://webapi.amap.com/loader.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .left-section {
+            flex: 2;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            padding: 0;
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #mapContainer {
+            width: 100%;
+            height: 100%;
+        }
+
+        .divider {
+            width: 5px;
+            background: white;
+        }
+
+        .right-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 8px;
+            background: #8B5CF6;
+            border-radius: 15px;
+        }
+
+        .right-top {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            color: #333;
+            background: #FFFFFF;
+            border-radius: 12px 12px 0 0;
+            padding: 8px 10px;
+            overflow: hidden;
+        }
+
+        .right-bottom {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+            background: linear-gradient(145deg, #f5f3ff, #ede9fe);
+            border-radius: 0 0 12px 12px;
+            padding: 12px;
+            overflow-y: auto;
+        }
+
+        .vertical-divider {
+            height: 8px;
+            background: #8B5CF6;
+        }
+
+        .control-group {
+            width: 100%;
+            margin-bottom: 6px;
+        }
+
+        .control-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .mode-select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 2px solid #8B5CF6;
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mode-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .mode-section {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .route-type-group {
+            display: none;
+            width: 100%;
+            margin-top: 6px;
+        }
+
+        .route-type-group.visible {
+            display: block;
+        }
+
+        .route-type-buttons {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+        }
+
+        .route-type-btn {
+            flex: 1;
+            padding: 6px 4px;
+            border: 2px solid #8B5CF6;
+            background: white;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #8B5CF6;
+        }
+
+        .route-type-btn:hover {
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .route-type-btn.active {
+            background: #8B5CF6;
+            color: white;
+        }
+
+        .address-section {
+            width: 100%;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .address-section.visible {
+            display: block;
+        }
+
+        .address-row {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .address-row-3col {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 6px;
+        }
+
+        .address-row-3col .control-group {
+            flex: 1;
+        }
+
+        .address-row-3col .address-select {
+            width: 100%;
+        }
+
+        .address-select {
+            flex: 1;
+            padding: 6px 8px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .address-select:focus {
+            border-color: #8B5CF6;
+        }
+
+        .address-input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .address-input:focus {
+            border-color: #8B5CF6;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+
+        .nav-btn {
+            width: 100%;
+            padding: 8px;
+            background: #8B5CF6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 6px;
+        }
+
+        .nav-btn:hover {
+            background: #7c3aed;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .nav-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .info-panel {
+            width: 100%;
+            margin-top: 6px;
+            padding: 8px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 6px;
+            font-size: 11px;
+            color: #333;
+            display: none;
+            line-height: 1.5;
+        }
+
+        .info-panel.visible {
+            display: block;
+        }
+
+        .info-panel .info-title {
+            font-weight: 600;
+            color: #8B5CF6;
+            margin-bottom: 5px;
+        }
+
+        .current-location {
+            width: 100%;
+            padding: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+            font-size: 12px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .current-location .label {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        /* 浮动面板样式 */
+        .floating-panel {
+            position: fixed;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            width: calc(100vw / 3);
+            height: calc(100vh / 3);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .floating-panel.visible {
+            display: flex;
+        }
+
+        .floating-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px 12px 0 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .floating-panel-close {
+            font-size: 24px;
+            cursor: pointer;
+            line-height: 1;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .floating-panel-close:hover {
+            opacity: 1;
+        }
+
+        .floating-panel-content {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .floating-content-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .floating-content-row:last-child {
+            border-bottom: none;
+        }
+
+        .floating-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .floating-value {
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: right;
+        }
+
+        .floating-value.primary {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .left-section, .right-section {
+                flex: none;
+                height: 50%;
+            }
+
+            .route-type-buttons {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-section">
+            <div id="mapContainer"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="right-section">
+            <div class="right-top">
+                <div class="mode-section" id="modeSection">
+                    <div class="control-group">
+                        <label class="control-label">工作模式</label>
+                        <select class="mode-select" id="modeSelect" onchange="handleModeChange()">
+                            <option value="location">定位模式</option>
+                            <option value="navigation">导航模式</option>
+                        </select>
+                    </div>
+
+                    <div class="current-location">
+                        <span class="label">当前位置：</span>
+                        <span id="currentAddress">正在获取位置...</span>
+                    </div>
+
+                    <div class="route-type-group" id="routeTypeGroup">
+                        <label class="control-label">路线规划方式</label>
+                        <div class="route-type-buttons">
+                            <button class="route-type-btn active" data-type="driving" onclick="setRouteType('driving')">🚗 自驾</button>
+                            <button class="route-type-btn" data-type="riding" onclick="setRouteType('riding')">🚴 骑行</button>
+                            <button class="route-type-btn" data-type="walking" onclick="setRouteType('walking')">🚶 步行</button>
+                        </div>
+                    </div>
+
+                    <div class="address-section" id="addressSection">
+                        <div class="address-row-3col">
+                            <div class="control-group">
+                                <label class="control-label">省份</label>
+                                <select class="address-select" id="provinceSelect" onchange="handleProvinceChange()">
+                                    <option value="">省</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" id="cityLabel">城市</label>
+                                <select class="address-select" id="citySelect" onchange="handleCityChange()">
+                                    <option value="">市</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" id="districtLabel">区县</label>
+                                <select class="address-select" id="districtSelect" onchange="handleDistrictChange()">
+                                    <option value="">县</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <label class="control-label">详细地址</label>
+                            <input type="text" class="address-input" id="detailAddress" placeholder="请输入详细地址">
+                        </div>
+
+                        <button class="nav-btn" id="startNavBtn" onclick="startNavigation()">开始导航</button>
+                    </div>
+
+                    <div class="info-panel" id="routeInfo" onclick="toggleFloatingPanel()">
+                        <div class="info-title">导航信息</div>
+                        <div id="routeDetails"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="vertical-divider"></div>
+            <div class="right-bottom">
+                <div style="font-size: 54px; font-weight: bold; color: #8B5CF6;">电台</div>
+            </div>
+        </div>
+
+        <!-- 浮动导航信息面板 -->
+        <div class="floating-panel" id="floatingPanel">
+            <div class="floating-panel-header">
+                <span>导航详情</span>
+                <span class="floating-panel-close" onclick="toggleFloatingPanel()">&times;</span>
+            </div>
+            <div class="floating-panel-content" id="floatingPanelContent"></div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        (function disableZoom() {
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '0')) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+            document.addEventListener('wheel', function(e) {
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    return false;
+                }
+            }, { passive: false });
+
+            document.addEventListener('gesturestart', function(e) {
+                e.preventDefault();
+                return false;
+            });
+
+            document.addEventListener('gesturechange', function(e) {
+                e.preventDefault();
+                return false;
+            });
+
+            document.addEventListener('gestureend', function(e) {
+                e.preventDefault();
+                return false;
+            });
+
+            document.addEventListener('dblclick', function(e) {
+                if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        })();
+
+        (function initMap() {
+            const MAP_CONFIG = {
+                key: '8230b4fc0b511aa883cb6b0b62f1eff3',
+                version: '2.0',
+                plugins: ['AMap.Scale', 'AMap.ToolBar', 'AMap.ControlBar', 'AMap.Geocoder', 'AMap.Geolocation', 'AMap.CitySearch', 'AMap.Driving', 'AMap.Riding', 'AMap.Walking']
+            };
+
+            let mapInstance = null;
+            let markerInstance = null;
+            let infoWindowInstance = null;
+            let currentPosition = null;
+            let currentAddress = '';
+            let routeType = 'driving';
+            let currentRoute = null;
+            let routeObjInstance = null;
+            let selectedProvince = '';
+            let selectedCity = '';
+            let selectedDistrict = '';
+            let navigationInfo = null;
+
+            const PROVINCES = [
+                { name: '北京市', adcode: '110000' },
+                { name: '天津市', adcode: '120000' },
+                { name: '河北省', adcode: '130000' },
+                { name: '山西省', adcode: '140000' },
+                { name: '内蒙古自治区', adcode: '150000' },
+                { name: '辽宁省', adcode: '210000' },
+                { name: '吉林省', adcode: '220000' },
+                { name: '黑龙江省', adcode: '230000' },
+                { name: '上海市', adcode: '310000' },
+                { name: '江苏省', adcode: '320000' },
+                { name: '浙江省', adcode: '330000' },
+                { name: '安徽省', adcode: '340000' },
+                { name: '福建省', adcode: '350000' },
+                { name: '江西省', adcode: '360000' },
+                { name: '山东省', adcode: '370000' },
+                { name: '河南省', adcode: '410000' },
+                { name: '湖北省', adcode: '420000' },
+                { name: '湖南省', adcode: '430000' },
+                { name: '广东省', adcode: '440000' },
+                { name: '广西壮族自治区', adcode: '450000' },
+                { name: '海南省', adcode: '460000' },
+                { name: '重庆市', adcode: '500000' },
+                { name: '四川省', adcode: '510000' },
+                { name: '贵州省', adcode: '520000' },
+                { name: '云南省', adcode: '530000' },
+                { name: '西藏自治区', adcode: '540000' },
+                { name: '陕西省', adcode: '610000' },
+                { name: '甘肃省', adcode: '620000' },
+                { name: '青海省', adcode: '630000' },
+                { name: '宁夏回族自治区', adcode: '640000' },
+                { name: '新疆维吾尔自治区', adcode: '650000' },
+                { name: '台湾省', adcode: '710000' },
+                { name: '香港特别行政区', adcode: '810000' },
+                { name: '澳门特别行政区', adcode: '820000' }
+            ];
+
+            const MUNICIPALITIES = ['北京市', '天津市', '上海市', '重庆市'];
+
+            window.handleModeChange = function() {
+                const mode = document.getElementById('modeSelect').value;
+                const routeTypeGroup = document.getElementById('routeTypeGroup');
+                const addressSection = document.getElementById('addressSection');
+
+                if (mode === 'navigation') {
+                    routeTypeGroup.classList.add('visible');
+                    addressSection.classList.add('visible');
+                    clearRoute();
+                } else {
+                    routeTypeGroup.classList.remove('visible');
+                    addressSection.classList.remove('visible');
+                    clearRoute();
+                    if (currentPosition && window.AMap) {
+                        updateLocationMarker(currentPosition, currentAddress, window.AMap);
+                    }
+                }
+            };
+
+            window.setRouteType = function(type) {
+                routeType = type;
+                document.querySelectorAll('.route-type-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.type === type) {
+                        btn.classList.add('active');
+                    }
+                });
+                if (document.getElementById('modeSelect').value === 'navigation') {
+                    const detailAddress = document.getElementById('detailAddress').value;
+                    if (detailAddress && currentPosition) {
+                        planRoute();
+                    }
+                }
+            };
+
+            window.handleProvinceChange = function() {
+                const provinceSelect = document.getElementById('provinceSelect');
+                const citySelect = document.getElementById('citySelect');
+                const districtSelect = document.getElementById('districtSelect');
+                const cityLabel = document.getElementById('cityLabel');
+                const districtLabel = document.getElementById('districtLabel');
+
+                selectedProvince = provinceSelect.value;
+                selectedCity = '';
+                selectedDistrict = '';
+
+                citySelect.innerHTML = '<option value="">市</option>';
+                districtSelect.innerHTML = '<option value="">县</option>';
+
+                if (MUNICIPALITIES.includes(selectedProvince)) {
+                    cityLabel.textContent = '市区';
+                    districtLabel.textContent = '街道办';
+                    citySelect.options[0].textContent = '市区';
+                    districtSelect.options[0].textContent = '街道办';
+
+                    if (selectedProvince && window.AMap) {
+                        loadDistrictsForMunicipality(selectedProvince);
+                    }
+                } else {
+                    cityLabel.textContent = '城市';
+                    districtLabel.textContent = '区县';
+                    citySelect.options[0].textContent = '市';
+                    districtSelect.options[0].textContent = '县';
+
+                    if (selectedProvince && window.AMap) {
+                        loadCities(selectedProvince);
+                    }
+                }
+            };
+
+            window.handleCityChange = function() {
+                const citySelect = document.getElementById('citySelect');
+                const districtSelect = document.getElementById('districtSelect');
+                const districtLabel = document.getElementById('districtLabel');
+
+                selectedCity = citySelect.value;
+                selectedDistrict = '';
+
+                if (MUNICIPALITIES.includes(selectedProvince)) {
+                    districtSelect.innerHTML = '<option value="">街道办</option>';
+                    districtLabel.textContent = '街道办';
+                    if (selectedCity && window.AMap) {
+                        loadStreetsForMunicipality(selectedCity);
+                    }
+                } else {
+                    districtSelect.innerHTML = '<option value="">县</option>';
+                    districtLabel.textContent = '区县';
+                    if (selectedCity && window.AMap) {
+                        loadDistricts(selectedCity);
+                    }
+                }
+            };
+
+            window.handleDistrictChange = function() {
+                selectedDistrict = document.getElementById('districtSelect').value;
+            };
+
+            window.startNavigation = function() {
+                const detailAddress = document.getElementById('detailAddress').value.trim();
+
+                if (!selectedProvince) {
+                    alert('请选择省份');
+                    return;
+                }
+
+                if (!selectedCity) {
+                    if (MUNICIPALITIES.includes(selectedProvince)) {
+                        alert('请选择' + (document.getElementById('cityLabel').textContent || '区县'));
+                    } else {
+                        alert('请选择城市');
+                    }
+                    return;
+                }
+
+                if (!detailAddress) {
+                    alert('请输入详细地址（包括街道名称和门牌号）');
+                    return;
+                }
+
+                if (!currentPosition) {
+                    alert('无法获取当前位置，请检查定位权限或刷新页面重新定位');
+                    return;
+                }
+
+                planRoute();
+            };
+
+            function loadCities(provinceName) {
+                if (!window.AMap) return;
+                AMap.plugin('AMap.DistrictSearch', function() {
+                    const district = new AMap.DistrictSearch({
+                        level: 'province',
+                        extensions: 'all',
+                        showbiz: true
+                    });
+                    district.search(provinceName, function(status, result) {
+                        if (status === 'complete' && result.districtList && result.districtList.length > 0) {
+                            const citySelect = document.getElementById('citySelect');
+                            citySelect.innerHTML = '<option value="">市</option>';
+                            const provinceData = result.districtList[0];
+                            if (provinceData.districtList) {
+                                provinceData.districtList.forEach(city => {
+                                    if (city.name) {
+                                        const option = document.createElement('option');
+                                        option.value = city.name;
+                                        option.textContent = city.name;
+                                        citySelect.appendChild(option);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                });
+            }
+
+            function loadDistricts(cityName) {
+                if (!window.AMap) return;
+                AMap.plugin('AMap.DistrictSearch', function() {
+                    const district = new AMap.DistrictSearch({
+                        level: 'city',
+                        extensions: 'all',
+                        showbiz: false
+                    });
+                    district.search(cityName, function(status, result) {
+                        if (status === 'complete' && result.districtList && result.districtList.length > 0) {
+                            const districtSelect = document.getElementById('districtSelect');
+                            districtSelect.innerHTML = '<option value="">县</option>';
+                            const cityData = result.districtList[0];
+                            if (cityData.districtList) {
+                                cityData.districtList.forEach(dist => {
+                                    if (dist.name) {
+                                        const option = document.createElement('option');
+                                        option.value = dist.name;
+                                        option.textContent = dist.name;
+                                        districtSelect.appendChild(option);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                });
+            }
+
+            function loadDistrictsForMunicipality(provinceName) {
+                if (!window.AMap) return;
+                AMap.plugin('AMap.DistrictSearch', function() {
+                    const district = new AMap.DistrictSearch({
+                        level: 'province',
+                        extensions: 'all',
+                        showbiz: true
+                    });
+                    district.search(provinceName, function(status, result) {
+                        if (status === 'complete' && result.districtList && result.districtList.length > 0) {
+                            const citySelect = document.getElementById('citySelect');
+                            citySelect.innerHTML = '<option value="">市区</option>';
+                            const provinceData = result.districtList[0];
+                            if (provinceData.districtList) {
+                                provinceData.districtList.forEach(dist => {
+                                    if (dist.name) {
+                                        const option = document.createElement('option');
+                                        option.value = dist.name;
+                                        option.textContent = dist.name;
+                                        citySelect.appendChild(option);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                });
+            }
+
+            function loadStreetsForMunicipality(districtName) {
+                if (!window.AMap) return;
+                AMap.plugin('AMap.DistrictSearch', function() {
+                    const district = new AMap.DistrictSearch({
+                        level: 'district',
+                        extensions: 'all',
+                        showbiz: false
+                    });
+                    district.search(districtName, function(status, result) {
+                        if (status === 'complete' && result.districtList && result.districtList.length > 0) {
+                            const districtSelect = document.getElementById('districtSelect');
+                            districtSelect.innerHTML = '<option value="">街道办</option>';
+                            const districtData = result.districtList[0];
+                            if (districtData.districtList) {
+                                districtData.districtList.forEach(street => {
+                                    if (street.name) {
+                                        const option = document.createElement('option');
+                                        option.value = street.name;
+                                        option.textContent = street.name;
+                                        districtSelect.appendChild(option);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                });
+            }
+
+            function buildFullAddress() {
+                let address = '';
+                if (selectedProvince) address += selectedProvince;
+
+                if (MUNICIPALITIES.includes(selectedProvince)) {
+                    if (selectedCity) address += selectedCity;
+                } else {
+                    if (selectedCity) address += selectedCity;
+                }
+
+                if (selectedDistrict) address += selectedDistrict;
+
+                const detail = document.getElementById('detailAddress').value.trim();
+                if (detail) address += detail;
+
+                return address;
+            }
+
+            function clearRoute() {
+                if (routeObjInstance) {
+                    routeObjInstance.clear();
+                    routeObjInstance = null;
+                }
+                currentRoute = null;
+                document.getElementById('routeInfo').classList.remove('visible');
+                document.getElementById('routeDetails').innerHTML = '';
+            }
+
+            function planRoute() {
+                if (!mapInstance || !window.AMap) return;
+
+                clearRoute();
+
+                const fullAddress = buildFullAddress();
+
+                if (!fullAddress || fullAddress.length < 6) {
+                    alert('请输入完整的地址信息');
+                    return;
+                }
+
+                const geocoder = new AMap.Geocoder({
+                    radius: 5000,
+                    extensions: 'all',
+                    batch: false
+                });
+
+                geocoder.getLocation(fullAddress, function(status, result) {
+                    if (status === 'complete' && result.geocodes && result.geocodes.length > 0) {
+                        let bestMatch = result.geocodes[0];
+                        let bestScore = 0;
+
+                        result.geocodes.forEach((geocode, index) => {
+                            let score = 0;
+                            if (geocode.level) {
+                                const level = geocode.level.toLowerCase();
+                                if (level === 'poi') score = 100;
+                                else if (level === 'building') score = 90;
+                                else if (level === 'street') score = 80;
+                                else if (level === 'intersection') score = 70;
+                                else if (level === 'district') score = 50;
+                                else if (level === 'city') score = 40;
+                                else if (level === 'province') score = 30;
+                                else score = 20;
+                            }
+
+                            if (geocode.score) {
+                                score += geocode.score;
+                            }
+
+                            const addressParts = fullAddress.split('');
+                            let matchCount = 0;
+                            addressParts.forEach(char => {
+                                if (geocode.formattedAddress.includes(char)) matchCount++;
+                            });
+                            score += (matchCount / addressParts.length) * 50;
+
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestMatch = geocode;
+                            }
+                        });
+
+                        const destination = bestMatch.location;
+
+                        let routePlugin;
+                        let routeOptions = {
+                            map: mapInstance,
+                            panel: null,
+                            showRoute: true
+                        };
+
+                        switch (routeType) {
+                            case 'driving':
+                                routePlugin = 'AMap.Driving';
+                                routeOptions.policy = AMap.DrivingPolicy.LEAST_TIME;
+                                routeOptions.province = 'auto';
+                                break;
+                            case 'riding':
+                                routePlugin = 'AMap.Riding';
+                                routeOptions.province = 'auto';
+                                break;
+                            case 'walking':
+                                routePlugin = 'AMap.Walking';
+                                break;
+                        }
+
+                        AMap.plugin(routePlugin, function() {
+                            let routeObj;
+                            if (routeType === 'driving') {
+                                routeObj = new AMap.Driving(routeOptions);
+                            } else if (routeType === 'riding') {
+                                routeObj = new AMap.Riding(routeOptions);
+                            } else {
+                                routeObj = new AMap.Walking(routeOptions);
+                            }
+
+                            routeObjInstance = routeObj;
+
+                            routeObj.search(currentPosition, destination, function(status, result) {
+                                if (status === 'complete' && result.routes && result.routes.length > 0) {
+                                    const route = result.routes[0];
+                                    const distanceKm = (route.distance / 1000).toFixed(2);
+                                    const timeMin = Math.round(route.time / 60);
+
+                                    let routeTypeName = '';
+                                    let routeTypeNameShort = '';
+                                    if (routeType === 'driving') {
+                                        routeTypeName = '🚗 自驾';
+                                        routeTypeNameShort = '自驾';
+                                    } else if (routeType === 'riding') {
+                                        routeTypeName = '🚴 骑行';
+                                        routeTypeNameShort = '骑行';
+                                    } else {
+                                        routeTypeName = '🚶 步行';
+                                        routeTypeNameShort = '步行';
+                                    }
+
+                                    // 保存导航信息
+                                    navigationInfo = {
+                                        startAddress: currentAddress || '当前位置',
+                                        endAddress: fullAddress,
+                                        matchedAddress: bestMatch.formattedAddress,
+                                        routeType: routeTypeName,
+                                        routeTypeShort: routeTypeNameShort,
+                                        distance: distanceKm,
+                                        time: timeMin,
+                                        steps: route.steps || []
+                                    };
+
+                                    let infoHtml = '<div style="margin-bottom:8px;"><strong>起点：</strong>' + navigationInfo.startAddress + '</div>';
+                                    infoHtml += '<div style="margin-bottom:8px;"><strong>终点：</strong>' + navigationInfo.endAddress + '</div>';
+                                    infoHtml += '<div style="margin-bottom:8px;color:#888;font-size:11px;"><strong>匹配地址：</strong>' + navigationInfo.matchedAddress + '</div>';
+                                    infoHtml += '<div style="margin-bottom:8px;"><strong>路线方式：</strong>' + navigationInfo.routeType + '</div>';
+                                    infoHtml += '<div style="margin-bottom:8px;"><strong>距离：</strong>' + navigationInfo.distance + ' 公里</div>';
+                                    infoHtml += '<div><strong>预计时间：</strong>' + navigationInfo.time + ' 分钟</div>';
+
+                                    document.getElementById('routeDetails').innerHTML = infoHtml;
+                                    document.getElementById('routeInfo').classList.add('visible');
+
+                                    mapInstance.setFitView();
+                                } else if (status === 'no_data') {
+                                    alert('未能找到从当前位置到目的地的路线，请尝试其他地址或路线方式');
+                                } else {
+                                    alert('路线规划失败，请检查地址是否正确');
+                                }
+                            });
+                        });
+                    } else {
+                        alert('无法找到指定地址，请检查输入是否正确或尝试更详细的地址');
+                    }
+                });
+            }
+
+            function createTriangleIcon(AMap) {
+                return new AMap.Icon({
+                    size: new AMap.Size(40, 40),
+                    image: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCA0MCI+PHBhdGggZD0iTTIwIDIgMzUgMzggNSAzOCBaIiBmaWxsPSJub25lIiBzdHJva2U9IiNGRjAwMDAiIHN0cm9rZS13aWR0aD0iMiIvPjwvc3ZnPg==',
+                    imageSize: new AMap.Size(40, 40)
+                });
+            }
+
+            function buildAddress(addressComponent) {
+                const parts = ['province', 'city', 'district', 'township'];
+                return parts.map(p => addressComponent[p]).filter(Boolean).join('');
+            }
+
+            function updateLocationMarker(position, detailedAddress, AMap) {
+                if (markerInstance) mapInstance.remove(markerInstance);
+                if (infoWindowInstance) infoWindowInstance.close();
+
+                mapInstance.setCenter(position);
+
+                markerInstance = new AMap.Marker({
+                    position: position,
+                    icon: createTriangleIcon(AMap),
+                    title: detailedAddress,
+                    offset: new AMap.Pixel(-20, -25),
+                    clickable: false
+                });
+                mapInstance.add(markerInstance);
+
+                infoWindowInstance = new AMap.InfoWindow({
+                    content: '<div style="padding:8px;font-size:14px;line-height:1.6;background:transparent;border:none;box-shadow:none;color:#000">' + detailedAddress + '</div>',
+                    offset: new AMap.Pixel(0, -25),
+                    closeWhenClickMap: false,
+                    isCustom: true
+                });
+                infoWindowInstance.open(mapInstance, position);
+
+                document.getElementById('currentAddress').textContent = detailedAddress || '未知位置';
+                currentAddress = detailedAddress;
+
+                setTimeout(function() {
+                    mapInstance.setFitView();
+                }, 300);
+            }
+
+            function handleGeocodeResult(position, geocoderInstance, AMap) {
+                geocoderInstance.getAddress(position, function(geoStatus, geoResult) {
+                    if (geoStatus === 'complete') {
+                        currentPosition = position;
+                        updateLocationMarker(position, buildAddress(geoResult.regeocode.addressComponent), AMap);
+                    }
+                });
+            }
+
+            function fallbackToCitySearch(AMap, geocoderInstance) {
+                const citySearch = new AMap.CitySearch();
+                citySearch.getLocalCity(function(status, result) {
+                    if (status === 'complete' && result && result.city) {
+                        const city = result.city;
+                        const geocoder = new AMap.Geocoder({ radius: 1000, extensions: 'all' });
+                        geocoder.getLocation(city, function(geoStatus, geoResult) {
+                            if (geoStatus === 'complete' && geoResult && geoResult.geocodes.length > 0) {
+                                const position = geoResult.geocodes[0].location;
+                                currentPosition = position;
+                                mapInstance.panTo(position);
+                                mapInstance.setZoom(15);
+                                handleGeocodeResult(position, geocoderInstance, AMap);
+                            }
+                        });
+                    }
+                });
+            }
+
+            function fallbackToHtml5Geolocation(AMap, geocoderInstance) {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        function(position) {
+                            const lat = position.coords.latitude;
+                            const lng = position.coords.longitude;
+                            const amapPosition = new AMap.LngLat(lng, lat);
+                            currentPosition = amapPosition;
+                            mapInstance.panTo(amapPosition);
+                            mapInstance.setZoom(15);
+                            handleGeocodeResult(amapPosition, geocoderInstance, AMap);
+                        },
+                        function(error) {
+                            console.warn('HTML5 Geolocation failed, falling back to CitySearch:', error);
+                            fallbackToCitySearch(AMap, geocoderInstance);
+                        },
+                        { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 }
+                    );
+                } else {
+                    fallbackToCitySearch(AMap, geocoderInstance);
+                }
+            }
+
+            function initializeProvinceSelect() {
+                const provinceSelect = document.getElementById('provinceSelect');
+                PROVINCES.forEach(province => {
+                    const option = document.createElement('option');
+                    option.value = province.name;
+                    option.textContent = province.name;
+                    provinceSelect.appendChild(option);
+                });
+            }
+
+            function initializeMap(AMap) {
+                window.AMap = AMap;
+
+                initializeProvinceSelect();
+
+                mapInstance = new AMap.Map('mapContainer', {
+                    resizeEnable: true,
+                    dragEnable: true,
+                    zoomEnable: true
+                });
+
+                mapInstance.addControl(new AMap.Scale());
+                mapInstance.addControl(new AMap.ToolBar());
+                mapInstance.addControl(new AMap.ControlBar({ position: 'RT' }));
+
+                const geocoderInstance = new AMap.Geocoder({ radius: 1000, extensions: 'all' });
+
+                const geolocation = new AMap.Geolocation({
+                    enableHighAccuracy: false,
+                    timeout: 15000,
+                    maximumAge: 300000,
+                    convert: true,
+                    showButton: false,
+                    showMarker: false,
+                    showCircle: false,
+                    panToLocation: false
+                });
+
+                geolocation.getCurrentPosition(function(status, result) {
+                    if (status === 'complete' && result && result.position) {
+                        const position = result.position;
+                        currentPosition = position;
+                        mapInstance.panTo(position);
+                        mapInstance.setZoom(15);
+                        handleGeocodeResult(position, geocoderInstance, AMap);
+                    } else {
+                        console.warn('AMap Geolocation failed, status:', status, 'error:', result && result.message);
+                        fallbackToHtml5Geolocation(AMap, geocoderInstance);
+                }
+            });
+        }
+
+        // 浮动面板切换函数
+        window.toggleFloatingPanel = function() {
+            const floatingPanel = document.getElementById('floatingPanel');
+            const routeInfo = document.getElementById('routeInfo');
+            
+            if (!navigationInfo) {
+                return;
+            }
+            
+            if (floatingPanel.classList.contains('visible')) {
+                // 隐藏浮动面板
+                floatingPanel.classList.remove('visible');
+            } else {
+                // 获取导航信息控件的位置
+                const rect = routeInfo.getBoundingClientRect();
+                const panelWidth = window.innerWidth / 3;
+                const panelHeight = window.innerHeight / 3;
+                
+                // 计算位置：显示在导航信息控件的正上方
+                let left = rect.left + (rect.width - panelWidth) / 2;
+                let top = rect.top - panelHeight - 10; // 10px间隔
+                
+                // 边界检查
+                if (left < 10) left = 10;
+                if (left + panelWidth > window.innerWidth - 10) {
+                    left = window.innerWidth - panelWidth - 10;
+                }
+                if (top < 10) {
+                    // 如果上方空间不够，显示在下方
+                    top = rect.bottom + 10;
+                }
+                
+                floatingPanel.style.width = panelWidth + 'px';
+                floatingPanel.style.height = panelHeight + 'px';
+                floatingPanel.style.left = left + 'px';
+                floatingPanel.style.top = top + 'px';
+                
+                // 显示浮动面板并填充内容
+                let contentHtml = '';
+                
+                // 基本信息
+                contentHtml += '<div class="floating-content-row">';
+                contentHtml += '<span class="floating-label">起点</span>';
+                contentHtml += '<span class="floating-value">' + navigationInfo.startAddress + '</span>';
+                contentHtml += '</div>';
+                
+                contentHtml += '<div class="floating-content-row">';
+                contentHtml += '<span class="floating-label">终点</span>';
+                contentHtml += '<span class="floating-value">' + navigationInfo.endAddress + '</span>';
+                contentHtml += '</div>';
+                
+                contentHtml += '<div class="floating-content-row">';
+                contentHtml += '<span class="floating-label">匹配地址</span>';
+                contentHtml += '<span class="floating-value" style="font-size:12px;">' + navigationInfo.matchedAddress + '</span>';
+                contentHtml += '</div>';
+                
+                contentHtml += '<div class="floating-content-row">';
+                contentHtml += '<span class="floating-label">路线方式</span>';
+                contentHtml += '<span class="floating-value primary">' + navigationInfo.routeType + '</span>';
+                contentHtml += '</div>';
+                
+                contentHtml += '<div class="floating-content-row">';
+                contentHtml += '<span class="floating-label">距离</span>';
+                contentHtml += '<span class="floating-value primary">' + navigationInfo.distance + ' 公里</span>';
+                contentHtml += '</div>';
+                
+                contentHtml += '<div class="floating-content-row">';
+                contentHtml += '<span class="floating-label">预计时间</span>';
+                contentHtml += '<span class="floating-value primary">' + navigationInfo.time + ' 分钟</span>';
+                contentHtml += '</div>';
+                
+                // 路线步骤
+                if (navigationInfo.steps && navigationInfo.steps.length > 0) {
+                    contentHtml += '<div class="floating-content-row" style="padding-top:16px;padding-bottom:8px;">';
+                    contentHtml += '<span class="floating-label" style="font-weight:600;">导航步骤</span>';
+                    contentHtml += '<span class="floating-value">' + navigationInfo.steps.length + ' 步</span>';
+                    contentHtml += '</div>';
+                    
+                    navigationInfo.steps.forEach((step, index) => {
+                        contentHtml += '<div class="floating-content-row" style="padding:8px 0;">';
+                        contentHtml += '<span class="floating-label" style="color:#667eea;">第' + (index + 1) + '步</span>';
+                        contentHtml += '<span class="floating-value" style="font-size:12px;line-height:1.5;">' + 
+                            (step.instruction || '继续前进') + 
+                            (step.distance ? ' (' + (step.distance / 1000).toFixed(2) + '公里)' : '') + 
+                            '</span>';
+                        contentHtml += '</div>';
+                    });
+                }
+                
+                document.getElementById('floatingPanelContent').innerHTML = contentHtml;
+                floatingPanel.classList.add('visible');
+            }
+        };
+
+        window.AMapLoader.load({
+                key: MAP_CONFIG.key,
+                version: MAP_CONFIG.version,
+                plugins: MAP_CONFIG.plugins
+            }).then(initializeMap).catch(error => {
+                alert('地图加载失败');
+            });
+        })();
+    </script>
+</body>
+</html>

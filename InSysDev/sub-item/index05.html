@@ -1,0 +1,543 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>Sub-Item 管理页面</title>
+    <style>
+        /* 全局重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        /* 整体布局容器 */
+        .layout {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover {
+            background-color: #f0f6fb;
+            color: #6AADD4;
+        }
+
+        /* 愿景目标浮动显示框 */
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            transform: none;
+            margin-right: 8px;
+            background-color: rgba(255, 255, 255, 100);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel {
+            display: block;
+        }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .vision-panel .vision-text {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .navbar-about:hover .navbar-dropdown {
+            display: block;
+        }
+
+        /* ===== 中间区域（侧边栏 + 主内容） ===== */
+        .main-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            background-color: #f0f6fb;
+        }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 220px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 19px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 8px 0;
+        }
+
+        .sidebar-menu li {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-menu li:hover {
+            background-color: #f5f7fa;
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            text-align: center;
+        }
+
+        /* 二级目录条目 */
+        .sidebar-menu li.menu-sub {
+            padding: 6px 20px 6px 46px;
+            font-size: 12px;
+            color: #888;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-menu li.menu-sub:hover {
+            color: #1890ff;
+        }
+
+        .sidebar-menu li.menu-sub.active {
+            color: #1890ff;
+            border-left-color: #1890ff;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 0;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #f0f6fb;
+        }
+
+        .content-card {
+            background-color: #fff;
+            padding: 24px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 3px 3px;
+        }
+
+        .content-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        /* ===== 底部信息区域 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            font-size: 13px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+    </style>
+    <link rel="stylesheet" href="./a4-print-template.css">
+</head>
+<body>
+    <div class="layout">
+
+        <!-- 顶部导航栏 -->
+        <nav class="navbar">
+            <div class="navbar-logo">MDK-keil安装与使用</div>
+            <div class="navbar-about">
+                关于我们
+                <ul class="navbar-dropdown">
+                    <li>愿景目标
+                        <div class="vision-panel">
+                            <div class="vision-title">愿景目标</div>
+                            <div class="vision-label">愿景：</div>
+                            <div class="vision-text">科技改变生活；生活缘由探索</div>
+                            <div class="vision-label">目标：</div>
+                            <div class="vision-text">探索提升生活；生活多一选择</div>
+                        </div>
+                    </li>
+                    <li>合作条款
+                        <div class="vision-panel" style="width:245px;">
+                            <div class="vision-title">合作条款</div>
+                            <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                            <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                            <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                        </div>
+                    </li>
+                    <li>联系方式
+                        <div class="vision-panel">
+                            <div class="vision-title">联系方式</div>
+                            <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <!-- 中间区域：侧边栏 + 主内容 -->
+        <div class="main-area">
+
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <div class="sidebar-header">---导-航-菜-单---</div>
+                <ul class="sidebar-menu">
+                    <li data-target="sec-keil-introduce"><span class="icon">&#9654;</span>Keil介绍</li>
+                    <li data-target="sec-download-install"><span class="icon">&#9654;</span>Keil的下载与安装</li>
+                    <li class="menu-sub" data-target="sec-keil-install">· Keil安装步骤</li>
+                    <li data-target="sec-keil-registration"><span class="icon">&#9654;</span>keil注册激活</li>
+                    <li data-target="sec-stm32-pack"><span class="icon">&#9654;</span>STM32 Pack包的安装</li>
+                    <li data-target="sec-keil-create-project"><span class="icon">&#9654;</span>Keil创建工程</li>
+                    <li class="menu-sub" data-target="sec-keil-create-project">· 新建工程</li>
+                    <li class="menu-sub" data-target="sec-keil-Startup">· 新建StartUp.s文件</li>
+                    <li class="menu-sub" data-target="sec-keil-Config-Modify">· 修改配置</li>
+                    <li class="menu-sub" data-target="sec-keil-Code-Compile">· 在.s文件中编写代码</li>
+                    <li class="menu-sub" data-target="sec-keil-HEX-Analysis">· 分析HEX文件</li>
+                </ul>
+            </aside>
+
+            <!-- 主内容区域 -->
+            <main class="content">
+                <div class="content-body">
+                    <div class="content-card">
+                        <h3 id="sec-keil-introduce">Keil介绍</h3>
+                        <p>　　Keil 是美国 Keil Software 公司出品的51系列兼容单片机 C 语言软件开发系统，与汇编相比，C 语言在功能上、结构性、可读性、可维护性上有明显的优势，因而易学易用。Keil 提供了包括 C 编译器、宏汇编、链接器、库管理和一个功能强大的仿真调试器等在内的完整开发方案，通过一个集成开发环境（μVision）将这些部分组合在一起。</p>
+                        <p>　　运行 Keil 软件需要 WIN98、NT、WIN2000、WINXP 等操作系统。如果使用 C 语言编程，那么 Keil 几乎是不二之选，即使不使用 C 语言而仅用汇编语言编程，其集成环境强大的软件仿真调试也会令事情事半功倍。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-download-install">Keil的下载与安装</h3>
+                        <p id="sec-keil-install"><strong>● Keil安装步骤</strong></p>
+                        <p>　　1) 下载完Keil压缩包，鼠标右键解压</p>
+                        <p>　　2) 打开文件，找到Keil安装程序，右键“以管理员身份运行”</p>
+                        <p>　　3) 进入安装界面，点击Next按钮</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Install-01.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　4) 勾选"I agree to all the terms of…"，然后点击"Next按钮"</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Install-02.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　5) 点击"Browse"按钮，选择安装路径到其他盘（不建议安装在C盘），两个安装路径都修改到其他盘后，再点击"Next"按钮</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Install-03.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　6) 四个内容随便填，再点击"Next"按钮</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Install-04.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　7) 等待安装</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Install-05.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　8) 点击"Finish"，结束</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-keil-registration">keil注册激活</h3>
+                        <p>　　1) 双击打开“keil uVision5”</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Active-01.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　2) 点击菜单栏File，然后点击License选项</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Active-02.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　3) 复制左上角的ID号</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Active-03.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　4) 在解压文件夹中找到“keygen”，鼠标右键“以管理员身份运行”</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Active-04.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　5) 复制CID中的内容，将其粘贴到①中，然后选择②“Target”选项框中ARM选项，再点击“Generate”，然后复制生成内容</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Active-05.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　6) 将其粘贴“New license”中然后点击“Add LIC”。点击“close”，即安装完成！</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Active-06.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-stm32-pack">STM32 Pack包的安装</h3>
+                        <p>　　1) 进入keil中，点击“pack installer”组件</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Pack-Install-01.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　2) 在“device”中点击“STM……”开头的文件，点击“+”号，找到“STM32F1 series”</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Pack-Install-02.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　3) 在右侧的菜单栏中，找到对应的软件包下载即可。之前已经装过pack，因此显示已安装</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Pack-Install-03.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-stm32-pack">Keil创建工程</h3>
+                        <p id="sec-keil-create-project"><strong>● 新建工程</strong></p>
+                        <p>　　1) 点击“project”-“new μVision project”，之后“Ctrl+s”保存工程</p>
+                        <p>　　2) 工程建好后，会弹出“芯片选型”窗口，在此界面下进行芯片选型</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Project-Create-01.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>  3) 芯片选型结束后，出现配置窗口，勾选对应选项，点击OK即可</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Project-Create-02.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p id="sec-keil-Startup"><strong>● 新建StartUp.s文件</strong></p>
+                        <p>　　1) 点击“source”，右键“Add new item to…”，新建文件，之后“Ctrl+s”保存文件，文件命名为</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Startup-Create-01.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p id="sec-keil-Config-Modifyp"><strong>● 修改配置</strong></p>
+                        <p>　　1) 生成HEX文件,点击“魔法棒按钮”-“ouput”，将“Create Hex file”选项勾选起来</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Active-Config-Modify-01.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Active-Config-Modify-02.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　2) 修改“Debug”模式为“软件仿真”。依旧点开“魔法棒”-“Debug”，修改为“Use Simulater”</p>
+                        <p>　　　　其中，修改Dialog DLL内容：DARMSTM.DLL;修改Parameter：-p+芯片型号选型</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Active-Config-Modify-03.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p id="sec-keil-Code-Compile"><strong>● 在.s文件中编写代码</strong></p>
+                        <p>　　1) 写入如下程序：</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Code-Compile-01.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　2) 编译，按菜单栏上的“下载”按钮</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Code-Compile-02.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　3) 按下菜单栏“D”按钮，进入调试</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Code-Compile-04.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Code-Compile-05.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p id="sec-keil-HEX-Analysis"><strong>● 分析HEX文件</strong></p>
+                        <p>　　通过记事本的形式打开hex文件，其内容是这样的</p>
+                        <img class="a4-inline-img-fix" src="./index05-map/MDK-Keil-Hex-Anysis-01.jpg" style="display: block; margin: 16px 0 0 2em; width: 500px; max-width: 100%;">
+                        <p>　　该文件为16进制的一串字符。hex文件的第一排字符称之为扩展线性地址记录，也称为32位地址记录或HEX386记录。</p>
+                        <p>　　在第一行数据020000040800F2中，其实际表达为0x02 0x00 0x00 0x04 0x08 0x00 0xf2。具体含义为</p>
+                        <p>　　第一个字节 0x02表示本行数据的长度；</p>
+                        <p>　　第二、三字节 0x00 0x00表示本行数据的起始地址；</p>
+                        <p>　　第四字节 0x04表示数据类型。数据类型有：0x00、0x01、0x02、0x03、0x04、0x05；</p>
+                        <p>　　‘00’ Data Rrecord：用来记录数据，HEX文件的大部分记录都是数据记录；</p>
+                        <p>　　‘01’ End of File Record: 用来标识文件结束，放在文件的最后，标识HEX文件的结尾；</p>
+                        <p>　　‘02’ Extended Segment Address Record: 用来标识扩展段地址的记录；</p>
+                        <p>　　‘03’ Start Segment Address Record:开始段地址记录；</p>
+                        <p>　　‘04’ Extended Linear Address Record: 用来标识扩展线性地址的记录；</p>
+                        <p>　　‘05’ Start Linear Address Record:开始线性地址记录；</p>
+                        <p>　　然后是数据，0x08 0x00</p>
+                        <p>　　最后一个字节 0xf2为校验和。</p>
+                    </div>
+                    <div class="content-card">
+                        <h3 id="sec-stm32-pack">HEX文件</h3>
+                        <p id="sec-keil-HEX-Analysis"><strong>● 介绍</strong></p>
+                        <p>　　HEX 文件是由一行行符合Intel HEX文件格式的ASCII 文本文件。在Intel HEX 文件中，每一行包含一个 HEX 记录 。 这些记录由对应机器语言码和/或常量数据的十六进制编码数字组成。</p>
+                        <p>　　HEX 文件通常用于传输将被存于ROM 或者EPROM 中的程序和数据。大多数EPROM 编程器或模拟器使用HEX 文件。</p>
+                        <p id="sec-keil-HEX-Record-Format"><strong>● hex文件记录格式</strong></p>
+                        <p>　　(1)域</p>
+                        <p>　　Intel HEX由任意数量的十六进制记录组成。每个记录包含5个域，它们按以下格式排列：:llaaaatt[dd...]cc</p>
+                        <p>　　每一组字母对应一个不同的域，每一个字母对应一个十六进制编码的数字。每一个域由至少两个十六进制编码数字组成，它们构成一个字节，就像以下描述的那样：</p>
+                        <p>　　每个Intel HEX记录都由冒号开头.</p>
+                        <p>　　(2)ll 是数据长度域</p>
+                        <p>　　它代表记录当中数据字节(dd)的数量。</p>
+                        <p>　　(3)aaaa 是地址域</p>
+                        <p>　　它代表记录当中数据的起始地址。</p>
+                        <p>　　(4)tt 是代表HEX记录类型的域</p>
+                        <p>　　它可能是以下数据当中的一个:</p>
+                        <p>　　00 – 数据记录</p>
+                        <p>　　01 – 文件结束记录</p>
+                        <p>　　02 – 扩展段地址记录</p>
+                        <p>　　04 – 扩展线性地址记录</p>
+                        <p>　　(5)dd 是数据域</p>
+                        <p>　　它代表一个字节的数据。一个记录可以有许多数据字节.记录当中数据字节的数量必须和数据长度域(ll)中指定的数字相符。</p>
+                        <p>　　(6)cc 是校验和域</p>
+                        <p>　　它表示这个记录的校验和。校验和的计算是通过将记录当中所有十六进制编码数字对的值相加，以256为模进行以下补足。</p>
+                        <p id="sec-keil-HEX-Data-Record"><strong>● 数据记录</strong></p>
+                        <p>　　Intel HEX文件由任意数量以回车换行符结束的数据记录组成。数据记录外观如下:</p>
+                        <p>　　:10246200464C5549442050524F46494C4500464C33</p>
+                        <p>　　其中:</p>
+                        <p>　　10代表这个记录当中数据字节的数量。</p>
+                        <p>　　2462 ：数据将被下载到存储器当中的地址。</p>
+                        <p>　　00 ：记录类型(数据记录)</p>
+                        <p>　　464C…464C是数据。</p>
+                        <p>　　33： 记录的校验和。</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- 底部信息区域 -->
+        <footer class="footer">
+            <span class="footer-copyright">&copy; 2026~2036 Erish All rights reserved.</span>
+        </footer>
+
+    </div>
+
+    <script>
+        // 禁止手势缩放
+        document.addEventListener('gesturestart', function(e) {
+            e.preventDefault();
+        });
+
+        // 禁止 Ctrl+滚轮缩放
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 禁止 Ctrl+键盘缩放
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '-' || e.key === '0')) {
+                e.preventDefault();
+            }
+        });
+
+        // 侧边栏目录点击平滑滚动
+        document.querySelectorAll('.sidebar-menu li').forEach(function(item) {
+            item.addEventListener('click', function() {
+                var targetId = this.getAttribute('data-target');
+                if (!targetId) return;
+                var target = document.getElementById(targetId);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+                // 更新 active 状态
+                document.querySelectorAll('.sidebar-menu li').forEach(function(li) {
+                    li.classList.remove('active');
+                });
+                this.classList.add('active');
+            });
+        });
+    </script>
+    <script src="./a4-pagination.js"></script>
+</body>
+</html>

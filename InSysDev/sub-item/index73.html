@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>STM32F429 实验59 UCOSII任务调度实验 · 启动过程讲解</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 关键逻辑说明 */
+        .keylogic {
+            background: #f4faf6;
+            border-left: 4px solid #45B97C;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 12px 0 16px;
+        }
+
+        .keylogic .kl-title { font-size: 13.5px; font-weight: 600; color: #2f7a55; margin-bottom: 8px; }
+
+        .keylogic ol { margin: 0 0 0 20px; color: #4f6b5f; font-size: 13px; line-height: 1.8; }
+
+        .keylogic li { margin-bottom: 4px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+        }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- 顶部导航栏：标题写工程/实验名，不要写文件名 -->
+    <nav class="navbar">
+        <div class="navbar-logo">实验59 UCOSII任务调度实验 · 启动过程讲解</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <!-- 左侧目录：条目由脚本按 section 自动生成，不要手写 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">本页源码取自实验59 UCOSII实验1-1-任务调度；点击目录跳转，图 3-1 为启动主线。</div>
+        </aside>
+
+        <!-- 主内容：每节一个 <section class="content-card">，
+             必须带 id 与 data-title，脚本据此生成目录 -->
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+<section id="s01" data-title="01 实验目标与硬件资源" class="content-card">
+  <h2>01 实验目标与硬件资源</h2>
+  <p class="sec-sub">同一颗 STM32F429 上，让两个 LED 任务按各自周期并行闪烁，理解“任务”而不是“死等”</p>
+  <p>实验 59-1-1 是 UCOSII 系列的第一个例程：裸机程序只能用 <code>delay_ms()</code> 把 CPU 按住，两个 LED 只能串行闪烁；移植 uC/OS-II 之后，每个 LED 有独立的栈和任务控制块（TCB），内核按优先级抢占，宏观上两个灯各闪各的。</p>
+  <div class="chips">
+    <span class="chip">STM32F429IGT6</span><span class="chip">SYSCLK 180 MHz</span>
+    <span class="chip">SysTick 1 ms</span><span class="chip">uC/OS-II V2.92</span>
+    <span class="chip">LED0 = PB0</span><span class="chip">LED1 = PB1</span>
+  </div>
+  <table class="data">
+    <thead><tr><th>任务</th><th>入口函数</th><th>优先级</th><th>栈大小</th><th>行为</th></tr></thead>
+    <tbody>
+      <tr><td>START</td><td>start_task</td><td>10</td><td>128 OS_STK（512 B）</td><td>创建两个 LED 任务后挂起自己</td></tr>
+      <tr><td>LED0</td><td>led0_task</td><td>7</td><td>128 OS_STK</td><td>亮 80 ms、灭 920 ms，周期 1 s</td></tr>
+      <tr><td>LED1</td><td>led1_task</td><td>6</td><td>128 OS_STK</td><td>亮 300 ms、灭 300 ms，周期 600 ms</td></tr>
+      <tr><td>统计任务</td><td>OS_TaskStat</td><td>62</td><td>OS_TASK_STAT_STK_SIZE</td><td>OSStatInit 后统计 CPU 使用率</td></tr>
+      <tr><td>空闲任务</td><td>OS_TaskIdle</td><td>63</td><td>OS_TASK_IDLE_STK_SIZE</td><td>OSInit 自动创建，永不挂起</td></tr>
+    </tbody>
+  </table>
+  <pre class="code"><span class="cmt">/* USER/main.c：三个任务的优先级与栈都在编译期确定 */</span>
+#define START_TASK_PRIO   10            <span class="cmt">// 启动任务：只跑一次，最后挂起自己</span>
+#define START_STK_SIZE    128
+OS_STK START_TASK_STK[START_STK_SIZE];
+
+#define LED0_TASK_PRIO    7             <span class="cmt">// LED0 优先级低于 LED1，数字越大优先级越低</span>
+#define LED0_STK_SIZE     128
+OS_STK LED0_TASK_STK[LED0_STK_SIZE];
+
+#define LED1_TASK_PRIO    6
+#define LED1_STK_SIZE     128
+OS_STK LED1_TASK_STK[LED1_STK_SIZE];</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>uC/OS-II 的优先级数值越小越高，0 最高、63 最低；应用任务占用 6、7、10，内核任务占用 62、63。</li>
+      <li><code>OS_STK</code> 在 Cortex-M4 上是 32 位，所以 128 个单元等于 512 字节，不是 128 字节。</li>
+      <li>每个任务必须有独立的栈数组，任务切换时 PSP 指向不同数组，互不覆盖。</li>
+    </ol>
+  </div>
+  <div class="note">为什么先建 START 任务而不直接在 main 里建 LED 任务？因为创建任务需要动态分配 TCB、清栈、初始化栈帧，放在一个独立任务里做，main 只负责 <code>OSInit</code> 与 <code>OSStart</code>，启动路径最干净。</div>
+</section>
+
+<section id="s02" data-title="02 工程结构与源码地图" class="content-card">
+  <h2>02 工程结构与源码地图</h2>
+  <p class="sec-sub">先认清哪一层在做什么：应用层只碰 API，移植层负责寄存器与汇编，配置层决定裁剪</p>
+  <table class="data">
+    <thead><tr><th>路径</th><th>作用</th><th>本页关注点</th></tr></thead>
+    <tbody>
+      <tr><td>USER/main.c</td><td>应用入口、任务函数</td><td>main、start_task、led0_task、led1_task</td></tr>
+      <tr><td>USER/stm32f4xx_it.c</td><td>Cortex-M 异常服务</td><td>SysTick_Handler、HardFault_Handler</td></tr>
+      <tr><td>UCOSII/uCOS-CONFIG/os_cfg.h</td><td>内核裁剪</td><td>任务数、事件数、节拍率、统计任务开关</td></tr>
+      <tr><td>UCOSII/uCOS-CONFIG/includes.h</td><td>统一包含头文件</td><td>ucos_ii.h、os_cpu.h、os_cfg.h 的顺序</td></tr>
+      <tr><td>UCOSII/uCOS-II/Source</td><td>内核 C 源码</td><td>OSInit、OSStart、OS_Sched、OS_TCBInit、OSTimeTick</td></tr>
+      <tr><td>UCOSII/uCOS-II/Ports/ARM-Cortex-M4/Generic/RealView</td><td>Cortex-M4 移植层</td><td>os_cpu.h、os_cpu_c.c、os_cpu_a.asm</td></tr>
+      <tr><td>SYSTEM/delay</td><td>延时与 SysTick</td><td>delay_init、SysTick_Handler、delay_ms</td></tr>
+      <tr><td>SYSTEM/sys、SYSTEM/usart</td><td>时钟与串口</td><td>Stm32_Clock_Init、uart_init、fputc</td></tr>
+      <tr><td>CORE/startup_stm32f429xx.s</td><td>启动汇编</td><td>向量表、Reset_Handler、FPU 使能</td></tr>
+    </tbody>
+  </table>
+  <pre class="code"><span class="cmt">/* UCOSII/uCOS-CONFIG/includes.h：先内核、再移植、最后配置 */</span>
+#include &lt;stdio.h&gt;
+#include "ucos_ii.h"
+#include "os_cpu.h"
+#include "os_cfg.h"
+#include "app_cfg.h"</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>应用代码只 <code>#include "includes.h"</code>，不直接包含内核私有头，换移植层时不用改 main.c。</li>
+      <li><code>os_cfg.h</code> 决定哪些 API 被编译进来，例如 <code>OS_TASK_STAT_EN</code> 为 1 才有统计任务。</li>
+      <li>移植层的 <code>os_cpu_a.asm</code> 负责 PendSV、OSCtxSw、OS_CPU_SR_Save，C 代码无法替代。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s03" data-title="03 启动流程总览" class="content-card">
+  <h2>03 启动流程总览</h2>
+  <p class="sec-sub">从复位向量到第一个任务运行，中间只有 9 个关键节点</p>
+  <figure class="figure">
+    <img src="./index73-map/boot-flow.png" alt="UCOSII 从上电复位到 OSStart 的启动流程图">
+    <figcaption>图 3-1　从上电复位到 OSStart 的启动链路（实验59 实际调用顺序）</figcaption>
+  </figure>
+  <pre class="code">int main(void)
+{
+    HAL_Init();                          <span class="cmt">// HAL 时基：NVIC 分组、SysTick 先按 16 MHz 配 1 ms</span>
+    Stm32_Clock_Init(360, 25, 2, 8);     <span class="cmt">// PLL: 25 MHz / 25 * 360 / 2 = 180 MHz</span>
+    delay_init(180);                     <span class="cmt">// 用 180 MHz 重装 SysTick，1 tick = 1 ms</span>
+    uart_init(115200);                   <span class="cmt">// USART1 PA9/PA10，printf 重定向</span>
+    LED_Init();                          <span class="cmt">// PB0/PB1 推挽输出</span>
+
+    OSInit();                            <span class="cmt">// 建空闲任务/统计任务、初始化就绪表与 TCB 空闲链</span>
+    OSTaskCreateExt((void (*)(void *))start_task,
+                    (void *)0,
+                    (OS_STK *)&amp;START_TASK_STK[START_STK_SIZE - 1],
+                    (INT8U)START_TASK_PRIO,
+                    (INT16U)START_TASK_PRIO,
+                    (OS_STK *)&amp;START_TASK_STK[0],
+                    (INT32U)START_STK_SIZE,
+                    (void *)0,
+                    (INT16U)OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
+    OSStart();                           <span class="cmt">// 永不返回：选最高优先级任务并跳进去</span>
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>复位后先跑启动汇编：初始化 MSP、使能 FPU、调用 SystemInit，再跳 <code>__main</code> 完成分散加载，最后进 <code>main()</code>。</li>
+      <li><code>HAL_Init()</code> 里的 SysTick 只是 HAL 的 1 ms 时基，此时 <code>OSRunning</code> 还是 0，中断里不会调用 <code>OSTimeTick()</code>。</li>
+      <li><code>delay_init(180)</code> 重新写 <code>SysTick-&gt;LOAD</code>，把节拍精确调到 <code>OS_TICKS_PER_SEC = 1000</code>。</li>
+      <li><code>OSInit()</code> 先创建优先级 63 的空闲任务和优先级 62 的统计任务，此时就绪表里已经有两位。</li>
+      <li><code>OSTaskCreateExt()</code> 创建 START 任务，优先级 10，立刻成为最高优先级就绪任务。</li>
+      <li><code>OSStart()</code> 调 <code>OS_SchedNew()</code> 找到 10，置 <code>OSTCBHighRdy</code>，再跳 <code>OSStartHighRdy</code>。</li>
+      <li><code>OSStartHighRdy</code> 把 PendSV 优先级设为最低，PSP 指向 START 任务栈，异常返回到 <code>start_task</code>。</li>
+      <li><code>start_task</code> 创建 LED0、LED1 后调用 <code>OSTaskSuspend(START_TASK_PRIO)</code>，让出 CPU。</li>
+      <li>此后每次 SysTick 或任务主动让出，都通过 PendSV 完成上下文切换。</li>
+    </ol>
+  </div>
+  <div class="note blue">注意 <code>OSStart()</code> 之后不会再回到 main。如果 <code>OSStart()</code> 之后还有代码，那些代码永远不会执行——这是初学者最常见的错误之一。</div>
+</section>
+
+<section id="s04" data-title="04 时钟与 SysTick 时基" class="content-card">
+  <h2>04 时钟与 SysTick 时基</h2>
+  <p class="sec-sub">OS 的“心跳”不是 magic：180 MHz / 180000 = 1 kHz，一个 tick 正好 1 ms</p>
+  <p>本工程把 <code>OS_TICKS_PER_SEC</code> 配成 1000。SysTick 是 24 位递减计数器，重装值 = 180000 − 1，递减到 0 产生中断，然后自动重装，所以中断周期 = 180000 / 180 MHz = 1 ms。</p>
+  <pre class="code">void delay_init(u8 SYSCLK)
+{
+    u32 reload;
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);   <span class="cmt">// SysTick 时钟源 = HCLK = 180 MHz</span>
+    fac_us = SYSCLK / 8;                                   <span class="cmt">// 供 delay_us 的循环计数使用</span>
+    fac_ms = (u16)fac_us * 1000;
+    reload = SYSCLK * 1000000 / delay_ostickspersec;       <span class="cmt">// 180e6 / 1000 = 180000</span>
+    SysTick-&gt;CTRL |= SYSTICK_CLKSOURCE_HCLK;
+    SysTick-&gt;LOAD = reload - 1;                            <span class="cmt">// 24 位重装值，1 ms 一次</span>
+    SysTick-&gt;VAL = 0;
+    SysTick-&gt;CTRL |= 1 &lt;&lt; 1;                               <span class="cmt">// 开 tick 中断</span>
+    SysTick-&gt;CTRL |= 1 &lt;&lt; 0;                               <span class="cmt">// 启动计数器</span>
+}</pre>
+  <pre class="code">void SysTick_Handler(void)
+{
+    HAL_IncTick();                       <span class="cmt">// HAL 自己的毫秒计数，HAL_Delay 依赖它</span>
+    if (delay_osrunning == 1) {          <span class="cmt">// OSStart 之后才为 1</span>
+        OSIntEnter();                    <span class="cmt">// OSIntNesting++，告诉内核现在在中断里</span>
+        OSTimeTick();                    <span class="cmt">// 所有任务 OSTCBDly 减 1，到 0 的置就绪</span>
+        OSIntExit();                     <span class="cmt">// 退出中断，必要时触发 PendSV 切换</span>
+    }
+}</pre>
+  <pre class="code"><span class="cmt">/* 移植层提供的标准节拍初始化，本工程实际未调用；delay_init 做了等价配置 */</span>
+void OS_CPU_SysTickInit(INT32U cnts)
+{
+    OS_CPU_SysTickClkFreq = OS_CPU_SysTickClkFreqGet();
+    OS_CPU_SysTickClkFreq /= cnts;                      <span class="cmt">// 每秒节拍数</span>
+    NVIC_SetPriority(SysTick_IRQn, OS_CPU_CFG_SYSTICK_PRIO);
+    OS_CPU_SysTickReloadSet(cnts - 1);
+    OS_CPU_SysTickCounterSet(0);
+    OS_CPU_SysTickIntEnable();
+    OS_CPU_SysTickEnable();
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>delay_init()</code> 必须先于 <code>OSStart()</code>，否则 tick 中断按 HAL 的默认 1 ms/16 MHz 配置，节拍不对。</li>
+      <li><code>delay_osrunning</code> 是移植代码里的开关，<code>OSStartHighRdy</code> 之后才置 1，避免 OS 未启动就调用内核 API。</li>
+      <li>SysTick 中断优先级由 HAL 配成 15（最低），与 PendSV 同级；这样内核临界区用 PRIMASK 一关，两个都不会来。</li>
+      <li><code>OSTimeTick()</code> 只做减计数和置就绪，不直接切换；真正切换在 <code>OSIntExit()</code> 里触发 PendSV。</li>
+    </ol>
+  </div>
+  <table class="data">
+    <thead><tr><th>函数</th><th>作用</th><th>参数</th><th>返回值</th><th>为什么这样写</th></tr></thead>
+    <tbody>
+      <tr><td>delay_init</td><td>配置 SysTick 为 1 ms 节拍</td><td>SYSCLK = 180（MHz）</td><td>无</td><td>用实际主频算重装值，换晶振只需改实参</td></tr>
+      <tr><td>SysTick_Handler</td><td>节拍中断入口</td><td>无</td><td>无</td><td>先 <code>OSIntEnter</code> 再 <code>OSTimeTick</code>，最后 <code>OSIntExit</code> 保证中断嵌套计数正确</td></tr>
+      <tr><td>OS_CPU_SysTickInit</td><td>移植层标准节拍初始化</td><td>cnts：每 tick 的时钟数</td><td>无</td><td>与 delay_init 等价，保留给不使用 ALIENTEK delay 的工程</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="s05" data-title="05 启动汇编与 C 运行时" class="content-card">
+  <h2>05 启动汇编与 C 运行时</h2>
+  <p class="sec-sub">在 main 之前，栈指针、FPU、.data 拷贝和 .bss 清零已经完成</p>
+  <pre class="code">__Vectors       DCD     __initial_sp               <span class="cmt">; 0x0000: 初始 MSP = 栈顶</span>
+                DCD     Reset_Handler              <span class="cmt">; 0x0004: 复位入口</span>
+                DCD     NMI_Handler
+                DCD     HardFault_Handler
+                ...
+                DCD     PendSV_Handler             <span class="cmt">; 移植层的上下文切换入口</span>
+                DCD     SysTick_Handler            <span class="cmt">; delay.c 里的节拍中断</span>
+
+Reset_Handler    PROC
+                EXPORT  Reset_Handler             [WEAK]
+                IMPORT  SystemInit
+                IMPORT  __main
+                LDR     R0, =SystemInit
+                BLX     R0                         <span class="cmt">; 关中断、清流水线等基础设置</span>
+                LDR     R0, =__main
+                BX      R0                         <span class="cmt">; C 库：分散加载 + 调 main</span>
+                ENDP</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>向量表第 0 项是初始 MSP，硬件复位时自动装进 SP；第 1 项是 Reset_Handler，自动装进 PC。</li>
+      <li>启动文件里还有一段汇编使能 FPU（CPACR 的 CP10/CP11 置 1），否则第一次执行浮点指令就进 HardFault。</li>
+      <li><code>__main</code> 是 ARM 编译器运行库入口，它完成 RW 数据从 Flash 到 RAM 的拷贝、ZI 段清零，然后才调用用户的 <code>main()</code>。</li>
+      <li>PendSV 和 SysTick 的向量必须指向移植层与 delay.c 的实现，名字写错就会落到默认死循环。</li>
+    </ol>
+  </div>
+  <div class="note">如果程序“进 main 之前就死”，优先查三件事：栈顶地址是否落在 RAM、向量表是否被重定位、FPU 是否使能。用调试器看 <code>SP</code> 和 <code>PC</code> 最直接。</div>
+</section>
+
+<section id="s06" data-title="06 main 初始化与外设" class="content-card">
+  <h2>06 main 初始化与外设</h2>
+  <p class="sec-sub">HAL → 时钟 → 延时 → 串口 → LED，顺序不能乱：时钟没起来，串口波特率就是错的</p>
+  <pre class="code">HAL_Init();                              <span class="cmt">// 1) HAL 基础：NVIC 分组、SysTick、HAL_MspInit</span>
+Stm32_Clock_Init(360, 25, 2, 8);         <span class="cmt">// 2) PLL：HSE 25 MHz → SYSCLK 180 MHz</span>
+delay_init(180);                         <span class="cmt">// 3) SysTick 1 ms，必须在时钟稳定之后</span>
+uart_init(115200);                       <span class="cmt">// 4) USART1，PA9 复用推挽、PA10 上拉输入</span>
+LED_Init();                              <span class="cmt">// 5) PB0/PB1 推挽输出，默认高电平灭灯</span>
+
+<span class="cmt">/* SYSTEM/sys/sys.c： PLL 参数全部由实参传入，方便换板 */</span>
+RCC_OscInitStruct.PLL.PLLM = pllm;       <span class="cmt">// 25：HSE 先分频到 1 MHz</span>
+RCC_OscInitStruct.PLL.PLLN = plln;       <span class="cmt">// 360：VCO = 1 MHz × 360 = 360 MHz</span>
+RCC_OscInitStruct.PLL.PLLP = pllp;       <span class="cmt">// 2：SYSCLK = 360 / 2 = 180 MHz</span>
+RCC_OscInitStruct.PLL.PLLQ = pllq;       <span class="cmt">// 8：USB/SDIO = 45 MHz</span>
+RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;   <span class="cmt">// HCLK 180 MHz</span>
+RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;     <span class="cmt">// APB1 45 MHz</span>
+RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;     <span class="cmt">// APB2 90 MHz</span>
+HAL_RCC_ClockConfig(&amp;RCC_ClkInitStruct, FLASH_LATENCY_5); <span class="cmt">// 180 MHz 需 5 个等待周期</span></pre>
+  <pre class="code"><span class="cmt">/* SYSTEM/usart/usart.c：115200-8-N-1，并重定向 printf */</span>
+huart1.Instance = USART1;
+huart1.Init.BaudRate = bound;
+huart1.Init.WordLength = UART_WORDLENGTH_8B;
+huart1.Init.StopBits = UART_STOPBITS_1;
+huart1.Init.Parity = UART_PARITY_NONE;
+huart1.Init.Mode = UART_MODE_TX_RX;
+HAL_UART_Init(&amp;huart1);
+
+int fputc(int ch, FILE *f)               <span class="cmt">// printf 最终走到这里</span>
+{
+    while ((USART1-&gt;SR &amp; 0X40) == 0);     <span class="cmt">// 等 TXE 置位</span>
+    USART1-&gt;DR = (u8)ch;
+    return ch;
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>HAL_Init 内部把 NVIC 优先级分组设为 4 位抢占、0 位子优先级，后面所有外设中断都按这个分组解释。</li>
+      <li>时钟树必须先于串口初始化：<code>uart_init</code> 用 <code>HAL_RCC_GetPCLK2Freq()</code> 计算 BRR，PCLK2 不对，115200 就会变成别的值。</li>
+      <li>LED 默认输出高电平，因为硬件是低电平点亮；<code>LED0=1</code> 是灭，<code>LED0=0</code> 才是亮。</li>
+      <li><code>fputc</code> 用轮询等 TXE，不占中断；在任务里 printf 会阻塞当前任务，但不会影响更高优先级任务抢占。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s07" data-title="07 任务控制块与就绪表" class="content-card">
+  <h2>07 任务控制块与就绪表</h2>
+  <p class="sec-sub">内核不认识“函数”，它只认识 TCB；就绪表则是所有 TCB 的优先级索引</p>
+  <figure class="figure">
+    <img src="./index73-map/rdy-table.png" alt="UCOSII 就绪表 OSRdyGrp 与 OSRdyTbl 的位映射">
+    <figcaption>图 7-1　OSRdyGrp / OSRdyTbl 的位映射与最高优先级查找</figcaption>
+  </figure>
+  <pre class="code"><span class="cmt">/* ucos_ii.h：TCB 中与调度直接相关的字段 */</span>
+typedef struct os_tcb {
+    OS_STK          *OSTCBStkPtr;        <span class="cmt">// 当前栈顶，PendSV 保存/恢复的就是它</span>
+    OS_STK          *OSTCBStkBottom;     <span class="cmt">// 栈底，用于栈使用率检查</span>
+    INT32U           OSTCBStkSize;       <span class="cmt">// 栈容量（OS_STK 个数）</span>
+    INT16U           OSTCBOpt;           <span class="cmt">// STK_CHK / STK_CLR / SAVE_FP</span>
+    INT8U            OSTCBStat;          <span class="cmt">// 任务状态：READY/RUNNING/SUSPEND/PEND</span>
+    INT8U            OSTCBStatPend;      <span class="cmt">// 等待结果：TIMEOUT / PEND_OK / PEND_ABORT</span>
+    INT16U           OSTCBDly;           <span class="cmt">// 延时剩余 tick，0 表示不在延时</span>
+    INT8U            OSTCBPrio;          <span class="cmt">// 优先级 0~63</span>
+    INT8U            OSTCBX, OSTCBY;     <span class="cmt">// 预先算好的 x = prio%8, y = prio/8</span>
+    INT8U            OSTCBBitX, OSTCBBitY;<span class="cmt">// 1&lt;&lt;x、1&lt;&lt;y，避免调度时再移位</span>
+    OS_EVENT        *OSTCBEventPtr;      <span class="cmt">// 正在等待的事件控制块</span>
+    INT8U            OSTCBDelReq;        <span class="cmt">// 删除请求标志</span>
+} OS_TCB;</pre>
+  <pre class="code"><span class="cmt">/* os_core.c OS_TCBInit()：把新任务挂进就绪表 */</span>
+ptcb-&gt;OSTCBX     = (INT8U)(prio &amp; 0x07u);
+ptcb-&gt;OSTCBY     = (INT8U)((prio &gt;&gt; 3u) &amp; 0x07u);
+ptcb-&gt;OSTCBBitX   = (OS_STK)(1uL &lt;&lt; ptcb-&gt;OSTCBX);
+ptcb-&gt;OSTCBBitY   = (OS_STK)(1uL &lt;&lt; ptcb-&gt;OSTCBY);
+
+ptcb-&gt;OSTCBPrio  = prio;
+ptcb-&gt;OSTCBDly   = 0u;
+ptcb-&gt;OSTCBStat  = OS_STAT_RDY;
+ptcb-&gt;OSTCBStatPend = OS_STAT_PEND_OK;
+ptcb-&gt;OSTCBDelReq   = OS_ERR_NONE;
+
+OSRdyGrp        |= ptcb-&gt;OSTCBBitY;      <span class="cmt">// 组位图：标记第 y 组有人就绪</span>
+OSRdyTbl[ptcb-&gt;OSTCBY] |= ptcb-&gt;OSTCBBitX;<span class="cmt">// 行位图：标记组内第 x 位就绪</span>
+OSTCBPrioTbl[prio] = ptcb;               <span class="cmt">// 优先级到 TCB 的反向索引</span></pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>优先级同时承担“身份”和“调度键”：<code>OSTCBPrioTbl[prio]</code> 直接拿到 TCB，不需要遍历链表。</li>
+      <li>就绪表是 8×8 位图，<code>OSRdyGrp</code> 的每一位对应 <code>OSRdyTbl</code> 的一行，查找最高优先级只需两次查表。</li>
+      <li><code>OSTCBX/Y/BitX/BitY</code> 在任务创建时算好，切换路径里只做按位或/与，减少中断延迟。</li>
+      <li><code>OSTCBDly</code> 为 0 是任务能被调度的必要条件；非 0 表示还在延时，即使就绪位为 1 也不会被选中。</li>
+    </ol>
+  </div>
+  <div class="note">图 7-1 中绿色两位对应 LED0（优先级 7）和 LED1（优先级 6），橙色位对应 START（优先级 10）。START 创建完子任务后把自己挂起，橙色位随即被清零。</div>
+</section>
+
+<section id="s08" data-title="08 调度与 PendSV 上下文切换" class="content-card">
+  <h2>08 调度与 PendSV 上下文切换</h2>
+  <p class="sec-sub">OS_Sched 只做“选谁”，真正换栈发生在 PendSV 异常里</p>
+  <pre class="code">void OS_Sched(void)
+{
+    INT8U y;
+    OS_ENTER_CRITICAL();                 <span class="cmt">// 选任务期间不允许被中断打断</span>
+    if ((OSIntNesting == 0u) &amp;&amp; (OSLockNesting == 0u)) {   <span class="cmt">// 中断里/调度锁内不切换</span>
+        y = OSUnMapTbl[OSRdyGrp];        <span class="cmt">// 找到最高的非空组</span>
+        OSPrioHighRdy = (INT8U)((y &lt;&lt; 3u) + OSUnMapTbl[OSRdyTbl[y]]);
+        if (OSPrioHighRdy != OSPrioCur) {<span class="cmt">// 只有更高优先级才切</span>
+            OSTCBHighRdy = OSTCBPrioTbl[OSPrioHighRdy];
+            OSCtxSwCtr++;                <span class="cmt">// 统计切换次数</span>
+            OS_TASK_SW();                <span class="cmt">// 宏：触发 PendSV</span>
+        }
+    }
+    OS_EXIT_CRITICAL();
+}</pre>
+  <pre class="code">PendSV_Handler
+    CPSID   I                        <span class="cmt">; 切换期间关中断</span>
+    MRS     R0, PSP                  <span class="cmt">; 取当前任务的进程栈指针</span>
+    CBZ     R0, PendSV_nosave        <span class="cmt">; 第一次切换，没有旧上下文可存</span>
+    SUBS    R0, R0, #0x20
+    STM     R0, {R4-R11}             <span class="cmt">; 手工保存 callee-saved 寄存器</span>
+    LDR     R1, =OSTCBCur
+    LDR     R1, [R1]
+    STR     R0, [R1]                 <span class="cmt">; OSTCBCur-&gt;OSTCBStkPtr = SP</span>
+PendSV_nosave
+    PUSH    {R14}
+    LDR     R0, =OSTaskSwHook
+    BLX     R0                       <span class="cmt">; 用户钩子，可为空</span>
+    POP     {R14}
+    LDR     R0, =OSPrioCur           <span class="cmt">; OSPrioCur = OSPrioHighRdy</span>
+    LDR     R1, =OSPrioHighRdy
+    LDRB    R2, [R1]
+    STRB    R2, [R0]
+    LDR     R0, =OSTCBCur            <span class="cmt">; OSTCBCur = OSTCBHighRdy</span>
+    LDR     R1, =OSTCBHighRdy
+    LDR     R2, [R1]
+    STR     R2, [R0]
+    LDR     R0, [R2]                 <span class="cmt">; R0 = 新任务栈顶</span>
+    LDM     R0, {R4-R11}             <span class="cmt">; 恢复新任务的 R4-R11</span>
+    ADDS    R0, R0, #0x20
+    MSR     PSP, R0                  <span class="cmt">; PSP 指向新任务栈</span>
+    ORR     LR, LR, #0xF4            <span class="cmt">; 异常返回使用 PSP，并恢复 FPU 状态</span>
+    CPSIE   I
+    BX      LR</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>OS_Sched</code> 不会在中断服务程序里切换（<code>OSIntNesting != 0</code>），中断退出由 <code>OSIntExit</code> 负责。</li>
+      <li><code>OSLockNesting</code> 让任务可以暂时禁止调度，临界区里改链表常用。</li>
+      <li>R4-R11 是 AAPCS 的 callee-saved 寄存器，必须由 PendSV 手工保存；R0-R3、R12、LR、PC、xPSR 由硬件自动压栈。</li>
+      <li>PendSV 优先级设为最低，保证它在所有中断处理完之后才执行，不会打断高优先级 ISR。</li>
+      <li><code>ORR LR, LR, #0xF4</code> 让异常返回后使用 PSP 而不是 MSP，否则会回到中断栈。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s09" data-title="09 临界区与中断嵌套" class="content-card">
+  <h2>09 临界区与中断嵌套</h2>
+  <p class="sec-sub">uC/OS-II 的临界区不是简单关中断，而是“保存 PRIMASK → 关 → 恢复”，因此可以嵌套</p>
+  <pre class="code"><span class="cmt">/* os_cpu.h：OS_CRITICAL_METHOD = 3，用局部变量保存 PRIMASK */</span>
+#define OS_CRITICAL_METHOD  3u
+#define OS_ENTER_CRITICAL()  { cpu_sr = OS_CPU_SR_Save(); }
+#define OS_EXIT_CRITICAL()   { OS_CPU_SR_Restore(cpu_sr); }
+
+<span class="cmt">/* os_cpu_a.asm：保存与恢复 PRIMASK */</span>
+OS_CPU_SR_Save
+    MRS     R0, PRIMASK      <span class="cmt">; 读当前中断屏蔽状态</span>
+    CPSID   I                <span class="cmt">; 关所有可屏蔽中断</span>
+    BX      LR
+
+OS_CPU_SR_Restore
+    MSR     PRIMASK, R0      <span class="cmt">; 还原进入临界区前的状态</span>
+    BX      LR</pre>
+  <pre class="code"><span class="cmt">/* 典型用法：改就绪表必须成对出现 */</span>
+OS_ENTER_CRITICAL();
+OSRdyTbl[y] &amp;= ~bitX;        <span class="cmt">// 清就绪位</span>
+if (OSRdyTbl[y] == 0u) {
+    OSRdyGrp &amp;= ~bitY;       <span class="cmt">// 整行空了才清组位</span>
+}
+OS_EXIT_CRITICAL();</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>方法 3 的 <code>cpu_sr</code> 是函数内局部变量，每个临界区各存各的，所以可以嵌套调用。</li>
+      <li><code>PRIMASK</code> 只屏蔽可配置优先级中断，NMI 和 HardFault 仍然响应；这符合“内核数据结构不能被普通中断改坏”的需求。</li>
+      <li>临界区要短：只包住位图/链表操作，不要在里面 <code>printf</code> 或延时，否则中断延迟直线上升。</li>
+      <li><code>OSIntEnter()</code> 让 <code>OSIntNesting++</code>，<code>OSIntExit()</code> 减到 0 时才允许调度，保证中断嵌套安全。</li>
+    </ol>
+  </div>
+  <div class="note blue">如果临界区里调用了会阻塞的 API（例如 <code>OSTimeDly</code>），任务永远不会被切走，系统表现为“死机”。这类 API 只能在临界区外调用。</div>
+</section>
+
+<section id="s10" data-title="10 任务创建 OSTaskCreateExt" class="content-card">
+  <h2>10 任务创建 OSTaskCreateExt</h2>
+  <p class="sec-sub">创建任务 = 占优先级 + 清栈 + 造初始帧 + 挂就绪表 + 可能立即调度</p>
+  <pre class="code">INT8U OSTaskCreateExt(void (*task)(void *p_arg), void *p_arg, OS_STK *ptos,
+                      INT8U prio, INT16U id, OS_STK *pbos, INT32U stk_size,
+                      void *pext, INT16U opt)
+{
+    OS_STK *psp;
+    INT8U   err;
+    OS_ENTER_CRITICAL();
+    if (OSIntNesting &gt; 0u) {                  <span class="cmt">// 不允许在 ISR 里创建任务</span>
+        OS_EXIT_CRITICAL();
+        return OS_ERR_TASK_CREATE_ISR;
+    }
+    if (OSTCBPrioTbl[prio] == (OS_TCB *)0) {  <span class="cmt">// 优先级未被占用</span>
+        OSTCBPrioTbl[prio] = OS_TCB_RESERVED; <span class="cmt">// 先占坑，防止并发创建</span>
+        OS_EXIT_CRITICAL();
+
+        OS_TaskStkClr(pbos, stk_size, opt);   <span class="cmt">// 按需把整段栈清 0</span>
+        psp = OSTaskStkInit(task, p_arg, ptos, opt); <span class="cmt">// 伪造异常压栈帧</span>
+        err = OS_TCBInit(prio, psp, pbos, id, stk_size, pext, opt);
+        if (err == OS_ERR_NONE) {
+            if (OSRunning == OS_TRUE) {        <span class="cmt">// 内核已启动则立即比较优先级</span>
+                OS_Sched();
+            }
+        } else {
+            OSTCBPrioTbl[prio] = (OS_TCB *)0;  <span class="cmt">// 失败回滚占位</span>
+        }
+        return err;
+    }
+    OS_EXIT_CRITICAL();
+    return OS_ERR_PRIO_EXIST;                  <span class="cmt">// 同一优先级只能有一个任务</span>
+}</pre>
+  <pre class="code">OS_STK *OSTaskStkInit(void (*task)(void *p_arg), void *p_arg, OS_STK *ptos, INT16U opt)
+{
+    OS_STK *p_stk;
+    p_stk = ptos + 1u;                         <span class="cmt">// 指向栈顶之外</span>
+    p_stk = (OS_STK *)((OS_STK)p_stk &amp; 0xFFFFFFF8u); <span class="cmt">// 8 字节对齐（AAPCS）</span>
+
+    *(--p_stk) = (OS_STK)0x01000000uL;         <span class="cmt">// xPSR：Thumb 位必须为 1</span>
+    *(--p_stk) = (OS_STK)task;                 <span class="cmt">// PC：异常返回后从这里执行</span>
+    *(--p_stk) = (OS_STK)OS_TaskReturn;        <span class="cmt">// LR：任务 return 时的兜底</span>
+    *(--p_stk) = (OS_STK)0x12121212uL;         <span class="cmt">// R12</span>
+    *(--p_stk) = (OS_STK)0x03030303uL;         <span class="cmt">// R3</span>
+    *(--p_stk) = (OS_STK)0x02020202uL;         <span class="cmt">// R2</span>
+    *(--p_stk) = (OS_STK)0x01010101uL;         <span class="cmt">// R1</span>
+    *(--p_stk) = (OS_STK)p_arg;                <span class="cmt">// R0：任务参数</span>
+    *(--p_stk) = (OS_STK)0x11111111uL;         <span class="cmt">// R11 ~ R4</span>
+    ...
+    return p_stk;                              <span class="cmt">// 返回新的栈顶，存入 TCB</span>
+}</pre>
+  <figure class="figure">
+    <img src="./index73-map/stk-frame.png" alt="OSTaskStkInit 构造的初始任务栈帧布局">
+    <figcaption>图 10-1　初始任务栈帧：硬件异常帧 + 软件保存的 R4-R11 + 可选的浮点帧</figcaption>
+  </figure>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>ptos</code> 必须传 <code>&amp;STK[SIZE-1]</code>，<code>pbos</code> 传 <code>&amp;STK[0]</code>；传反了会在第一次切换时踩坏内存。</li>
+      <li>初始帧故意伪造得像“刚被异常打断”：PendSV 只要按同一套偏移恢复，就能让新任务从入口函数开始跑。</li>
+      <li><code>xPSR = 0x01000000</code> 的 bit24 是 Thumb 状态位，Cortex-M 只能执行 Thumb 指令，该位必须为 1。</li>
+      <li><code>OS_TaskStkClr</code> 只在 <code>OS_TASK_STAT_STK_CHK_EN</code> 且 opt 带 STK_CLR 时执行，用来做栈使用率统计。</li>
+      <li>如果 <code>OSRunning == OS_TRUE</code>，创建完立即 <code>OS_Sched()</code>，新任务可能马上抢占当前任务。</li>
+    </ol>
+  </div>
+  <table class="data">
+    <thead><tr><th>参数</th><th>含义</th><th>本工程取值</th></tr></thead>
+    <tbody>
+      <tr><td>task</td><td>任务入口，签名必须是 <code>void (*)(void *)</code></td><td>start_task / led0_task / led1_task</td></tr>
+      <tr><td>p_arg</td><td>传给任务的参数，存到初始 R0</td><td>0</td></tr>
+      <tr><td>ptos</td><td>栈顶地址（满递减栈的最高地址）</td><td>&amp;STK[SIZE-1]</td></tr>
+      <tr><td>prio</td><td>优先级 0~63，必须唯一</td><td>10 / 7 / 6</td></tr>
+      <tr><td>id</td><td>用户扩展 ID，内核不使用</td><td>与 prio 相同</td></tr>
+      <tr><td>pbos</td><td>栈底地址，用于清栈和统计</td><td>&amp;STK[0]</td></tr>
+      <tr><td>stk_size</td><td>栈容量（OS_STK 个数）</td><td>128</td></tr>
+      <tr><td>pext</td><td>扩展 TCB 指针</td><td>0</td></tr>
+      <tr><td>opt</td><td>STK_CHK / STK_CLR / SAVE_FP</td><td>STK_CHK | STK_CLR</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="s11" data-title="11 延时、节拍与统计任务" class="content-card">
+  <h2>11 延时、节拍与统计任务</h2>
+  <p class="sec-sub">delay_ms 在 UCOS 工程里已经变成“主动让出 CPU”，不是死循环</p>
+  <pre class="code">void OSTimeDly(INT32U ticks)
+{
+    if (OSIntNesting &gt; 0u) return;       <span class="cmt">// 中断里不能延时</span>
+    if (ticks &gt; 0u) {
+        OS_ENTER_CRITICAL();
+        if ((OSRdyTbl[OSTCBCur-&gt;OSTCBY] &amp;= ~OSTCBCur-&gt;OSTCBBitX) == 0u) {
+            OSRdyGrp &amp;= ~OSTCBCur-&gt;OSTCBBitY;  <span class="cmt">// 当前任务从就绪表摘掉</span>
+        }
+        OSTCBCur-&gt;OSTCBDly = ticks;      <span class="cmt">// 记录还要睡几个 tick</span>
+        OS_EXIT_CRITICAL();
+        OS_Sched();                      <span class="cmt">// 立刻切到别的任务</span>
+    }
+}</pre>
+  <pre class="code"><span class="cmt">/* os_core.c OSTimeTick()：每个 tick 调一次 */</span>
+ptcb = OSTCBList;
+while (ptcb-&gt;OSTCBPrio != OS_TASK_IDLE_PRIO) {   <span class="cmt">// 遍历所有 TCB</span>
+    OS_ENTER_CRITICAL();
+    if (ptcb-&gt;OSTCBDly != 0u) {
+        if (--ptcb-&gt;OSTCBDly == 0u) {            <span class="cmt">// 睡够了</span>
+            if ((ptcb-&gt;OSTCBStat &amp; OS_STAT_SUSPEND) == 0u) {
+                OSRdyGrp |= ptcb-&gt;OSTCBBitY;     <span class="cmt">// 重新置就绪</span>
+                OSRdyTbl[ptcb-&gt;OSTCBY] |= ptcb-&gt;OSTCBBitX;
+            }
+        }
+    }
+    ptcb = ptcb-&gt;OSTCBNext;
+    OS_EXIT_CRITICAL();
+}</pre>
+  <pre class="code"><span class="cmt">/* SYSTEM/delay/delay.c：delay_ms 被改成 OS 感知版本 */</span>
+void delay_ms(u32 nms)
+{
+    if (delay_osrunning == 1) {          <span class="cmt">// OS 已启动</span>
+        delay_ostimedly(nms / fac_ms);   <span class="cmt">// 转成 OSTimeDly，让出 CPU</span>
+    } else {
+        delay_xms(nms);                  <span class="cmt">// OS 未启动时仍是忙等</span>
+    }
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li><code>OSTimeDly</code> 先摘就绪位、再记 <code>OSTCBDly</code>、最后 <code>OS_Sched</code>，三步都在临界区保护下完成。</li>
+      <li>被挂起的任务即使 <code>OSTCBDly</code> 减到 0，只要 <code>OS_STAT_SUSPEND</code> 还在，也不会被置就绪。</li>
+      <li><code>OSTimeTick</code> 遍历 TCB 链表，空闲任务作为链表尾哨兵，不处理它的延时。</li>
+      <li><code>delay_ms(80)</code> 在 OS 启动后等价于 <code>OSTimeDly(80)</code>，所以 LED0 的 80 ms 是“睡眠 80 个 tick”。</li>
+      <li><code>OSStatInit</code> 在第一个 tick 里测最大空闲计数，之后统计任务用 <code>OSIdleCtr</code> 估算 CPU 使用率。</li>
+    </ol>
+  </div>
+  <div class="note">本工程的 <code>delay_ms</code> 依赖 <code>delay_osrunning</code> 判断，若在 <code>OSStart</code> 前调用仍是忙等；因此 main 里初始化外设时用它没问题，任务里调用才会让出 CPU。</div>
+</section>
+
+<section id="s12" data-title="12 启动任务与任务挂起" class="content-card">
+  <h2>12 启动任务与任务挂起</h2>
+  <p class="sec-sub">START 任务只做三件事：建两个任务、打印一句、把自己挂起</p>
+  <pre class="code">void start_task(void *p_arg)
+{
+    OS_CPU_SR cpu_sr = 0;
+    (void)p_arg;
+    OS_ENTER_CRITICAL();                 <span class="cmt">// 创建任务期间禁止调度，保证三个任务一次性建完</span>
+
+    OSTaskCreateExt((void (*)(void *))led0_task,
+                    (void *)0,
+                    (OS_STK *)&amp;LED0_TASK_STK[LED0_STK_SIZE - 1],
+                    (INT8U)LED0_TASK_PRIO,
+                    (INT16U)LED0_TASK_PRIO,
+                    (OS_STK *)&amp;LED0_TASK_STK[0],
+                    (INT32U)LED0_STK_SIZE,
+                    (void *)0,
+                    (INT16U)OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
+
+    OSTaskCreateExt((void (*)(void *))led1_task,
+                    (void *)0,
+                    (OS_STK *)&amp;LED1_TASK_STK[LED1_STK_SIZE - 1],
+                    (INT8U)LED1_TASK_PRIO,
+                    (INT16U)LED1_TASK_PRIO,
+                    (OS_STK *)&amp;LED1_TASK_STK[0],
+                    (INT32U)LED1_STK_SIZE,
+                    (void *)0,
+                    (INT16U)OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
+
+    OS_EXIT_CRITICAL();                  <span class="cmt">// 放开调度，LED1 会立刻抢占</span>
+    printf("任务创建完成，START 任务即将挂起\r\n");
+    OSTaskSuspend(START_TASK_PRIO);      <span class="cmt">// 挂起自己，不再参与调度</span>
+}</pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>创建任务放在临界区里，避免建到一半被更高优先级任务抢占，看到“半个任务”。</li>
+      <li>三个任务的栈都是静态数组，链接器分配在 RAM；不调用 <code>malloc</code>，运行期没有堆碎片。</li>
+      <li><code>OSTaskSuspend(START_TASK_PRIO)</code> 后 START 任务的就绪位被清、状态字加 SUSPEND，永远不会再运行。</li>
+      <li>挂起自己后 CPU 立刻切到优先级 6 的 LED1，再切到 7 的 LED0，空闲任务只在两者都睡时才跑。</li>
+    </ol>
+  </div>
+  <div class="note blue">如果忘记挂起 START 任务，它会一直处于就绪态。虽然它没有循环体，但任务函数返回会跳到 <code>OS_TaskReturn</code>，最终删除该任务并报错——不同版本行为略有差异，显式挂起最稳妥。</div>
+</section>
+
+<section id="s13" data-title="13 实验现象与调试验证" class="content-card">
+  <h2>13 实验现象与调试验证</h2>
+  <p class="sec-sub">两个灯不再互相等待：LED1 闪两次，LED0 才闪一次</p>
+  <figure class="figure">
+    <img src="./index73-map/task-timing.png" alt="LED0 与 LED1 两个任务在 1 秒窗口内的波形时序">
+    <figcaption>图 13-1　LED0（1 s 周期）与 LED1（600 ms 周期）的并行闪烁时序</figcaption>
+  </figure>
+  <table class="data">
+    <thead><tr><th>观察点</th><th>预期现象</th><th>验证方法</th></tr></thead>
+    <tbody>
+      <tr><td>LED1（PB1）</td><td>亮 300 ms、灭 300 ms，1 秒内闪约 1.67 次</td><td>示波器接 PB1，测高/低脉宽</td></tr>
+      <tr><td>LED0（PB0）</td><td>亮 80 ms、灭 920 ms，周期 1 s</td><td>示波器接 PB0，确认短脉冲周期 1 s</td></tr>
+      <tr><td>串口</td><td>只打印一次“任务创建完成”</td><td>USART1 115200，复位后观察</td></tr>
+      <tr><td>CPU 使用率</td><td>统计任务给出 <code>CPU Usage</code></td><td>调试器看 <code>OSCPUUsage</code></td></tr>
+      <tr><td>切换次数</td><td><code>OSCtxSwCtr</code> 持续增长</td><td>Watch 窗口观察</td></tr>
+    </tbody>
+  </table>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>如果两个灯“同步闪”或只有一个闪，先检查优先级是否重复：<code>OSTaskCreateExt</code> 会返回 <code>OS_ERR_PRIO_EXIST</code>。</li>
+      <li>如果 LED 完全不动，看 SysTick 是否真的 1 ms：<code>SysTick-&gt;LOAD</code> 应为 179999。</li>
+      <li>如果串口只输出乱码，检查 PCLK2 是否为 90 MHz，以及 <code>uart_init</code> 是否在时钟配置之后。</li>
+      <li>用调试器暂停时，看 <code>OSTCBCur-&gt;OSTCBPrio</code> 可以确认当前运行的是哪个任务。</li>
+    </ol>
+  </div>
+</section>
+
+<section id="s14" data-title="14 总结与移植要点" class="content-card">
+  <h2>14 总结与移植要点</h2>
+  <p class="sec-sub">移植 uC/OS-II 到一颗新 Cortex-M4，只需要改三处：节拍、PendSV、临界区</p>
+  <pre class="code"><span class="cmt">/* os_cfg.h 里与本实验直接相关的裁剪项 */</span>
+#define OS_MAX_TASKS            10u   <span class="cmt">// 应用任务上限（不含空闲/统计）</span>
+#define OS_LOWEST_PRIO          63u   <span class="cmt">// 64 个优先级，位图正好 8x8</span>
+#define OS_TICKS_PER_SEC        1000u <span class="cmt">// 1 ms 一个节拍</span>
+#define OS_TASK_STAT_EN         1u    <span class="cmt">// 使能统计任务（优先级 62）</span>
+#define OS_TASK_CREATE_EXT_EN   1u    <span class="cmt">// 使能 OSTaskCreateExt</span>
+#define OS_TASK_DEL_EN          1u    <span class="cmt">// 使能 OSTaskDel / OSTaskDelReq</span>
+#define OS_TASK_SUSPEND_EN      1u    <span class="cmt">// 使能 OSTaskSuspend / OSTaskResume</span>
+#define OS_SEM_EN               1u    <span class="cmt">// 后续实验要用信号量</span>
+#define OS_MBOX_EN              1u    <span class="cmt">// 后续实验要用邮箱</span></pre>
+  <div class="keylogic">
+    <div class="kl-title">关键逻辑</div>
+    <ol>
+      <li>启动顺序固定：HAL_Init → 时钟 → delay_init → 外设 → OSInit → 建任务 → OSStart。</li>
+      <li><code>OSStart()</code> 不返回；它通过 <code>OSStartHighRdy</code> 直接把 PSP 指向最高优先级任务的栈并异常返回。</li>
+      <li>调度只看就绪表和优先级，延时/等待的任务不在就绪表里，所以不会浪费 CPU。</li>
+      <li>移植三要素：SysTick 提供节拍、PendSV 保存/恢复 R4-R11、PRIMASK 实现可嵌套临界区。</li>
+      <li>任务栈要按最坏调用深度估算；本实验 128 个 OS_STK 对 LED 任务足够，但加 printf 或浮点运算要加大。</li>
+    </ol>
+  </div>
+  <div class="note">下一页（实验 59-1-2）会在此基础上加入按键：用 <code>OSTaskSuspend</code>、<code>OSTaskResume</code>、<code>OSTaskDelReq</code> 动态控制任务的生与死。</div>
+</section>
+
+            
+
+            
+                <section class="content-card" id="s15" data-title="15 交互演示">
+                    <h2>15　交互演示</h2>
+                    <div class="sec-sub">按钮对应 <code class="inline">os_core.c</code> 的调度分支，仅演示逻辑</div>
+                    <div class="sim">
+                        <div class="sim-title">任务就绪、延时与节拍唤醒</div>
+                        <div class="sim-buttons">
+                            <button data-act="start">OSStart 启动调度</button>
+                            <button data-act="delay">LED 任务 OSTimeDly</button>
+                            <button data-act="wake">节拍到期唤醒</button>
+                        </div>
+                        <div class="sim-log" id="simLog">状态：OSInit 完成，LED/Beep 两任务已创建，尚未 OSStart</div>
+                    </div>
+                    <div class="note blue">演示只反映就绪表与延时链表的增减关系，真实切换由 PendSV 完成，不涉及寄存器现场保存。</div>
+                    <script>
+                        (function () {
+                            var log = document.getElementById('simLog');
+                            var started = false, delayed = false;
+                            function show(msg) {
+                                log.textContent = msg + '　调度器：' + (started ? '运行中' : '未启动') +
+                                    '　LED 任务：' + (delayed ? '延时等待' : '就绪') ;
+                            }
+                            var acts = {
+                                start: function () {
+                                    if (started) { show('OSStart 已调用，不重复启动'); return; }
+                                    started = true;
+                                    show('OSStart → OSStartHighRdy → 切到最高优先级就绪任务');
+                                },
+                                delay: function () {
+                                    if (!started) { show('未 OSStart，延时无意义'); return; }
+                                    if (delayed) { show('已在延时链表中，重复延时只是重装节拍'); return; }
+                                    delayed = true;
+                                    show('OSTimeDly(500) → 任务移出就绪表，插入 OSTickList');
+                                },
+                                wake: function () {
+                                    if (!delayed) { show('没有任务在等待节拍'); return; }
+                                    delayed = false;
+                                    show('OSTimeTick 递减到 0 → 任务重新置位就绪表');
+                                }
+                            };
+                            Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (b) {
+                                b.addEventListener('click', function () { var a = b.getAttribute('data-act'); if (acts[a]) acts[a](); });
+                            });
+                        })();
+                    </script>
+                </section>
+</div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">版权归Erish个人所有，版权时间为2026-11-14开始的10年内</span>
+    </footer>
+</div>
+
+<script>
+    // 禁止手势缩放
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成：section 的 data-title 即目录文字 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    // 滚动时自动高亮当前小节（rAF 节流，绑 .content-body）
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== 交互演示（页面无 .sim 时自动跳过） =====
+    var dot0 = document.getElementById('dot0');
+    var dot1 = document.getElementById('dot1');
+    var simLog = document.getElementById('simLog');
+
+    if (dot0 && dot1 && simLog) {
+        var led0On = false;
+        var led1On = false;
+        var lastKey = '无';
+
+        function render() {
+            dot0.classList.toggle('on', led0On);
+            dot1.classList.toggle('on', led1On);
+            simLog.textContent =
+                '最后按键：' + lastKey +
+                '　　当前状态：DS0 ' + (led0On ? '亮' : '灭') +
+                '　DS1 ' + (led1On ? '亮' : '灭');
+        }
+
+        var handlers = {
+            key0: function () { led0On = !led0On; lastKey = 'KEY0'; },
+            key1: function () { led1On = !led1On; lastKey = 'KEY1'; }
+        };
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-key');
+                if (handlers[key]) handlers[key]();
+                render();
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>

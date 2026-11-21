@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>实验10 电容触摸按键</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            background-color: #eaf2fa;
+        }
+
+        .layout { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* ===== 顶部导航栏 ===== */
+        .navbar {
+            height: 44.8px;
+            background-color: #6AADD4;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(106, 173, 212, 0.3);
+            z-index: 100;
+            position: relative;
+        }
+
+        .navbar-logo {
+            font-size: 17px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .navbar-about {
+            margin-left: auto;
+            color: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            padding: 8px 18px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+        }
+
+        .navbar-about:hover { color: #fff; background-color: rgba(255, 255, 255, 0.2); }
+
+        .navbar-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 6px 0;
+            z-index: 200;
+            margin-top: 4px;
+            list-style: none;
+        }
+
+        .navbar-dropdown li {
+            padding: 8px 18px;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .navbar-dropdown li:hover { background-color: #f0f6fb; color: #6AADD4; }
+
+        .vision-panel {
+            display: none;
+            position: absolute;
+            right: 100%;
+            top: 0;
+            margin-right: 8px;
+            background-color: #fff;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            padding: 16px 20px;
+            z-index: 300;
+            width: 220px;
+            text-align: center;
+        }
+
+        .navbar-dropdown li:first-child:hover .vision-panel,
+        .navbar-dropdown li:nth-child(2):hover .vision-panel,
+        .navbar-dropdown li:nth-child(3):hover .vision-panel { display: block; }
+
+        .vision-panel .vision-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #6AADD4;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dce8f2;
+        }
+
+        .vision-panel .vision-label { font-size: 13px; font-weight: 600; color: #555; margin-top: 8px; margin-bottom: 2px; }
+        .vision-panel .vision-text { font-size: 12px; color: #666; line-height: 1.6; }
+        .navbar-about:hover .navbar-dropdown { display: block; }
+
+        /* ===== 中间区域 ===== */
+        .main-area { display: flex; flex: 1; min-height: 0; background-color: #f0f6fb; }
+
+        /* ===== 左侧边栏 ===== */
+        .sidebar {
+            width: 250px;
+            background-color: #f0f6fb;
+            border-right: 1px solid #dce8f2;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 3px;
+            perspective: 800px;
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #dce8f2;
+            text-align: center;
+            animation: rotateText 8s ease-in-out infinite;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #54a0ff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes rotateText {
+            0% { transform: rotateX(0deg); }
+            75% { transform: rotateX(360deg); }
+            100% { transform: rotateX(360deg); }
+        }
+
+        .sidebar-menu { list-style: none; padding: 8px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-menu::-webkit-scrollbar { width: 6px; }
+        .sidebar-menu::-webkit-scrollbar-thumb { background: #cfe0ec; border-radius: 3px; }
+
+        .sidebar-menu li {
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #555;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            user-select: none;
+            font-size: 13px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            line-height: 1.45;
+        }
+
+        .sidebar-menu li:hover { background-color: #f5f7fa; color: #1890ff; }
+
+        .sidebar-menu li.active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-left-color: #1890ff;
+            font-weight: 500;
+        }
+
+        .sidebar-menu li .num { font-family: Consolas, monospace; font-size: 11px; color: #9db4c6; flex-shrink: 0; }
+        .sidebar-menu li.active .num { color: #1890ff; }
+
+        .sidebar-tip {
+            padding: 10px 16px;
+            font-size: 11.5px;
+            color: #93aaba;
+            border-top: 1px dashed #dce8f2;
+            line-height: 1.6;
+        }
+
+        /* ===== 主内容 ===== */
+        .content { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+        .content-body {
+            flex: 1;
+            padding: 4px 3px 8px;
+            overflow-y: auto;
+            background-color: #f0f6fb;
+            scroll-behavior: smooth;
+        }
+
+        .content-body::-webkit-scrollbar { width: 9px; }
+        .content-body::-webkit-scrollbar-thumb { background: #c8dcec; border-radius: 5px; }
+
+        .content-card {
+            background-color: #fff;
+            padding: 22px 26px 20px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            margin: 0 3px 12px;
+            border-radius: 4px;
+        }
+
+        .content-card h2 {
+            font-size: 19px;
+            font-weight: 600;
+            color: #2f5d7c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2::before {
+            content: '';
+            width: 5px;
+            height: 20px;
+            border-radius: 3px;
+            background: linear-gradient(#6AADD4, #1890ff);
+            flex-shrink: 0;
+        }
+
+        .content-card .sec-sub {
+            color: #8aa4b8;
+            font-size: 12.5px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #dce8f2;
+        }
+
+        .content-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #35566d;
+            margin: 22px 0 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6AADD4;
+        }
+
+        .content-card h4 { font-size: 13.5px; color: #2f5d7c; margin: 14px 0 6px; }
+
+        .content-card p { color: #5a6b78; line-height: 1.85; margin-bottom: 10px; font-size: 13.5px; }
+
+        .content-card ul, .content-card ol { margin: 6px 0 12px 22px; color: #5a6b78; font-size: 13.5px; line-height: 1.85; }
+        .content-card li { margin-bottom: 3px; }
+        .content-card strong { color: #35566d; }
+
+        code.inline {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            background: #eef6fc;
+            color: #2f7bb0;
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        table.data { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0 16px; }
+
+        table.data th {
+            background: #eef6fc;
+            color: #40607a;
+            font-weight: 600;
+            text-align: left;
+            padding: 9px 12px;
+            border: 1px solid #dce8f2;
+            white-space: nowrap;
+        }
+
+        table.data td { padding: 8px 12px; border: 1px solid #dce8f2; color: #5a6b78; line-height: 1.7; vertical-align: top; }
+        table.data tr:nth-child(even) td { background: #fafcfe; }
+        table.data td code { font-family: Consolas, monospace; font-size: 12px; color: #2f7bb0; }
+
+        pre.code {
+            background: #f6fafd;
+            border: 1px solid #dce8f2;
+            border-left: 4px solid #6AADD4;
+            border-radius: 5px;
+            padding: 14px 16px;
+            margin: 10px 0 16px;
+            overflow-x: auto;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #33566d;
+            tab-size: 4;
+        }
+
+        pre.code .cmt { color: #94aebf; }
+        pre.code .kw { color: #b5541c; font-weight: 600; }
+
+        .note {
+            background: #fff9ef;
+            border-left: 4px solid #e8a33d;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin: 12px 0 16px;
+            font-size: 13px;
+            color: #8a6a3d;
+            line-height: 1.8;
+        }
+
+        .note.blue { background: #f1f8fd; border-left-color: #6AADD4; color: #4a6f88; }
+
+        /* 插图 */
+        .figure { margin: 18px 0 6px; text-align: center; }
+
+        .figure img {
+            display: block;
+            width: auto;
+            max-width: 94%;
+            height: auto;
+            margin: 0 auto 8px;
+            border: 1px solid #e4eef7;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+        .figure figcaption { font-size: 12.5px; color: #8aa4b8; margin-bottom: 6px; }
+
+        /* 引脚/流程胶囊 */
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 16px; }
+
+        .chip {
+            background: #f1f8fd;
+            border: 1px solid #d8e9f5;
+            color: #3d7599;
+            font-size: 12.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: Consolas, monospace;
+        }
+
+        /* 仿真面板 */
+        .sim {
+            background: #f8fbfe;
+            border: 1px solid #dce8f2;
+            border-radius: 8px;
+            padding: 16px 18px;
+            margin: 14px 0 6px;
+        }
+
+        .sim-title { font-size: 13.5px; font-weight: 600; color: #35566d; margin-bottom: 12px; }
+
+        .sim-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+        .sim-buttons button {
+            border: 1px solid #cfe3f1;
+            background: #fff;
+            color: #3d7599;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+        }
+
+        .sim-buttons button:hover { background: #eaf5fc; border-color: #6AADD4; }
+        .sim-buttons button:active { transform: translateY(1px); }
+
+        .led-row { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+
+        .led-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5a6b78; }
+
+        .led-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dfeaf2;
+            border: 2px solid #c8dcec;
+            transition: all 0.2s;
+        }
+
+        .led-dot.on {
+            background: #ffd66b;
+            border-color: #e8a33d;
+            box-shadow: 0 0 10px rgba(232, 163, 61, 0.75);
+        }
+
+        .sim-log {
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            font-size: 12.5px;
+            color: #4a6f88;
+            background: #fff;
+            border: 1px dashed #cfe3f1;
+            border-radius: 5px;
+            padding: 8px 12px;
+            min-height: 34px;
+            white-space: pre-wrap;
+            line-height: 1.8;
+        }
+
+        .sim-state { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-bottom: 12px; font-size: 12.5px; color: #5a6b78; }
+        .sim-state b { color: #2f5d7c; font-family: Consolas, monospace; }
+
+        /* ===== 底部 ===== */
+        .footer {
+            height: 24.576px;
+            background-color: #dce8f2;
+            border-top: 1px solid #c8d8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            color: #6a8da8;
+            position: relative;
+        }
+
+        .footer-copyright { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .content-card { padding: 18px 16px; }
+            .figure img { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <nav class="navbar">
+        <div class="navbar-logo">实验10 · 电容触摸按键(TPAD)</div>
+        <div class="navbar-about">
+            关于我们
+            <ul class="navbar-dropdown">
+                <li>愿景目标
+                    <div class="vision-panel">
+                        <div class="vision-title">愿景目标</div>
+                        <div class="vision-label">愿景：</div>
+                        <div class="vision-text">科技改变生活；生活缘由探索</div>
+                        <div class="vision-label">目标：</div>
+                        <div class="vision-text">探索提升生活；生活多一选择</div>
+                    </div>
+                </li>
+                <li>合作条款
+                    <div class="vision-panel" style="width:245px;">
+                        <div class="vision-title">合作条款</div>
+                        <div class="vision-text" style="margin-top:8px;">学习、创新、团结、高效</div>
+                        <div class="vision-text" style="margin-top:6px;">敢拼敢搏你进来；怕苦怕累请绕开</div>
+                        <div class="vision-text" style="margin-top:6px;">宁可认认真真做事；绝不麻麻呼呼将就</div>
+                    </div>
+                </li>
+                <li>联系方式
+                    <div class="vision-panel">
+                        <div class="vision-title">联系方式</div>
+                        <div class="vision-text" style="margin-top:8px;">E-mail:121007803@qq.com</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-area">
+
+        <aside class="sidebar">
+            <div class="sidebar-header">--- 目 录 ---</div>
+            <ul class="sidebar-menu" id="menu"></ul>
+            <div class="sidebar-tip">本页只讲“代码怎么跑起来”，TPAD 的每一步都能在 tpad.c 里找到对应语句。</div>
+        </aside>
+
+        <main class="content">
+            <div class="content-body" id="scroller">
+
+                <section class="content-card" id="s01" data-title="实验概述与硬件资源">
+                    <h2>01　实验概述与硬件资源</h2>
+                    <div class="sec-sub">用 TIM2 测一段 RC 充电时间，把“手指靠近”翻译成“计数值变大”</div>
+
+                    <p>实验9 用输入捕获测外部 PWM 的高电平宽度；实验10 沿用同一套捕获外设，但被测对象换成了<b>自己搭的 RC 电路</b>：PA5 上的触摸焊盘对地等效一个电容 C，通过上拉电阻充电，充电时间 t 与 C 成正比。手指靠近焊盘会让 C 变大，t 随之变长，定时器捕获到的计数就变大。</p>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>取值</th><th>来源</th></tr>
+                        <tr><td>MCU</td><td>STM32F429IGTx（Cortex-M4F，180MHz）</td><td><code>TPAD.uvprojx</code> Device</td></tr>
+                        <tr><td>晶振 / 系统时钟</td><td>HSE 25MHz → SYSCLK 180MHz</td><td><code>Stm32_Clock_Init(360,25,2,8)</code></td></tr>
+                        <tr><td>触摸引脚</td><td>PA5 → TIM2_CH1（复用功能 AF1）</td><td><code>tpad.c</code> GPIO_AF1_TIM2</td></tr>
+                        <tr><td>定时器</td><td>TIM2，32 位，ARR = 0xFFFFFFFF</td><td><code>TPAD_ARR_MAX_VAL</code></td></tr>
+                        <tr><td>计数频率</td><td>90MHz ÷ (1+1) = 45MHz</td><td><code>TPAD_Init(2)</code> → <code>psc-1</code></td></tr>
+                        <tr><td>指示 LED</td><td>LED0 = PB1，LED1 = PB0，低电平点亮</td><td><code>led.h</code> 位带宏</td></tr>
+                        <tr><td>串口</td><td>USART1，115200-8-N-1</td><td><code>uart_init(115200)</code></td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">PA5 → TIM2_CH1</span>
+                        <span class="chip">TIM2 → APB1 定时器 90MHz</span>
+                        <span class="chip">TPAD_Init(2) → 45MHz</span>
+                        <span class="chip">LED1 → PB0</span>
+                        <span class="chip">LED0 → PB1</span>
+                    </div>
+
+                    <div class="note">本实验<b>没有中断</b>：TIM2 只用 <code class="inline">HAL_TIM_IC_Start()</code> 启动，主循环靠 <code class="inline">__HAL_TIM_GET_FLAG</code> 轮询 CC1IF。所以整页的“启动过程”就是一条主线：时钟先对、延时可用、串口可打印，再标定基准，最后进 while(1) 反复扫描。</div>
+                </section>
+
+                <section class="content-card" id="s02" data-title="工程目录与文件分工">
+                    <h2>02　工程目录与文件分工</h2>
+                    <div class="sec-sub">八个源文件各自负责一段，读的时候按“启动 → 系统 → 驱动”三层看</div>
+
+                    <table class="data">
+                        <tr><th>文件</th><th>职责</th><th>本页关注点</th></tr>
+                        <tr><td><code>USER/main.c</code></td><td>用户入口，六步初始化 + 主循环</td><td>初始化顺序、扫描节奏</td></tr>
+                        <tr><td><code>CORE/startup_stm32f429xx.s</code></td><td>向量表、复位入口、栈堆大小</td><td>0x08000000 取 MSP/PC</td></tr>
+                        <tr><td><code>SYSTEM/sys/sys.c</code></td><td><code>Stm32_Clock_Init</code>、WFI、开关中断等</td><td>PLL 与总线分频</td></tr>
+                        <tr><td><code>SYSTEM/delay/delay.c</code></td><td>基于 SysTick 的 us/ms 延时</td><td>fac_us、轮询 VAL</td></tr>
+                        <tr><td><code>SYSTEM/usart/usart.c</code></td><td>USART1 初始化与 printf 重定向</td><td>标定值如何打印</td></tr>
+                        <tr><td><code>HARDWARE/LED/led.c</code></td><td>PB0 / PB1 推挽输出</td><td>现象观察口</td></tr>
+                        <tr><td><code>HARDWARE/TPAD/tpad.c</code></td><td>触摸驱动：标定、放电、捕获、判定</td><td>全页核心</td></tr>
+                        <tr><td><code>HALLIB/</code></td><td>ST 官方 HAL 库（工程内改了优先级分组）</td><td>只看被调用的函数</td></tr>
+                    </table>
+
+                    <p><code class="inline">USER/stm32f4xx_it.c</code> 里只有 <code class="inline">SysTick_Handler()</code> 调用 <code class="inline">HAL_IncTick()</code> 以及各 fault 的死循环，<b>没有任何 TIM2 中断服务函数</b>，这与“纯轮询”的实现互相印证。</p>
+
+                    <div class="note blue">HALLIB 只读不改：整页只引用被工程实际调用的 <code class="inline">HAL_TIM_IC_Init</code>、<code class="inline">HAL_RCC_OscConfig</code> 等，不逐行展开库实现。</div>
+                </section>
+
+                <section class="content-card" id="s03" data-title="启动流程总览与 main">
+                    <h2>03　启动流程总览与 main</h2>
+                    <div class="sec-sub">从上电到 while(1)，显式初始化只有六步，顺序不能随意调换</div>
+
+                    <figure class="figure">
+                        <img src="./index24-map/boot-flow.png" alt="从复位到主循环的启动链路图">
+                        <figcaption>图 3-1　上电复位 → Reset_Handler → SystemInit → main → while(1)</figcaption>
+                    </figure>
+
+                    <h3>main 函数全文</h3>
+<pre class="code">int main(void)
+{
+    u8 t=0;
+
+    HAL_Init();                     <span class="cmt">//初始化HAL库</span>
+    Stm32_Clock_Init(360,25,2,8);   <span class="cmt">//设置时钟,180Mhz</span>
+    delay_init(180);                <span class="cmt">//初始化延时函数</span>
+    uart_init(115200);              <span class="cmt">//初始化USART</span>
+    LED_Init();                     <span class="cmt">//初始化LED</span>
+    TPAD_Init(2);                   <span class="cmt">//初始化触摸按键,以90/8=11.25Mhz频率计数</span>
+
+    while(1)
+    {
+        if(TPAD_Scan(0))    <span class="cmt">//成功捕获到了一次上升沿(此函数执行时间至少15ms)</span>
+        {
+            LED1=!LED1;     <span class="cmt">//LED1取反</span>
+        }
+        t++;
+        if(t==15)
+        {
+            t=0;
+            LED0=!LED0;
+        }
+        delay_ms(10);
+    }
+}</pre>
+
+                    <h3>为什么是这个顺序</h3>
+                    <table class="data">
+                        <tr><th>步骤</th><th>做了什么</th><th>如果提前/推后会怎样</th></tr>
+                        <tr><td>① HAL_Init</td><td>Flash Cache、优先级分组、SysTick 1ms 时基</td><td>没有它，后面 HAL 的延时与中断优先级都无依据</td></tr>
+                        <tr><td>② Stm32_Clock_Init</td><td>HSE + PLL，SYSCLK 180MHz</td><td>时钟没升上去，定时器分频算出来的时间全错</td></tr>
+                        <tr><td>③ delay_init(180)</td><td>按 180MHz 计算 <code>fac_us</code></td><td>参数必须与 ② 的实际频率一致，否则延时成比例偏差</td></tr>
+                        <tr><td>④ uart_init</td><td>115200，开发送 + 接收中断</td><td>必须在 TPAD_Init 之前，否则标定结果打印不出来</td></tr>
+                        <tr><td>⑤ LED_Init</td><td>PB0 / PB1 推挽输出并置高</td><td>提前置高避免上电瞬间误亮</td></tr>
+                        <tr><td>⑥ TPAD_Init(2)</td><td>PA5 复用为 TIM2_CH1，采样并保存空载基准</td><td>必须在主循环前完成，扫描时才有比较对象</td></tr>
+                    </table>
+
+                    <div class="note">实参是 <code class="inline">TPAD_Init(2)</code>，进入 <code class="inline">TIM2_CH1_Cap_Init(arr, psc-1)</code> 后 PSC = 1，计数频率为 <b>90MHz ÷ 2 = 45MHz</b>。原注释误写为“90/8=11.25Mhz”（旧版本 PSC=7 的遗留），已按代码更正为 90/2=45MHz。</div>
+                </section>
+
+                <section class="content-card" id="s04" data-title="启动文件与向量表">
+                    <h2>04　启动文件与向量表</h2>
+                    <div class="sec-sub">复位后 CPU 只认两件事：栈顶地址和复位入口</div>
+
+<pre class="code">Stack_Size      EQU     0x400;          <span class="cmt">; 1KB 栈</span>
+Heap_Size       EQU     0x200;          <span class="cmt">; 512B 堆</span>
+
+                AREA    RESET, DATA, READONLY
+__Vectors       DCD     __initial_sp    <span class="cmt">; Top of Stack</span>
+                DCD     Reset_Handler   <span class="cmt">; Reset Handler</span>
+                DCD     NMI_Handler
+                DCD     HardFault_Handler
+                ...
+                DCD     SysTick_Handler</pre>
+
+                    <table class="data">
+                        <tr><th>环节</th><th>内容</th></tr>
+                        <tr><td>取栈顶</td><td>地址 <code>0x08000000</code> 处存放 <code>__initial_sp</code>，上电后装入 MSP</td></tr>
+                        <tr><td>取入口</td><td><code>0x08000004</code> 处存放 <code>Reset_Handler</code>，装入 PC 开始执行</td></tr>
+                        <tr><td>中断号</td><td>异常 1~15 依次为 Reset / NMI / HardFault / … / SysTick；外设中断从第 16 项开始（TIM2 为 <code>TIM2_IRQHandler</code>，本工程未使用）</td></tr>
+                        <tr><td>跳转 C 世界</td><td><code>Reset_Handler</code> → <code>SystemInit</code> → <code>__main</code>（分散加载、<code>.bss</code> 清零）→ <code>main</code></td></tr>
+                        <tr><td>弱符号</td><td>启动文件的 <code>xxx_Handler</code> 均为 <code>WEAK</code>，<code>stm32f4xx_it.c</code> 里重新定义即可覆盖</td></tr>
+                    </table>
+
+                    <div class="note blue">本工程 <code class="inline">stm32f4xx_it.c</code> 只覆盖了 <code class="inline">SysTick_Handler</code>，TIM2 的向量仍是启动文件里的死循环——因为没有开启 TIM2 中断，这个向量永远不会被触发。</div>
+                </section>
+
+                <section class="content-card" id="s05" data-title="SystemInit 与 HAL_Init">
+                    <h2>05　SystemInit 与 HAL_Init</h2>
+                    <div class="sec-sub">一个准备 CPU 运行环境，一个准备 HAL 的时基与优先级规则</div>
+
+                    <h3>SystemInit（复位后、main 前）</h3>
+                    <p>由启动文件调用，做三件事：使能 FPU（CPACR）、把向量表基址 <code class="inline">SCB-&gt;VTOR</code> 指向 <code class="inline">0x08000000</code>、把时钟暂时切回内部 HSI 16MHz。真正的 180MHz 要等 <code class="inline">main</code> 里调用 <code class="inline">Stm32_Clock_Init</code>。</p>
+
+                    <h3>HAL_Init</h3>
+<pre class="code">HAL_Init();   <span class="cmt">// 内部依次：HAL_NVIC_SetPriorityGrouping / HAL_InitTick / ...</span>
+
+<span class="cmt">// 工程内 HALLIB 第 183 行已被改为：</span>
+HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_2);</pre>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>配置</th><th>含义</th></tr>
+                        <tr><td>优先级分组</td><td><code>NVIC_PRIORITYGROUP_2</code></td><td>4 位优先级里 2 位抢占（0~3）、2 位子优先级（0~3）</td></tr>
+                        <tr><td>SysTick 中断优先级</td><td><code>TICK_INT_PRIORITY = 0x0F</code></td><td>编码后抢占 3、子优先级 0，是最低档</td></tr>
+                        <tr><td>SysTick 周期</td><td><code>HCLK / 1000 = 180000</code></td><td>1ms 一次的 <code>HAL_IncTick()</code>，供 <code>HAL_Delay</code> 使用</td></tr>
+                        <tr><td>Flash 预取</td><td>Prefetch / Instruction / Data Cache 全开</td><td>180MHz 下取指效率的前提</td></tr>
+                    </table>
+
+                    <div class="note">本工程的 <code class="inline">delay_ms</code> <b>不用</b> <code class="inline">HAL_Delay</code>，而是自己轮询 SysTick-&gt;VAL；但 <code class="inline">HAL_InitTick</code> 依然要把 SysTick 配好，否则 <code class="inline">HAL_GetTick</code> 类接口全部失效。</div>
+                </section>
+
+                <section class="content-card" id="s06" data-title="时钟树与 45MHz 计数">
+                    <h2>06　时钟树与 45MHz 计数</h2>
+                    <div class="sec-sub">180MHz 系统时钟经 APB1 分频与定时器倍频，最终变成 45MHz 的计数节拍</div>
+
+                    <figure class="figure">
+                        <img src="./index24-map/clock-tree.png" alt="从 HSE 25MHz 到 TIM2 45MHz 的时钟树">
+                        <figcaption>图 6-1　PLL、总线分频与 TIM2 计数频率的推导</figcaption>
+                    </figure>
+
+<pre class="code">RCC_OscInitStructure.PLL.PLLM = pllm;   <span class="cmt">// 25</span>
+RCC_OscInitStructure.PLL.PLLN = plln;   <span class="cmt">// 360</span>
+RCC_OscInitStructure.PLL.PLLP = pllp;   <span class="cmt">// 2</span>
+RCC_OscInitStructure.PLL.PLLQ = pllq;   <span class="cmt">// 8</span>
+...
+RCC_ClkInitStructure.AHBCLKDivider  = RCC_SYSCLK_DIV1;   <span class="cmt">// HCLK 180MHz</span>
+RCC_ClkInitStructure.APB1CLKDivider = RCC_HCLK_DIV4;     <span class="cmt">// PCLK1 45MHz</span>
+RCC_ClkInitStructure.APB2CLKDivider = RCC_HCLK_DIV2;     <span class="cmt">// PCLK2 90MHz</span>
+ret = HAL_RCC_ClockConfig(&amp;RCC_ClkInitStructure, FLASH_LATENCY_5);</pre>
+
+                    <table class="data">
+                        <tr><th>节点</th><th>算式</th><th>结果</th></tr>
+                        <tr><td>PLL 输入</td><td>25MHz ÷ PLLM(25)</td><td>1MHz</td></tr>
+                        <tr><td>VCO</td><td>1MHz × PLLN(360)</td><td>360MHz</td></tr>
+                        <tr><td>SYSCLK</td><td>360MHz ÷ PLLP(2)</td><td>180MHz</td></tr>
+                        <tr><td>HCLK</td><td>180MHz ÷ 1</td><td>180MHz</td></tr>
+                        <tr><td>PCLK1</td><td>180MHz ÷ 4</td><td>45MHz</td></tr>
+                        <tr><td>APB1 定时器时钟</td><td>45MHz × 2（分频不为 1 时倍频）</td><td>90MHz</td></tr>
+                        <tr><td>TIM2 计数</td><td>90MHz ÷ (PSC+1) = 90 ÷ 2</td><td>45MHz，1 计数 ≈ 22.2ns</td></tr>
+                    </table>
+
+                    <div class="note">这套配置必须先 <code class="inline">HAL_PWREx_EnableOverDrive()</code> 再切 180MHz，并配 <code class="inline">FLASH_LATENCY_5</code>（5 个等待周期）；三步中任一步返回非 <code class="inline">HAL_OK</code>，源码直接 <code class="inline">while(1)</code> 停住。</div>
+                </section>
+
+                <section class="content-card" id="s07" data-title="延时函数与串口">
+                    <h2>07　延时函数与串口</h2>
+                    <div class="sec-sub">delay 提供“5ms 放电”和“10ms 扫描间隔”，串口负责把标定值打出来</div>
+
+<pre class="code">void delay_init(u8 SYSCLK)
+{
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);  <span class="cmt">// SysTick 时钟源 = HCLK</span>
+    fac_us = SYSCLK;                                      <span class="cmt">// 180MHz → 180</span>
+}
+
+<span class="cmt">// delay_us：设置 LOAD 后轮询 SysTick-&gt;VAL 递减到 0</span>
+<span class="cmt">// delay_ms：循环调用 delay_us(1000)，非精确毫秒</span></pre>
+
+                    <table class="data">
+                        <tr><th>项目</th><th>配置</th><th>说明</th></tr>
+                        <tr><td>延时基准</td><td><code>delay_init(180)</code></td><td>与 SYSCLK 180MHz 对应</td></tr>
+                        <tr><td>us 级实现</td><td>轮询 <code>SysTick-&gt;VAL</code></td><td>不产生中断，不占用中断资源</td></tr>
+                        <tr><td>ms 级实现</td><td><code>delay_us(1000)</code> 循环</td><td>受循环开销影响，略长于标称值</td></tr>
+                        <tr><td>串口参数</td><td>115200、8 数据位、1 停止位、无校验</td><td><code>uart_init(115200)</code></td></tr>
+                        <tr><td>接收</td><td><code>HAL_UART_Receive_IT(..., RXBUFFERSIZE)</code></td><td>开启接收中断，主循环未使用</td></tr>
+                        <tr><td>printf</td><td><code>fputc</code> 重定向到 USART1</td><td>标定与判定结果都走这里</td></tr>
+                        <tr><td>USART1 中断优先级</td><td><code>HAL_NVIC_SetPriority(USART1_IRQn, 3, 3)</code></td><td>分组 2 下即抢占 3、子 3</td></tr>
+                    </table>
+
+                    <div class="note blue">TPAD 的时间常量全部建立在这套延时上：<code class="inline">TPAD_Reset</code> 里放电 5ms、<code class="inline">TPAD_Init</code> 里每次采样间隔 10ms、主循环末尾 <code class="inline">delay_ms(10)</code>。若 <code class="inline">delay_init</code> 传错频率，充电时间不变，但节奏会整体偏移。</div>
+                </section>
+
+                <section class="content-card" id="s08" data-title="LED 初始化与主循环节奏">
+                    <h2>08　LED 初始化与主循环节奏</h2>
+                    <div class="sec-sub">两个 LED 分别指示“扫描节拍”和“触摸事件”</div>
+
+<pre class="code">void LED_Init(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_GPIOB_CLK_ENABLE();           <span class="cmt">//开启GPIOB时钟</span>
+
+    GPIO_Initure.Pin=GPIO_PIN_0|GPIO_PIN_1; <span class="cmt">//PB0, PB1</span>
+    GPIO_Initure.Mode=GPIO_MODE_OUTPUT_PP;  <span class="cmt">//推挽输出</span>
+    GPIO_Initure.Pull=GPIO_PULLUP;          <span class="cmt">//上拉</span>
+    GPIO_Initure.Speed=GPIO_SPEED_HIGH;     <span class="cmt">//高速</span>
+    HAL_GPIO_Init(GPIOB,&amp;GPIO_Initure);
+
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_0,GPIO_PIN_SET);  <span class="cmt">//PB0置1</span>
+    HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,GPIO_PIN_SET);  <span class="cmt">//PB1置1</span>
+}</pre>
+
+                    <p><code class="inline">led.h</code> 用位带宏把两个引脚简化成可直接赋值的变量：<code class="inline">LED0</code> 对应 PB1，<code class="inline">LED1</code> 对应 PB0。因为初始化时都置高，所以<b>上电默认全灭</b>（低电平点亮）。</p>
+
+                    <table class="data">
+                        <tr><th>观察对象</th><th>触发条件</th><th>周期估算</th></tr>
+                        <tr><td>LED1（PB0）</td><td><code>TPAD_Scan(0)</code> 返回 1</td><td>随触摸事件翻转，一次有效触摸翻转一次</td></tr>
+                        <tr><td>LED0（PB1）</td><td><code>t</code> 计到 15</td><td>15 × (扫描≥15ms + 延时10ms) ≈ 375ms 翻转一次，即约 0.75s 一个闪烁周期</td></tr>
+                        <tr><td>串口</td><td><code>rval</code> 落在有效窗口内</td><td>每次判定为“有效值”打印一次 <code>r:xxx</code></td></tr>
+                    </table>
+
+                    <div class="note">LED0 的闪烁说明主循环还活着，LED1 的翻转才代表触摸判定成功。调不出来时先看 LED0 有没有在闪——它在闪，说明卡在 TPAD 判定而不是系统跑飞。</div>
+                </section>
+
+                <section class="content-card" id="s09" data-title="电容触摸原理与 PA5 配置">
+                    <h2>09　电容触摸原理与 PA5 配置</h2>
+                    <div class="sec-sub">同一个引脚在两个阶段扮演两种角色：放电时是推挽输出，测量时是定时器输入</div>
+
+                    <p>焊盘与手指之间形成电容，焊盘对地还有寄生电容。用上拉电阻给焊盘充电时，电压上升速度由 RC 决定：电压到 VIH（输入高电平阈值）所需时间 t ≈ R·C·ln(...)，C 越大 t 越长。定时器把 t 量化成计数，就等于把“电容变化”量化成了数字。</p>
+
+                    <table class="data">
+                        <tr><th>阶段</th><th>PA5 模式</th><th>作用</th></tr>
+                        <tr><td>放电</td><td><code>GPIO_MODE_OUTPUT_PP</code> + <code>GPIO_PULLDOWN</code>，输出 0</td><td>把焊盘电容上的电荷放干净，保证每次测量起点一致</td></tr>
+                        <tr><td>充电 / 捕获</td><td><code>GPIO_MODE_AF_PP</code> + <code>GPIO_NOPULL</code> + <code>GPIO_AF1_TIM2</code></td><td>引脚交给 TIM2_CH1，上升沿到来时把 CNT 锁进 CCR1</td></tr>
+                        <tr><td>计数</td><td>TIM2 32 位向上计数，ARR = 0xFFFFFFFF</td><td>量程约 95.4 秒，远超一次充电所需，几乎不会溢出</td></tr>
+                    </table>
+
+                    <div class="chips">
+                        <span class="chip">PA5 → AF1 = TIM2_CH1</span>
+                        <span class="chip">上升沿捕获</span>
+                        <span class="chip">1 计数 ≈ 22.2ns</span>
+                        <span class="chip">单次溢出 ≈ 95.4s</span>
+                    </div>
+
+                    <div class="note">电容式触摸没有机械触点，读数会随温湿度、板子固定方式漂移，所以必须<b>每次开机重新标定</b>空载值，再用相对比例（5/4、4/3、10 倍）判定，而不是写死一个绝对阈值。</div>
+                </section>
+
+                <section class="content-card" id="s10" data-title="TPAD_Reset 与充电时序">
+                    <h2>10　TPAD_Reset 与充电时序</h2>
+                    <div class="sec-sub">先把电容放空、计数器清零，再放开引脚让 RC 自己充电，等上升沿把时间锁进 CCR1</div>
+
+                    <figure class="figure">
+                        <img src="./index24-map/charge-timing.png" alt="放电、充电与捕获时刻的时序图">
+                        <figcaption>图 10-1　PA5 电平与 CNT 计数在一次采样中的关系</figcaption>
+                    </figure>
+
+<pre class="code">void TPAD_Reset(void)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+
+    GPIO_Initure.Pin=GPIO_PIN_5;            <span class="cmt">//PA5</span>
+    GPIO_Initure.Mode=GPIO_MODE_OUTPUT_PP;  <span class="cmt">//推挽输出</span>
+    GPIO_Initure.Pull=GPIO_PULLDOWN;        <span class="cmt">//下拉</span>
+    GPIO_Initure.Speed=GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+
+    HAL_GPIO_WritePin(GPIOA,GPIO_PIN_5,GPIO_PIN_RESET);  <span class="cmt">//PA5输出0，放电</span>
+    delay_ms(5);
+    __HAL_TIM_CLEAR_FLAG(&amp;TIM2_Handler,TIM_FLAG_CC1|TIM_FLAG_UPDATE);
+    __HAL_TIM_SET_COUNTER(&amp;TIM2_Handler,0);              <span class="cmt">//计数器值归0</span>
+
+    GPIO_Initure.Mode=GPIO_MODE_AF_PP;      <span class="cmt">//推挽复用</span>
+    GPIO_Initure.Pull=GPIO_NOPULL;
+    GPIO_Initure.Alternate=GPIO_AF1_TIM2;   <span class="cmt">//PA5复用为TIM2通道1</span>
+    HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+}</pre>
+
+<pre class="code">u16 TPAD_Get_Val(void)
+{
+    TPAD_Reset();
+    while(__HAL_TIM_GET_FLAG(&amp;TIM2_Handler,TIM_FLAG_CC1)==RESET) <span class="cmt">//等待捕获上升沿</span>
+    {
+        if(__HAL_TIM_GET_COUNTER(&amp;TIM2_Handler)&gt;TPAD_ARR_MAX_VAL-500)
+            return __HAL_TIM_GET_COUNTER(&amp;TIM2_Handler);  <span class="cmt">//超时，直接返回CNT</span>
+    };
+    return HAL_TIM_ReadCapturedValue(&amp;TIM2_Handler,TIM_CHANNEL_1);
+}</pre>
+
+                    <table class="data">
+                        <tr><th>步骤</th><th>关键语句</th><th>结果</th></tr>
+                        <tr><td>放电</td><td><code>HAL_GPIO_WritePin(..., RESET)</code> + <code>delay_ms(5)</code></td><td>焊盘电压拉到 0，持续 5ms 确保放干净</td></tr>
+                        <tr><td>清场</td><td>清 CC1IF / UIF，<code>CNT = 0</code></td><td>本次测量的起点，避免上一次的标志干扰</td></tr>
+                        <tr><td>放开</td><td>切回 <code>AF_PP</code> + <code>AF1_TIM2</code></td><td>上拉电阻开始给电容充电</td></tr>
+                        <tr><td>等待</td><td>轮询 CC1IF 直到置位</td><td>电压越过 VIH 的瞬间被硬件锁存</td></tr>
+                        <tr><td>取值</td><td><code>HAL_TIM_ReadCapturedValue(..., CHANNEL_1)</code></td><td>返回 CCR1，即充电段计数</td></tr>
+                        <tr><td>超时保护</td><td><code>CNT &gt; ARR - 500</code></td><td>32 位定时器几乎不会溢出，但仍保留兜底返回</td></tr>
+                    </table>
+
+                    <div class="note">时序图的横轴不是等比例的：5ms 放电段在 45MHz 下相当于 22.5 万个计数，而一次正常充电只有几百到几千个计数。图里把放电段压窄，是为了让充电曲线看得清。</div>
+                </section>
+
+                <section class="content-card" id="s11" data-title="TIM2_CH1 输入捕获初始化">
+                    <h2>11　TIM2_CH1 输入捕获初始化</h2>
+                    <div class="sec-sub">只配置“上升沿 + 直连 TI1 + 不分频 + 不滤波”，启动后靠轮询取结果</div>
+
+<pre class="code">void TIM2_CH1_Cap_Init(u32 arr,u16 psc)
+{
+    TIM_IC_InitTypeDef TIM2_CH1Config;
+
+    TIM2_Handler.Instance=TIM2;
+    TIM2_Handler.Init.Prescaler=psc;                     <span class="cmt">// 分频</span>
+    TIM2_Handler.Init.CounterMode=TIM_COUNTERMODE_UP;    <span class="cmt">// 向上计数</span>
+    TIM2_Handler.Init.Period=arr;                        <span class="cmt">// 自动装载值</span>
+    TIM2_Handler.Init.ClockDivision=TIM_CLOCKDIVISION_DIV1;
+    HAL_TIM_IC_Init(&amp;TIM2_Handler);
+
+    TIM2_CH1Config.ICPolarity=TIM_ICPOLARITY_RISING;     <span class="cmt">// 上升沿捕获</span>
+    TIM2_CH1Config.ICSelection=TIM_ICSELECTION_DIRECTTI; <span class="cmt">// 映射到TI1</span>
+    TIM2_CH1Config.ICPrescaler=TIM_ICPSC_DIV1;           <span class="cmt">// 不分频</span>
+    TIM2_CH1Config.ICFilter=0;                           <span class="cmt">// 不滤波</span>
+    HAL_TIM_IC_ConfigChannel(&amp;TIM2_Handler,&amp;TIM2_CH1Config,TIM_CHANNEL_1);
+    HAL_TIM_IC_Start(&amp;TIM2_Handler,TIM_CHANNEL_1);       <span class="cmt">// 启动捕获（非中断）</span>
+}</pre>
+
+                    <table class="data">
+                        <tr><th>参数</th><th>值</th><th>推导 / 说明</th></tr>
+                        <tr><td>Prescaler</td><td>psc = 2-1 = 1</td><td>计数频率 90MHz ÷ (1+1) = 45MHz</td></tr>
+                        <tr><td>Period (ARR)</td><td>0xFFFFFFFF</td><td>TIM2 是 32 位定时器，量程最大</td></tr>
+                        <tr><td>CounterMode</td><td>UP</td><td>从 0 向上计到 ARR 再回绕</td></tr>
+                        <tr><td>ICPolarity</td><td>RISING</td><td>只关心电压越过 VIH 的那个沿</td></tr>
+                        <tr><td>ICSelection</td><td>DIRECTTI</td><td>CH1 直连 TI1，不经过交叉通道</td></tr>
+                        <tr><td>ICFilter</td><td>0</td><td>不滤波，保留真实充电斜率</td></tr>
+                        <tr><td>NVIC</td><td>未配置</td><td><code>HAL_TIM_IC_Start</code> 不产生中断，因此没有 TIM2_IRQHandler</td></tr>
+                    </table>
+
+                    <h3>MSP：时钟与引脚</h3>
+<pre class="code">void HAL_TIM_IC_MspInit(TIM_HandleTypeDef *htim)
+{
+    GPIO_InitTypeDef GPIO_Initure;
+    __HAL_RCC_TIM2_CLK_ENABLE();            <span class="cmt">//使能TIM2时钟</span>
+    __HAL_RCC_GPIOA_CLK_ENABLE();           <span class="cmt">//开启GPIOA时钟</span>
+
+    GPIO_Initure.Pin=GPIO_PIN_5;
+    GPIO_Initure.Mode=GPIO_MODE_AF_PP;      <span class="cmt">//推挽复用</span>
+    GPIO_Initure.Pull=GPIO_NOPULL;
+    GPIO_Initure.Speed=GPIO_SPEED_HIGH;
+    GPIO_Initure.Alternate=GPIO_AF1_TIM2;   <span class="cmt">//PA5复用为TIM2通道1</span>
+    HAL_GPIO_Init(GPIOA,&amp;GPIO_Initure);
+}</pre>
+
+                    <div class="note blue">调用顺序是 <code class="inline">HAL_TIM_IC_Init</code> 先触发 <code class="inline">HAL_TIM_IC_MspInit</code>（开时钟、配引脚），再 <code class="inline">HAL_TIM_IC_ConfigChannel</code> 配通道。MspInit 里没有 NVIC 配置，正好对应“本实验不用中断”。</div>
+                </section>
+
+                <section class="content-card" id="s12" data-title="空载标定与两套阈值">
+                    <h2>12　空载标定与两套阈值</h2>
+                    <div class="sec-sub">开机先测 10 次空载值，排序后取中间 6 个平均，得到后续所有判定的基准</div>
+
+                    <figure class="figure">
+                        <img src="./index24-map/tpad-threshold.png" alt="空载基准与 5/4、4/3、10 倍三个阈值的关系">
+                        <figcaption>图 12-1　基准值与两套判定比例的相对位置</figcaption>
+                    </figure>
+
+<pre class="code">u8 TPAD_Init(u8 psc)
+{
+    u16 buf[10];
+    u16 temp;
+    u8 j,i;
+    TIM2_CH1_Cap_Init(TPAD_ARR_MAX_VAL,psc-1);  <span class="cmt">//设置分频系数</span>
+    for(i=0;i&lt;10;i++)                            <span class="cmt">//连续读取10次</span>
+    {
+        buf[i]=TPAD_Get_Val();
+        delay_ms(10);
+    }
+    for(i=0;i&lt;9;i++)                             <span class="cmt">//冒泡升序</span>
+    {
+        for(j=i+1;j&lt;10;j++)
+        {
+            if(buf[i]&gt;buf[j])
+            {
+                temp=buf[i]; buf[i]=buf[j]; buf[j]=temp;
+            }
+        }
+    }
+    temp=0;
+    for(i=2;i&lt;8;i++)temp+=buf[i];                <span class="cmt">//取中间的8个数据进行平均</span>
+    tpad_default_val=temp/6;
+    printf("tpad_default_val:%d\r\n",tpad_default_val);
+    if(tpad_default_val&gt;TPAD_ARR_MAX_VAL/2)return 1;  <span class="cmt">//不正常</span>
+    return 0;
+}</pre>
+
+                    <table class="data">
+                        <tr><th>环节</th><th>实际做法</th><th>作用</th></tr>
+                        <tr><td>采样次数</td><td>循环 10 次，每次间隔 <code>delay_ms(10)</code></td><td>给电容充分的放电/恢复时间</td></tr>
+                        <tr><td>排序</td><td>冒泡升序</td><td>把偶发的大值/小值挤到两端</td></tr>
+                        <tr><td>平均范围</td><td><code>buf[2] ~ buf[7]</code>，共 6 个</td><td>去掉最小 2 个和最大 2 个，抗干扰</td></tr>
+                        <tr><td>基准值</td><td><code>temp / 6</code> 存入 <code>tpad_default_val</code></td><td>全局变量，扫描时反复引用</td></tr>
+                        <tr><td>合理性检查</td><td><code>&gt; TPAD_ARR_MAX_VAL/2</code> 返回 1</td><td>接近半量程说明引脚可能悬空或短路</td></tr>
+                    </table>
+
+                    <h3>三个比例各自管什么</h3>
+                    <table class="data">
+                        <tr><th>比例</th><th>出现位置</th><th>判据</th><th>含义</th></tr>
+                        <tr><td>5/4</td><td><code>TPAD_Get_MaxVal</code></td><td><code>temp &gt; default*5/4</code></td><td>单次采样“明显高于空载”，计入有效次数</td></tr>
+                        <tr><td>2/3</td><td><code>TPAD_Get_MaxVal</code></td><td><code>okcnt &gt;= n*2/3</code></td><td>至少三分之二的采样有效，才认为这批数据可信</td></tr>
+                        <tr><td>4/3</td><td><code>TPAD_Scan</code></td><td><code>rval &gt; default*4/3</code></td><td>对最大值做最终判定，超过才算按下</td></tr>
+                        <tr><td>10 倍</td><td><code>TPAD_Scan</code></td><td><code>rval &lt; 10*default</code></td><td>上界，超过视为异常直接丢弃</td></tr>
+                    </table>
+
+                    <div class="note">源码注释“取中间的 8 个数据进行平均”与循环 <code class="inline">for(i=2;i&lt;8;i++)</code> 不符：实际累加 <code class="inline">buf[2]~buf[7]</code> 共 <b>6</b> 个数，除数也是 6，运算本身自洽，只是注释过时。</div>
+                </section>
+
+                <section class="content-card" id="s13" data-title="扫描判定与去抖">
+                    <h2>13　扫描判定与去抖</h2>
+                    <div class="sec-sub">采样 → 统计有效次数 → 区间判定 → keyen 冷却，四道关卡逐级收紧</div>
+
+                    <figure class="figure">
+                        <img src="./index24-map/scan-flow.png" alt="一次 TPAD_Scan 的判定流程">
+                        <figcaption>图 13-1　TPAD_Scan(0) 内部的判定链与 keyen 冷却</figcaption>
+                    </figure>
+
+<pre class="code">u16 TPAD_Get_MaxVal(u8 n)
+{
+    u16 temp=0;
+    u16 res=0;
+    u8 lcntnum=n*2/3;   <span class="cmt">//至少2/3*n的有效个触摸,才算有效</span>
+    u8 okcnt=0;
+    while(n--)
+    {
+        temp=TPAD_Get_Val();
+        if(temp&gt;(tpad_default_val*5/4))okcnt++;  <span class="cmt">//大于默认值的5/4才算有效</span>
+        if(temp&gt;res)res=temp;
+    }
+    if(okcnt&gt;=lcntnum)return res;
+    else return 0;
+}
+
+u8 TPAD_Scan(u8 mode)
+{
+    static u8 keyen=0;   <span class="cmt">//0,可以开始检测;&gt;0,还不能开始检测</span>
+    u8 res=0;
+    u8 sample=3;         <span class="cmt">//默认采样3次</span>
+    u16 rval;
+    if(mode)
+    {
+        sample=6;        <span class="cmt">//支持连按,采样6次</span>
+        keyen=0;         <span class="cmt">//支持连按</span>
+    }
+    rval=TPAD_Get_MaxVal(sample);
+    if(rval&gt;(tpad_default_val*4/3)&amp;&amp;rval&lt;(10*tpad_default_val))
+    {
+        if(keyen==0)res=1;
+        printf("r:%d\r\n",rval);
+        keyen=3;         <span class="cmt">//至少要再过3次之后才能按键有效</span>
+    }
+    if(keyen)keyen--;
+    return res;
+}</pre>
+
+                    <table class="data">
+                        <tr><th>关卡</th><th>条件</th><th>不满足时的结果</th></tr>
+                        <tr><td>① 单次有效</td><td><code>temp &gt; default × 5/4</code></td><td>不计数，但仍参与取最大值</td></tr>
+                        <tr><td>② 次数门限</td><td><code>okcnt ≥ n × 2/3</code>（3 次→2，6 次→4）</td><td>整批作废，<code>TPAD_Get_MaxVal</code> 返回 0</td></tr>
+                        <tr><td>③ 区间判定</td><td><code>4/3 × default &lt; rval &lt; 10 × default</code></td><td>不置位，也不改 keyen</td></tr>
+                        <tr><td>④ 冷却门控</td><td><code>keyen == 0</code></td><td>仍打印 <code>r:xxx</code>，但返回 0，不翻转 LED1</td></tr>
+                    </table>
+
+                    <p><code class="inline">keyen</code> 每次有效判定后置 3，并在每次扫描末尾自减 1。也就是说一次有效触摸之后，接下来 3 次扫描（约 75ms）即使检测到有效值也不会再触发，直到它减回 0。<code class="inline">mode=1</code> 时每轮强制把 <code class="inline">keyen</code> 清零，所以支持一直按住连续触发。</p>
+
+                    <div class="note">注意 <code class="inline">keyen</code> 是 <code class="inline">static</code> 局部变量：跨调用保持状态，作用等价于文件级全局变量，但作用域只在本函数内，外部无法误改。</div>
+                </section>
+
+                <section class="content-card" id="s14" data-title="实验现象与交互演示">
+                    <h2>14　实验现象、交互演示与常见问题</h2>
+                    <div class="sec-sub">先看现象是否对得上，再用演示复现判定分支</div>
+
+                    <h3>正常现象</h3>
+                    <table class="data">
+                        <tr><th>观察点</th><th>预期</th><th>说明</th></tr>
+                        <tr><td>上电瞬间</td><td>两个 LED 都不亮</td><td><code>LED_Init</code> 把 PB0 / PB1 置高</td></tr>
+                        <tr><td>串口</td><td>开机打印一行 <code>tpad_default_val:xxx</code></td><td><code>TPAD_Init</code> 里的 printf</td></tr>
+                        <tr><td>不触摸</td><td>LED0 约 0.75s 闪一次，LED1 不动</td><td>主循环在跑，但没有有效判定</td></tr>
+                        <tr><td>手指按下</td><td>LED1 翻转一次，串口打印 <code>r:xxx</code></td><td><code>TPAD_Scan(0)</code> 返回 1</td></tr>
+                        <tr><td>一直按住</td><td>只翻转一次</td><td><code>mode=0</code>，必须松开再按</td></tr>
+                    </table>
+
+                    <h3>交互演示：复现 TPAD_Scan 的判定</h3>
+                    <div class="sim">
+                        <div class="sim-title">虚拟基准 default = 3000（5/4 线 3750，4/3 线 4000，10 倍线 30000）</div>
+                        <div class="sim-buttons">
+                            <button data-act="touch">手指按下 / 抬起</button>
+                            <button data-act="scan0">扫描一次 TPAD_Scan(0)</button>
+                            <button data-act="scan1">连按模式 TPAD_Scan(1)</button>
+                            <button data-act="reset">复位</button>
+                        </div>
+                        <div class="sim-state">
+                            <span>手指状态：<b id="stTouch">抬起</b></span>
+                            <span>keyen：<b id="stKeyen">0</b></span>
+                            <span>最近 rval：<b id="stRval">-</b></span>
+                        </div>
+                        <div class="led-row">
+                            <div class="led-item"><span class="led-dot" id="dot1"></span>LED1（PB0）</div>
+                        </div>
+                        <div class="sim-log" id="simLog">等待操作…</div>
+                    </div>
+
+                    <div class="note">演示只复现 <code class="inline">TPAD_Get_MaxVal</code> 与 <code class="inline">TPAD_Scan</code> 的整数判断（有效次数取 <code class="inline">n*2/3</code> 整除），采样值用随机数模拟噪声，不涉及真实硬件与延时。</div>
+
+                    <h3>现象 → 原因 → 排查</h3>
+                    <table class="data">
+                        <tr><th>现象</th><th>可能原因</th><th>排查方向</th></tr>
+                        <tr><td>LED0 不闪</td><td>程序没进主循环或卡死</td><td>单步跟到 <code>while(1)</code>，检查 <code>Stm32_Clock_Init</code> 是否在 <code>while(1)</code> 卡住</td></tr>
+                        <tr><td>上电标定值很大（接近半量程）</td><td>PA5 未接焊盘或虚焊</td><td><code>TPAD_Init</code> 返回 1，检查焊盘与连线</td></tr>
+                        <tr><td>完全按不动</td><td>基准值偏高，4/3 门限够不到</td><td>看串口 <code>r:xxx</code> 与 <code>tpad_default_val</code> 的比值是否接近 1</td></tr>
+                        <tr><td>一次按下翻转多次</td><td>判定过于灵敏或 keyen 被绕过</td><td>确认调用的是 <code>TPAD_Scan(0)</code> 而不是 1</td></tr>
+                        <tr><td>串口无输出</td><td>uart 未初始化或波特率不符</td><td>确认 <code>uart_init</code> 在 <code>TPAD_Init</code> 之前调用</td></tr>
+                    </table>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <span class="footer-copyright">实验10 电容触摸按键 · 启动过程讲解</span>
+    </footer>
+</div>
+
+<script>
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+
+    // ===== 目录自动生成 =====
+    var sections = Array.prototype.slice.call(document.querySelectorAll('.content-body > section'));
+    var menu = document.getElementById('menu');
+    var scroller = document.getElementById('scroller');
+
+    sections.forEach(function (sec, i) {
+        var num = ('0' + (i + 1)).slice(-2);
+        if (!sec.id) sec.id = 's' + num;
+        var li = document.createElement('li');
+        li.setAttribute('data-target', sec.id);
+        if (i === 0) li.className = 'active';
+        var numSpan = document.createElement('span');
+        numSpan.className = 'num';
+        numSpan.textContent = num;
+        li.appendChild(numSpan);
+        li.appendChild(document.createTextNode(sec.getAttribute('data-title') || ('第 ' + num + ' 节')));
+        menu.appendChild(li);
+    });
+
+    var menuItems = Array.prototype.slice.call(menu.querySelectorAll('li'));
+
+    function setActive(id) {
+        menuItems.forEach(function (li) {
+            li.classList.toggle('active', li.getAttribute('data-target') === id);
+        });
+    }
+
+    function goTo(id) {
+        var target = document.getElementById(id);
+        if (!target) return;
+        var top = target.offsetTop - scroller.offsetTop - 6;
+        scroller.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
+    menuItems.forEach(function (item) {
+        item.addEventListener('click', function () {
+            setActive(item.getAttribute('data-target'));
+            goTo(item.getAttribute('data-target'));
+        });
+    });
+
+    var ticking = false;
+    scroller.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+            var pos = scroller.scrollTop + 90;
+            var current = menuItems.length ? menuItems[0].getAttribute('data-target') : '';
+            menuItems.forEach(function (li) {
+                var sec = document.getElementById(li.getAttribute('data-target'));
+                if (sec && sec.offsetTop - scroller.offsetTop <= pos) {
+                    current = li.getAttribute('data-target');
+                }
+            });
+            if (current) setActive(current);
+            ticking = false;
+        });
+    });
+
+    // ===== TPAD 判定演示（与 tpad.c 分支一一对应）=====
+    var logEl = document.getElementById('simLog');
+    if (logEl) {
+        var D = 3000;              // 虚拟空载基准
+        var keyen = 0;             // static u8 keyen
+        var touching = false;      // 虚拟手指
+        var led1 = false;
+        var lastRval = '-';
+
+        var stTouch = document.getElementById('stTouch');
+        var stKeyen = document.getElementById('stKeyen');
+        var stRval = document.getElementById('stRval');
+        var dot1 = document.getElementById('dot1');
+
+        function sampleVal() {
+            var base = touching ? D * 1.55 : D * 1.0;
+            var noise = (Math.random() - 0.5) * D * 0.10;
+            return Math.round(base + noise);
+        }
+
+        function render() {
+            stTouch.textContent = touching ? '按下' : '抬起';
+            stKeyen.textContent = keyen;
+            stRval.textContent = lastRval;
+            dot1.classList.toggle('on', led1);
+        }
+
+        function scan(mode) {
+            var sample = 3;
+            if (mode) { sample = 6; keyen = 0; }          // 支持连按
+            var okcnt = 0, res = 0, vals = [];
+            for (var i = 0; i < sample; i++) {
+                var v = sampleVal();
+                vals.push(v);
+                if (v > D * 5 / 4) okcnt++;               // 单次有效
+                if (v > res) res = v;
+            }
+            var lcnt = Math.floor(sample * 2 / 3);
+            var rval = (okcnt >= lcnt) ? res : 0;
+            var triggered = false;
+            var printLine = '';
+
+            if (rval > D * 4 / 3 && rval < 10 * D) {      // 区间判定
+                if (keyen === 0) triggered = true;
+                printLine = '  printf("r:%d\\r\\n", ' + rval + ')';
+                keyen = 3;
+            }
+            if (keyen) keyen--;                            // 末尾自减
+            if (triggered) led1 = !led1;
+            lastRval = rval;
+
+            var head = (mode ? 'TPAD_Scan(1)' : 'TPAD_Scan(0)') +
+                '：采样 ' + sample + ' 次 [' + vals.join(', ') + ']';
+            var mid = '  okcnt=' + okcnt + ' / 门限 ' + lcnt +
+                '，rval=' + rval;
+            var tail = triggered ? '  → keyen=3，返回 1，LED1 翻转'
+                                 : '  → 返回 0' + (rval ? '（冷却中或未过 4/3 线）' : '（未过次数门限）');
+            logEl.textContent = head + '\n' + mid + printLine + '\n' + tail;
+            render();
+        }
+
+        Array.prototype.forEach.call(document.querySelectorAll('.sim-buttons button'), function (btn) {
+            btn.addEventListener('click', function () {
+                var act = btn.getAttribute('data-act');
+                if (act === 'touch') {
+                    touching = !touching;
+                    render();
+                } else if (act === 'scan0') {
+                    scan(0);
+                } else if (act === 'scan1') {
+                    scan(1);
+                } else if (act === 'reset') {
+                    keyen = 0; touching = false; led1 = false; lastRval = '-';
+                    logEl.textContent = '已复位：keyen=0，基准 default=3000';
+                    render();
+                }
+            });
+        });
+
+        render();
+    }
+</script>
+</body>
+</html>
