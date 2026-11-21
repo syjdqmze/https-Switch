@@ -386,9 +386,7 @@
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            console.log('用户名:', username);
-            console.log('密码:', password);
-            
+
             fetch(window.location.origin + '/login', {
                 method: 'POST',
                 headers: {

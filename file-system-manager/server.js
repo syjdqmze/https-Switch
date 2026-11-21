@@ -25,9 +25,7 @@ function isAuthenticated(req) {
 function handleLogin(req, res, body) {
     try {
         const { username, password } = JSON.parse(body);
-        console.log('登录请求:', { username, password });
-        console.log('配置用户名:', USERNAME);
-        console.log('配置密码:', PASSWORD);
+        console.log('登录请求:', { username });
         
         if (username === USERNAME && password === PASSWORD) {
             const token = generateToken();

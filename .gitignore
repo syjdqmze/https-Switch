@@ -12,8 +12,33 @@ uploads/
 
 # 含敏感信息的本地配置（参考 config.example.json）
 file-system-manager/config.json
+.env
+.env.*
+*.local.json
+config.local.js
+
+# 密钥与证书
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# 数据库与备份（可能含用户数据）
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+*.dump
+*.bak
 
 # 系统与日志
 .DS_Store
 Thumbs.db
 *.log
+*.pid
+*.tmp
+*.swp
+.vscode/
+.idea/

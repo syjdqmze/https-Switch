@@ -64,14 +64,16 @@ Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  登录凭据" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  用户名: admin" -ForegroundColor Yellow
-Write-Host "  密码: password123" -ForegroundColor Yellow
+$cfg = Get-Content (Join-Path $ScriptDir "config.json") -Raw | ConvertFrom-Json
+Write-Host "  用户名: $($cfg.username)" -ForegroundColor Yellow
+Write-Host "  密码: 见 config.json" -ForegroundColor Yellow
 Write-Host ""
 
 # 测试登录
 Write-Host "测试登录功能..." -ForegroundColor Yellow
 try {
-    $response = Invoke-WebRequest -Uri "http://localhost:8080/login" -Method POST -Body '{"username":"admin","password":"password123"}' -ContentType "application/json" -UseBasicParsing -TimeoutSec 5
+    $loginBody = @{ username = $cfg.username; password = $cfg.password } | ConvertTo-Json -Compress
+    $response = Invoke-WebRequest -Uri "http://localhost:8080/login" -Method POST -Body $loginBody -ContentType "application/json" -UseBasicParsing -TimeoutSec 5
     if ($response.StatusCode -eq 200) {
         $result = $response.Content | ConvertFrom-Json
         if ($result.success) {

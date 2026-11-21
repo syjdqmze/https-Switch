@@ -33,7 +33,7 @@
 4. **验证服务器运行状态**
    ```bash
    pm2 status
-   curl http://localhost:8080/login -X POST -H "Content-Type: application/json" -d '{"username":"admin","password":"password123"}'
+   curl http://localhost:8080/login -X POST -H "Content-Type: application/json" -d '{"username":"admin","password":"<your-password>"}'
    ```
 
 ### 方案二：配置 Nginx 反向代理
@@ -86,7 +86,7 @@ nginx -s reload
     "port": 80,
     "rootDirectory": "./data",
     "username": "admin",
-    "password": "password123"
+    "password": "<your-password>"
 }
 ```
 
@@ -101,14 +101,14 @@ pm2 restart file-manager
 
 1. ✅ 服务器正在运行：`pm2 status`
 2. ✅ 端口可访问：`curl http://localhost:8080`
-3. ✅ 登录端点工作：`curl -X POST http://localhost:8080/login -H "Content-Type: application/json" -d '{"username":"admin","password":"password123"}'`
+3. ✅ 登录端点工作：`curl -X POST http://localhost:8080/login -H "Content-Type: application/json" -d '{"username":"admin","password":"<your-password>"}'`
 4. ✅ 防火墙开放端口：8080（阿里云安全组）
 
 ## 默认配置
 
 - **端口**: 8080
 - **用户名**: admin
-- **密码**: password123
+- **密码**: `<your-password>`（在配置文件中设置，切勿使用弱口令）
 - **管理目录**: ./data
 
 ## 常用 PM2 命令

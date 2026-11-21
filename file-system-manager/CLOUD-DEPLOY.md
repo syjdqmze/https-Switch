@@ -97,7 +97,7 @@ pm2 startup
 # 测试登录
 curl -X POST http://localhost:8080/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"password123"}'
+  -d '{"username":"admin","password":"<your-password>"}'
 
 # 应该返回：{"success":true,"token":"..."}
 ```
@@ -287,7 +287,7 @@ chown -R www-data:www-data /www/wwwroot/file-system-manager/data
 |--------|-----|
 | 端口 | 8080 |
 | 用户名 | admin |
-| 密码 | password123 |
+| 密码 | &lt;your-password&gt; |
 | 数据目录 | ./data |
 | 部署路径 | /www/wwwroot/file-system-manager |
 

@@ -225,7 +225,7 @@
       <div class="right-top">
         <!-- 阿里百炼 API Key 设置入口 -->
         <div class="api-settings">
-          <input type="password" id="apiKeyInput" class="api-key-input" placeholder="API Key（留空用内置默认）" autocomplete="off">
+          <input type="password" id="apiKeyInput" class="api-key-input" placeholder="API Key（留空则使用服务端配置）" autocomplete="off">
           <button type="button" id="saveKeyBtn" class="api-save-btn">保存</button>
         </div>
       </div>
@@ -740,7 +740,7 @@
   // 主流程：注册音色 -> 逐块合成 -> 顺序播放（合成与播放流水线并行，预留 1 块缓冲）
   function startReading() {
     running = true;
-    var apiKey = getApiKey(); // 允许为空：服务端有内置默认 Key
+    var apiKey = getApiKey(); // 允许为空：服务端从环境变量或 config.local.json 读取 Key
     var file = hiddenFileInput.files[0];
     if (!file) {
       running = false;

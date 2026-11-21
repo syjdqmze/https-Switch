@@ -24,7 +24,16 @@ const WS_URL = 'wss://' + WORKSPACE_ID + '.cn-beijing.maas.aliyuncs.com/api-ws/v
 const TTS_MODEL = 'cosyvoice-v2';
 
 // 默认阿里百炼 API Key（前端留空时使用；页面设置入口可覆盖）
-const DEFAULT_API_KEY = 'sk-ws-H.YLRREHD.qaQO.MEUCIQCHCvwoHkWXkXNZ0n3q10qn8LX56kRhKCLmPYmXE4DAJAIgVXWFWM0W5X8SgyNAavr1mBgtvE9Ux5DZVFgPut85epk';
+// 优先读环境变量 DASHSCOPE_API_KEY，其次读本地 config.local.json（已在 .gitignore 中忽略）
+function loadDefaultApiKey() {
+  if (process.env.DASHSCOPE_API_KEY) return process.env.DASHSCOPE_API_KEY.trim();
+  try {
+    const local = JSON.parse(fs.readFileSync(path.join(ROOT, 'config.local.json'), 'utf8'));
+    if (local && local.apiKey) return String(local.apiKey).trim();
+  } catch (e) {}
+  return '';
+}
+const DEFAULT_API_KEY = loadDefaultApiKey();
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -71,6 +80,9 @@ function readBody(req, limitBytes) {
 // ---------- 音色注册：上传参考音频，返回克隆音色 voiceId ----------
 async function handleEnroll(req, body) {
   const apiKey = body.apiKey || DEFAULT_API_KEY;
+  if (!apiKey) {
+    return { status: 400, out: { error: '未配置 API Key：请设置环境变量 DASHSCOPE_API_KEY 或创建 config.local.json' } };
+  }
   if (!body.audioDataUrl || body.audioDataUrl.indexOf('base64,') === -1) {
     return { status: 400, out: { error: '缺少音频数据 audioDataUrl' } };
   }
@@ -239,7 +251,12 @@ const server = http.createServer(async function (req, res) {
         sendJSON(res, 400, { error: '缺少 voiceId / text' });
         return;
       }
-      const audio = await synthesize(body.apiKey || DEFAULT_API_KEY, body.voiceId, body.text);
+      const apiKey = body.apiKey || DEFAULT_API_KEY;
+      if (!apiKey) {
+        sendJSON(res, 400, { error: '未配置 API Key：请设置环境变量 DASHSCOPE_API_KEY 或创建 config.local.json' });
+        return;
+      }
+      const audio = await synthesize(apiKey, body.voiceId, body.text);
       res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Content-Length': audio.length });
       res.end(audio);
     } catch (e) {
@@ -256,8 +273,9 @@ const server = http.createServer(async function (req, res) {
     if (!filePath.startsWith(ROOT)) {
       res.writeHead(403); res.end('Forbidden'); return;
     }
-    // 禁止下载服务端源码（内含 API Key）
-    if (path.basename(filePath) === 'server.js') {
+    // 禁止下载服务端源码与本地密钥配置
+    const blockedNames = ['server.js', 'config.local.json', 'config.example.json'];
+    if (blockedNames.indexOf(path.basename(filePath)) !== -1) {
       res.writeHead(403); res.end('Forbidden'); return;
     }
     fs.readFile(filePath, function (err, buf) {

@@ -99,7 +99,7 @@ echo "✓ 服务器地址: http://$(hostname -I | awk '{print $1}'):8080"
 echo ""
 echo "登录凭据："
 echo "  用户名: admin"
-echo "  密码: password123"
+echo "  密码: 见 config.json（请勿使用默认弱口令）"
 echo ""
 echo "========================================"
 echo "  常用命令"
@@ -142,9 +142,11 @@ echo ""
 # 测试登录
 echo "测试登录功能..."
 sleep 1
+LOGIN_USER=$(node -e "console.log(require('./config.json').username)")
+LOGIN_PASS=$(node -e "console.log(require('./config.json').password)")
 RESPONSE=$(curl -s -X POST http://localhost:8080/login \
     -H "Content-Type: application/json" \
-    -d '{"username":"admin","password":"password123"}')
+    -d "{\"username\":\"$LOGIN_USER\",\"password\":\"$LOGIN_PASS\"}")
 
 if echo "$RESPONSE" | grep -q '"success":true'; then
     echo "✓ 登录测试成功！"
